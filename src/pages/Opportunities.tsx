@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,75 +7,146 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Clock, Phone, Mail, Star, TrendingUp } from "lucide-react";
+import { Search, MapPin, Clock, Phone, Mail, Star, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Opportunity {
-  id: number;
+  id: string;
   name: string;
   type: string;
   location: string;
-  hours: string;
-  acceptanceRate: string;
-  rating: number;
-  reviewCount: number;
-  contact: { phone: string; email: string };
+  latitude: number | null;
+  longitude: number | null;
+  hours_required: string;
+  acceptance_likelihood: string;
+  description: string | null;
   requirements: string[];
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  avg_rating?: number;
+  review_count?: number;
+  distance?: number;
 }
 
 const Opportunities = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const opportunities: Opportunity[] = [
-    {
-      id: 1,
-      name: "City General Hospital",
-      type: "Hospital",
-      location: "Downtown, CA",
-      hours: "100+ hours/year",
-      acceptanceRate: "High",
-      rating: 4.5,
-      reviewCount: 24,
-      contact: { phone: "(555) 123-4567", email: "volunteer@citygeneral.org" },
-      requirements: ["Background check", "TB test", "Orientation"],
-    },
-    {
-      id: 2,
-      name: "Community Health Clinic",
-      type: "Clinic",
-      location: "Westside, CA",
-      hours: "50-100 hours/year",
-      acceptanceRate: "Medium",
-      rating: 4.2,
-      reviewCount: 18,
-      contact: { phone: "(555) 234-5678", email: "info@communityclinic.org" },
-      requirements: ["HIPAA training", "CPR certification"],
-    },
-    {
-      id: 3,
-      name: "Sunrise Hospice Care",
-      type: "Hospice",
-      location: "Northville, CA",
-      hours: "40+ hours/year",
-      acceptanceRate: "High",
-      rating: 4.8,
-      reviewCount: 31,
-      contact: { phone: "(555) 345-6789", email: "volunteers@sunrisehospice.org" },
-      requirements: ["Emotional intelligence training", "Background check"],
-    },
-    {
-      id: 4,
-      name: "Local EMT Program",
-      type: "EMT",
-      location: "Eastside, CA",
-      hours: "150+ hours/program",
-      acceptanceRate: "Low",
-      rating: 4.6,
-      reviewCount: 42,
-      contact: { phone: "(555) 456-7890", email: "emt@localfiredept.org" },
-      requirements: ["EMT certification course", "Physical fitness test"],
-    },
-  ];
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          toast({
+            title: "Location access denied",
+            description: "Unable to sort by distance. Showing all opportunities.",
+            variant: "destructive",
+          });
+        }
+      );
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    const fetchOpportunities = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("opportunities_with_ratings")
+          .select("*");
+
+        if (error) throw error;
+
+        let processedData: Opportunity[] = data.map((opp: any) => ({
+          id: opp.id,
+          name: opp.name,
+          type: opp.type,
+          location: opp.location,
+          latitude: opp.latitude,
+          longitude: opp.longitude,
+          hours_required: opp.hours_required,
+          acceptance_likelihood: opp.acceptance_likelihood,
+          description: opp.description,
+          requirements: opp.requirements || [],
+          phone: opp.phone,
+          email: opp.email,
+          website: opp.website,
+          avg_rating: opp.avg_rating,
+          review_count: opp.review_count,
+          distance: undefined,
+        }));
+
+        if (userLocation) {
+          processedData = processedData.map((opp) => ({
+            ...opp,
+            distance: opp.latitude && opp.longitude
+              ? calculateDistance(
+                  userLocation.lat,
+                  userLocation.lng,
+                  opp.latitude,
+                  opp.longitude
+                )
+              : undefined,
+          }));
+
+          processedData.sort((a, b) => {
+            if (a.distance === undefined) return 1;
+            if (b.distance === undefined) return -1;
+            return a.distance - b.distance;
+          });
+        }
+
+        setOpportunities(processedData);
+      } catch (error) {
+        console.error("Error fetching opportunities:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load opportunities. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchOpportunities();
+    }
+  }, [user, userLocation, toast]);
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 3959;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
 
   const filteredOpportunities = opportunities.filter(
     (opp) =>
@@ -84,17 +156,28 @@ const Opportunities = () => {
   );
 
   const getAcceptanceColor = (rate: string) => {
-    switch (rate) {
-      case "High":
+    switch (rate.toLowerCase()) {
+      case "high":
         return "bg-success text-success-foreground";
-      case "Medium":
+      case "medium":
         return "bg-primary text-primary-foreground";
-      case "Low":
+      case "low":
         return "bg-destructive text-destructive-foreground";
       default:
         return "bg-muted text-muted-foreground";
     }
   };
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,18 +185,16 @@ const Opportunities = () => {
 
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
           <div className="mb-12">
-            <h1 className="text-4xl font-bold mb-4">Clinical Opportunities</h1>
+            <h1 className="text-4xl font-bold mb-4">Clinical Opportunities Near You</h1>
             <p className="text-lg text-muted-foreground">
-              Discover and compare clinical opportunities from hospitals, clinics, hospice care, and EMT programs.
+              Discover clinical opportunities sorted by distance from your location.
             </p>
           </div>
 
-          {/* Search and Filter */}
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search by name or location..."
                 value={searchTerm}
@@ -135,89 +216,115 @@ const Opportunities = () => {
             </Select>
           </div>
 
-          {/* Results Count */}
-          <div className="mb-6 text-sm text-muted-foreground">
-            Showing {filteredOpportunities.length} opportunities
+          <div className="mb-6">
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredOpportunities.length} opportunities
+              {userLocation && " sorted by distance"}
+            </p>
           </div>
 
-          {/* Opportunities List */}
-          <div className="space-y-6">
-            {filteredOpportunities.map((opportunity) => (
-              <Card key={opportunity.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <CardTitle className="text-2xl">{opportunity.name}</CardTitle>
-                        <Badge variant="secondary">{opportunity.type}</Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading opportunities...</p>
+            </div>
+          ) : filteredOpportunities.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-lg font-medium mb-2">No opportunities found</p>
+                <p className="text-muted-foreground">Try adjusting your search or filters</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {filteredOpportunities.map((opportunity) => (
+                <Card key={opportunity.id} className="hover:border-primary transition-colors">
+                  <CardHeader>
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div className="flex-1">
+                        <CardTitle className="text-2xl mb-2">{opportunity.name}</CardTitle>
+                        <CardDescription className="flex items-center gap-2 text-base">
                           <MapPin className="h-4 w-4" />
                           {opportunity.location}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {opportunity.hours}
-                        </div>
+                          {opportunity.distance && (
+                            <span className="text-primary font-medium">
+                              • {opportunity.distance.toFixed(1)} miles away
+                            </span>
+                          )}
+                        </CardDescription>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline">{opportunity.type}</Badge>
+                        <Badge className={getAcceptanceColor(opportunity.acceptance_likelihood)}>
+                          {opportunity.acceptance_likelihood} Acceptance
+                        </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Star className="h-5 w-5 fill-primary text-primary" />
-                      <span className="font-semibold">{opportunity.rating}</span>
-                      <span className="text-sm text-muted-foreground">({opportunity.reviewCount} reviews)</span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Acceptance Rate */}
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Acceptance Likelihood:</span>
-                    <Badge className={getAcceptanceColor(opportunity.acceptanceRate)}>
-                      {opportunity.acceptanceRate}
-                    </Badge>
-                  </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {opportunity.description && (
+                      <p className="text-muted-foreground">{opportunity.description}</p>
+                    )}
 
-                  {/* Requirements */}
-                  <div>
-                    <p className="text-sm font-medium mb-2">Requirements:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {opportunity.requirements.map((req, index) => (
-                        <Badge key={index} variant="outline">
-                          {req}
-                        </Badge>
-                      ))}
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>{opportunity.hours_required}</span>
+                      </div>
+                      {opportunity.avg_rating && (
+                        <div className="flex items-center gap-2">
+                          <Star className="h-4 w-4 text-primary fill-primary" />
+                          <span>
+                            {opportunity.avg_rating.toFixed(1)} ({opportunity.review_count} reviews)
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Contact Info */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-primary" />
-                      <a href={`tel:${opportunity.contact.phone}`} className="hover:text-primary transition-colors">
-                        {opportunity.contact.phone}
-                      </a>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-primary" />
-                      <a
-                        href={`mailto:${opportunity.contact.email}`}
-                        className="hover:text-primary transition-colors"
-                      >
-                        {opportunity.contact.email}
-                      </a>
-                    </div>
-                  </div>
+                    {opportunity.requirements.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-2">Requirements:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {opportunity.requirements.map((req, idx) => (
+                            <Badge key={idx} variant="secondary">
+                              {req}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                  {/* Action Button */}
-                  <div className="pt-2">
-                    <Button className="w-full sm:w-auto">View Details & Reviews</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <div className="flex flex-wrap gap-3 pt-2">
+                      {opportunity.phone && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={`tel:${opportunity.phone}`}>
+                            <Phone className="mr-2 h-4 w-4" />
+                            Call
+                          </a>
+                        </Button>
+                      )}
+                      {opportunity.email && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={`mailto:${opportunity.email}`}>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Email
+                          </a>
+                        </Button>
+                      )}
+                      {opportunity.website && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={opportunity.website} target="_blank" rel="noopener noreferrer">
+                            Visit Website
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

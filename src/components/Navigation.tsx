@@ -15,14 +15,20 @@ const Navigation = () => {
     navigate("/");
   };
 
-  const links = [
+  // Show different links based on auth state
+  const publicLinks = [
+    { name: "Home", path: "/" },
+  ];
+
+  const authenticatedLinks = [
     { name: "Home", path: "/" },
     { name: "Opportunities", path: "/opportunities" },
     { name: "About", path: "/about" },
-    { name: "Projects", path: "/projects" },
-    { name: "Resume", path: "/resume" },
+    { name: "My Projects", path: "/projects" },
     { name: "Contact", path: "/contact" },
   ];
+
+  const links = user ? authenticatedLinks : publicLinks;
 
   const isActive = (path: string) => location.pathname === path;
 
