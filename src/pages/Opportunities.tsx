@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import OpportunitiesMap from "@/components/OpportunitiesMap";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Clock, Phone, Mail, Star, AlertCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, MapPin, Clock, Phone, Mail, Star, AlertCircle, Map } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -216,13 +218,6 @@ const Opportunities = () => {
             </Select>
           </div>
 
-          <div className="mb-6">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredOpportunities.length} opportunities
-              {userLocation && " sorted by distance"}
-            </p>
-          </div>
-
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -237,8 +232,26 @@ const Opportunities = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-6">
-              {filteredOpportunities.map((opportunity) => (
+            <Tabs defaultValue="list" className="w-full">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <p className="text-sm text-muted-foreground">
+                  Showing {filteredOpportunities.length} opportunities
+                  {userLocation && " sorted by distance"}
+                </p>
+                <TabsList>
+                  <TabsTrigger value="list">
+                    <Search className="h-4 w-4 mr-2" />
+                    List View
+                  </TabsTrigger>
+                  <TabsTrigger value="map">
+                    <Map className="h-4 w-4 mr-2" />
+                    Map View
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="list" className="space-y-6">
+                {filteredOpportunities.map((opportunity) => (
                 <Card key={opportunity.id} className="hover:border-primary transition-colors">
                   <CardHeader>
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -323,7 +336,15 @@ const Opportunities = () => {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+              </TabsContent>
+
+              <TabsContent value="map">
+                <OpportunitiesMap 
+                  opportunities={filteredOpportunities} 
+                  userLocation={userLocation}
+                />
+              </TabsContent>
+            </Tabs>
           )}
         </div>
       </div>
