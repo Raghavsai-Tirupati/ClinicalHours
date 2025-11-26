@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Contact = () => {
@@ -46,7 +46,7 @@ const Contact = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 gap-8">
             {/* Contact Info Cards */}
             <div className="space-y-4">
               <Card>
@@ -61,17 +61,6 @@ const Contact = () => {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <Phone className="h-8 w-8 text-primary mb-2" />
-                  <CardTitle className="text-lg">Phone</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <a href="tel:+15551234567" className="text-sm text-primary hover:underline">
-                    (555) 123-4567
-                  </a>
-                </CardContent>
-              </Card>
 
               <Card>
                 <CardHeader>
@@ -79,7 +68,7 @@ const Contact = () => {
                   <CardTitle className="text-lg">Location</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">California, United States</p>
+                  <p className="text-sm text-muted-foreground">Dallas, Texas</p>
                 </CardContent>
               </Card>
             </div>
