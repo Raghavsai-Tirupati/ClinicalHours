@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Hospital, Clock, Search, MapPin } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import heroImage from "@/assets/hero-medical-abstract.png";
 
 const Home = () => {
   const features = [
@@ -37,6 +38,9 @@ const Home = () => {
       {/* Hero Section */}
       <section className="relative py-20 md:py-32 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary to-[hsl(var(--hero-gradient-end))] opacity-5" />
+        <div className="absolute right-0 top-0 w-1/2 h-full opacity-20">
+          <img src={heroImage} alt="" className="w-full h-full object-cover" />
+        </div>
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center space-y-6">
             <h1 className="text-4xl md:text-6xl font-bold text-foreground">

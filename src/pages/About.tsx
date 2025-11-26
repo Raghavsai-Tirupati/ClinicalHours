@@ -2,6 +2,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Heart, Users, Target, Award } from "lucide-react";
+import communityImage from "@/assets/community-illustration.png";
 
 const About = () => {
   const values = [
@@ -80,8 +81,12 @@ const About = () => {
 
           {/* Story Section */}
           <section className="mb-16">
-            <Card className="bg-secondary/30">
-              <CardContent className="pt-6 space-y-4">
+            <Card className="bg-secondary/30 overflow-hidden">
+              <div className="flex flex-col md:flex-row">
+                <div className="md:w-1/3 p-6 flex items-center justify-center">
+                  <img src={communityImage} alt="" className="w-full max-w-xs rounded-lg opacity-80" />
+                </div>
+                <CardContent className="md:w-2/3 pt-6 space-y-4">
                 <h2 className="text-2xl font-bold mb-4">How It Started</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   As pre-med students ourselves, we experienced firsthand the frustration of trying to find clinical
@@ -94,7 +99,8 @@ const About = () => {
                   efficiently. Today, ClinicalHours serves hundreds of students across the country, helping them find
                   the perfect clinical opportunities to strengthen their medical school applications.
                 </p>
-              </CardContent>
+                </CardContent>
+              </div>
             </Card>
           </section>
 
