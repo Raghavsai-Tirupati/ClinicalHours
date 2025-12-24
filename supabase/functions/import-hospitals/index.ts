@@ -7,18 +7,18 @@ const corsHeaders = {
 };
 
 interface CMSHospital {
-  facility_id: string;
-  facility_name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip_code: string;
-  county_name: string;
-  phone_number: string;
-  hospital_type: string;
-  hospital_ownership: string;
-  emergency_services: string;
-  hospital_overall_rating: string;
+  'Facility ID': string;
+  'Facility Name': string;
+  'Address': string;
+  'City/Town': string;
+  'State': string;
+  'ZIP Code': string;
+  'County/Parish': string;
+  'Telephone Number': string;
+  'Hospital Type': string;
+  'Hospital Ownership': string;
+  'Emergency Services': string;
+  'Hospital overall rating': string;
 }
 
 interface GeocodeResult {
@@ -60,12 +60,12 @@ function mapRatingToAcceptanceLikelihood(rating: string): 'high' | 'medium' | 'l
 function buildRequirements(hospital: CMSHospital): string[] {
   const requirements: string[] = [];
   
-  if (hospital.emergency_services === 'Yes') {
+  if (hospital['Emergency Services'] === 'Yes') {
     requirements.push('Emergency services available');
   }
   
-  if (hospital.hospital_overall_rating && hospital.hospital_overall_rating !== 'Not Available') {
-    requirements.push(`CMS Rating: ${hospital.hospital_overall_rating}/5 stars`);
+  if (hospital['Hospital overall rating'] && hospital['Hospital overall rating'] !== 'Not Available') {
+    requirements.push(`CMS Rating: ${hospital['Hospital overall rating']}/5 stars`);
   }
   
   requirements.push('HIPAA compliance training required');
@@ -76,23 +76,85 @@ function buildRequirements(hospital: CMSHospital): string[] {
 }
 
 function buildDescription(hospital: CMSHospital): string {
-  let desc = `${hospital.facility_name} is a ${hospital.hospital_type.toLowerCase()} located in ${hospital.city}, ${hospital.state}.`;
+  let desc = `${hospital['Facility Name']} is a ${hospital['Hospital Type'].toLowerCase()} located in ${hospital['City/Town']}, ${hospital['State']}.`;
   
-  if (hospital.hospital_ownership) {
-    desc += ` This ${hospital.hospital_ownership.toLowerCase()} facility`;
+  if (hospital['Hospital Ownership']) {
+    desc += ` This ${hospital['Hospital Ownership'].toLowerCase()} facility`;
   }
   
-  if (hospital.emergency_services === 'Yes') {
+  if (hospital['Emergency Services'] === 'Yes') {
     desc += ' offers emergency services.';
   } else {
     desc += ' provides healthcare services to the community.';
   }
   
-  if (hospital.hospital_overall_rating && hospital.hospital_overall_rating !== 'Not Available') {
-    desc += ` The facility has a CMS overall rating of ${hospital.hospital_overall_rating} out of 5 stars.`;
+  if (hospital['Hospital overall rating'] && hospital['Hospital overall rating'] !== 'Not Available') {
+    desc += ` The facility has a CMS overall rating of ${hospital['Hospital overall rating']} out of 5 stars.`;
   }
   
   return desc;
+}
+
+// Parse CSV string into array of objects
+function parseCSV(csvText: string): CMSHospital[] {
+  const lines = csvText.split('\n');
+  if (lines.length < 2) return [];
+  
+  // Parse header line - handle quoted fields
+  const headerLine = lines[0];
+  const headers: string[] = [];
+  let inQuotes = false;
+  let currentField = '';
+  
+  for (let i = 0; i < headerLine.length; i++) {
+    const char = headerLine[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      headers.push(currentField.trim());
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+  headers.push(currentField.trim());
+  
+  console.log(`CSV Headers: ${headers.slice(0, 10).join(', ')}...`);
+  
+  const hospitals: CMSHospital[] = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    const values: string[] = [];
+    inQuotes = false;
+    currentField = '';
+    
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(currentField.trim());
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+    values.push(currentField.trim());
+    
+    const row: Record<string, string> = {};
+    for (let j = 0; j < headers.length && j < values.length; j++) {
+      row[headers[j]] = values[j];
+    }
+    
+    if (row['Facility ID'] && row['Facility Name']) {
+      hospitals.push(row as unknown as CMSHospital);
+    }
+  }
+  
+  return hospitals;
 }
 
 serve(async (req) => {
@@ -114,21 +176,31 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Build CMS API URL with filters
-    let cmsUrl = `https://data.cms.gov/data-api/v1/dataset/xubh-q36u/data?size=${limit}&offset=${offset}`;
+    // Download CSV directly from CMS
+    const csvUrl = 'https://data.cms.gov/provider-data/sites/default/files/resources/893c372430d9d71a1c52737d01239d47_1760630721/Hospital_General_Information.csv';
+    
+    console.log(`Fetching CSV from CMS: ${csvUrl}`);
+    
+    const csvResponse = await fetch(csvUrl);
+    if (!csvResponse.ok) {
+      throw new Error(`CMS CSV download error: ${csvResponse.status}`);
+    }
+    
+    const csvText = await csvResponse.text();
+    console.log(`Downloaded CSV, size: ${csvText.length} bytes`);
+    
+    let hospitals = parseCSV(csvText);
+    console.log(`Parsed ${hospitals.length} hospitals from CSV`);
+    
+    // Filter by state if specified
     if (state) {
-      cmsUrl += `&filter[state]=${state}`;
+      hospitals = hospitals.filter(h => h['State'] === state);
+      console.log(`Filtered to ${hospitals.length} hospitals in ${state}`);
     }
     
-    console.log(`Fetching from CMS API: ${cmsUrl}`);
-    
-    const cmsResponse = await fetch(cmsUrl);
-    if (!cmsResponse.ok) {
-      throw new Error(`CMS API error: ${cmsResponse.status}`);
-    }
-    
-    const hospitals: CMSHospital[] = await cmsResponse.json();
-    console.log(`Fetched ${hospitals.length} hospitals from CMS`);
+    // Apply offset and limit
+    hospitals = hospitals.slice(offset, offset + limit);
+    console.log(`Processing ${hospitals.length} hospitals (offset=${offset}, limit=${limit})`);
     
     if (hospitals.length === 0) {
       return new Response(JSON.stringify({ 
@@ -141,31 +213,31 @@ serve(async (req) => {
       });
     }
     
-    // Get existing facility IDs to avoid duplicates
-    const facilityIds = hospitals.map(h => h.facility_id);
+    // Get existing facility names to avoid duplicates
     const { data: existingOpps } = await supabase
       .from('opportunities')
-      .select('name, address')
-      .in('name', hospitals.map(h => h.facility_name));
+      .select('name')
+      .eq('type', 'hospital');
     
     const existingNames = new Set(existingOpps?.map(o => o.name) || []);
+    console.log(`Found ${existingNames.size} existing hospitals in database`);
     
     let imported = 0;
     let skipped = 0;
     let failed = 0;
-    const batchSize = 10; // Process 10 at a time to avoid rate limits
+    const batchSize = 10;
     
     for (let i = 0; i < hospitals.length; i += batchSize) {
       const batch = hospitals.slice(i, i + batchSize);
       
       const insertPromises = batch.map(async (hospital) => {
         // Skip if already exists
-        if (existingNames.has(hospital.facility_name)) {
+        if (existingNames.has(hospital['Facility Name'])) {
           skipped++;
           return null;
         }
         
-        const fullAddress = `${hospital.address}, ${hospital.city}, ${hospital.state} ${hospital.zip_code}`;
+        const fullAddress = `${hospital['Address']}, ${hospital['City/Town']}, ${hospital['State']} ${hospital['ZIP Code']}`;
         
         // Geocode the address
         const coords = await geocodeAddress(fullAddress, mapboxToken);
@@ -176,17 +248,17 @@ serve(async (req) => {
         }
         
         const opportunity = {
-          name: hospital.facility_name,
+          name: hospital['Facility Name'],
           type: 'hospital' as const,
-          location: `${hospital.city}, ${hospital.state}`,
+          location: `${hospital['City/Town']}, ${hospital['State']}`,
           address: fullAddress,
           latitude: coords.latitude,
           longitude: coords.longitude,
-          phone: hospital.phone_number || null,
+          phone: hospital['Telephone Number'] || null,
           email: null,
           website: null,
           hours_required: '4-8 hours/week',
-          acceptance_likelihood: mapRatingToAcceptanceLikelihood(hospital.hospital_overall_rating),
+          acceptance_likelihood: mapRatingToAcceptanceLikelihood(hospital['Hospital overall rating']),
           requirements: buildRequirements(hospital),
           description: buildDescription(hospital),
         };
@@ -214,6 +286,8 @@ serve(async (req) => {
       if (i + batchSize < hospitals.length) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
+      
+      console.log(`Progress: processed ${i + batch.length}/${hospitals.length}, imported=${imported}`);
     }
     
     console.log(`Import complete: imported=${imported}, skipped=${skipped}, failed=${failed}`);
