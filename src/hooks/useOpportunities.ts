@@ -36,6 +36,21 @@ interface UseOpportunitiesResult {
   totalCount: number;
 }
 
+// Calculate distance client-side (Haversine formula)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959; // Earth radius in miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export function useOpportunities({
   userLocation,
   filterType,
@@ -43,6 +58,7 @@ export function useOpportunities({
   pageSize = 20,
 }: UseOpportunitiesOptions): UseOpportunitiesResult {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [allOpportunities, setAllOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -51,20 +67,17 @@ export function useOpportunities({
 
   // Reset when filters change
   useEffect(() => {
-    setOpportunities([]);
     setPage(0);
     setHasMore(true);
   }, [filterType, searchTerm, userLocation?.lat, userLocation?.lng]);
 
-  const fetchOpportunities = useCallback(async (pageNum: number) => {
+  // Fetch ALL opportunities once, then sort and paginate client-side
+  const fetchAllOpportunities = useCallback(async () => {
     setLoading(true);
     try {
-      const from = pageNum * pageSize;
-      const to = from + pageSize - 1;
-
       let query = supabase
         .from("opportunities_with_ratings")
-        .select("*", { count: "exact" });
+        .select("*");
 
       // Apply type filter
       if (filterType !== "all") {
@@ -76,10 +89,7 @@ export function useOpportunities({
         query = query.or(`name.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`);
       }
 
-      // Pagination
-      query = query.range(from, to);
-
-      const { data, error, count } = await query;
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -102,7 +112,7 @@ export function useOpportunities({
         distance: undefined,
       }));
 
-      // Calculate distance client-side (server-side would require RPC call)
+      // Calculate distance and sort if user location available
       if (userLocation) {
         processedData = processedData.map((opp) => ({
           ...opp,
@@ -116,7 +126,7 @@ export function useOpportunities({
             : undefined,
         }));
 
-        // Sort by distance
+        // Sort by distance (closest first)
         processedData.sort((a, b) => {
           if (a.distance === undefined) return 1;
           if (b.distance === undefined) return -1;
@@ -124,14 +134,8 @@ export function useOpportunities({
         });
       }
 
-      if (pageNum === 0) {
-        setOpportunities(processedData);
-      } else {
-        setOpportunities((prev) => [...prev, ...processedData]);
-      }
-
-      setTotalCount(count || 0);
-      setHasMore(processedData.length === pageSize);
+      setAllOpportunities(processedData);
+      setTotalCount(processedData.length);
     } catch (error) {
       console.error("Error fetching opportunities:", error);
       toast({
@@ -142,12 +146,20 @@ export function useOpportunities({
     } finally {
       setLoading(false);
     }
-  }, [filterType, searchTerm, userLocation, pageSize, toast]);
+  }, [filterType, searchTerm, userLocation, toast]);
 
-  // Fetch on mount and when filters/page change
+  // Fetch all opportunities when filters change
   useEffect(() => {
-    fetchOpportunities(page);
-  }, [page, fetchOpportunities]);
+    fetchAllOpportunities();
+  }, [fetchAllOpportunities]);
+
+  // Paginate from already-sorted data
+  useEffect(() => {
+    const endIndex = (page + 1) * pageSize;
+    const paginatedData = allOpportunities.slice(0, endIndex);
+    setOpportunities(paginatedData);
+    setHasMore(endIndex < allOpportunities.length);
+  }, [allOpportunities, page, pageSize]);
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {
@@ -162,18 +174,4 @@ export function useOpportunities({
     loadMore,
     totalCount,
   };
-}
-
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 3959; // Earth radius in miles
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
 }

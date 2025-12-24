@@ -105,14 +105,13 @@ const Dashboard = () => {
       // Fetch all opportunities
       const { data: oppsData, error: oppsError } = await supabase
         .from("opportunities")
-        .select("*")
-        .order("name");
+        .select("*");
 
       if (oppsError) throw oppsError;
 
       let processedOpps = oppsData || [];
       
-      // Calculate distances if location available
+      // Calculate distances and sort if location available
       if (userLocation) {
         processedOpps = processedOpps.map((opp) => ({
           ...opp,
@@ -125,7 +124,11 @@ const Dashboard = () => {
               )
             : undefined,
         }));
+        // Sort by distance (closest first)
         processedOpps.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+      } else {
+        // Default sort by name if no location
+        processedOpps.sort((a, b) => a.name.localeCompare(b.name));
       }
 
       setOpportunities(processedOpps);

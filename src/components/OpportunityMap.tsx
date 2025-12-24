@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Map, List } from 'lucide-react';
+import { Loader2, Map, List, MapPin, RotateCcw } from 'lucide-react';
 
 interface Opportunity {
   id: string;
@@ -29,12 +29,29 @@ interface SavedOpportunity {
 type ViewMode = 'all' | 'saved';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN || '';
+const RADIUS_MILES = 100;
+
+// Calculate distance between two points in miles
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 const OpportunityMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const customPinMarkerRef = useRef<mapboxgl.Marker | null>(null);
   
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -42,7 +59,12 @@ const OpportunityMap = () => {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [savedOpportunities, setSavedOpportunities] = useState<SavedOpportunity[]>([]);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [customPin, setCustomPin] = useState<{ lat: number; lng: number } | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [isPinMode, setIsPinMode] = useState(false);
+
+  // The active center is either custom pin or user location
+  const activeCenter = customPin || userLocation;
 
   // Fetch all opportunities
   useEffect(() => {
@@ -83,7 +105,6 @@ const OpportunityMap = () => {
 
         if (error) throw error;
         
-        // Transform the data to match our interface
         const validData: SavedOpportunity[] = [];
         (data || []).forEach((item: any) => {
           if (item.opportunities && !Array.isArray(item.opportunities)) {
@@ -119,6 +140,26 @@ const OpportunityMap = () => {
     }
   }, []);
 
+  // Filter opportunities within radius
+  const getFilteredOpportunities = useCallback(() => {
+    if (!activeCenter) return [];
+
+    const baseOpportunities = viewMode === 'all' 
+      ? opportunities 
+      : savedOpportunities.map(s => s.opportunities).filter(Boolean);
+
+    return baseOpportunities.filter(opp => {
+      if (!opp.latitude || !opp.longitude) return false;
+      const distance = calculateDistance(
+        activeCenter.lat,
+        activeCenter.lng,
+        opp.latitude,
+        opp.longitude
+      );
+      return distance <= RADIUS_MILES;
+    });
+  }, [activeCenter, opportunities, savedOpportunities, viewMode]);
+
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -135,7 +176,7 @@ const OpportunityMap = () => {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/dark-v11',
-        center: [-98.5795, 39.8283], // Center of US
+        center: [-98.5795, 39.8283],
         zoom: 3.5,
         pitch: 0,
       });
@@ -156,6 +197,17 @@ const OpportunityMap = () => {
         setMapError('Error loading map');
         setLoading(false);
       });
+
+      // Handle map click for custom pin
+      map.current.on('click', (e) => {
+        if (!isPinMode) return;
+        
+        setCustomPin({
+          lat: e.lngLat.lat,
+          lng: e.lngLat.lng,
+        });
+        setIsPinMode(false);
+      });
     } catch (err: any) {
       console.error('Map initialization error:', err);
       setMapError('Failed to initialize map');
@@ -168,6 +220,12 @@ const OpportunityMap = () => {
     };
   }, []);
 
+  // Update cursor when in pin mode
+  useEffect(() => {
+    if (!map.current) return;
+    map.current.getCanvas().style.cursor = isPinMode ? 'crosshair' : '';
+  }, [isPinMode]);
+
   // Update markers when data or mode changes
   useEffect(() => {
     if (!map.current || loading) return;
@@ -176,16 +234,13 @@ const OpportunityMap = () => {
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
-    // Get opportunities to display based on mode
-    const displayOpportunities = viewMode === 'all' 
-      ? opportunities 
-      : savedOpportunities.map(s => s.opportunities).filter(Boolean);
+    // Get filtered opportunities within radius
+    const displayOpportunities = getFilteredOpportunities();
 
     // Add markers for each opportunity
     displayOpportunities.forEach((opp) => {
       if (!opp.latitude || !opp.longitude) return;
 
-      // Create custom marker element
       const el = document.createElement('div');
       el.className = 'opportunity-marker';
       el.style.cssText = `
@@ -201,7 +256,6 @@ const OpportunityMap = () => {
         transition: transform 0.2s;
       `;
 
-      // Color based on type
       const colors: Record<string, string> = {
         hospital: '#3B82F6',
         clinic: '#10B981',
@@ -211,7 +265,6 @@ const OpportunityMap = () => {
       };
       el.style.backgroundColor = colors[opp.type] || '#6B7280';
       
-      // Icon based on type
       const icons: Record<string, string> = {
         hospital: '🏥',
         clinic: '🏪',
@@ -228,7 +281,6 @@ const OpportunityMap = () => {
         el.style.transform = 'scale(1)';
       });
 
-      // Create popup
       const popup = new mapboxgl.Popup({
         offset: 25,
         closeButton: true,
@@ -261,31 +313,24 @@ const OpportunityMap = () => {
       markersRef.current.push(marker);
     });
 
-    // Fit bounds to markers if there are any
-    if (displayOpportunities.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      displayOpportunities.forEach((opp) => {
-        if (opp.latitude && opp.longitude) {
-          bounds.extend([opp.longitude, opp.latitude]);
-        }
+    // Fit bounds to markers if there are any and we have a center
+    if (displayOpportunities.length > 0 && activeCenter) {
+      map.current.flyTo({
+        center: [activeCenter.lng, activeCenter.lat],
+        zoom: 7,
+        duration: 1000,
       });
-      if (userLocation) {
-        bounds.extend([userLocation.lng, userLocation.lat]);
-      }
-      map.current.fitBounds(bounds, { padding: 80, maxZoom: 10 });
     }
-  }, [opportunities, savedOpportunities, viewMode, loading, userLocation]);
+  }, [opportunities, savedOpportunities, viewMode, loading, activeCenter, getFilteredOpportunities]);
 
   // Add user location marker
   useEffect(() => {
     if (!map.current || !userLocation || loading) return;
 
-    // Remove existing user marker
     if (userMarkerRef.current) {
       userMarkerRef.current.remove();
     }
 
-    // Create user location marker
     const el = document.createElement('div');
     el.style.cssText = `
       width: 20px;
@@ -308,9 +353,58 @@ const OpportunityMap = () => {
       .addTo(map.current);
   }, [userLocation, loading]);
 
-  const displayCount = viewMode === 'all' 
-    ? opportunities.filter(o => o.latitude && o.longitude).length 
-    : savedOpportunities.filter(s => s.opportunities?.latitude && s.opportunities?.longitude).length;
+  // Add custom pin marker
+  useEffect(() => {
+    if (!map.current || loading) return;
+
+    if (customPinMarkerRef.current) {
+      customPinMarkerRef.current.remove();
+      customPinMarkerRef.current = null;
+    }
+
+    if (!customPin) return;
+
+    const el = document.createElement('div');
+    el.style.cssText = `
+      width: 32px;
+      height: 32px;
+      background: #EF4444;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.3), 0 2px 8px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    `;
+    el.textContent = '📌';
+
+    const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+      <div style="padding: 8px; font-family: system-ui, sans-serif;">
+        <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">📌 Custom Location</h3>
+        <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">Showing opportunities within ${RADIUS_MILES} miles</p>
+      </div>
+    `);
+
+    customPinMarkerRef.current = new mapboxgl.Marker(el)
+      .setLngLat([customPin.lng, customPin.lat])
+      .setPopup(popup)
+      .addTo(map.current);
+  }, [customPin, loading]);
+
+  const handleResetToMyLocation = () => {
+    setCustomPin(null);
+    setIsPinMode(false);
+    if (map.current && userLocation) {
+      map.current.flyTo({
+        center: [userLocation.lng, userLocation.lat],
+        zoom: 7,
+        duration: 1000,
+      });
+    }
+  };
+
+  const displayCount = getFilteredOpportunities().length;
 
   if (mapError) {
     return (
@@ -333,7 +427,7 @@ const OpportunityMap = () => {
       )}
 
       {/* Mode toggle */}
-      <div className="absolute top-4 left-4 z-10 flex gap-2">
+      <div className="absolute top-4 left-4 z-10 flex flex-wrap gap-2">
         <Button
           variant={viewMode === 'all' ? 'default' : 'outline'}
           size="sm"
@@ -355,12 +449,45 @@ const OpportunityMap = () => {
         </Button>
       </div>
 
+      {/* Pin controls */}
+      <div className="absolute top-16 left-4 z-10 flex flex-wrap gap-2">
+        <Button
+          variant={isPinMode ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setIsPinMode(!isPinMode)}
+          className="bg-background/90 backdrop-blur-sm"
+        >
+          <MapPin className="h-4 w-4 mr-2" />
+          {isPinMode ? 'Click map to place pin...' : 'Drop Pin'}
+        </Button>
+        {customPin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleResetToMyLocation}
+            className="bg-background/90 backdrop-blur-sm"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reset to My Location
+          </Button>
+        )}
+      </div>
+
       {/* Stats badge */}
       <div className="absolute top-4 right-16 z-10">
         <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm text-foreground">
-          {displayCount} locations
+          {displayCount} within {RADIUS_MILES} mi
         </Badge>
       </div>
+
+      {/* No location message */}
+      {!activeCenter && !loading && (
+        <div className="absolute top-28 left-4 z-10 bg-amber-500/90 backdrop-blur-sm rounded-lg p-3 border border-amber-600 max-w-xs">
+          <p className="text-sm text-amber-950 font-medium">
+            📍 Enable location access or drop a pin to see nearby opportunities
+          </p>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="absolute bottom-4 left-4 z-10 bg-background/90 backdrop-blur-sm rounded-lg p-3 border border-border">
@@ -389,6 +516,10 @@ const OpportunityMap = () => {
           <div className="flex items-center gap-2">
             <span className="w-4 h-4 rounded-full bg-[#3B82F6] border-2 border-white shadow-[0_0_0_4px_rgba(59,130,246,0.3)]" style={{ width: '12px', height: '12px' }}></span>
             <span className="text-muted-foreground">You</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full bg-[#EF4444] border-2 border-white flex items-center justify-center text-[10px]">📌</span>
+            <span className="text-muted-foreground">Custom Pin</span>
           </div>
         </div>
       </div>
