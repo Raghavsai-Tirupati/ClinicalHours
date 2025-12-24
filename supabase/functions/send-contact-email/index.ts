@@ -15,6 +15,16 @@ interface ContactEmailRequest {
   message: string;
 }
 
+// HTML escape function to prevent XSS
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -24,7 +34,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { name, email, subject, message }: ContactEmailRequest = await req.json();
 
-    console.log("Received contact form submission:", { name, email, subject });
+    console.log("Received contact form submission:", { name: escapeHtml(name), email: escapeHtml(email), subject: escapeHtml(subject) });
 
     // Validate required fields
     if (!name || !email || !subject || !message) {
@@ -38,6 +48,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Sanitize user inputs before using in HTML
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    const safeSubject = escapeHtml(subject);
+    const safeMessage = escapeHtml(message);
+
     // Send notification email to site owner using Resend HTTP API
     const ownerEmailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -49,14 +65,14 @@ const handler = async (req: Request): Promise<Response> => {
         from: "Clinical Hours <onboarding@resend.dev>",
         to: ["contact@clinicalhours.com"],
         reply_to: email,
-        subject: `Contact Form: ${subject}`,
+        subject: `Contact Form: ${safeSubject}`,
         html: `
           <h2>New Contact Form Submission</h2>
-          <p><strong>From:</strong> ${name} (${email})</p>
-          <p><strong>Subject:</strong> ${subject}</p>
+          <p><strong>From:</strong> ${safeName} (${safeEmail})</p>
+          <p><strong>Subject:</strong> ${safeSubject}</p>
           <hr />
           <h3>Message:</h3>
-          <p>${message.replace(/\n/g, "<br>")}</p>
+          <p>${safeMessage.replace(/\n/g, "<br>")}</p>
         `,
       }),
     });
@@ -81,11 +97,11 @@ const handler = async (req: Request): Promise<Response> => {
         to: [email],
         subject: "We received your message!",
         html: `
-          <h1>Thank you for contacting us, ${name}!</h1>
+          <h1>Thank you for contacting us, ${safeName}!</h1>
           <p>We have received your message and will get back to you as soon as possible.</p>
           <p><strong>Your message:</strong></p>
           <blockquote style="border-left: 3px solid #3b82f6; padding-left: 12px; color: #666;">
-            ${message.replace(/\n/g, "<br>")}
+            ${safeMessage.replace(/\n/g, "<br>")}
           </blockquote>
           <p>Best regards,<br>The Clinical Hours Team</p>
         `,
