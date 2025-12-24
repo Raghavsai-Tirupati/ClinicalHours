@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Stethoscope, User, LogOut } from "lucide-react";
+import { Menu, X, Stethoscope, User, LogOut, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -24,6 +24,7 @@ const Navigation = () => {
     { name: "Home", path: "/" },
     { name: "Dashboard", path: "/dashboard" },
     { name: "Opportunities", path: "/opportunities" },
+    { name: "Map", path: "/map" },
     { name: "About", path: "/about" },
     { name: "My Projects", path: "/projects" },
     { name: "Contact", path: "/contact" },
