@@ -426,13 +426,6 @@ export type Database = {
             referencedRelation: "opportunities_with_ratings"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "saved_opportunities_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_projects: {
