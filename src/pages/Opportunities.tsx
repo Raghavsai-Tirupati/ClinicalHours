@@ -7,11 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Clock, Phone, Mail, Star, AlertCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Search, MapPin, Clock, Phone, Mail, Star, AlertCircle, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import opportunitiesAccent from "@/assets/opportunities-accent.png";
+import ReviewForm from "@/components/ReviewForm";
+import ReviewsList from "@/components/ReviewsList";
 
 interface Opportunity {
   id: string;
@@ -38,6 +41,8 @@ const Opportunities = () => {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [expandedReviews, setExpandedReviews] = useState<Record<string, boolean>>({});
+  const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -167,6 +172,17 @@ const Opportunities = () => {
       default:
         return "bg-muted text-muted-foreground";
     }
+  };
+
+  const toggleReviews = (opportunityId: string) => {
+    setExpandedReviews((prev) => ({
+      ...prev,
+      [opportunityId]: !prev[opportunityId],
+    }));
+  };
+
+  const handleReviewSubmitted = () => {
+    setReviewRefreshTrigger((prev) => prev + 1);
   };
 
   if (authLoading || !user) {
@@ -325,7 +341,35 @@ const Opportunities = () => {
                           </a>
                         </Button>
                       )}
+                      <ReviewForm
+                        opportunityId={opportunity.id}
+                        opportunityName={opportunity.name}
+                        onReviewSubmitted={handleReviewSubmitted}
+                      />
                     </div>
+
+                    {/* Reviews Section */}
+                    <Collapsible
+                      open={expandedReviews[opportunity.id]}
+                      onOpenChange={() => toggleReviews(opportunity.id)}
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-full mt-4">
+                          <ChevronDown
+                            className={`h-4 w-4 mr-2 transition-transform ${
+                              expandedReviews[opportunity.id] ? "rotate-180" : ""
+                            }`}
+                          />
+                          {expandedReviews[opportunity.id] ? "Hide Reviews" : "Show Reviews"}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-4">
+                        <ReviewsList
+                          opportunityId={opportunity.id}
+                          refreshTrigger={reviewRefreshTrigger}
+                        />
+                      </CollapsibleContent>
+                    </Collapsible>
                   </CardContent>
                 </Card>
               ))}

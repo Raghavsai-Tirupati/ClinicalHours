@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,13 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, ExternalLink } from "lucide-react";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [resumeSignedUrl, setResumeSignedUrl] = useState<string | null>(null);
   const [profile, setProfile] = useState({
     full_name: "",
     city: "",
@@ -34,6 +35,21 @@ const Profile = () => {
     linkedin_url: "",
     resume_url: "",
   });
+
+  // Generate signed URL for resume viewing
+  const getSignedResumeUrl = useCallback(async (path: string) => {
+    if (!path) return null;
+    try {
+      const { data, error } = await supabase.storage
+        .from("resumes")
+        .createSignedUrl(path, 3600); // Valid for 1 hour
+      if (error) throw error;
+      return data?.signedUrl || null;
+    } catch (error) {
+      console.error("Error getting signed URL:", error);
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -71,6 +87,12 @@ const Profile = () => {
           linkedin_url: data.linkedin_url || "",
           resume_url: data.resume_url || "",
         });
+        
+        // Generate signed URL for viewing resume
+        if (data.resume_url) {
+          const signedUrl = await getSignedResumeUrl(data.resume_url);
+          setResumeSignedUrl(signedUrl);
+        }
       }
     } catch (error: any) {
       toast.error("Error loading profile: " + error.message);
@@ -86,19 +108,21 @@ const Profile = () => {
 
       const file = e.target.files[0];
       const fileExt = file.name.split(".").pop();
-      const fileName = `${user?.id}/${Math.random()}.${fileExt}`;
+      const filePath = `${user?.id}/${Math.random()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("resumes")
-        .upload(fileName, file);
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("resumes")
-        .getPublicUrl(fileName);
-
-      setProfile({ ...profile, resume_url: publicUrl });
+      // Store just the file path, not a public URL
+      setProfile({ ...profile, resume_url: filePath });
+      
+      // Generate a signed URL for viewing
+      const signedUrl = await getSignedResumeUrl(filePath);
+      setResumeSignedUrl(signedUrl);
+      
       toast.success("Resume uploaded successfully!");
     } catch (error: any) {
       toast.error("Error uploading resume: " + error.message);
@@ -338,16 +362,16 @@ const Profile = () => {
                     />
                     {uploading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
                   </div>
-                  {profile.resume_url && (
-                    <p className="text-sm text-muted-foreground">
+                  {profile.resume_url && resumeSignedUrl && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
                       Current resume:{" "}
                       <a
-                        href={profile.resume_url}
+                        href={resumeSignedUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:underline"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
                       >
-                        View Resume
+                        View Resume <ExternalLink className="h-3 w-3" />
                       </a>
                     </p>
                   )}
