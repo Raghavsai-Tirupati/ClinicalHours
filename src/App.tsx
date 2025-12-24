@@ -14,12 +14,15 @@ import Dashboard from "./pages/Dashboard";
 import MapView from "./pages/MapView";
 import AdminImportHospitals from "./pages/AdminImportHospitals";
 import NotFound from "./pages/NotFound";
+import { useAutoImportHospitals } from "./hooks/useAutoImportHospitals";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+function AppContent() {
+  useAutoImportHospitals();
+  
+  return (
+    <>
       <Toaster />
       <Sonner />
       <BrowserRouter>
@@ -34,10 +37,17 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/admin/import-hospitals" element={<AdminImportHospitals />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+    </>
+  );
+}
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <AppContent />
     </TooltipProvider>
   </QueryClientProvider>
 );
