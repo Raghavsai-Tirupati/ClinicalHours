@@ -3,16 +3,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+// No CORS headers needed - this function is only invoked by cron jobs (server-side)
+const responseHeaders = {
+  "Content-Type": "application/json",
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
+  // This function should only be called by cron jobs, reject browser preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { status: 405 });
   }
 
   try {
@@ -48,7 +47,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ message: "No due reminders found", sent: 0 }),
         {
           status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
+          headers: responseHeaders,
         }
       );
     }
@@ -162,7 +161,7 @@ const handler = async (req: Request): Promise<Response> => {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: responseHeaders,
       }
     );
   } catch (error: any) {
@@ -171,7 +170,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ error: error.message }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: responseHeaders,
       }
     );
   }
