@@ -167,15 +167,34 @@ const Dashboard = () => {
   };
 
   const addToTracker = async (opportunityId: string) => {
+    if (!user?.id) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to add opportunities to your tracker",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("saved_opportunities")
         .insert({
-          user_id: user?.id,
+          user_id: user.id,
           opportunity_id: opportunityId,
         });
 
-      if (error) throw error;
+      if (error) {
+        // Handle duplicate entry error
+        if (error.code === '23505') {
+          toast({
+            title: "Already tracked",
+            description: "This opportunity is already in your tracker",
+          });
+          return;
+        }
+        throw error;
+      }
 
       toast({
         title: "Added to tracker",
