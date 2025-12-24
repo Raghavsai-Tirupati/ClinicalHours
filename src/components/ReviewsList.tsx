@@ -14,6 +14,9 @@ interface Review {
   comment: string | null;
   created_at: string;
   user_id: string;
+  profiles: {
+    full_name: string;
+  } | null;
 }
 
 interface ReviewsListProps {
@@ -31,12 +34,12 @@ const ReviewsList = ({ opportunityId, refreshTrigger }: ReviewsListProps) => {
       try {
         const { data, error } = await supabase
           .from("reviews")
-          .select("*")
+          .select("*, profiles(full_name)")
           .eq("opportunity_id", opportunityId)
           .order("created_at", { ascending: false });
 
         if (error) throw error;
-        setReviews(data || []);
+        setReviews((data as Review[]) || []);
       } catch (error) {
         console.error("Error fetching reviews:", error);
       } finally {
@@ -90,7 +93,9 @@ const ReviewsList = ({ opportunityId, refreshTrigger }: ReviewsListProps) => {
                   <User className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Anonymous Student</p>
+                  <p className="text-sm font-medium">
+                    {review.profiles?.full_name || "Unknown User"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(review.created_at), "MMM d, yyyy")}
                   </p>
