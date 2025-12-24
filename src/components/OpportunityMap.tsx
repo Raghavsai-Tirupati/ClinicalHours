@@ -129,13 +129,20 @@ const OpportunityMap = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setUserLocation({
+          const loc = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          });
+          };
+          console.log('Map: User location detected:', loc);
+          setUserLocation(loc);
         },
         (error) => {
-          console.error('Error getting location:', error);
+          console.error('Map: Error getting location:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000, // Cache for 5 minutes
         }
       );
     }
@@ -149,10 +156,12 @@ const OpportunityMap = () => {
 
     // If no active center, show all opportunities
     if (!activeCenter) {
-      return baseOpportunities.filter(opp => opp.latitude && opp.longitude);
+      const filtered = baseOpportunities.filter(opp => opp.latitude && opp.longitude);
+      console.log('Map: No active center, showing all:', filtered.length);
+      return filtered;
     }
 
-    return baseOpportunities.filter(opp => {
+    const filtered = baseOpportunities.filter(opp => {
       if (!opp.latitude || !opp.longitude) return false;
       const distance = calculateDistance(
         activeCenter.lat,
@@ -162,6 +171,9 @@ const OpportunityMap = () => {
       );
       return distance <= radiusMiles;
     });
+    
+    console.log('Map: Filtered by radius', radiusMiles, 'miles from', activeCenter, ':', filtered.length, 'results');
+    return filtered;
   }, [activeCenter, opportunities, savedOpportunities, viewMode, radiusMiles]);
 
   // Initialize map
