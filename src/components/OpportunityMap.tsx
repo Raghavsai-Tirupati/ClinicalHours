@@ -31,6 +31,15 @@ type ViewMode = 'all' | 'saved';
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN || '';
 const DEFAULT_RADIUS_MILES = 100;
 
+// Type colors for clustering
+const TYPE_COLORS: Record<string, string> = {
+  hospital: '#3B82F6',
+  clinic: '#10B981',
+  hospice: '#8B5CF6',
+  emt: '#F59E0B',
+  volunteer: '#EC4899',
+};
+
 // Calculate distance between two points in miles
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 3959;
@@ -46,10 +55,37 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+// Convert opportunities to GeoJSON
+function opportunitiesToGeoJSON(opportunities: Opportunity[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: opportunities
+      .filter(opp => opp.latitude && opp.longitude)
+      .map(opp => ({
+        type: 'Feature' as const,
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [opp.longitude!, opp.latitude!],
+        },
+        properties: {
+          id: opp.id,
+          name: opp.name,
+          type: opp.type,
+          location: opp.location,
+          acceptance_likelihood: opp.acceptance_likelihood,
+          hours_required: opp.hours_required,
+          website: opp.website || '',
+          email: opp.email || '',
+          phone: opp.phone || '',
+        },
+      })),
+  };
+}
+
 const OpportunityMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const popupRef = useRef<mapboxgl.Popup | null>(null);
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const customPinMarkerRef = useRef<mapboxgl.Marker | null>(null);
   
@@ -64,6 +100,7 @@ const OpportunityMap = () => {
   const [mapError, setMapError] = useState<string | null>(null);
   const [isPinMode, setIsPinMode] = useState(false);
   const [radiusMiles, setRadiusMiles] = useState(DEFAULT_RADIUS_MILES);
+  const [mapReady, setMapReady] = useState(false);
 
   // Combined loading state
   const loading = mapLoading || dataLoading;
@@ -167,7 +204,7 @@ const OpportunityMap = () => {
         {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 300000, // Cache for 5 minutes
+          maximumAge: 300000,
         }
       );
     }
@@ -179,14 +216,11 @@ const OpportunityMap = () => {
       ? opportunities 
       : savedOpportunities.map(s => s.opportunities).filter(Boolean);
 
-    // If no active center, show all opportunities
     if (!activeCenter) {
-      const filtered = baseOpportunities.filter(opp => opp.latitude && opp.longitude);
-      console.log('Map: No active center, showing all:', filtered.length);
-      return filtered;
+      return baseOpportunities.filter(opp => opp.latitude && opp.longitude);
     }
 
-    const filtered = baseOpportunities.filter(opp => {
+    return baseOpportunities.filter(opp => {
       if (!opp.latitude || !opp.longitude) return false;
       const distance = calculateDistance(
         activeCenter.lat,
@@ -196,12 +230,9 @@ const OpportunityMap = () => {
       );
       return distance <= radiusMiles;
     });
-    
-    console.log('Map: Filtered by radius', radiusMiles, 'miles from', activeCenter, ':', filtered.length, 'results');
-    return filtered;
   }, [activeCenter, opportunities, savedOpportunities, viewMode, radiusMiles]);
 
-  // Initialize map
+  // Initialize map with clustering layers
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
@@ -230,6 +261,172 @@ const OpportunityMap = () => {
       );
 
       map.current.on('load', () => {
+        if (!map.current) return;
+        
+        // Add empty source for opportunities (will be updated later)
+        map.current.addSource('opportunities', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] },
+          cluster: true,
+          clusterMaxZoom: 14,
+          clusterRadius: 50,
+        });
+
+        // Cluster circle layer
+        map.current.addLayer({
+          id: 'clusters',
+          type: 'circle',
+          source: 'opportunities',
+          filter: ['has', 'point_count'],
+          paint: {
+            'circle-color': [
+              'step',
+              ['get', 'point_count'],
+              '#51bbd6',
+              100,
+              '#f1f075',
+              500,
+              '#f28cb1',
+            ],
+            'circle-radius': [
+              'step',
+              ['get', 'point_count'],
+              20,
+              100,
+              30,
+              500,
+              40,
+            ],
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff',
+          },
+        });
+
+        // Cluster count label layer
+        map.current.addLayer({
+          id: 'cluster-count',
+          type: 'symbol',
+          source: 'opportunities',
+          filter: ['has', 'point_count'],
+          layout: {
+            'text-field': ['get', 'point_count_abbreviated'],
+            'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+            'text-size': 12,
+          },
+          paint: {
+            'text-color': '#000000',
+          },
+        });
+
+        // Unclustered point layer - color by type
+        map.current.addLayer({
+          id: 'unclustered-point',
+          type: 'circle',
+          source: 'opportunities',
+          filter: ['!', ['has', 'point_count']],
+          paint: {
+            'circle-color': [
+              'match',
+              ['get', 'type'],
+              'hospital', TYPE_COLORS.hospital,
+              'clinic', TYPE_COLORS.clinic,
+              'hospice', TYPE_COLORS.hospice,
+              'emt', TYPE_COLORS.emt,
+              'volunteer', TYPE_COLORS.volunteer,
+              '#6B7280', // default gray
+            ],
+            'circle-radius': 10,
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff',
+          },
+        });
+
+        // Click on cluster to zoom in
+        map.current.on('click', 'clusters', (e) => {
+          if (!map.current) return;
+          const features = map.current.queryRenderedFeatures(e.point, {
+            layers: ['clusters'],
+          });
+          if (!features.length) return;
+          
+          const clusterId = features[0].properties?.cluster_id;
+          const source = map.current.getSource('opportunities') as mapboxgl.GeoJSONSource;
+          
+          source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err || !map.current) return;
+            const geometry = features[0].geometry;
+            if (geometry.type === 'Point') {
+              map.current.easeTo({
+                center: geometry.coordinates as [number, number],
+                zoom: zoom,
+              });
+            }
+          });
+        });
+
+        // Click on individual point to show popup
+        map.current.on('click', 'unclustered-point', (e) => {
+          if (!map.current || !e.features?.length) return;
+          
+          const feature = e.features[0];
+          const geometry = feature.geometry;
+          if (geometry.type !== 'Point') return;
+          
+          const coordinates = geometry.coordinates.slice() as [number, number];
+          const props = feature.properties;
+          
+          // Ensure popup opens at clicked location even when map is zoomed out
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+
+          // Close existing popup
+          if (popupRef.current) {
+            popupRef.current.remove();
+          }
+
+          popupRef.current = new mapboxgl.Popup({
+            closeButton: true,
+            closeOnClick: true,
+            maxWidth: '300px',
+          })
+            .setLngLat(coordinates)
+            .setHTML(`
+              <div style="padding: 8px; font-family: system-ui, sans-serif;">
+                <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1f2937;">${props?.name || 'Unknown'}</h3>
+                <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280; text-transform: capitalize;">
+                  <strong>Type:</strong> ${props?.type || 'N/A'}
+                </p>
+                <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280;">
+                  <strong>Location:</strong> ${props?.location || 'N/A'}
+                </p>
+                <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280;">
+                  <strong>Hours:</strong> ${props?.hours_required || 'N/A'}
+                </p>
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280; text-transform: capitalize;">
+                  <strong>Acceptance:</strong> ${props?.acceptance_likelihood || 'N/A'}
+                </p>
+                ${props?.website ? `<a href="${props.website}" target="_blank" rel="noopener" style="font-size: 12px; color: #3b82f6; text-decoration: underline;">Visit Website</a>` : ''}
+              </div>
+            `)
+            .addTo(map.current);
+        });
+
+        // Change cursor on hover
+        map.current.on('mouseenter', 'clusters', () => {
+          if (map.current) map.current.getCanvas().style.cursor = 'pointer';
+        });
+        map.current.on('mouseleave', 'clusters', () => {
+          if (map.current && !isPinMode) map.current.getCanvas().style.cursor = '';
+        });
+        map.current.on('mouseenter', 'unclustered-point', () => {
+          if (map.current) map.current.getCanvas().style.cursor = 'pointer';
+        });
+        map.current.on('mouseleave', 'unclustered-point', () => {
+          if (map.current && !isPinMode) map.current.getCanvas().style.cursor = '';
+        });
+
+        setMapReady(true);
         setMapLoading(false);
       });
 
@@ -239,9 +436,16 @@ const OpportunityMap = () => {
         setMapLoading(false);
       });
 
-      // Handle map click for custom pin
+      // Handle map click for custom pin (only when not clicking on features)
       map.current.on('click', (e) => {
-        if (!isPinMode) return;
+        if (!isPinMode || !map.current) return;
+        
+        // Check if clicked on a cluster or point
+        const features = map.current.queryRenderedFeatures(e.point, {
+          layers: ['clusters', 'unclustered-point'],
+        });
+        
+        if (features.length > 0) return; // Don't place pin if clicking on a feature
         
         setCustomPin({
           lat: e.lngLat.lat,
@@ -267,95 +471,21 @@ const OpportunityMap = () => {
     map.current.getCanvas().style.cursor = isPinMode ? 'crosshair' : '';
   }, [isPinMode]);
 
-  // Update markers when data or mode changes
+  // Update GeoJSON source when data or filters change
   useEffect(() => {
-    if (!map.current || loading) return;
+    if (!map.current || !mapReady) return;
 
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
+    const source = map.current.getSource('opportunities') as mapboxgl.GeoJSONSource;
+    if (!source) return;
 
-    // Get filtered opportunities within radius
-    const displayOpportunities = getFilteredOpportunities();
+    const filtered = getFilteredOpportunities();
+    const geojson = opportunitiesToGeoJSON(filtered);
+    
+    console.log('Map: Updating source with', filtered.length, 'filtered opportunities');
+    source.setData(geojson);
 
-    // Add markers for each opportunity
-    displayOpportunities.forEach((opp) => {
-      if (!opp.latitude || !opp.longitude) return;
-
-      const el = document.createElement('div');
-      el.className = 'opportunity-marker';
-      el.style.cssText = `
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        transition: transform 0.2s;
-      `;
-
-      const colors: Record<string, string> = {
-        hospital: '#3B82F6',
-        clinic: '#10B981',
-        hospice: '#8B5CF6',
-        emt: '#F59E0B',
-        volunteer: '#EC4899',
-      };
-      el.style.backgroundColor = colors[opp.type] || '#6B7280';
-      
-      const icons: Record<string, string> = {
-        hospital: '🏥',
-        clinic: '🏪',
-        hospice: '🏠',
-        emt: '🚑',
-        volunteer: '❤️',
-      };
-      el.textContent = icons[opp.type] || '📍';
-
-      el.addEventListener('mouseenter', () => {
-        el.style.transform = 'scale(1.2)';
-      });
-      el.addEventListener('mouseleave', () => {
-        el.style.transform = 'scale(1)';
-      });
-
-      const popup = new mapboxgl.Popup({
-        offset: 25,
-        closeButton: true,
-        closeOnClick: false,
-        maxWidth: '300px',
-      }).setHTML(`
-        <div style="padding: 8px; font-family: system-ui, sans-serif;">
-          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1f2937;">${opp.name}</h3>
-          <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280; text-transform: capitalize;">
-            <strong>Type:</strong> ${opp.type}
-          </p>
-          <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280;">
-            <strong>Location:</strong> ${opp.location}
-          </p>
-          <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280;">
-            <strong>Hours:</strong> ${opp.hours_required}
-          </p>
-          <p style="margin: 0 0 8px 0; font-size: 12px; color: #6b7280; text-transform: capitalize;">
-            <strong>Acceptance:</strong> ${opp.acceptance_likelihood}
-          </p>
-          ${opp.website ? `<a href="${opp.website}" target="_blank" rel="noopener" style="font-size: 12px; color: #3b82f6; text-decoration: underline;">Visit Website</a>` : ''}
-        </div>
-      `);
-
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([opp.longitude, opp.latitude])
-        .setPopup(popup)
-        .addTo(map.current!);
-
-      markersRef.current.push(marker);
-    });
-
-    // Fit bounds to markers if there are any
-    if (displayOpportunities.length > 0) {
+    // Fit bounds to data if there are points
+    if (filtered.length > 0) {
       if (activeCenter) {
         map.current.flyTo({
           center: [activeCenter.lng, activeCenter.lat],
@@ -363,9 +493,8 @@ const OpportunityMap = () => {
           duration: 1000,
         });
       } else {
-        // Fit to all markers if no center
         const bounds = new mapboxgl.LngLatBounds();
-        displayOpportunities.forEach((opp) => {
+        filtered.forEach((opp) => {
           if (opp.latitude && opp.longitude) {
             bounds.extend([opp.longitude, opp.latitude]);
           }
@@ -373,11 +502,11 @@ const OpportunityMap = () => {
         map.current.fitBounds(bounds, { padding: 80, maxZoom: 6 });
       }
     }
-  }, [opportunities, savedOpportunities, viewMode, loading, activeCenter, getFilteredOpportunities]);
+  }, [opportunities, savedOpportunities, viewMode, mapReady, activeCenter, radiusMiles, getFilteredOpportunities]);
 
   // Add user location marker
   useEffect(() => {
-    if (!map.current || !userLocation || loading) return;
+    if (!map.current || !userLocation || !mapReady) return;
 
     if (userMarkerRef.current) {
       userMarkerRef.current.remove();
@@ -403,11 +532,11 @@ const OpportunityMap = () => {
       .setLngLat([userLocation.lng, userLocation.lat])
       .setPopup(popup)
       .addTo(map.current);
-  }, [userLocation, loading]);
+  }, [userLocation, mapReady]);
 
   // Add custom pin marker
   useEffect(() => {
-    if (!map.current || loading) return;
+    if (!map.current || !mapReady) return;
 
     if (customPinMarkerRef.current) {
       customPinMarkerRef.current.remove();
@@ -442,7 +571,7 @@ const OpportunityMap = () => {
       .setLngLat([customPin.lng, customPin.lat])
       .setPopup(popup)
       .addTo(map.current);
-  }, [customPin, loading]);
+  }, [customPin, mapReady, radiusMiles]);
 
   const handleResetToMyLocation = () => {
     setCustomPin(null);
@@ -564,31 +693,35 @@ const OpportunityMap = () => {
         <p className="text-xs font-medium text-foreground mb-2">Legend</p>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-[#3B82F6] flex items-center justify-center text-[10px]">🏥</span>
+            <span className="w-4 h-4 rounded-full bg-[#3B82F6] border-2 border-white"></span>
             <span className="text-muted-foreground">Hospital</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-[#10B981] flex items-center justify-center text-[10px]">🏪</span>
+            <span className="w-4 h-4 rounded-full bg-[#10B981] border-2 border-white"></span>
             <span className="text-muted-foreground">Clinic</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-[#8B5CF6] flex items-center justify-center text-[10px]">🏠</span>
+            <span className="w-4 h-4 rounded-full bg-[#8B5CF6] border-2 border-white"></span>
             <span className="text-muted-foreground">Hospice</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-[#F59E0B] flex items-center justify-center text-[10px]">🚑</span>
+            <span className="w-4 h-4 rounded-full bg-[#F59E0B] border-2 border-white"></span>
             <span className="text-muted-foreground">EMT</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-[#EC4899] flex items-center justify-center text-[10px]">❤️</span>
+            <span className="w-4 h-4 rounded-full bg-[#EC4899] border-2 border-white"></span>
             <span className="text-muted-foreground">Volunteer</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-[#3B82F6] border-2 border-white shadow-[0_0_0_4px_rgba(59,130,246,0.3)]" style={{ width: '12px', height: '12px' }}></span>
+            <span className="w-3 h-3 rounded-full bg-[#51bbd6] border border-white"></span>
+            <span className="text-muted-foreground">Cluster</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-[#3B82F6] border-2 border-white shadow-[0_0_0_4px_rgba(59,130,246,0.3)]"></span>
             <span className="text-muted-foreground">You</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-[#EF4444] border-2 border-white flex items-center justify-center text-[10px]">📌</span>
+            <span className="w-4 h-4 rounded-full bg-[#EF4444] border-2 border-white flex items-center justify-center text-[8px]">📌</span>
             <span className="text-muted-foreground">Custom Pin</span>
           </div>
         </div>
