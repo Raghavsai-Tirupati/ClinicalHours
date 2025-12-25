@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, MapPin, Clock, Phone, Mail, Star, AlertCircle, ChevronDown, MessageCircle, Loader2 } from "lucide-react";
+import { Search, MapPin, Clock, Phone, Mail, Star, AlertCircle, ChevronDown, MessageCircle, Loader2, Plus, Check } from "lucide-react";
 import { ReminderDialog } from "@/components/ReminderDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useOpportunities } from "@/hooks/useOpportunities";
+import { supabase } from "@/integrations/supabase/client";
 import opportunitiesAccent from "@/assets/opportunities-accent.png";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewsList from "@/components/ReviewsList";
@@ -25,6 +26,8 @@ const Opportunities = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [expandedReviews, setExpandedReviews] = useState<Record<string, boolean>>({});
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
+  const [savedOpportunityIds, setSavedOpportunityIds] = useState<Set<string>>(new Set());
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -45,6 +48,24 @@ const Opportunities = () => {
     searchTerm: debouncedSearch,
     pageSize: 20,
   });
+
+  // Fetch saved opportunities on mount
+  useEffect(() => {
+    const fetchSavedOpportunities = async () => {
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from("saved_opportunities")
+        .select("opportunity_id")
+        .eq("user_id", user.id);
+      
+      if (!error && data) {
+        setSavedOpportunityIds(new Set(data.map((item) => item.opportunity_id)));
+      }
+    };
+
+    fetchSavedOpportunities();
+  }, [user]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -72,6 +93,47 @@ const Opportunities = () => {
       );
     }
   }, [toast]);
+
+  const handleAddToTracker = async (opportunityId: string) => {
+    if (!user) return;
+    
+    setSavingIds((prev) => new Set(prev).add(opportunityId));
+    
+    const { error } = await supabase
+      .from("saved_opportunities")
+      .insert({
+        user_id: user.id,
+        opportunity_id: opportunityId,
+      });
+    
+    setSavingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(opportunityId);
+      return next;
+    });
+    
+    if (error) {
+      if (error.code === "23505") {
+        toast({
+          title: "Already in tracker",
+          description: "This opportunity is already in your tracker.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add to tracker. Please try again.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+    
+    setSavedOpportunityIds((prev) => new Set(prev).add(opportunityId));
+    toast({
+      title: "Added to tracker!",
+      description: "View it in your Dashboard to track your progress.",
+    });
+  };
 
   const getAcceptanceColor = (rate: string) => {
     switch (rate.toLowerCase()) {
@@ -253,6 +315,29 @@ const Opportunities = () => {
                           </a>
                         </Button>
                       )}
+                      
+                      {/* Add to Tracker Button */}
+                      {savedOpportunityIds.has(opportunity.id) ? (
+                        <Button variant="secondary" size="sm" disabled>
+                          <Check className="mr-2 h-4 w-4" />
+                          In Tracker
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleAddToTracker(opportunity.id)}
+                          disabled={savingIds.has(opportunity.id)}
+                        >
+                          {savingIds.has(opportunity.id) ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="mr-2 h-4 w-4" />
+                          )}
+                          Add to Tracker
+                        </Button>
+                      )}
+                      
                       <ReviewForm
                         opportunityId={opportunity.id}
                         opportunityName={opportunity.name}

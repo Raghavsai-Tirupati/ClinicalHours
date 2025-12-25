@@ -1,16 +1,18 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Hospital, Clock, Search, MapPin, Users, Star, ArrowRight, Building2, TrendingUp, ClipboardCheck, MessageCircle } from "lucide-react";
+import { Hospital, Clock, Search, MapPin, Users, Star, ArrowRight, Building2, TrendingUp, ClipboardCheck, MessageCircle, Heart, Target } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import { useInView } from "@/hooks/useInView";
 import heroImage from "@/assets/hero-medical-purple.png";
 import heroVideo from "@/assets/hero-video.mp4";
+import communityImage from "@/assets/community-illustration.png";
 
 const Home = () => {
   const { ref: statsRef, isInView: statsInView } = useInView({ threshold: 0.2 });
+  const { ref: storyRef, isInView: storyInView } = useInView({ threshold: 0.2 });
   const { ref: featuresRef, isInView: featuresInView } = useInView({ threshold: 0.1 });
   const { ref: howItWorksRef, isInView: howItWorksInView } = useInView({ threshold: 0.1 });
   const { ref: ctaRef, isInView: ctaInView } = useInView({ threshold: 0.2 });
@@ -57,6 +59,21 @@ const Home = () => {
       icon: MapPin,
       title: "Location-Based Search",
       description: "Find clinical opportunities near you with our interactive map and powerful search features.",
+    },
+    {
+      icon: Heart,
+      title: "Student-Focused",
+      description: "Built by students, for students. We understand the challenges of finding clinical opportunities.",
+    },
+    {
+      icon: Users,
+      title: "Community-Driven",
+      description: "Powered by honest reviews and experiences from real pre-med students nationwide.",
+    },
+    {
+      icon: Target,
+      title: "Transparent Process",
+      description: "Clear information about requirements, hours, and acceptance rates—no surprises.",
     },
   ];
 
@@ -124,8 +141,8 @@ const Home = () => {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="text-base px-8 py-6 bg-background/50 backdrop-blur-sm hover:bg-background/80 border-border/50 hover:scale-105 transition-all">
-                <Link to="/about">
-                  Learn More
+                <Link to="/auth">
+                  Get Started
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -194,8 +211,45 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Our Story Section */}
+      <section ref={storyRef} className="py-24 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/2 right-0 w-[600px] h-[600px] rounded-full bg-gradient-radial from-primary/5 to-transparent blur-3xl -translate-y-1/2" />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className={`max-w-5xl mx-auto ${storyInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            <Card className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden">
+              <div className="flex flex-col md:flex-row">
+                <div className="md:w-1/3 p-8 flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                  <img src={communityImage} alt="" className="w-full max-w-[200px] rounded-lg opacity-90" />
+                </div>
+                <CardContent className="md:w-2/3 p-8 space-y-6">
+                  <div>
+                    <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm uppercase tracking-wider mb-4">
+                      Our Story
+                    </span>
+                    <h2 className="text-3xl md:text-4xl font-bold">How It Started</h2>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    As pre-med students ourselves, we experienced firsthand the frustration of trying to find clinical
+                    opportunities. We spent weeks calling different facilities, only to discover that many didn't accept
+                    volunteers, had extremely limited spots, or required certifications we didn't have.
+                  </p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    We realized that there had to be a better way. By creating a centralized platform where students could
+                    share their experiences and insights, we could help future pre-meds navigate this process more
+                    efficiently. Today, ClinicalHours serves hundreds of students across the country.
+                  </p>
+                </CardContent>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
-      <section ref={featuresRef} className="py-24 relative">
+      <section ref={featuresRef} className="py-24 relative bg-gradient-to-b from-background via-primary/5 to-background">
         {/* Decorative background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-gradient-radial from-primary/5 to-transparent blur-3xl" />
@@ -204,9 +258,9 @@ const Home = () => {
         <div className="container mx-auto px-4 relative z-10">
           <div className={`text-center max-w-2xl mx-auto mb-16 ${featuresInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
             <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm uppercase tracking-wider mb-4">
-              Features
+              Why ClinicalHours
             </span>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mt-3 mb-6">Why Choose ClinicalHours?</h2>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mt-3 mb-6">Built for Pre-Med Success</h2>
             <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
               Everything you need to find, evaluate, and secure clinical opportunities in one place.
             </p>
@@ -217,7 +271,7 @@ const Home = () => {
               <Card 
                 key={index} 
                 className={`group border-border/50 bg-card/80 backdrop-blur-sm hover:border-primary/50 hover-lift ${
-                  featuresInView ? `animate-stagger-${index + 1}` : 'opacity-0'
+                  featuresInView ? `animate-stagger-${(index % 3) + 1}` : 'opacity-0'
                 }`}
               >
                 <CardHeader className="pb-4">
