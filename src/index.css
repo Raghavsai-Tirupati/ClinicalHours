@@ -8,109 +8,119 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 270 20% 98%;
-    --foreground: 270 30% 15%;
+    /* Earthy Rose Palette - Cream/white base with subtle earthy tones */
+    --background: 30 25% 97%;
+    --foreground: 153 16% 28%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 270 30% 15%;
+    --card: 30 30% 99%;
+    --card-foreground: 153 16% 28%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 270 30% 15%;
+    --popover: 30 30% 99%;
+    --popover-foreground: 153 16% 28%;
 
-    --primary: 270 60% 55%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 347 54% 50%;
+    --primary-foreground: 30 30% 99%;
 
-    --secondary: 270 30% 95%;
-    --secondary-foreground: 270 60% 45%;
+    --secondary: 9 30% 91%;
+    --secondary-foreground: 153 16% 28%;
 
-    --muted: 270 20% 94%;
-    --muted-foreground: 270 15% 45%;
+    --muted: 150 10% 88%;
+    --muted-foreground: 150 10% 45%;
 
-    --accent: 270 50% 92%;
-    --accent-foreground: 270 60% 35%;
+    --accent: 19 41% 69%;
+    --accent-foreground: 153 16% 20%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 20% 88%;
-    --input: 270 20% 88%;
-    --ring: 270 60% 55%;
+    --border: 9 20% 88%;
+    --input: 9 20% 88%;
+    --ring: 347 54% 50%;
 
     --radius: 0.75rem;
     
-    /* Custom design tokens */
-    --hero-gradient-start: 270 60% 55%;
-    --hero-gradient-end: 280 65% 65%;
-    --success: 145 60% 45%;
-    --success-foreground: 0 0% 100%;
+    /* Custom design tokens - Earthy Rose */
+    --hero-gradient-start: 347 54% 50%;
+    --hero-gradient-end: 19 41% 69%;
+    --success: 150 16% 40%;
+    --success-foreground: 30 30% 99%;
     
-    /* Purple accent shades */
-    --purple-50: 270 40% 98%;
-    --purple-100: 270 50% 95%;
-    --purple-200: 270 50% 90%;
-    --purple-300: 270 55% 80%;
-    --purple-400: 270 60% 65%;
-    --purple-500: 270 60% 55%;
-    --purple-600: 270 65% 45%;
-    --purple-700: 270 70% 35%;
+    /* Earthy Rose accent shades */
+    --rose-50: 9 30% 97%;
+    --rose-100: 9 30% 94%;
+    --rose-200: 9 30% 88%;
+    --rose-300: 19 35% 78%;
+    --rose-400: 19 41% 69%;
+    --rose-500: 347 54% 50%;
+    --rose-600: 347 54% 42%;
+    --rose-700: 347 54% 35%;
     
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(270 30% 15% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(270 30% 15% / 0.08);
-    --shadow-lg: 0 10px 15px -3px hsl(270 30% 15% / 0.1);
-    --shadow-purple: 0 4px 14px -3px hsl(270 60% 55% / 0.25);
+    /* Sage green shades */
+    --sage-50: 150 10% 95%;
+    --sage-100: 150 10% 88%;
+    --sage-200: 150 10% 75%;
+    --sage-300: 150 10% 50%;
+    --sage-400: 153 16% 40%;
+    --sage-500: 153 16% 31%;
+    
+    /* Shadows - subtle warm tones */
+    --shadow-sm: 0 1px 2px 0 hsl(153 16% 28% / 0.04);
+    --shadow-md: 0 4px 6px -1px hsl(153 16% 28% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(153 16% 28% / 0.08);
+    --shadow-rose: 0 4px 14px -3px hsl(347 54% 50% / 0.15);
     
     /* Transitions */
     --transition-base: all 0.2s ease-in-out;
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 270 60% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 30% 95%;
-    --sidebar-accent-foreground: 270 60% 35%;
-    --sidebar-border: 270 20% 88%;
-    --sidebar-ring: 270 60% 55%;
+    --sidebar-background: 30 25% 97%;
+    --sidebar-foreground: 153 16% 28%;
+    --sidebar-primary: 347 54% 50%;
+    --sidebar-primary-foreground: 30 30% 99%;
+    --sidebar-accent: 9 30% 91%;
+    --sidebar-accent-foreground: 153 16% 28%;
+    --sidebar-border: 9 20% 88%;
+    --sidebar-ring: 347 54% 50%;
   }
 
   .dark {
-    --background: 270 15% 8%;
-    --foreground: 270 20% 95%;
+    /* Dark mode - Deep sage with rose accents */
+    --background: 153 16% 10%;
+    --foreground: 9 30% 92%;
 
-    --card: 270 15% 12%;
-    --card-foreground: 270 20% 95%;
+    --card: 153 16% 14%;
+    --card-foreground: 9 30% 92%;
 
-    --popover: 270 15% 12%;
-    --popover-foreground: 270 20% 95%;
+    --popover: 153 16% 14%;
+    --popover-foreground: 9 30% 92%;
 
-    --primary: 270 60% 65%;
-    --primary-foreground: 270 15% 8%;
+    --primary: 347 54% 60%;
+    --primary-foreground: 153 16% 10%;
 
-    --secondary: 270 20% 18%;
-    --secondary-foreground: 270 60% 75%;
+    --secondary: 153 12% 20%;
+    --secondary-foreground: 9 30% 85%;
 
-    --muted: 270 15% 20%;
-    --muted-foreground: 270 15% 60%;
+    --muted: 153 10% 22%;
+    --muted-foreground: 150 10% 60%;
 
-    --accent: 270 30% 25%;
-    --accent-foreground: 270 50% 85%;
+    --accent: 19 35% 45%;
+    --accent-foreground: 9 30% 92%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 270 30% 90%;
+    --destructive: 0 63% 40%;
+    --destructive-foreground: 9 30% 92%;
 
-    --border: 270 15% 20%;
-    --input: 270 15% 20%;
-    --ring: 270 60% 65%;
+    --border: 153 12% 22%;
+    --input: 153 12% 22%;
+    --ring: 347 54% 60%;
     
-    --sidebar-background: 270 15% 10%;
-    --sidebar-foreground: 270 20% 95%;
-    --sidebar-primary: 270 60% 65%;
-    --sidebar-primary-foreground: 270 15% 8%;
-    --sidebar-accent: 270 20% 18%;
-    --sidebar-accent-foreground: 270 50% 85%;
-    --sidebar-border: 270 15% 20%;
-    --sidebar-ring: 270 60% 65%;
+    --sidebar-background: 153 16% 12%;
+    --sidebar-foreground: 9 30% 92%;
+    --sidebar-primary: 347 54% 60%;
+    --sidebar-primary-foreground: 153 16% 10%;
+    --sidebar-accent: 153 12% 20%;
+    --sidebar-accent-foreground: 9 30% 85%;
+    --sidebar-border: 153 12% 22%;
+    --sidebar-ring: 347 54% 60%;
   }
 }
 
