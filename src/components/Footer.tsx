@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Stethoscope, Mail, Github, Linkedin } from "lucide-react";
+import { Mail, Github, Linkedin } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Footer = () => {
   return (
@@ -9,7 +10,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 font-bold text-lg text-primary">
-              <Stethoscope className="h-5 w-5" />
+              <img src={logo} alt="ClinicalHours" className="h-6 w-6" />
               <span>ClinicalHours</span>
             </div>
             <p className="text-sm text-muted-foreground">
