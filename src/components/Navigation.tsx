@@ -38,8 +38,8 @@ const Navigation = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 font-bold text-xl text-primary">
-            <img src={logo} alt="ClinicalHours" className="h-8 w-8" />
+          <Link to="/" className="flex items-center gap-3 font-bold text-2xl text-primary">
+            <img src={logo} alt="ClinicalHours" className="h-12 w-12" />
             <span>ClinicalHours</span>
           </Link>
 

@@ -187,7 +187,7 @@ const Home = () => {
               <div 
                 key={index} 
                 className={`text-center group p-8 rounded-2xl bg-card/50 backdrop-blur-sm border border-border/50 hover-lift ${
-                  statsInView ? `animate-stagger-${index + 1}` : 'opacity-0'
+                  statsInView ? `animate-stagger-${index + 1}` : 'opacity-0 translate-y-12'
                 }`}
               >
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-6 group-hover:bg-primary/20 transition-colors group-hover:scale-110 transform duration-300">
@@ -218,7 +218,7 @@ const Home = () => {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className={`max-w-5xl mx-auto ${storyInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
+          <div className={`max-w-5xl mx-auto ${storyInView ? 'animate-pop-in' : 'opacity-0 translate-y-12'}`}>
             <Card className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden">
               <div className="flex flex-col md:flex-row">
                 <div className="md:w-1/3 p-8 flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
@@ -256,7 +256,7 @@ const Home = () => {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className={`text-center max-w-2xl mx-auto mb-16 ${featuresInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
+          <div className={`text-center max-w-2xl mx-auto mb-16 ${featuresInView ? 'animate-fade-in-up' : 'opacity-0 translate-y-12'}`}>
             <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm uppercase tracking-wider mb-4">
               Why ClinicalHours
             </span>
@@ -267,12 +267,16 @@ const Home = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
+            {features.map((feature, index) => {
+              const animationClass = index % 2 === 0 ? 'animate-slide-in-left' : 'animate-slide-in-right';
+              const delay = `[animation-delay:${index * 100}ms]`;
+              return (
               <Card 
                 key={index} 
                 className={`group border-border/50 bg-card/80 backdrop-blur-sm hover:border-primary/50 hover-lift ${
-                  featuresInView ? `animate-stagger-${(index % 3) + 1}` : 'opacity-0'
+                  featuresInView ? `${animationClass} ${delay}` : 'opacity-0 translate-y-12'
                 }`}
+                style={{ animationDelay: `${index * 100}ms` }}
               >
                 <CardHeader className="pb-4">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-5 group-hover:from-primary/30 group-hover:to-primary/10 transition-all duration-300 group-hover:scale-110">
@@ -284,7 +288,8 @@ const Home = () => {
                   <CardDescription className="text-base leading-relaxed">{feature.description}</CardDescription>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -298,7 +303,7 @@ const Home = () => {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className={`text-center max-w-2xl mx-auto mb-16 ${howItWorksInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
+          <div className={`text-center max-w-2xl mx-auto mb-16 ${howItWorksInView ? 'animate-fade-in-up' : 'opacity-0 translate-y-12'}`}>
             <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm uppercase tracking-wider mb-4">
               How It Works
             </span>
@@ -326,8 +331,9 @@ const Home = () => {
                 <div
                   key={index}
                   className={`relative flex flex-col items-center text-center group ${
-                    howItWorksInView ? `animate-stagger-${index + 1}` : 'opacity-0'
+                    howItWorksInView ? `animate-stagger-${index + 1}` : 'opacity-0 translate-y-12'
                   }`}
+                  style={{ animationDelay: `${index * 150}ms` }}
                 >
                   {/* Step Number Badge */}
                   <div className="relative mb-6">
@@ -377,7 +383,7 @@ const Home = () => {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <div className={`max-w-3xl mx-auto text-center space-y-8 ${ctaInView ? 'animate-scale-in' : 'opacity-0'}`}>
+          <div className={`max-w-3xl mx-auto text-center space-y-8 ${ctaInView ? 'animate-bounce-in' : 'opacity-0 scale-90'}`}>
             <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight">
               Ready to Start Your Clinical Journey?
             </h2>
