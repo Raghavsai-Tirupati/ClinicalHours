@@ -214,14 +214,10 @@ const Home = () => {
                     <h2 className="text-3xl md:text-4xl font-bold">How It Started</h2>
                   </div>
                   <p className="text-muted-foreground leading-relaxed">
-                    As college students—one pre-med, one engineering—we experienced firsthand the frustration of trying to find clinical
-                    opportunities. We spent weeks calling different facilities, only to discover that many didn't accept
-                    volunteers, had extremely limited spots, or required certifications we didn't have.
+                    As college students—one pre-med, one engineering—we saw how frustrating it was to find real clinical experience. The pre-med among us spent weeks calling hospitals and clinics, only to learn that many didn't accept volunteers, had limited spots, or required certifications that were hard to get. After hearing this struggle firsthand, the engineer realized there had to be a better way.
                   </p>
                   <p className="text-muted-foreground leading-relaxed">
-                    We realized that there had to be a better way. By creating a centralized platform where students could
-                    share their experiences and insights, we could help future pre-meds navigate this process more
-                    efficiently. Today, we're building ClinicalHours to help students across the country.
+                    Together, we set out to build a centralized platform where students could share verified opportunities and insights to make the process smoother for everyone pursuing healthcare. Today, we're building ClinicalHours to help pre-meds across the country gain the experience they need—without the confusion.
                   </p>
                 </CardContent>
               </div>
