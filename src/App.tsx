@@ -51,7 +51,7 @@ function AppContent() {
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="clinicalhours-theme">
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="clinicalhours-theme">
         <TooltipProvider>
           <AppContent />
         </TooltipProvider>
