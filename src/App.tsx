@@ -13,6 +13,7 @@ import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import MapView from "./pages/MapView";
 import AdminImportHospitals from "./pages/AdminImportHospitals";
+import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 import { useAutoImportHospitals } from "./hooks/useAutoImportHospitals";
 
@@ -36,6 +37,7 @@ function AppContent() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/admin/import-hospitals" element={<AdminImportHospitals />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
