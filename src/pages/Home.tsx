@@ -68,7 +68,7 @@ const Home = () => {
     {
       icon: Users,
       title: "Community-Driven",
-      description: "Powered by honest reviews and experiences from real pre-med students nationwide.",
+      description: "Share your experiences and learn from other students in your community.",
     },
     {
       icon: Target,
@@ -78,9 +78,9 @@ const Home = () => {
   ];
 
   const stats = [
-    { value: 500, suffix: "+", label: "Clinical Opportunities", icon: Building2 },
-    { value: 50, suffix: "+", label: "Cities Covered", icon: MapPin },
-    { value: 95, suffix: "%", label: "Student Success Rate", icon: TrendingUp },
+    { value: 4500, suffix: "+", label: "Clinical Opportunities", icon: Building2 },
+    { value: 3000, suffix: "+", label: "Locations Covered", icon: MapPin },
+    { value: 100, suffix: "%", label: "Free to Use", icon: Heart },
   ];
 
   return (
@@ -116,7 +116,7 @@ const Home = () => {
           <div className="max-w-2xl space-y-8">
             <div className="space-y-6">
               <span className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium backdrop-blur-sm border border-primary/20 animate-fade-in-up">
-                🩺 The #1 Platform for Pre-Med Students
+                🩺 Your Go-To Platform for Pre-Med Students
               </span>
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-tight animate-fade-in-up-delay-1">
                 Find Your Perfect{" "}
@@ -148,24 +148,6 @@ const Home = () => {
               </Button>
             </div>
 
-            {/* Social Proof */}
-            <div className="flex items-center gap-6 pt-4 animate-fade-in-up-delay-3">
-              <div className="flex -space-x-3">
-                <div className="w-10 h-10 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center backdrop-blur-sm">
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-                <div className="w-10 h-10 rounded-full bg-primary/30 border-2 border-background flex items-center justify-center backdrop-blur-sm">
-                  <Star className="h-5 w-5 text-primary" />
-                </div>
-                <div className="w-10 h-10 rounded-full bg-primary/40 border-2 border-background flex items-center justify-center text-primary font-semibold text-sm backdrop-blur-sm">
-                  +
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">1,000+</span> pre-med students 
-                have found opportunities
-              </p>
-            </div>
           </div>
         </div>
       </section>
@@ -388,7 +370,7 @@ const Home = () => {
               Ready to Start Your Clinical Journey?
             </h2>
             <p className="text-xl md:text-2xl text-primary-foreground/90 leading-relaxed max-w-2xl mx-auto">
-              Join thousands of pre-med students who have found their clinical opportunities through our platform.
+              Be one of the first students to discover clinical opportunities through our platform.
             </p>
             <div className="pt-4">
               <Button 
