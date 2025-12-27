@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import { useInView } from "@/hooks/useInView";
 import { useAuth } from "@/hooks/useAuth";
-import heroVideo from "@/assets/hero-video.mp4";
+import HeroVideoCarousel from "@/components/HeroVideoCarousel";
 import communityImage from "@/assets/community-illustration.png";
 
 const Home = () => {
@@ -98,18 +98,8 @@ const Home = () => {
 
       {/* Hero Section - Full-screen immersive Squarespace style */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden bg-foreground">
-        {/* Video Background */}
-        <div className="absolute inset-0 overflow-hidden">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="w-full h-full object-cover opacity-40"
-          >
-            <source src={heroVideo} type="video/mp4" />
-          </video>
-        </div>
+        {/* Video Background Carousel */}
+        <HeroVideoCarousel />
         
         <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center space-y-8">
