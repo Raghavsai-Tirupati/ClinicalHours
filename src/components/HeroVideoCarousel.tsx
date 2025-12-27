@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import heroVideo1 from "@/assets/hero-video-1.mp4";
 import heroVideo2 from "@/assets/hero-video-2.mp4";
 import heroVideo3 from "@/assets/hero-video-3.mp4";
@@ -7,90 +7,85 @@ import heroVideo4 from "@/assets/hero-video-4.mp4";
 const videos = [heroVideo1, heroVideo2, heroVideo3, heroVideo4];
 
 const HeroVideoCarousel = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [nextIndex, setNextIndex] = useState(1);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const currentVideoRef = useRef<HTMLVideoElement>(null);
-  const nextVideoRef = useRef<HTMLVideoElement>(null);
+  const [activeVideo, setActiveVideo] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<"none" | "left">("none");
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
+  const handleVideoEnd = useCallback(() => {
+    setSlideDirection("left");
+    
+    // After slide animation, switch to next video
+    setTimeout(() => {
+      setActiveVideo((prev) => (prev + 1) % videos.length);
+      setSlideDirection("none");
+    }, 800);
+  }, []);
+
+  // Play active video when it changes
   useEffect(() => {
-    const currentVideo = currentVideoRef.current;
-    if (!currentVideo) return;
-
-    const handleVideoEnd = () => {
-      // Start transition
-      setIsTransitioning(true);
-      
-      // After transition completes, update indices
-      setTimeout(() => {
-        setCurrentIndex(nextIndex);
-        setNextIndex((nextIndex + 1) % videos.length);
-        setIsTransitioning(false);
-      }, 1200); // Match transition duration
-    };
-
-    currentVideo.addEventListener("ended", handleVideoEnd);
-    return () => currentVideo.removeEventListener("ended", handleVideoEnd);
-  }, [nextIndex]);
-
-  // Preload next video
-  useEffect(() => {
-    const nextVideo = nextVideoRef.current;
-    if (nextVideo) {
-      nextVideo.load();
+    const video = videoRefs.current[activeVideo];
+    if (video) {
+      video.currentTime = 0;
+      video.play().catch(() => {});
     }
-  }, [nextIndex]);
+  }, [activeVideo]);
 
-  // Auto-play current video when index changes
+  // Set up video end listener
   useEffect(() => {
-    const currentVideo = currentVideoRef.current;
-    if (currentVideo && !isTransitioning) {
-      currentVideo.currentTime = 0;
-      currentVideo.play().catch(() => {});
-    }
-  }, [currentIndex, isTransitioning]);
+    const video = videoRefs.current[activeVideo];
+    if (!video) return;
+
+    video.addEventListener("ended", handleVideoEnd);
+    return () => video.removeEventListener("ended", handleVideoEnd);
+  }, [activeVideo, handleVideoEnd]);
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Current Video */}
-      <div 
-        className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
-          isTransitioning ? "opacity-0 -translate-x-full" : "opacity-100 translate-x-0"
-        }`}
-      >
-        <video
-          ref={currentVideoRef}
-          autoPlay
-          muted
-          playsInline
-          className="w-full h-full object-cover opacity-40"
-          key={`current-${currentIndex}`}
-        >
-          <source src={videos[currentIndex]} type="video/mp4" />
-        </video>
-      </div>
+      {videos.map((src, index) => {
+        const isActive = index === activeVideo;
+        const isNext = index === (activeVideo + 1) % videos.length;
+        
+        let transform = "translate-x-full"; // Off screen right by default
+        let opacity = "opacity-0";
+        
+        if (isActive) {
+          if (slideDirection === "left") {
+            transform = "-translate-x-full";
+            opacity = "opacity-0";
+          } else {
+            transform = "translate-x-0";
+            opacity = "opacity-100";
+          }
+        } else if (isNext && slideDirection === "left") {
+          transform = "translate-x-0";
+          opacity = "opacity-100";
+        }
 
-      {/* Next Video (slides in from right) */}
-      <div 
-        className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
-          isTransitioning ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
-        }`}
-      >
-        <video
-          ref={nextVideoRef}
-          muted
-          playsInline
-          className="w-full h-full object-cover opacity-40"
-          key={`next-${nextIndex}`}
-        >
-          <source src={videos[nextIndex]} type="video/mp4" />
-        </video>
-      </div>
+        return (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-all duration-700 ease-out ${transform} ${opacity}`}
+          >
+            <video
+              ref={(el) => (videoRefs.current[index] = el)}
+              muted
+              playsInline
+              autoPlay={index === 0}
+              className="w-full h-full object-cover"
+            >
+              <source src={src} type="video/mp4" />
+            </video>
+          </div>
+        );
+      })}
 
-      {/* Blend overlay during transition */}
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/60" />
+
+      {/* Extra blend during transition */}
       <div 
-        className={`absolute inset-0 bg-foreground/30 transition-opacity duration-500 ${
-          isTransitioning ? "opacity-100" : "opacity-0"
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${
+          slideDirection === "left" ? "opacity-100" : "opacity-0"
         }`}
       />
 
@@ -100,7 +95,7 @@ const HeroVideoCarousel = () => {
           <div
             key={index}
             className={`h-0.5 w-8 transition-all duration-300 ${
-              index === currentIndex 
+              index === activeVideo 
                 ? "bg-white/80" 
                 : "bg-white/20"
             }`}
