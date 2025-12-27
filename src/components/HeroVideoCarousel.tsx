@@ -12,14 +12,22 @@ const HeroVideoCarousel = () => {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   const handleVideoEnd = useCallback(() => {
+    // Reset next video to beginning BEFORE transition starts
+    const nextIndex = (activeVideo + 1) % videos.length;
+    const nextVideo = videoRefs.current[nextIndex];
+    if (nextVideo) {
+      nextVideo.currentTime = 0;
+      nextVideo.pause();
+    }
+    
     setSlideDirection("left");
     
     // After slide animation, switch to next video
     setTimeout(() => {
-      setActiveVideo((prev) => (prev + 1) % videos.length);
+      setActiveVideo(nextIndex);
       setSlideDirection("none");
     }, 800);
-  }, []);
+  }, [activeVideo]);
 
   // Play active video when it changes
   useEffect(() => {
