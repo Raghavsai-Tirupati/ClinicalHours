@@ -19,15 +19,108 @@ const GUEST_MODE_KEY = "clinicalhours_guest_mode";
 // Key for storing guest session ID
 const GUEST_SESSION_ID_KEY = "clinicalhours_guest_session_id";
 
+// Debounce interval for activity updates (5 minutes)
+const ACTIVITY_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
+
+// Track last activity update time
+let lastActivityUpdate = 0;
+
 /**
  * Generate a UUID v4 for guest session tracking
  */
 function generateUUID(): string {
+  // Use crypto.randomUUID if available (more secure)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
+}
+
+/**
+ * Get the current referrer, handling edge cases
+ */
+function getReferrer(): string | null {
+  try {
+    const referrer = document.referrer;
+    // Only return external referrers (not same-origin)
+    if (referrer && !referrer.includes(window.location.hostname)) {
+      return referrer.substring(0, 500); // Limit length
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get the current landing page path
+ */
+function getLandingPage(): string {
+  try {
+    return window.location.pathname + window.location.search;
+  } catch {
+    return '/';
+  }
+}
+
+/**
+ * Update guest session activity (debounced)
+ */
+async function updateGuestSessionActivity(sessionId: string): Promise<void> {
+  const now = Date.now();
+  // Only update if enough time has passed since last update
+  if (now - lastActivityUpdate < ACTIVITY_UPDATE_INTERVAL_MS) {
+    return;
+  }
+  lastActivityUpdate = now;
+
+  try {
+    const { error } = await supabase
+      .from('guest_sessions')
+      .update({
+        last_activity: new Date().toISOString(),
+        page_views: supabase.rpc ? undefined : 1, // Will increment via raw SQL if needed
+      })
+      .eq('session_id', sessionId);
+
+    if (error) {
+      // Silently fail - this is non-critical
+      console.debug('Guest session activity update failed:', error.message);
+    }
+  } catch {
+    // Silently fail
+  }
+}
+
+/**
+ * Track guest-to-user conversion
+ */
+async function trackGuestConversion(userId: string): Promise<void> {
+  const sessionId = getGuestSessionId();
+  if (!sessionId) {
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('guest_sessions')
+      .update({ converted_to_user_id: userId })
+      .eq('session_id', sessionId)
+      .is('converted_to_user_id', null); // Only update if not already converted
+
+    if (error) {
+      console.error('Failed to track guest conversion:', error.message);
+    } else {
+      console.log('Guest conversion tracked successfully for session:', sessionId);
+    }
+  } catch (err) {
+    console.error('Error tracking guest conversion:', err);
+  }
 }
 
 /**
@@ -118,11 +211,19 @@ export const useAuth = () => {
   const sessionRef = useRef<Session | null>(null);
   const initializingRef = useRef(false);
 
-  // Clear guest mode when user signs in
+  // Clear guest mode when user signs in and track conversion
   useEffect(() => {
     if (user) {
+      // Track conversion before clearing the session ID
+      const sessionId = getGuestSessionId();
+      if (sessionId) {
+        // Track the conversion asynchronously
+        trackGuestConversion(user.id).finally(() => {
+          // Clear guest session data after tracking
+          setGuestSessionId(null);
+        });
+      }
       setGuestModePreference(false);
-      setGuestSessionId(null);
       setIsGuest(false);
     }
   }, [user]);
@@ -139,21 +240,37 @@ export const useAuth = () => {
       sessionId = generateUUID();
       setGuestSessionId(sessionId);
 
+      const sessionData = {
+        session_id: sessionId,
+        user_agent: navigator.userAgent?.substring(0, 500) || 'unknown',
+        referrer: getReferrer(),
+        landing_page: getLandingPage(),
+        last_activity: new Date().toISOString(),
+        page_views: 1,
+      };
+
       // Fire and forget - don't block on this
       supabase
         .from('guest_sessions')
-        .insert({
-          session_id: sessionId,
-          user_agent: navigator.userAgent,
-        })
+        .insert(sessionData)
         .then(({ error }) => {
           if (error) {
-            console.error('Failed to log guest session:', error);
-            console.error('Error details:', JSON.stringify(error, null, 2));
+            console.error('Failed to log guest session:', error.message);
+            // Log more details for debugging
+            if (error.code === '42501') {
+              console.error('Permission denied - RLS policy may not be configured correctly');
+            } else if (error.code === '23505') {
+              console.error('Session ID already exists - this is expected for returning guests');
+            } else {
+              console.error('Error code:', error.code, 'Details:', error.details);
+            }
           } else {
             console.log('Guest session logged successfully:', sessionId);
           }
         });
+    } else {
+      // Existing session - update activity
+      updateGuestSessionActivity(sessionId);
     }
   }, []);
 

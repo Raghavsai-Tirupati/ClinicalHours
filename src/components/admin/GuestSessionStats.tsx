@@ -9,6 +9,10 @@ import {
   Calendar,
   Clock,
   TrendingUp,
+  UserCheck,
+  Eye,
+  Link2,
+  AlertCircle,
 } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay, startOfWeek, parseISO } from 'date-fns';
 
@@ -22,24 +26,48 @@ interface HourlyCount {
   count: number;
 }
 
+interface GuestSession {
+  created_at: string;
+  converted_to_user_id: string | null;
+  referrer: string | null;
+  page_views: number | null;
+  last_activity: string | null;
+}
+
+interface ReferrerCount {
+  referrer: string;
+  count: number;
+}
+
 export default function GuestSessionStats() {
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [todayCount, setTodayCount] = useState<number>(0);
   const [weekCount, setWeekCount] = useState<number>(0);
+  const [convertedCount, setConvertedCount] = useState<number>(0);
+  const [activeSessionsCount, setActiveSessionsCount] = useState<number>(0);
   const [dailyCounts, setDailyCounts] = useState<DailyCount[]>([]);
   const [hourlyCounts, setHourlyCounts] = useState<HourlyCount[]>([]);
+  const [topReferrers, setTopReferrers] = useState<ReferrerCount[]>([]);
+  const [avgPageViews, setAvgPageViews] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [diagnosticInfo, setDiagnosticInfo] = useState<string | null>(null);
+
+  // Get user's timezone
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   async function fetchStats() {
     setLoading(true);
     setError(null);
+    setDiagnosticInfo(null);
     try {
       const now = new Date();
       const todayStart = startOfDay(now).toISOString();
       const todayEnd = endOfDay(now).toISOString();
       const weekStart = startOfWeek(now, { weekStartsOn: 0 }).toISOString();
       const thirtyDaysAgo = subDays(now, 30).toISOString();
+      // Active sessions: last activity within 24 hours
+      const activeThreshold = subDays(now, 1).toISOString();
 
       // Fetch total count
       const { count: total, error: totalError } = await supabase
@@ -71,13 +99,37 @@ export default function GuestSessionStats() {
       if (weekError) throw weekError;
       setWeekCount(week || 0);
 
-      // Fetch sessions from last 30 days for daily breakdown (paginate for accuracy)
-      const sessions: Array<{ created_at: string }> = [];
+      // Fetch converted count
+      const { count: converted, error: convertedError } = await supabase
+        .from('guest_sessions')
+        .select('*', { count: 'exact', head: true })
+        .not('converted_to_user_id', 'is', null);
+
+      if (convertedError) {
+        console.warn('Could not fetch converted count:', convertedError.message);
+      } else {
+        setConvertedCount(converted || 0);
+      }
+
+      // Fetch active sessions (last activity within 24 hours)
+      const { count: activeSessions, error: activeError } = await supabase
+        .from('guest_sessions')
+        .select('*', { count: 'exact', head: true })
+        .gte('last_activity', activeThreshold);
+
+      if (activeError) {
+        console.warn('Could not fetch active sessions count:', activeError.message);
+      } else {
+        setActiveSessionsCount(activeSessions || 0);
+      }
+
+      // Fetch sessions from last 30 days for detailed breakdown (paginate for accuracy)
+      const sessions: GuestSession[] = [];
       const PAGE_SIZE = 1000;
       for (let offset = 0; ; offset += PAGE_SIZE) {
         const { data, error: sessionsError } = await supabase
           .from('guest_sessions')
-          .select('created_at')
+          .select('created_at, converted_to_user_id, referrer, page_views, last_activity')
           .gte('created_at', thirtyDaysAgo)
           .order('created_at', { ascending: false })
           .range(offset, offset + PAGE_SIZE - 1);
@@ -85,13 +137,19 @@ export default function GuestSessionStats() {
         if (sessionsError) throw sessionsError;
         if (!data || data.length === 0) break;
 
-        sessions.push(...data);
+        sessions.push(...(data as GuestSession[]));
         if (data.length < PAGE_SIZE) break;
       }
 
-      // Group by day
+      // Update diagnostic info
+      setDiagnosticInfo(`Loaded ${sessions.length} sessions from last 30 days. Timezone: ${userTimezone}`);
+
+      // Group by day (using user's timezone for display)
       const dailyMap = new Map<string, number>();
       const hourlyMap = new Map<number, number>();
+      const referrerMap = new Map<string, number>();
+      let totalPageViews = 0;
+      let sessionsWithPageViews = 0;
 
       // Initialize last 30 days with 0
       for (let i = 0; i < 30; i++) {
@@ -106,14 +164,40 @@ export default function GuestSessionStats() {
 
       // Count sessions
       (sessions || []).forEach((session) => {
-        const date = format(parseISO(session.created_at), 'yyyy-MM-dd');
-        const hour = parseISO(session.created_at).getHours();
+        // Parse the UTC timestamp - JavaScript Date automatically converts to local timezone
+        const localDate = new Date(session.created_at);
+
+        const date = format(localDate, 'yyyy-MM-dd');
+        const hour = localDate.getHours();
 
         if (dailyMap.has(date)) {
           dailyMap.set(date, (dailyMap.get(date) || 0) + 1);
         }
         hourlyMap.set(hour, (hourlyMap.get(hour) || 0) + 1);
+
+        // Track referrers
+        if (session.referrer) {
+          try {
+            const referrerHost = new URL(session.referrer).hostname;
+            referrerMap.set(referrerHost, (referrerMap.get(referrerHost) || 0) + 1);
+          } catch {
+            referrerMap.set(session.referrer.substring(0, 30), (referrerMap.get(session.referrer.substring(0, 30)) || 0) + 1);
+          }
+        }
+
+        // Track page views
+        if (session.page_views && session.page_views > 0) {
+          totalPageViews += session.page_views;
+          sessionsWithPageViews++;
+        }
       });
+
+      // Calculate average page views
+      if (sessionsWithPageViews > 0) {
+        setAvgPageViews(Math.round((totalPageViews / sessionsWithPageViews) * 10) / 10);
+      } else {
+        setAvgPageViews(0);
+      }
 
       // Convert to arrays
       const dailyArray: DailyCount[] = Array.from(dailyMap.entries())
@@ -124,16 +208,25 @@ export default function GuestSessionStats() {
         .map(([hour, count]) => ({ hour, count }))
         .sort((a, b) => a.hour - b.hour);
 
+      // Get top referrers
+      const referrerArray: ReferrerCount[] = Array.from(referrerMap.entries())
+        .map(([referrer, count]) => ({ referrer, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
       setDailyCounts(dailyArray);
       setHourlyCounts(hourlyArray);
+      setTopReferrers(referrerArray);
     } catch (error) {
       console.error('Error fetching guest session stats:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to fetch guest session stats';
       setError(errorMsg);
-      
+
       // Check if table exists
       if (errorMsg.includes('relation "guest_sessions" does not exist') || errorMsg.includes('does not exist')) {
         setError('Guest sessions table not found. Please run database migrations.');
+      } else if (errorMsg.includes('permission denied') || errorMsg.includes('42501')) {
+        setError('Permission denied. You may not have admin access to view guest sessions.');
       }
     } finally {
       setLoading(false);
@@ -190,7 +283,7 @@ export default function GuestSessionStats() {
           </div>
         )}
 
-        {/* Summary Stats */}
+        {/* Summary Stats - Row 1 */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="p-4 bg-muted/50 rounded-lg">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -218,6 +311,62 @@ export default function GuestSessionStats() {
             <p className="text-3xl font-bold">
               {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : weekCount.toLocaleString()}
             </p>
+          </div>
+        </div>
+
+        {/* Summary Stats - Row 2 (Conversions & Engagement) */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <UserCheck className="h-4 w-4" />
+              <span className="text-sm">Converted to Users</span>
+            </div>
+            <p className="text-2xl font-bold">
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : convertedCount.toLocaleString()}
+            </p>
+            {totalCount > 0 && !loading && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {((convertedCount / totalCount) * 100).toFixed(1)}% conversion rate
+              </p>
+            )}
+          </div>
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <Users className="h-4 w-4" />
+              <span className="text-sm">Active (24h)</span>
+            </div>
+            <p className="text-2xl font-bold">
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : activeSessionsCount.toLocaleString()}
+            </p>
+          </div>
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <Eye className="h-4 w-4" />
+              <span className="text-sm">Avg Page Views</span>
+            </div>
+            <p className="text-2xl font-bold">
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : avgPageViews}
+            </p>
+          </div>
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <Link2 className="h-4 w-4" />
+              <span className="text-sm">Top Referrers</span>
+            </div>
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : topReferrers.length > 0 ? (
+              <div className="text-xs space-y-1 mt-1">
+                {topReferrers.slice(0, 3).map((ref) => (
+                  <div key={ref.referrer} className="flex justify-between">
+                    <span className="truncate max-w-[100px]">{ref.referrer}</span>
+                    <span className="font-medium">{ref.count}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No referrer data</p>
+            )}
           </div>
         </div>
 
@@ -258,7 +407,7 @@ export default function GuestSessionStats() {
         {/* Peak Hours */}
         <div>
           <h3 className="text-sm font-medium mb-3">
-            Peak Hours
+            Peak Hours ({userTimezone})
             {peakHour.count > 0 && (
               <span className="text-muted-foreground font-normal ml-2">
                 (Busiest: {formatHour(peakHour.hour)})
@@ -294,6 +443,14 @@ export default function GuestSessionStats() {
             <span>11 PM</span>
           </div>
         </div>
+
+        {/* Diagnostic Info */}
+        {diagnosticInfo && !error && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-4 border-t">
+            <AlertCircle className="h-3 w-3" />
+            <span>{diagnosticInfo}</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
