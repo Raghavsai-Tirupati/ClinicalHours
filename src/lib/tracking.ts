@@ -94,16 +94,20 @@ export interface TrackingMetadata {
 
 /**
  * Send tracking event to the backend
- * Uses fire-and-forget pattern with sendBeacon when available
+ * Uses fetch with keepalive for reliable tracking
  */
 export async function trackEvent(
   eventType: TrackingEventType,
   metadata?: TrackingMetadata,
   userId?: string
 ): Promise<void> {
-  // Don't track in development unless explicitly enabled
-  if (import.meta.env.DEV && !import.meta.env.VITE_ENABLE_TRACKING) {
-    console.debug("[Tracking]", eventType, metadata);
+  const isDev = import.meta.env.DEV;
+  const enableTracking = import.meta.env.VITE_ENABLE_TRACKING === "true";
+  
+  // In development, only track if explicitly enabled
+  // In production, always track
+  if (isDev && !enableTracking) {
+    console.debug("[Tracking] (disabled in dev)", eventType, metadata);
     return;
   }
 
@@ -124,30 +128,38 @@ export async function trackEvent(
 
   const endpoint = getTrackingEndpoint();
 
-  try {
-    // Try sendBeacon first (works even during page unload)
-    if (navigator.sendBeacon) {
-      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-      const sent = navigator.sendBeacon(endpoint, blob);
-      if (sent) {
-        return;
-      }
-    }
+  if (isDev && enableTracking) {
+    console.log("[Tracking] Sending:", eventType, "to", endpoint);
+  }
 
-    // Fallback to fetch with keepalive
-    fetch(endpoint, {
+  try {
+    // Use fetch with keepalive (works like sendBeacon but with proper headers)
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
-      keepalive: true,
-      // Don't wait for response - fire and forget
-    }).catch(() => {
-      // Silently ignore errors - tracking should never break the app
+      keepalive: true, // Works during page unload like sendBeacon
     });
-  } catch {
-    // Silently ignore errors
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Unknown error");
+      if (isDev || enableTracking) {
+        console.warn("[Tracking] Failed:", response.status, errorText);
+      }
+      return;
+    }
+
+    if (isDev && enableTracking) {
+      console.log("[Tracking] Success:", eventType);
+    }
+  } catch (error) {
+    // Log errors in development for debugging
+    if (isDev || enableTracking) {
+      console.error("[Tracking] Error:", error);
+    }
+    // Silently ignore in production - tracking should never break the app
   }
 }
 

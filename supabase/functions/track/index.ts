@@ -95,11 +95,19 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Parse request body
+    // Parse request body - handle both JSON and text/plain (from sendBeacon)
     let payload: TrackingEvent;
     try {
-      payload = await req.json();
-    } catch {
+      const contentType = req.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        payload = await req.json();
+      } else {
+        // Handle blob/text requests (e.g., from sendBeacon)
+        const text = await req.text();
+        payload = JSON.parse(text);
+      }
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
       return new Response(
         JSON.stringify({ success: false, error: "Invalid JSON body" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }

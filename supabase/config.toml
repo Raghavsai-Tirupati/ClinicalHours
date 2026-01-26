@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.create-test-users]
 verify_jwt = false
+
+[functions.track]
+verify_jwt = false
