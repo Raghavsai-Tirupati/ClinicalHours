@@ -68,7 +68,7 @@ const Auth = () => {
 
   const handleGuestMode = () => {
     enterGuestMode();
-    navigate("/dashboard");
+    navigate("/dashboard?showTutorial=true");
   };
 
   useEffect(() => {
@@ -88,31 +88,6 @@ const Auth = () => {
         if (data.session && !error) {
           // Clear the hash from the URL
           window.history.replaceState(null, '', window.location.pathname);
-          
-          // Check if this is a new user (first OAuth sign-in)
-          const user = data.session.user;
-          if (user) {
-            // Method 1: Check if created_at equals last_sign_in_at (first login)
-            const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
-            const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
-            const isFirstSignIn = Math.abs(createdAt - lastSignIn) < 60000; // Within 1 minute
-            
-            // Method 2: Check onboarding_complete flag if column exists
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("onboarding_complete, created_at")
-              .eq("id", user.id)
-              .single();
-            
-            // Show tutorial if: first sign-in OR onboarding not complete
-            const needsOnboarding = isFirstSignIn || (profile && profile.onboarding_complete === false);
-            
-            if (needsOnboarding) {
-              navigate("/dashboard?showTutorial=true");
-              return;
-            }
-          }
-          
           navigate("/dashboard");
           return;
         }
@@ -310,7 +285,7 @@ const Auth = () => {
       if (data.user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("email_verified, created_at, onboarding_complete")
+          .select("email_verified, created_at")
           .eq("id", data.user.id)
           .single();
 
@@ -332,20 +307,6 @@ const Auth = () => {
 
         logAuthEvent("login_success", { email: validatedData.email });
         toast.success("Logged in successfully!");
-        
-        // Check if this is effectively a first login (just verified email)
-        const createdAt = data.user.created_at ? new Date(data.user.created_at).getTime() : 0;
-        const lastSignIn = data.user.last_sign_in_at ? new Date(data.user.last_sign_in_at).getTime() : 0;
-        const isFirstSignIn = Math.abs(createdAt - lastSignIn) < 60000; // Within 1 minute
-        
-        // Show tutorial if: first sign-in OR onboarding not complete
-        const needsOnboarding = isFirstSignIn || (profile && profile.onboarding_complete === false);
-        
-        if (needsOnboarding) {
-          navigate("/dashboard?showTutorial=true");
-          return;
-        }
-        
         navigate("/dashboard");
         return;
       }

@@ -98,14 +98,14 @@ const Dashboard = () => {
   const isMountedRef = useRef(true);
   const isFetchingRef = useRef(false);
   
-  // Check for tutorial flag in URL
+  // Check for tutorial flag in URL (for guests)
   useEffect(() => {
-    if (searchParams.get('showTutorial') === 'true' && !isGuest) {
+    if (searchParams.get('showTutorial') === 'true') {
       setShowTutorial(true);
       // Remove the query param from URL without reload
       setSearchParams({}, { replace: true });
     }
-  }, [searchParams, setSearchParams, isGuest]);
+  }, [searchParams, setSearchParams]);
 
   // Handle OAuth callback tokens and auth redirect
   useEffect(() => {
