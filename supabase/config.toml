@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.track]
 verify_jwt = false
+
+[functions.admin-get-user-profile]
+verify_jwt = false
