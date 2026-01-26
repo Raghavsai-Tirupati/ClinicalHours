@@ -88,6 +88,23 @@ const Auth = () => {
         if (data.session && !error) {
           // Clear the hash from the URL
           window.history.replaceState(null, '', window.location.pathname);
+          
+          // Check if this is a new user (first OAuth sign-in)
+          const user = data.session.user;
+          if (user) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("onboarding_complete")
+              .eq("id", user.id)
+              .single();
+            
+            // Show tutorial for users who haven't completed onboarding
+            if (profile && !profile.onboarding_complete) {
+              navigate("/dashboard?showTutorial=true");
+              return;
+            }
+          }
+          
           navigate("/dashboard");
           return;
         }
@@ -285,7 +302,7 @@ const Auth = () => {
       if (data.user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("email_verified, created_at")
+          .select("email_verified, created_at, onboarding_complete")
           .eq("id", data.user.id)
           .single();
 
@@ -304,6 +321,18 @@ const Auth = () => {
           navigate(`/check-email?email=${encodeURIComponent(userEmail)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(userName)}`);
           return;
         }
+
+        logAuthEvent("login_success", { email: validatedData.email });
+        toast.success("Logged in successfully!");
+        
+        // Show tutorial for users who haven't completed onboarding
+        if (profile && !profile.onboarding_complete) {
+          navigate("/dashboard?showTutorial=true");
+          return;
+        }
+        
+        navigate("/dashboard");
+        return;
       }
 
       logAuthEvent("login_success", { email: validatedData.email });

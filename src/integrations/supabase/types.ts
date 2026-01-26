@@ -309,6 +309,7 @@ export type Database = {
           id: string
           linkedin_url: string | null
           major: string | null
+          onboarding_complete: boolean | null
           phone: string | null
           pre_med_track: string | null
           research_experience: string | null
@@ -332,6 +333,7 @@ export type Database = {
           id: string
           linkedin_url?: string | null
           major?: string | null
+          onboarding_complete?: boolean | null
           phone?: string | null
           pre_med_track?: string | null
           research_experience?: string | null
@@ -347,6 +349,7 @@ export type Database = {
           city?: string | null
           clinical_hours?: number | null
           created_at?: string
+          onboarding_complete?: boolean | null
           email_opt_in?: boolean | null
           email_verified?: boolean | null
           full_name?: string

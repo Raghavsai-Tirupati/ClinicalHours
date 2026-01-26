@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReminderDialog } from "@/components/ReminderDialog";
+import OnboardingTutorial from "@/components/tutorial/OnboardingTutorial";
 import {
   Table,
   TableBody,
@@ -84,6 +85,7 @@ const Dashboard = () => {
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [savedOpportunities, setSavedOpportunities] = useState<DashboardSavedOpportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,8 +94,18 @@ const Dashboard = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [opportunityToDelete, setOpportunityToDelete] = useState<string | null>(null);
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
+  const [showTutorial, setShowTutorial] = useState(false);
   const isMountedRef = useRef(true);
   const isFetchingRef = useRef(false);
+  
+  // Check for tutorial flag in URL
+  useEffect(() => {
+    if (searchParams.get('showTutorial') === 'true' && !isGuest) {
+      setShowTutorial(true);
+      // Remove the query param from URL without reload
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, isGuest]);
 
   // Handle OAuth callback tokens and auth redirect
   useEffect(() => {
@@ -418,6 +430,11 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* Onboarding Tutorial for new users */}
+      {showTutorial && (
+        <OnboardingTutorial onComplete={() => setShowTutorial(false)} />
+      )}
+      
       <Navigation />
       
       <main className="flex-1 container mx-auto px-4 pt-28 pb-8">
