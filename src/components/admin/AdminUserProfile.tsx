@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +16,6 @@ import {
   User,
   Mail,
   Phone,
-  MapPin,
   GraduationCap,
   Calendar,
   Clock,
@@ -35,6 +33,10 @@ import {
   Target,
   Award,
   Briefcase,
+  Send,
+  Bell,
+  ClipboardCheck,
+  TrendingUp,
 } from 'lucide-react';
 
 interface UserProfile {
@@ -78,12 +80,51 @@ interface FullProfile {
 }
 
 interface UserActivity {
-  saved_opportunities: number;
+  saved_total: number;
+  active_experiences: number;
+  applied: number;
+  contacted: number;
+  heard_back: number;
+  interviews_scheduled: number;
+  experience_entries: number;
+  total_hours_logged: number;
   reviews: number;
   questions: number;
   answers: number;
-  tracking_events: number;
+  reminders_set: number;
   last_activity: string | null;
+}
+
+interface SavedOpportunity {
+  id: string;
+  name: string;
+  type: string;
+  location: string;
+  status: string;
+  is_active: boolean;
+  has_deadline: boolean;
+  deadline: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ExperienceEntry {
+  id: string;
+  opportunity_name: string;
+  opportunity_type: string;
+  entry_date: string;
+  hours: number;
+  moment: string | null;
+  created_at: string;
+}
+
+interface Review {
+  id: string;
+  opportunity_name: string;
+  opportunity_type: string;
+  rating: number;
+  has_comment: boolean;
+  created_at: string;
 }
 
 interface AdminUserProfileProps {
@@ -96,9 +137,9 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
   const [loading, setLoading] = useState(false);
   const [fullProfile, setFullProfile] = useState<FullProfile | null>(null);
   const [activity, setActivity] = useState<UserActivity | null>(null);
-  const [savedOpportunities, setSavedOpportunities] = useState<Array<{ name: string; status: string; created_at: string }>>([]);
-  const [reviews, setReviews] = useState<Array<{ opportunity_name: string; rating: number; created_at: string }>>([]);
-  const [recentEvents, setRecentEvents] = useState<Array<{ event_type: string; page_url: string; created_at: string }>>([]);
+  const [savedOpportunities, setSavedOpportunities] = useState<SavedOpportunity[]>([]);
+  const [experienceEntries, setExperienceEntries] = useState<ExperienceEntry[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   useEffect(() => {
     if (open && user) {
@@ -114,7 +155,6 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error('Not authenticated');
 
-      // Fetch full profile
       const profileResponse = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-get-user-profile`,
         {
@@ -133,8 +173,8 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
           setFullProfile(profileData.profile);
           setActivity(profileData.activity);
           setSavedOpportunities(profileData.savedOpportunities || []);
+          setExperienceEntries(profileData.experienceEntries || []);
           setReviews(profileData.reviews || []);
-          setRecentEvents(profileData.recentEvents || []);
         }
       }
     } catch (error) {
@@ -162,6 +202,17 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Active Experience': return 'bg-green-500';
+      case 'Interview Scheduled': return 'bg-purple-500';
+      case 'Heard Back': return 'bg-blue-500';
+      case 'Applied': return 'bg-yellow-500';
+      case 'Contacted': return 'bg-orange-500';
+      default: return 'bg-gray-500';
+    }
   };
 
   if (!user) return null;
@@ -227,13 +278,182 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
 
               <Separator />
 
-              <Tabs defaultValue="profile" className="w-full">
+              <Tabs defaultValue="activity" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="profile">Profile</TabsTrigger>
                   <TabsTrigger value="activity">Activity</TabsTrigger>
-                  <TabsTrigger value="saved">Saved</TabsTrigger>
-                  <TabsTrigger value="tracking">Events</TabsTrigger>
+                  <TabsTrigger value="profile">Profile</TabsTrigger>
+                  <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
+                  <TabsTrigger value="hours">Hours Log</TabsTrigger>
                 </TabsList>
+
+                {/* Activity Tab */}
+                <TabsContent value="activity" className="mt-4 space-y-4">
+                  {/* Key Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Card>
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-5 w-5 text-primary" />
+                          <div>
+                            <p className="text-2xl font-bold">{activity?.total_hours_logged || 0}</p>
+                            <p className="text-xs text-muted-foreground">Hours Logged</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-5 w-5 text-green-500" />
+                          <div>
+                            <p className="text-2xl font-bold">{activity?.active_experiences || 0}</p>
+                            <p className="text-xs text-muted-foreground">Active Experiences</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center gap-2">
+                          <BookmarkCheck className="h-5 w-5 text-blue-500" />
+                          <div>
+                            <p className="text-2xl font-bold">{activity?.saved_total || 0}</p>
+                            <p className="text-xs text-muted-foreground">Saved Total</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Star className="h-5 w-5 text-yellow-500" />
+                          <div>
+                            <p className="text-2xl font-bold">{activity?.reviews || 0}</p>
+                            <p className="text-xs text-muted-foreground">Reviews</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Application Pipeline */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Application Pipeline
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-5 gap-2 text-center">
+                        <div className="p-2 bg-muted/50 rounded">
+                          <p className="text-lg font-semibold">{activity?.saved_total || 0}</p>
+                          <p className="text-xs text-muted-foreground">Saved</p>
+                        </div>
+                        <div className="p-2 bg-orange-500/10 rounded">
+                          <p className="text-lg font-semibold text-orange-600">{activity?.contacted || 0}</p>
+                          <p className="text-xs text-muted-foreground">Contacted</p>
+                        </div>
+                        <div className="p-2 bg-yellow-500/10 rounded">
+                          <p className="text-lg font-semibold text-yellow-600">{activity?.applied || 0}</p>
+                          <p className="text-xs text-muted-foreground">Applied</p>
+                        </div>
+                        <div className="p-2 bg-blue-500/10 rounded">
+                          <p className="text-lg font-semibold text-blue-600">{activity?.heard_back || 0}</p>
+                          <p className="text-xs text-muted-foreground">Heard Back</p>
+                        </div>
+                        <div className="p-2 bg-purple-500/10 rounded">
+                          <p className="text-lg font-semibold text-purple-600">{activity?.interviews_scheduled || 0}</p>
+                          <p className="text-xs text-muted-foreground">Interviews</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Engagement Stats */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Engagement
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+                          <span>{activity?.experience_entries || 0} hour entries</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                          <span>{activity?.questions || 0} questions</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Send className="h-4 w-4 text-muted-foreground" />
+                          <span>{activity?.answers || 0} answers</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Bell className="h-4 w-4 text-muted-foreground" />
+                          <span>{activity?.reminders_set || 0} reminders</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Account Activity */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Account Activity
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account Created</span>
+                        <span>{formatDateShort(user.created_at)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Activity</span>
+                        <span>{formatDate(activity?.last_activity || null)}</span>
+                      </div>
+                      {fullProfile?.updated_at && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Profile Updated</span>
+                          <span>{formatDateShort(fullProfile.updated_at)}</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Recent Reviews */}
+                  {reviews.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Recent Reviews</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {reviews.slice(0, 5).map((review) => (
+                            <div key={review.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">{review.opportunity_type}</Badge>
+                                <span className="truncate max-w-[200px]">{review.opportunity_name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center">
+                                  <Star className="h-3 w-3 text-yellow-500 mr-1" />
+                                  {review.rating}/5
+                                </div>
+                                <span className="text-xs text-muted-foreground">{formatDateShort(review.created_at)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
 
                 {/* Profile Tab */}
                 <TabsContent value="profile" className="space-y-4 mt-4">
@@ -329,8 +549,12 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                       </CardHeader>
                       <CardContent className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Clinical Hours</span>
+                          <span className="text-muted-foreground">Profile Hours</span>
                           <span className="font-semibold">{user.clinical_hours || 0} hrs</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Logged Hours</span>
+                          <span className="font-semibold">{activity?.total_hours_logged || 0} hrs</span>
                         </div>
                         {fullProfile?.certifications && fullProfile.certifications.length > 0 && (
                           <div>
@@ -420,97 +644,35 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                   )}
                 </TabsContent>
 
-                {/* Activity Tab */}
-                <TabsContent value="activity" className="mt-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                          <BookmarkCheck className="h-8 w-8 text-blue-500" />
-                          <div>
-                            <p className="text-2xl font-bold">{activity?.saved_opportunities || 0}</p>
-                            <p className="text-xs text-muted-foreground">Saved Opportunities</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                          <Star className="h-8 w-8 text-yellow-500" />
-                          <div>
-                            <p className="text-2xl font-bold">{activity?.reviews || 0}</p>
-                            <p className="text-xs text-muted-foreground">Reviews</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                          <MessageSquare className="h-8 w-8 text-green-500" />
-                          <div>
-                            <p className="text-2xl font-bold">{activity?.questions || 0}</p>
-                            <p className="text-xs text-muted-foreground">Questions Asked</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                          <Activity className="h-8 w-8 text-purple-500" />
-                          <div>
-                            <p className="text-2xl font-bold">{activity?.tracking_events || 0}</p>
-                            <p className="text-xs text-muted-foreground">Page Views</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Reviews List */}
-                  {reviews.length > 0 && (
-                    <Card className="mt-4">
-                      <CardHeader>
-                        <CardTitle className="text-sm">Recent Reviews</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {reviews.slice(0, 5).map((review, i) => (
-                            <div key={i} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
-                              <span className="truncate max-w-[250px]">{review.opportunity_name}</span>
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center">
-                                  <Star className="h-3 w-3 text-yellow-500 mr-1" />
-                                  {review.rating}/5
-                                </div>
-                                <span className="text-xs text-muted-foreground">{formatDateShort(review.created_at)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </TabsContent>
-
-                {/* Saved Tab */}
-                <TabsContent value="saved" className="mt-4">
+                {/* Opportunities Tab */}
+                <TabsContent value="opportunities" className="mt-4">
                   {savedOpportunities.length > 0 ? (
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-sm">Saved Opportunities</CardTitle>
+                        <CardTitle className="text-sm">Saved Opportunities ({savedOpportunities.length})</CardTitle>
                         <CardDescription>User's tracked opportunities and their status</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2">
-                          {savedOpportunities.map((opp, i) => (
-                            <div key={i} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
-                              <span className="truncate max-w-[300px]">{opp.name}</span>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">{opp.status}</Badge>
-                                <span className="text-xs text-muted-foreground">{formatDateShort(opp.created_at)}</span>
+                          {savedOpportunities.map((opp) => (
+                            <div key={opp.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <Badge variant="outline" className="text-xs shrink-0">{opp.type}</Badge>
+                                <span className="truncate">{opp.name}</span>
+                                {opp.location && (
+                                  <span className="text-xs text-muted-foreground truncate hidden sm:inline">
+                                    ({opp.location})
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Badge 
+                                  variant={opp.is_active ? "default" : "secondary"} 
+                                  className={`text-xs ${opp.is_active ? getStatusColor(opp.status) : ''}`}
+                                >
+                                  {opp.status}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">{formatDateShort(opp.updated_at)}</span>
                               </div>
                             </div>
                           ))}
@@ -525,23 +687,31 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                   )}
                 </TabsContent>
 
-                {/* Tracking Events Tab */}
-                <TabsContent value="tracking" className="mt-4">
-                  {recentEvents.length > 0 ? (
+                {/* Hours Log Tab */}
+                <TabsContent value="hours" className="mt-4">
+                  {experienceEntries.length > 0 ? (
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-sm">Recent Activity Events</CardTitle>
-                        <CardDescription>Last 20 tracked events for this user</CardDescription>
+                        <CardTitle className="text-sm">
+                          Experience Entries ({experienceEntries.length})
+                          <span className="ml-2 text-primary font-bold">
+                            — {activity?.total_hours_logged || 0} total hours
+                          </span>
+                        </CardTitle>
+                        <CardDescription>Hours logged by this user</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2">
-                          {recentEvents.map((event, i) => (
-                            <div key={i} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="text-xs">{event.event_type}</Badge>
-                                <span className="truncate max-w-[250px] text-muted-foreground">{event.page_url}</span>
+                          {experienceEntries.map((entry) => (
+                            <div key={entry.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <Badge variant="outline" className="text-xs shrink-0">{entry.opportunity_type}</Badge>
+                                <span className="truncate">{entry.opportunity_name}</span>
                               </div>
-                              <span className="text-xs text-muted-foreground">{formatDate(event.created_at)}</span>
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className="font-semibold text-primary">{entry.hours} hrs</span>
+                                <span className="text-xs text-muted-foreground">{formatDateShort(entry.entry_date)}</span>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -549,8 +719,8 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                     </Card>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No tracking events found</p>
+                      <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No hours logged yet</p>
                     </div>
                   )}
                 </TabsContent>
