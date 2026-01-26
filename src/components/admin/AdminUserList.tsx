@@ -19,7 +19,9 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
+  Eye,
 } from 'lucide-react';
+import AdminUserProfile from './AdminUserProfile';
 
 interface UserProfile {
   id: string;
@@ -43,6 +45,8 @@ export default function AdminUserList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   const pageSize = 20;
 
   async function fetchUsers() {
@@ -178,18 +182,19 @@ export default function AdminUserList() {
                 <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -276,6 +281,19 @@ export default function AdminUserList() {
                         {formatDate(user.created_at)}
                       </span>
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setProfileOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -312,6 +330,13 @@ export default function AdminUserList() {
             </div>
           </div>
         )}
+
+        {/* User Profile Dialog */}
+        <AdminUserProfile
+          user={selectedUser}
+          open={profileOpen}
+          onOpenChange={setProfileOpen}
+        />
       </CardContent>
     </Card>
   );

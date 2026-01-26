@@ -1,0 +1,222 @@
+/**
+ * Event Tracking Utility
+ * 
+ * Tracks page views, button clicks, and conversions for analytics.
+ * Uses fire-and-forget pattern to avoid blocking the UI.
+ */
+
+// Session ID storage key (reuse existing guest session ID if available)
+const TRACKING_SESSION_KEY = "clinicalhours_tracking_session_id";
+const GUEST_SESSION_KEY = "clinicalhours_guest_session_id";
+
+// Debounce tracking to prevent rapid duplicate events
+let lastPageView: { url: string; time: number } | null = null;
+const PAGE_VIEW_DEBOUNCE_MS = 1000;
+
+/**
+ * Generate a UUID v4
+ */
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+/**
+ * Get or create tracking session ID
+ * Reuses guest session ID if available for consistency
+ */
+export function getTrackingSessionId(): string {
+  try {
+    // First check if there's a guest session ID
+    const guestSessionId = localStorage.getItem(GUEST_SESSION_KEY);
+    if (guestSessionId) {
+      return guestSessionId;
+    }
+
+    // Then check for existing tracking session
+    let trackingSessionId = localStorage.getItem(TRACKING_SESSION_KEY);
+    if (trackingSessionId) {
+      return trackingSessionId;
+    }
+
+    // Create new session ID
+    trackingSessionId = generateUUID();
+    localStorage.setItem(TRACKING_SESSION_KEY, trackingSessionId);
+    return trackingSessionId;
+  } catch {
+    // localStorage not available, generate ephemeral session ID
+    return generateUUID();
+  }
+}
+
+/**
+ * Get the tracking endpoint URL
+ */
+function getTrackingEndpoint(): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (supabaseUrl) {
+    return `${supabaseUrl}/functions/v1/track`;
+  }
+  // Fallback for development
+  return "/track";
+}
+
+/**
+ * Get device/browser info
+ */
+function getDeviceInfo() {
+  return {
+    user_agent: navigator.userAgent,
+    screen_width: window.screen?.width || window.innerWidth,
+    screen_height: window.screen?.height || window.innerHeight,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  };
+}
+
+/**
+ * Event types
+ */
+export type TrackingEventType = 
+  | "page_view" 
+  | "button_click" 
+  | "guest_conversion" 
+  | "signup" 
+  | "login";
+
+export interface TrackingMetadata {
+  button_name?: string;
+  conversion_source?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Send tracking event to the backend
+ * Uses fetch with keepalive for reliable tracking
+ */
+export async function trackEvent(
+  eventType: TrackingEventType,
+  metadata?: TrackingMetadata,
+  userId?: string
+): Promise<void> {
+  const isDev = import.meta.env.DEV;
+  const enableTracking = import.meta.env.VITE_ENABLE_TRACKING === "true";
+  
+  // In development, only track if explicitly enabled
+  // In production, always track
+  if (isDev && !enableTracking) {
+    console.debug("[Tracking] (disabled in dev)", eventType, metadata);
+    return;
+  }
+
+  const sessionId = getTrackingSessionId();
+  const pageUrl = window.location.pathname + window.location.search;
+  const referrerUrl = document.referrer || undefined;
+  const deviceInfo = getDeviceInfo();
+
+  const payload = {
+    session_id: sessionId,
+    event_type: eventType,
+    page_url: pageUrl,
+    referrer_url: referrerUrl,
+    ...deviceInfo,
+    user_id: userId,
+    metadata: metadata || {},
+  };
+
+  const endpoint = getTrackingEndpoint();
+
+  if (isDev && enableTracking) {
+    console.log("[Tracking] Sending:", eventType, "to", endpoint);
+  }
+
+  try {
+    // Use fetch with keepalive (works like sendBeacon but with proper headers)
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      keepalive: true, // Works during page unload like sendBeacon
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Unknown error");
+      if (isDev || enableTracking) {
+        console.warn("[Tracking] Failed:", response.status, errorText);
+      }
+      return;
+    }
+
+    if (isDev && enableTracking) {
+      console.log("[Tracking] Success:", eventType);
+    }
+  } catch (error) {
+    // Log errors in development for debugging
+    if (isDev || enableTracking) {
+      console.error("[Tracking] Error:", error);
+    }
+    // Silently ignore in production - tracking should never break the app
+  }
+}
+
+/**
+ * Track a page view
+ * Debounces rapid page views to the same URL
+ */
+export function trackPageView(userId?: string): void {
+  const currentUrl = window.location.pathname + window.location.search;
+  const now = Date.now();
+
+  // Debounce: don't track same page view within 1 second
+  if (
+    lastPageView &&
+    lastPageView.url === currentUrl &&
+    now - lastPageView.time < PAGE_VIEW_DEBOUNCE_MS
+  ) {
+    return;
+  }
+
+  lastPageView = { url: currentUrl, time: now };
+  trackEvent("page_view", undefined, userId);
+}
+
+/**
+ * Track a button click
+ */
+export function trackButtonClick(buttonName: string, userId?: string): void {
+  trackEvent("button_click", { button_name: buttonName }, userId);
+}
+
+/**
+ * Track guest conversion (guest user signs up)
+ */
+export function trackGuestConversion(userId: string): void {
+  trackEvent("guest_conversion", { conversion_source: "signup" }, userId);
+}
+
+/**
+ * Track signup event
+ */
+export function trackSignup(userId: string, source?: string): void {
+  trackEvent("signup", { source: source || "email" }, userId);
+}
+
+/**
+ * Track login event
+ */
+export function trackLogin(userId: string, method?: string): void {
+  trackEvent("login", { method: method || "email" }, userId);
+}
+
+/**
+ * Custom hook for tracking page views on route changes
+ * Import this in App.tsx and use within BrowserRouter context
+ */
+export function usePageViewTracking(userId?: string): void {
+  // This will be called by the PageViewTracker component
+  trackPageView(userId);
+}

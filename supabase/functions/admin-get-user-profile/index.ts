@@ -74,7 +74,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const { userId } = payload;
-
     if (!userId) {
       return new Response(
         JSON.stringify({ success: false, error: "userId is required" }),
@@ -82,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch profile
+    // Fetch full profile
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("*")
@@ -97,18 +96,117 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch user email from auth
-    const { data: authUser, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    // Fetch activity counts
+    const [
+      savedResult,
+      reviewsResult,
+      questionsResult,
+      answersResult,
+      trackingResult,
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("saved_opportunities")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
+      supabaseAdmin
+        .from("reviews")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
+      supabaseAdmin
+        .from("opportunity_questions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
+      supabaseAdmin
+        .from("question_answers")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
+      supabaseAdmin
+        .from("tracking_events")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
+    ]);
 
-    if (authUserError) {
-      console.error("Error fetching auth user:", authUserError);
-    }
+    // Fetch last activity from tracking_events
+    const { data: lastActivity } = await supabaseAdmin
+      .from("tracking_events")
+      .select("created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    // Fetch saved opportunities with status
+    const { data: savedOpportunities } = await supabaseAdmin
+      .from("saved_opportunities")
+      .select(`
+        created_at,
+        applied,
+        contacted,
+        heard_back,
+        scheduled_interview,
+        opportunities:opportunity_id (name)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    // Fetch reviews with opportunity names
+    const { data: reviews } = await supabaseAdmin
+      .from("reviews")
+      .select(`
+        rating,
+        created_at,
+        opportunities:opportunity_id (name)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    // Fetch recent tracking events
+    const { data: recentEvents } = await supabaseAdmin
+      .from("tracking_events")
+      .select("event_type, page_url, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    // Format saved opportunities
+    const formattedSaved = (savedOpportunities || []).map((s: any) => {
+      let status = "Saved";
+      if (s.scheduled_interview) status = "Interview Scheduled";
+      else if (s.heard_back) status = "Heard Back";
+      else if (s.applied) status = "Applied";
+      else if (s.contacted) status = "Contacted";
+      
+      return {
+        name: s.opportunities?.name || "Unknown",
+        status,
+        created_at: s.created_at,
+      };
+    });
+
+    // Format reviews
+    const formattedReviews = (reviews || []).map((r: any) => ({
+      opportunity_name: r.opportunities?.name || "Unknown",
+      rating: r.rating,
+      created_at: r.created_at,
+    }));
 
     return new Response(
       JSON.stringify({
         success: true,
         profile,
-        email: authUser?.user?.email || null,
+        activity: {
+          saved_opportunities: savedResult.count || 0,
+          reviews: reviewsResult.count || 0,
+          questions: questionsResult.count || 0,
+          answers: answersResult.count || 0,
+          tracking_events: trackingResult.count || 0,
+          last_activity: lastActivity?.created_at || null,
+        },
+        savedOpportunities: formattedSaved,
+        reviews: formattedReviews,
+        recentEvents: recentEvents || [],
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
