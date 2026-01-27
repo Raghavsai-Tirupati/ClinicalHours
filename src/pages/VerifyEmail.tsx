@@ -32,11 +32,23 @@ const VerifyEmail = () => {
         body: { token },
       });
 
+      // Handle the response - edge functions may return errors in the data object
+      // even when the HTTP response is technically successful
       if (error) {
-        throw new Error(error.message || "Verification failed");
+        // Check if error contains useful message from edge function
+        const errorMsg = error.message || "Verification failed";
+        
+        // Parse edge function error messages
+        if (errorMsg.includes("already verified") || errorMsg.includes("alreadyVerified")) {
+          setStatus("already_verified");
+          return;
+        }
+        
+        throw new Error(errorMsg);
       }
 
-      if (data.error) {
+      // Check for error in data payload (edge function returned 4xx)
+      if (data?.error) {
         if (data.alreadyVerified) {
           setStatus("already_verified");
         } else {
@@ -46,12 +58,30 @@ const VerifyEmail = () => {
         return;
       }
 
-      setEmail(data.email || "");
+      setEmail(data?.email || "");
       setStatus("success");
     } catch (error: unknown) {
       logger.error("Verification error", error);
+      
+      // Extract meaningful error message
+      let message = "Failed to verify email. Please try again.";
+      if (error instanceof Error) {
+        // Clean up edge function error messages
+        const rawMessage = error.message;
+        if (rawMessage.includes("expired")) {
+          message = "This verification link has expired. Please request a new one from the sign-up page.";
+        } else if (rawMessage.includes("Invalid")) {
+          message = "This verification link is invalid. Please request a new verification email.";
+        } else if (rawMessage.includes("non-2xx")) {
+          // Edge function returned an error - try to extract the actual message
+          message = "Verification failed. The link may be expired or invalid.";
+        } else {
+          message = rawMessage;
+        }
+      }
+      
       setStatus("error");
-      setErrorMessage(error instanceof Error ? error.message : "Failed to verify email. Please try again.");
+      setErrorMessage(message);
     }
   };
 
