@@ -10,7 +10,11 @@ const videos = [heroVideo4, heroVideo3, heroVideo2, heroVideo1];
 // Crossfade duration in seconds
 const CROSSFADE_DURATION = 0.5;
 
-const HeroVideoCarousel = () => {
+interface HeroVideoCarouselProps {
+  onIndexChange?: (index: number) => void;
+}
+
+const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
   // Two persistent slots - we swap which one is on top
   const [slotAVideo, setSlotAVideo] = useState(0);
   const [slotBVideo, setSlotBVideo] = useState(1);
@@ -96,10 +100,13 @@ const HeroVideoCarousel = () => {
       setActiveSlot(newActiveSlot);
       setIsFading(false);
       fadeStartedRef.current = false;
+      
+      // Notify parent of index change
+      onIndexChange?.(currentVideoIndex);
     }, CROSSFADE_DURATION * 1000);
     
     return () => clearTimeout(timer);
-  }, [isFading, activeSlot, slotAVideo, slotBVideo]);
+  }, [isFading, activeSlot, slotAVideo, slotBVideo, onIndexChange]);
 
   // Initial play
   useEffect(() => {
