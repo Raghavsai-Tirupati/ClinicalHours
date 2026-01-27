@@ -133,11 +133,30 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
   return (
     <div className="absolute inset-0 overflow-hidden bg-black">
       <style>{`
+        video {
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+        }
         video::-webkit-media-controls,
         video::-webkit-media-controls-enclosure,
         video::-webkit-media-controls-panel,
         video::-webkit-media-controls-play-button,
-        video::-webkit-media-controls-start-playback-button {
+        video::-webkit-media-controls-start-playback-button,
+        video::-webkit-media-controls-overlay-play-button,
+        video::-webkit-media-controls-timeline,
+        video::-webkit-media-controls-current-time-display,
+        video::-webkit-media-controls-time-remaining-display,
+        video::-webkit-media-controls-mute-button,
+        video::-webkit-media-controls-volume-slider,
+        video::-webkit-media-controls-fullscreen-button {
+          display: none !important;
+          -webkit-appearance: none !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          visibility: hidden !important;
+        }
+        video::-moz-media-controls {
           display: none !important;
         }
         video[controls] {
@@ -164,7 +183,10 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
           disablePictureInPicture
           disableRemotePlayback
           preload="auto"
-          className="w-full h-full object-cover pointer-events-none"
+          webkit-playsinline="true"
+          x-webkit-airplay="deny"
+          className="w-full h-full object-cover pointer-events-none select-none"
+          style={{ WebkitAppearance: 'none' }}
         />
       </div>
       
@@ -186,7 +208,10 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
           disablePictureInPicture
           disableRemotePlayback
           preload="auto"
-          className="w-full h-full object-cover pointer-events-none"
+          webkit-playsinline="true"
+          x-webkit-airplay="deny"
+          className="w-full h-full object-cover pointer-events-none select-none"
+          style={{ WebkitAppearance: 'none' }}
         />
       </div>
 
