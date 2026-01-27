@@ -11,6 +11,7 @@ import HeroBrowserCarousel from "@/components/HeroBrowserCarousel";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import FeatureShowcaseRail from "@/components/FeatureShowcaseRail";
 import HowItWorksTimeline from "@/components/HowItWorksTimeline";
+import carouselBg from "@/assets/carousel-bg.png";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -86,13 +87,25 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Browser Carousel Section - Seamless black background with scroll animation */}
+      {/* Browser Carousel Section - With background image and gradient fades */}
       <section 
         ref={carouselRef}
-        className="relative py-16 sm:py-20 md:py-24 bg-black overflow-hidden"
+        className="relative py-16 sm:py-20 md:py-24 overflow-hidden"
       >
+        {/* Background image */}
         <div 
-          className={`container mx-auto px-4 transition-all duration-700 ${
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${carouselBg})` }}
+        />
+        
+        {/* Top gradient fade from black (hero) */}
+        <div className="absolute inset-x-0 top-0 h-32 sm:h-40 bg-gradient-to-b from-black to-transparent z-[1]" />
+        
+        {/* Bottom gradient fade to black (stats) */}
+        <div className="absolute inset-x-0 bottom-0 h-32 sm:h-40 bg-gradient-to-t from-black to-transparent z-[1]" />
+        
+        <div 
+          className={`container mx-auto px-4 transition-all duration-700 relative z-10 ${
             carouselInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
           }`}
         >
