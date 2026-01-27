@@ -96,7 +96,7 @@ function AppContent() {
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem storageKey="clinicalhours-theme">
+      <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" storageKey="clinicalhours-theme">
         <ErrorBoundary>
           <AppContent />
         </ErrorBoundary>
