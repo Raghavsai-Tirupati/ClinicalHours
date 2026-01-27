@@ -79,7 +79,7 @@ const DashboardVideoShowcase = ({
             </div>
             <div className="flex-1 mx-3">
               <div className="max-w-xs mx-auto bg-background/50 rounded-md px-3 py-1 flex items-center justify-center border border-border/50">
-                <span className="text-[10px] sm:text-xs text-muted-foreground truncate">clinicalhours.lovable.app/dashboard</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground truncate">clinicalhours.org/dashboard</span>
               </div>
             </div>
             <div className="w-12" />
