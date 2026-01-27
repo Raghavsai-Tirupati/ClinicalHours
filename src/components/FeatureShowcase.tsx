@@ -2,25 +2,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-/**
- * SCENES CONFIGURATION
- * =====================
- * To update scenes, modify this array:
- * - title: Main headline text
- * - subtitle: Description text
- * - ctaText: Button text
- * - ctaHref: Button link destination
- * - bgGradient: CSS gradient for background (full-bleed)
- * - imageSrc: Path to screenshot image
- * - imageAlt: Alt text for accessibility
- */
 interface Scene {
   id: string;
   title: string;
   subtitle: string;
   ctaText: string;
   ctaHref: string;
-  bgGradient: string;
   imageSrc: string;
   imageAlt: string;
 }
@@ -32,7 +19,6 @@ const scenes: Scene[] = [
     subtitle: "Track saved opportunities, monitor your progress, and manage applications all in one powerful dashboard.",
     ctaText: "View Dashboard",
     ctaHref: "/dashboard",
-    bgGradient: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)",
     imageSrc: "/screenshots/dashboard.png",
     imageAlt: "Clinical Hours Dashboard showing saved opportunities and progress tracking",
   },
@@ -42,7 +28,6 @@ const scenes: Scene[] = [
     subtitle: "Browse thousands of clinical positions sorted by distance. Filter by type and add promising ones to your tracker.",
     ctaText: "Browse Opportunities",
     ctaHref: "/opportunities",
-    bgGradient: "linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%)",
     imageSrc: "/screenshots/opportunities.png",
     imageAlt: "Opportunities page showing clinical volunteer positions",
   },
@@ -52,7 +37,6 @@ const scenes: Scene[] = [
     subtitle: "Explore opportunities on an interactive map. Set your radius and see clusters of positions in your area.",
     ctaText: "Open Map",
     ctaHref: "/map",
-    bgGradient: "linear-gradient(135deg, #042f2e 0%, #134e4a 50%, #0f766e 100%)",
     imageSrc: "/screenshots/map.png",
     imageAlt: "Interactive map showing clinical opportunities near user location",
   },
@@ -62,24 +46,20 @@ const scenes: Scene[] = [
     subtitle: "Keep your information updated. Get tailored recommendations and track your total hours automatically.",
     ctaText: "Edit Profile",
     ctaHref: "/profile",
-    bgGradient: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%)",
     imageSrc: "/screenshots/profile.png",
     imageAlt: "User profile page with settings and hour tracking",
   },
 ];
 
-// Scroll threshold to trigger scene change
-const SCROLL_THRESHOLD = 80;
+// Pixels of scroll per scene transition
+const SCROLL_PER_SCENE = 150;
 
 const FeatureShowcase = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0); // 0 to (scenes.length - 1) * 100
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const scrollAccumulator = useRef(0);
-  const isTransitioning = useRef(false);
-  const hasEnteredFromTop = useRef(false);
-  const hasExitedFromBottom = useRef(false);
   const isMobile = useIsMobile();
 
   // Check for reduced motion preference
@@ -93,149 +73,114 @@ const FeatureShowcase = () => {
   }, []);
 
   const goToScene = useCallback((index: number) => {
-    if (index === activeIndex || isTransitioning.current) return;
-    isTransitioning.current = true;
-    setActiveIndex(index);
-    
-    // Reset transition lock after animation
-    setTimeout(() => {
-      isTransitioning.current = false;
-    }, 700);
-  }, [activeIndex]);
+    const clampedIndex = Math.max(0, Math.min(scenes.length - 1, index));
+    setActiveIndex(clampedIndex);
+    setScrollProgress(clampedIndex * 100);
+  }, []);
 
-  const nextScene = useCallback(() => {
-    if (activeIndex < scenes.length - 1) {
-      goToScene(activeIndex + 1);
-      return true;
-    }
-    return false;
-  }, [activeIndex, goToScene]);
-
-  const prevScene = useCallback(() => {
-    if (activeIndex > 0) {
-      goToScene(activeIndex - 1);
-      return true;
-    }
-    return false;
-  }, [activeIndex, goToScene]);
-
-  // Scroll-hijacking logic
+  // Intersection observer to lock/unlock based on visibility
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const handleScroll = () => {
-      const rect = container.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const containerCenter = rect.top + rect.height / 2;
-      const viewportCenter = viewportHeight / 2;
-      
-      // Check if container is centered in viewport (with some tolerance)
-      const tolerance = viewportHeight * 0.3;
-      const isCentered = Math.abs(containerCenter - viewportCenter) < tolerance;
-      
-      // Enter lock when scrolling down into center
-      if (isCentered && !isLocked && !hasExitedFromBottom.current) {
-        if (rect.top < viewportCenter && !hasEnteredFromTop.current) {
-          hasEnteredFromTop.current = true;
-          setIsLocked(true);
-        }
-      }
-      
-      // Reset flags when scrolled away
-      if (rect.bottom < 0 || rect.top > viewportHeight) {
-        hasEnteredFromTop.current = false;
-        hasExitedFromBottom.current = false;
-      }
-    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // Lock when more than 60% visible
+          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+            setIsLocked(true);
+            // Scroll to center when locking
+            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      },
+      { threshold: [0, 0.3, 0.6, 0.9, 1] }
+    );
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isLocked]);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
-  // Handle wheel events when locked
+  // Handle wheel events when locked - smooth continuous scrolling
   useEffect(() => {
     if (!isLocked) return;
 
     const handleWheel = (e: WheelEvent) => {
-      if (isTransitioning.current) {
-        e.preventDefault();
-        return;
-      }
+      e.preventDefault();
 
-      scrollAccumulator.current += e.deltaY;
-
-      if (scrollAccumulator.current > SCROLL_THRESHOLD) {
-        // Scrolling down
-        scrollAccumulator.current = 0;
-        if (!nextScene()) {
-          // At last scene, unlock and allow normal scroll
+      // Calculate new progress based on scroll delta
+      const delta = e.deltaY;
+      const progressDelta = (delta / SCROLL_PER_SCENE) * 100;
+      
+      setScrollProgress((prev) => {
+        const newProgress = prev + progressDelta;
+        const maxProgress = (scenes.length - 1) * 100;
+        
+        // Check if we should unlock
+        if (newProgress < -20) {
+          // Scrolling up past first scene
           setIsLocked(false);
-          hasExitedFromBottom.current = true;
-        } else {
-          e.preventDefault();
+          return 0;
         }
-      } else if (scrollAccumulator.current < -SCROLL_THRESHOLD) {
-        // Scrolling up
-        scrollAccumulator.current = 0;
-        if (!prevScene()) {
-          // At first scene, unlock and allow normal scroll
+        if (newProgress > maxProgress + 20) {
+          // Scrolling down past last scene
           setIsLocked(false);
-          hasEnteredFromTop.current = false;
-        } else {
-          e.preventDefault();
+          return maxProgress;
         }
-      } else {
-        e.preventDefault();
-      }
+        
+        // Clamp within bounds
+        const clamped = Math.max(0, Math.min(maxProgress, newProgress));
+        
+        // Update active index based on progress
+        const newIndex = Math.round(clamped / 100);
+        setActiveIndex(newIndex);
+        
+        return clamped;
+      });
     };
 
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => window.removeEventListener('wheel', handleWheel);
-  }, [isLocked, nextScene, prevScene]);
+  }, [isLocked]);
 
-  // Handle touch events for mobile
+  // Handle touch events for mobile - smooth continuous scrolling
   useEffect(() => {
     if (!isLocked || !isMobile) return;
 
     let touchStartY = 0;
-    let touchAccumulator = 0;
 
     const handleTouchStart = (e: TouchEvent) => {
       touchStartY = e.touches[0].clientY;
-      touchAccumulator = 0;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (isTransitioning.current) {
-        e.preventDefault();
-        return;
-      }
-
+      e.preventDefault();
+      
       const touchY = e.touches[0].clientY;
       const deltaY = touchStartY - touchY;
-      touchAccumulator += deltaY;
       touchStartY = touchY;
 
-      if (touchAccumulator > SCROLL_THRESHOLD) {
-        touchAccumulator = 0;
-        if (!nextScene()) {
+      const progressDelta = (deltaY / SCROLL_PER_SCENE) * 100;
+      
+      setScrollProgress((prev) => {
+        const newProgress = prev + progressDelta;
+        const maxProgress = (scenes.length - 1) * 100;
+        
+        if (newProgress < -20) {
           setIsLocked(false);
-          hasExitedFromBottom.current = true;
-        } else {
-          e.preventDefault();
+          return 0;
         }
-      } else if (touchAccumulator < -SCROLL_THRESHOLD) {
-        touchAccumulator = 0;
-        if (!prevScene()) {
+        if (newProgress > maxProgress + 20) {
           setIsLocked(false);
-          hasEnteredFromTop.current = false;
-        } else {
-          e.preventDefault();
+          return maxProgress;
         }
-      } else {
-        e.preventDefault();
-      }
+        
+        const clamped = Math.max(0, Math.min(maxProgress, newProgress));
+        const newIndex = Math.round(clamped / 100);
+        setActiveIndex(newIndex);
+        
+        return clamped;
+      });
     };
 
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -245,14 +190,27 @@ const FeatureShowcase = () => {
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchmove', handleTouchMove);
     };
-  }, [isLocked, isMobile, nextScene, prevScene]);
+  }, [isLocked, isMobile]);
 
   const activeScene = scenes[activeIndex];
   
-  // Transition classes based on motion preference - now vertical
-  const transitionClass = prefersReducedMotion 
-    ? "" 
-    : "transition-all duration-700 ease-out";
+  // Calculate continuous transform based on scroll progress
+  const getSceneTransform = (index: number) => {
+    if (prefersReducedMotion) return "translateY(0)";
+    
+    const sceneProgress = scrollProgress - (index * 100);
+    // Each scene moves from 100% (below) to 0% (visible) to -100% (above)
+    const translateY = -sceneProgress;
+    
+    return `translateY(${translateY}%)`;
+  };
+
+  const getSceneOpacity = (index: number) => {
+    const sceneProgress = scrollProgress - (index * 100);
+    // Full opacity when at 0, fade out as we move away
+    const distance = Math.abs(sceneProgress);
+    return Math.max(0, 1 - (distance / 100));
+  };
 
   return (
     <div
@@ -269,26 +227,22 @@ const FeatureShowcase = () => {
             <div className="order-1 lg:order-1 space-y-8">
               {/* Scene indicator */}
               <div 
-                className={`text-xs text-white/40 uppercase tracking-[0.3em] ${transitionClass}`}
+                className="text-xs text-white/40 uppercase tracking-[0.3em]"
                 style={{ fontWeight: 400 }}
               >
                 {String(activeIndex + 1).padStart(2, "0")} / {String(scenes.length).padStart(2, "0")}
               </div>
 
-              {/* Title with vertical crossfade */}
+              {/* Title with smooth vertical scroll */}
               <div className="relative min-h-[120px] md:min-h-[160px] overflow-hidden">
                 {scenes.map((scene, index) => (
                   <h2
                     key={scene.id}
-                    className={`absolute inset-0 text-4xl md:text-5xl lg:text-6xl text-white leading-tight ${transitionClass}`}
+                    className="absolute inset-0 text-4xl md:text-5xl lg:text-6xl text-white leading-tight transition-none"
                     style={{
                       fontWeight: 400,
-                      opacity: activeIndex === index ? 1 : 0,
-                      transform: activeIndex === index 
-                        ? "translateY(0)" 
-                        : activeIndex > index 
-                          ? (prefersReducedMotion ? "translateY(0)" : "translateY(-100%)")
-                          : (prefersReducedMotion ? "translateY(0)" : "translateY(100%)"),
+                      opacity: getSceneOpacity(index),
+                      transform: getSceneTransform(index),
                     }}
                   >
                     {scene.title}
@@ -296,21 +250,16 @@ const FeatureShowcase = () => {
                 ))}
               </div>
 
-              {/* Subtitle with vertical crossfade */}
+              {/* Subtitle with smooth vertical scroll */}
               <div className="relative min-h-[80px] overflow-hidden">
                 {scenes.map((scene, index) => (
                   <p
                     key={scene.id}
-                    className={`absolute inset-0 text-lg md:text-xl text-white/60 leading-relaxed max-w-lg ${transitionClass}`}
+                    className="absolute inset-0 text-lg md:text-xl text-white/60 leading-relaxed max-w-lg transition-none"
                     style={{
                       fontWeight: 400,
-                      opacity: activeIndex === index ? 1 : 0,
-                      transform: activeIndex === index 
-                        ? "translateY(0)" 
-                        : activeIndex > index 
-                          ? (prefersReducedMotion ? "translateY(0)" : "translateY(-100%)")
-                          : (prefersReducedMotion ? "translateY(0)" : "translateY(100%)"),
-                      transitionDelay: prefersReducedMotion ? "0ms" : "100ms",
+                      opacity: getSceneOpacity(index),
+                      transform: getSceneTransform(index),
                     }}
                   >
                     {scene.subtitle}
@@ -322,12 +271,12 @@ const FeatureShowcase = () => {
               <div className="pt-4">
                 <Link
                   to={activeScene.ctaHref}
-                  className={`group inline-flex items-center gap-3 text-sm uppercase tracking-widest px-8 py-4 bg-white text-black hover:bg-white/90 ${transitionClass}`}
+                  className="group inline-flex items-center gap-3 text-sm uppercase tracking-widest px-8 py-4 bg-white text-black hover:bg-white/90 transition-colors"
                   style={{ fontWeight: 500 }}
                 >
                   <span>{activeScene.ctaText}</span>
                   <svg 
-                    className={`w-4 h-4 ${prefersReducedMotion ? "" : "group-hover:translate-x-1 transition-transform"}`}
+                    className="w-4 h-4 group-hover:translate-x-1 transition-transform"
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -337,13 +286,13 @@ const FeatureShowcase = () => {
                 </Link>
               </div>
 
-              {/* Navigation dots - now vertical progress indicator */}
+              {/* Navigation dots */}
               <div className="flex items-center gap-3 pt-8">
                 {scenes.map((scene, index) => (
                   <div
                     key={scene.id}
                     onClick={() => goToScene(index)}
-                    className={`relative h-2 rounded-full cursor-pointer ${transitionClass} ${
+                    className={`relative h-2 rounded-full cursor-pointer transition-all duration-300 ${
                       activeIndex === index 
                         ? "w-8 bg-white" 
                         : "w-2 bg-white/30 hover:bg-white/50"
@@ -377,7 +326,7 @@ const FeatureShowcase = () => {
               <div className="relative w-full max-w-2xl">
                 {/* Device frame container */}
                 <div 
-                  className={`relative rounded-2xl overflow-hidden shadow-2xl ${transitionClass}`}
+                  className="relative rounded-2xl overflow-hidden shadow-2xl"
                   style={{
                     boxShadow: "0 50px 100px -20px rgba(0, 0, 0, 0.5), 0 30px 60px -30px rgba(0, 0, 0, 0.6)",
                   }}
@@ -396,21 +345,17 @@ const FeatureShowcase = () => {
                     </div>
                   </div>
 
-                  {/* Screenshot images with vertical crossfade */}
+                  {/* Screenshot images with smooth vertical scroll */}
                   <div className="relative overflow-hidden" style={{ aspectRatio: "16/10" }}>
                     {scenes.map((scene, index) => (
                       <img
                         key={scene.id}
                         src={scene.imageSrc}
                         alt={scene.imageAlt}
-                        className={`absolute inset-0 w-full h-full object-cover object-top ${transitionClass}`}
+                        className="absolute inset-0 w-full h-full object-cover object-top transition-none"
                         style={{
-                          opacity: activeIndex === index ? 1 : 0,
-                          transform: activeIndex === index 
-                            ? "translateY(0)" 
-                            : activeIndex > index 
-                              ? (prefersReducedMotion ? "translateY(0)" : "translateY(-100%)")
-                              : (prefersReducedMotion ? "translateY(0)" : "translateY(100%)"),
+                          opacity: getSceneOpacity(index),
+                          transform: getSceneTransform(index),
                         }}
                         loading={index === 0 ? "eager" : "lazy"}
                       />
@@ -419,9 +364,7 @@ const FeatureShowcase = () => {
                 </div>
 
                 {/* Subtle glow effect */}
-                <div 
-                  className={`absolute -inset-4 rounded-3xl opacity-20 blur-3xl -z-10 bg-white/10`}
-                />
+                <div className="absolute -inset-4 rounded-3xl opacity-20 blur-3xl -z-10 bg-white/10" />
               </div>
             </div>
           </div>
@@ -431,18 +374,20 @@ const FeatureShowcase = () => {
       {/* Arrow navigation - Desktop only */}
       <div className="absolute bottom-8 right-8 hidden lg:flex gap-3 z-20">
         <button
-          onClick={() => prevScene()}
-          className={`p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white ${transitionClass}`}
+          onClick={() => goToScene(activeIndex - 1)}
+          className="p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white transition-all"
           aria-label="Previous scene"
+          disabled={activeIndex === 0}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 15l7-7 7 7" />
           </svg>
         </button>
         <button
-          onClick={() => nextScene()}
-          className={`p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white ${transitionClass}`}
+          onClick={() => goToScene(activeIndex + 1)}
+          className="p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white transition-all"
           aria-label="Next scene"
+          disabled={activeIndex === scenes.length - 1}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
