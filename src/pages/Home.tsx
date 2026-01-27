@@ -87,70 +87,71 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Browser Carousel Section - With background image and gradient fades */}
+      {/* Browser Carousel + Stats Section - Unified background */}
       <section 
-        ref={carouselRef}
-        className="relative py-16 sm:py-20 md:py-24 overflow-hidden"
+        className="relative overflow-hidden"
       >
-        {/* Background image */}
+        {/* Background image spanning carousel and stats */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${carouselBg})` }}
         />
         
-        {/* Top gradient fade from black (hero) */}
-        <div className="absolute inset-x-0 top-0 h-32 sm:h-40 bg-gradient-to-b from-black to-transparent z-[1]" />
+        {/* Subtle top gradient blend from hero */}
+        <div className="absolute inset-x-0 top-0 h-16 sm:h-24 bg-gradient-to-b from-black/80 to-transparent z-[1]" />
         
-        {/* Bottom gradient fade to black (stats) */}
-        <div className="absolute inset-x-0 bottom-0 h-32 sm:h-40 bg-gradient-to-t from-black to-transparent z-[1]" />
-        
+        {/* Carousel content */}
         <div 
-          className={`container mx-auto px-4 transition-all duration-700 relative z-10 ${
+          ref={carouselRef}
+          className={`container mx-auto px-4 py-16 sm:py-20 md:py-24 transition-all duration-700 relative z-10 ${
             carouselInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
           }`}
         >
           <HeroBrowserCarousel activeIndex={heroVideoIndex} />
         </div>
-      </section>
 
-      {/* Stats Section - Below the carousel */}
-      <section 
-        ref={statsRef}
-        className="py-16 sm:py-24 md:py-32 bg-black relative overflow-hidden"
-        style={{ fontFamily: '"Times New Roman", Times, serif' }}
-      >
-        <div className="container mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid grid-cols-3 md:flex md:flex-row justify-center items-center gap-4 sm:gap-12 md:gap-32">
-            {stats.map((stat, index) => (
-              <div 
-                key={index} 
-                className={`text-center group cursor-default ${
-                  statsInView ? 'animate-fade-in-up' : 'opacity-0'
-                }`}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="relative inline-block mb-2 sm:mb-3">
-                  <div className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl text-white relative z-10 group-hover:scale-110 transition-transform duration-300" style={{ fontWeight: 400, fontFamily: '"Times New Roman", Times, serif' }}>
-                    {statsInView ? (
-                      <AnimatedCounter 
-                        end={stat.value} 
-                        suffix={stat.suffix}
-                        duration={2000}
-                      />
-                    ) : (
-                      `0${stat.suffix}`
-                    )}
+        {/* Stats content */}
+        <div 
+          ref={statsRef}
+          className="relative z-10 py-16 sm:py-24 md:py-32"
+          style={{ fontFamily: '"Times New Roman", Times, serif' }}
+        >
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="grid grid-cols-3 md:flex md:flex-row justify-center items-center gap-4 sm:gap-12 md:gap-32">
+              {stats.map((stat, index) => (
+                <div 
+                  key={index} 
+                  className={`text-center group cursor-default ${
+                    statsInView ? 'animate-fade-in-up' : 'opacity-0'
+                  }`}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <div className="relative inline-block mb-2 sm:mb-3">
+                    <div className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl text-white relative z-10 group-hover:scale-110 transition-transform duration-300" style={{ fontWeight: 400, fontFamily: '"Times New Roman", Times, serif' }}>
+                      {statsInView ? (
+                        <AnimatedCounter 
+                          end={stat.value} 
+                          suffix={stat.suffix}
+                          duration={2000}
+                        />
+                      ) : (
+                        `0${stat.suffix}`
+                      )}
+                    </div>
+                    <div className="absolute inset-0 blur-xl opacity-0 group-hover:opacity-30 bg-white transition-opacity duration-300"></div>
                   </div>
-                  <div className="absolute inset-0 blur-xl opacity-0 group-hover:opacity-30 bg-white transition-opacity duration-300"></div>
+                  <div className="flex items-center justify-center gap-1 sm:gap-2 mb-2">
+                    <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-white/40 group-hover:text-white/70 transition-colors duration-300" />
+                    <div className="text-[10px] sm:text-xs text-white/50 uppercase tracking-[0.1em] sm:tracking-[0.2em] group-hover:text-white/80 transition-colors duration-300" style={{ fontWeight: 400 }}>{stat.label}</div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-center gap-1 sm:gap-2 mb-2">
-                  <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-white/40 group-hover:text-white/70 transition-colors duration-300" />
-                  <div className="text-[10px] sm:text-xs text-white/50 uppercase tracking-[0.1em] sm:tracking-[0.2em] group-hover:text-white/80 transition-colors duration-300" style={{ fontWeight: 400 }}>{stat.label}</div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
+        
+        {/* Bottom gradient fade to black for next section */}
+        <div className="absolute inset-x-0 bottom-0 h-24 sm:h-32 bg-gradient-to-t from-black to-transparent z-[1]" />
       </section>
 
 
