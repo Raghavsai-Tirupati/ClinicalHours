@@ -51,15 +51,17 @@ const scenes: Scene[] = [
   },
 ];
 
-// Pixels of scroll per scene transition
-const SCROLL_PER_SCENE = 150;
+// Pixels of scroll per scene transition - higher = less sensitive
+const SCROLL_PER_SCENE = 300;
 
 const FeatureShowcase = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0); // 0 to (scenes.length - 1) * 100
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasCompletedDown = useRef(false);
+  const hasCompletedUp = useRef(false);
   const isMobile = useIsMobile();
 
   // Check for reduced motion preference
@@ -78,7 +80,7 @@ const FeatureShowcase = () => {
     setScrollProgress(clampedIndex * 100);
   }, []);
 
-  // Intersection observer to lock/unlock based on visibility
+  // Intersection observer to lock based on visibility
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -86,47 +88,66 @@ const FeatureShowcase = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          // Lock when more than 60% visible
-          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
-            setIsLocked(true);
-            // Scroll to center when locking
-            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            // Only lock if we haven't just exited
+            if (!hasCompletedDown.current && !hasCompletedUp.current) {
+              setIsLocked(true);
+              container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          } else if (!entry.isIntersecting) {
+            // Reset completion flags when fully out of view
+            hasCompletedDown.current = false;
+            hasCompletedUp.current = false;
           }
         });
       },
-      { threshold: [0, 0.3, 0.6, 0.9, 1] }
+      { threshold: [0, 0.3, 0.5, 0.7, 1] }
     );
 
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
 
-  // Handle wheel events when locked - smooth continuous scrolling
+  // Handle wheel events when locked
   useEffect(() => {
     if (!isLocked) return;
 
     const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-
-      // Calculate new progress based on scroll delta
       const delta = e.deltaY;
-      const progressDelta = (delta / SCROLL_PER_SCENE) * 100;
+      const maxProgress = (scenes.length - 1) * 100;
       
       setScrollProgress((prev) => {
+        const progressDelta = (delta / SCROLL_PER_SCENE) * 100;
         const newProgress = prev + progressDelta;
-        const maxProgress = (scenes.length - 1) * 100;
         
-        // Check if we should unlock
-        if (newProgress < -20) {
-          // Scrolling up past first scene
-          setIsLocked(false);
+        // Scrolling up past first scene
+        if (newProgress <= 0 && delta < 0) {
+          if (prev <= 0) {
+            // Already at first scene, unlock and allow normal scroll
+            setIsLocked(false);
+            hasCompletedUp.current = true;
+            return 0;
+          }
+          // Clamp to 0
+          setActiveIndex(0);
           return 0;
         }
-        if (newProgress > maxProgress + 20) {
-          // Scrolling down past last scene
-          setIsLocked(false);
+        
+        // Scrolling down past last scene
+        if (newProgress >= maxProgress && delta > 0) {
+          if (prev >= maxProgress) {
+            // Already at last scene, unlock and allow normal scroll
+            setIsLocked(false);
+            hasCompletedDown.current = true;
+            return maxProgress;
+          }
+          // Clamp to max
+          setActiveIndex(scenes.length - 1);
           return maxProgress;
         }
+        
+        // Prevent default only when we're handling the scroll
+        e.preventDefault();
         
         // Clamp within bounds
         const clamped = Math.max(0, Math.min(maxProgress, newProgress));
@@ -143,7 +164,7 @@ const FeatureShowcase = () => {
     return () => window.removeEventListener('wheel', handleWheel);
   }, [isLocked]);
 
-  // Handle touch events for mobile - smooth continuous scrolling
+  // Handle touch events for mobile
   useEffect(() => {
     if (!isLocked || !isMobile) return;
 
@@ -154,26 +175,37 @@ const FeatureShowcase = () => {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      
       const touchY = e.touches[0].clientY;
       const deltaY = touchStartY - touchY;
       touchStartY = touchY;
 
-      const progressDelta = (deltaY / SCROLL_PER_SCENE) * 100;
+      const maxProgress = (scenes.length - 1) * 100;
       
       setScrollProgress((prev) => {
+        const progressDelta = (deltaY / SCROLL_PER_SCENE) * 100;
         const newProgress = prev + progressDelta;
-        const maxProgress = (scenes.length - 1) * 100;
         
-        if (newProgress < -20) {
-          setIsLocked(false);
+        if (newProgress <= 0 && deltaY < 0) {
+          if (prev <= 0) {
+            setIsLocked(false);
+            hasCompletedUp.current = true;
+            return 0;
+          }
+          setActiveIndex(0);
           return 0;
         }
-        if (newProgress > maxProgress + 20) {
-          setIsLocked(false);
+        
+        if (newProgress >= maxProgress && deltaY > 0) {
+          if (prev >= maxProgress) {
+            setIsLocked(false);
+            hasCompletedDown.current = true;
+            return maxProgress;
+          }
+          setActiveIndex(scenes.length - 1);
           return maxProgress;
         }
+        
+        e.preventDefault();
         
         const clamped = Math.max(0, Math.min(maxProgress, newProgress));
         const newIndex = Math.round(clamped / 100);
@@ -199,7 +231,6 @@ const FeatureShowcase = () => {
     if (prefersReducedMotion) return "translateY(0)";
     
     const sceneProgress = scrollProgress - (index * 100);
-    // Each scene moves from 100% (below) to 0% (visible) to -100% (above)
     const translateY = -sceneProgress;
     
     return `translateY(${translateY}%)`;
@@ -207,7 +238,6 @@ const FeatureShowcase = () => {
 
   const getSceneOpacity = (index: number) => {
     const sceneProgress = scrollProgress - (index * 100);
-    // Full opacity when at 0, fade out as we move away
     const distance = Math.abs(sceneProgress);
     return Math.max(0, 1 - (distance / 100));
   };
@@ -215,32 +245,33 @@ const FeatureShowcase = () => {
   return (
     <div
       ref={containerRef}
-      className="relative w-full min-h-screen overflow-hidden"
+      className="relative w-full min-h-[120vh] overflow-hidden"
       style={{ fontFamily: '"Times New Roman", Times, serif' }}
     >
       {/* Content container */}
-      <div className="relative z-10 min-h-screen flex items-center">
-        <div className="container mx-auto px-6 lg:px-12 py-20">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+      <div className="relative z-10 min-h-[120vh] flex items-center">
+        <div className="container mx-auto px-4 md:px-8 lg:px-12 py-12 md:py-20">
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             
-            {/* Text content - Left side on desktop, top on mobile */}
-            <div className="order-1 lg:order-1 space-y-8">
+            {/* Text content */}
+            <div className="order-2 lg:order-1 space-y-6 md:space-y-8 w-full">
               {/* Scene indicator */}
               <div 
-                className="text-xs text-white/40 uppercase tracking-[0.3em]"
+                className="text-sm text-white/50 uppercase tracking-[0.3em]"
                 style={{ fontWeight: 400 }}
               >
                 {String(activeIndex + 1).padStart(2, "0")} / {String(scenes.length).padStart(2, "0")}
               </div>
 
               {/* Title with smooth vertical scroll */}
-              <div className="relative min-h-[120px] md:min-h-[160px] overflow-hidden">
+              <div className="relative min-h-[140px] md:min-h-[200px] lg:min-h-[240px] overflow-hidden">
                 {scenes.map((scene, index) => (
                   <h2
                     key={scene.id}
-                    className="absolute inset-0 text-4xl md:text-5xl lg:text-6xl text-white leading-tight transition-none"
+                    className="absolute inset-0 text-4xl md:text-6xl lg:text-7xl text-white leading-tight transition-none"
                     style={{
-                      fontWeight: 400,
+                      fontWeight: 300,
+                      letterSpacing: '0.02em',
                       opacity: getSceneOpacity(index),
                       transform: getSceneTransform(index),
                     }}
@@ -251,11 +282,11 @@ const FeatureShowcase = () => {
               </div>
 
               {/* Subtitle with smooth vertical scroll */}
-              <div className="relative min-h-[80px] overflow-hidden">
+              <div className="relative min-h-[100px] md:min-h-[120px] overflow-hidden">
                 {scenes.map((scene, index) => (
                   <p
                     key={scene.id}
-                    className="absolute inset-0 text-lg md:text-xl text-white/60 leading-relaxed max-w-lg transition-none"
+                    className="absolute inset-0 text-lg md:text-xl lg:text-2xl text-white/60 leading-relaxed max-w-xl transition-none"
                     style={{
                       fontWeight: 400,
                       opacity: getSceneOpacity(index),
@@ -268,15 +299,15 @@ const FeatureShowcase = () => {
               </div>
 
               {/* CTA Button */}
-              <div className="pt-4">
+              <div className="pt-4 md:pt-6">
                 <Link
                   to={activeScene.ctaHref}
-                  className="group inline-flex items-center gap-3 text-sm uppercase tracking-widest px-8 py-4 bg-white text-black hover:bg-white/90 transition-colors"
+                  className="group inline-flex items-center gap-3 text-sm md:text-base uppercase tracking-widest px-8 md:px-10 py-4 md:py-5 bg-white text-black hover:bg-white/90 transition-colors"
                   style={{ fontWeight: 500 }}
                 >
                   <span>{activeScene.ctaText}</span>
                   <svg 
-                    className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+                    className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform"
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -287,15 +318,15 @@ const FeatureShowcase = () => {
               </div>
 
               {/* Navigation dots */}
-              <div className="flex items-center gap-3 pt-8">
+              <div className="flex items-center gap-3 pt-6 md:pt-8">
                 {scenes.map((scene, index) => (
                   <div
                     key={scene.id}
                     onClick={() => goToScene(index)}
-                    className={`relative h-2 rounded-full cursor-pointer transition-all duration-300 ${
+                    className={`relative h-2 md:h-3 rounded-full cursor-pointer transition-all duration-300 ${
                       activeIndex === index 
-                        ? "w-8 bg-white" 
-                        : "w-2 bg-white/30 hover:bg-white/50"
+                        ? "w-10 md:w-12 bg-white" 
+                        : "w-2 md:w-3 bg-white/30 hover:bg-white/50"
                     }`}
                     role="button"
                     tabIndex={0}
@@ -321,31 +352,31 @@ const FeatureShowcase = () => {
               )}
             </div>
 
-            {/* Device frame with screenshot - Right side on desktop, bottom on mobile */}
-            <div className="order-2 lg:order-2 flex justify-center lg:justify-end">
-              <div className="relative w-full max-w-2xl">
+            {/* Device frame with screenshot - LARGER */}
+            <div className="order-1 lg:order-2 flex justify-center lg:justify-end w-full">
+              <div className="relative w-full max-w-3xl lg:max-w-4xl">
                 {/* Device frame container */}
                 <div 
-                  className="relative rounded-2xl overflow-hidden shadow-2xl"
+                  className="relative rounded-xl md:rounded-2xl overflow-hidden shadow-2xl"
                   style={{
                     boxShadow: "0 50px 100px -20px rgba(0, 0, 0, 0.5), 0 30px 60px -30px rgba(0, 0, 0, 0.6)",
                   }}
                 >
                   {/* Browser-style top bar */}
-                  <div className="bg-gray-900/80 backdrop-blur px-4 py-3 flex items-center gap-2">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                      <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                  <div className="bg-gray-900/80 backdrop-blur px-3 md:px-4 py-2 md:py-3 flex items-center gap-2">
+                    <div className="flex gap-1 md:gap-1.5">
+                      <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-red-500/80" />
+                      <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-yellow-500/80" />
+                      <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-green-500/80" />
                     </div>
-                    <div className="flex-1 ml-4">
-                      <div className="bg-gray-800 rounded-md px-3 py-1 text-xs text-gray-400 max-w-xs">
+                    <div className="flex-1 ml-3 md:ml-4">
+                      <div className="bg-gray-800 rounded-md px-2 md:px-3 py-1 text-xs text-gray-400 max-w-xs">
                         clinicalhours.org
                       </div>
                     </div>
                   </div>
 
-                  {/* Screenshot images with smooth vertical scroll */}
+                  {/* Screenshot images with smooth vertical scroll - LARGER */}
                   <div className="relative overflow-hidden" style={{ aspectRatio: "16/10" }}>
                     {scenes.map((scene, index) => (
                       <img
@@ -375,7 +406,7 @@ const FeatureShowcase = () => {
       <div className="absolute bottom-8 right-8 hidden lg:flex gap-3 z-20">
         <button
           onClick={() => goToScene(activeIndex - 1)}
-          className="p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white transition-all"
+          className="p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white transition-all disabled:opacity-30 disabled:pointer-events-none"
           aria-label="Previous scene"
           disabled={activeIndex === 0}
         >
@@ -385,7 +416,7 @@ const FeatureShowcase = () => {
         </button>
         <button
           onClick={() => goToScene(activeIndex + 1)}
-          className="p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white transition-all"
+          className="p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white transition-all disabled:opacity-30 disabled:pointer-events-none"
           aria-label="Next scene"
           disabled={activeIndex === scenes.length - 1}
         >
