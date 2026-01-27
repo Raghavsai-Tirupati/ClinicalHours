@@ -87,16 +87,17 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Browser Carousel + Stats Section - Unified background */}
+      {/* Unified Background Section - Carousel, Stats, and Feature Showcase */}
       <section 
         className="relative overflow-hidden"
       >
-        {/* Background image spanning carousel and stats */}
+        {/* Single background image spanning all content */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${carouselBg})` }}
         />
         
+        {/* Carousel content */}
         <div 
           ref={carouselRef}
           className={`container mx-auto px-4 py-16 sm:py-20 md:py-24 transition-all duration-700 relative z-10 ${
@@ -145,11 +146,12 @@ const Home = () => {
             </div>
           </div>
         </div>
+
+        {/* Feature Showcase - now inside unified background */}
+        <div className="relative z-10">
+          <FeatureShowcase />
+        </div>
       </section>
-
-
-      {/* Feature Showcase - Interactive Squarespace-style section */}
-      <FeatureShowcase />
 
       {/* Features Section - Horizontal scrolling rail */}
       <FeatureShowcaseRail />
