@@ -110,7 +110,7 @@ const Home = () => {
         {/* Stats content */}
         <div 
           ref={statsRef}
-          className="relative z-10 py-16 sm:py-24 md:py-32"
+          className="relative z-10 py-12 sm:py-16 md:py-20"
           style={{ fontFamily: '"Times New Roman", Times, serif' }}
         >
           <div className="container mx-auto px-4 sm:px-6">
