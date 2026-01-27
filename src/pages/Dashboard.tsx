@@ -439,19 +439,19 @@ const Dashboard = () => {
       
       <Navigation />
       
-      {/* Hero Section - Full viewport with stats centered, video peeks from bottom */}
-      <section className="relative min-h-screen flex flex-col">
+      {/* Hero + Video Background Container */}
+      <div className="relative">
         {/* Background Image with Dark Overlay */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ 
-            backgroundImage: `url(${dashboardBg})`,
-            bottom: '50%' // Only cover top half (above video)
-          }}
+          style={{ backgroundImage: `url(${dashboardBg})` }}
         >
-          {/* Dark overlay */}
-          <div className="absolute inset-0 bg-background/85" />
+          {/* Dark overlay - lighter for better visibility */}
+          <div className="absolute inset-0 bg-background/60" />
         </div>
+        
+        {/* Hero Section - Full viewport with stats centered, video peeks from bottom */}
+        <section className="relative min-h-screen flex flex-col z-10">
         {/* Guest Banner - Fixed at top */}
         {isGuest && (
           <div className="container mx-auto px-4 pt-24 pb-4 relative z-10">
@@ -578,7 +578,8 @@ const Dashboard = () => {
       </section>
 
       {/* Spacer to account for the video peeking up */}
-      <div className="h-[40vh]" />
+      <div className="h-[40vh] relative z-10" />
+      </div> {/* End of Hero + Video Background Container */}
       
       <main className="flex-1 container mx-auto px-4 pb-8">
         {/* My Opportunities Tracker */}
