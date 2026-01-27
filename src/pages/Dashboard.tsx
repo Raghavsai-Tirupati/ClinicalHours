@@ -438,119 +438,137 @@ const Dashboard = () => {
       
       <Navigation />
       
-      <main className="flex-1 container mx-auto px-4 pt-28 pb-8">
-        {/* Guest Banner */}
+      {/* Hero Section - Full viewport with stats centered, video peeks from bottom */}
+      <section className="relative min-h-screen flex flex-col">
+        {/* Guest Banner - Fixed at top */}
         {isGuest && (
-          <Alert className="mb-6 bg-primary/5 border-primary/20">
-            <UserPlus className="h-4 w-4" />
-            <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <span>You're browsing as a guest. Create an account to save opportunities and track your progress.</span>
-              <Button asChild size="sm" variant="default">
-                <Link to="/auth">Sign Up Free</Link>
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <div className="container mx-auto px-4 pt-24 pb-4">
+            <Alert className="bg-primary/5 border-primary/20">
+              <UserPlus className="h-4 w-4" />
+              <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <span>You're browsing as a guest. Create an account to save opportunities and track your progress.</span>
+                <Button asChild size="sm" variant="default">
+                  <Link to="/auth">Sign Up Free</Link>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
         )}
 
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl lg:text-4xl font-bold text-foreground scroll-mt-28">
-            {isGuest ? "Welcome to ClinicalHours!" : `Welcome back, ${firstName}!`}
-          </h1>
+        {/* Centered Content Area */}
+        <div className={`flex-1 flex flex-col justify-center container mx-auto px-4 ${isGuest ? 'pb-48' : 'pt-24 pb-48'}`}>
+          {/* Welcome Section - Centered */}
+          <div className="text-center mb-10">
+            <h1 className="text-3xl lg:text-5xl font-bold text-foreground">
+              {isGuest ? "Welcome to ClinicalHours!" : `Welcome back, ${firstName}!`}
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+              Track your clinical journey and find opportunities
+            </p>
+          </div>
+
+          {/* Quick Stats Cards - Centered */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 max-w-5xl mx-auto w-full">
+            <Card className="bg-card border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Bookmark className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{trackedCount}</p>
+                    <p className="text-xs text-muted-foreground">Saved Opportunities</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{appliedCount}</p>
+                    <p className="text-xs text-muted-foreground">Applications Sent</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{interviewCount}</p>
+                    <p className="text-xs text-muted-foreground">Interviews Scheduled</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{totalHours}</p>
+                    <p className="text-xs text-muted-foreground">Total Hours</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Action Buttons - Centered */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto w-full">
+            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
+              <Link to="/map">
+                <Map className="h-6 w-6" />
+                <span>Explore Map</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
+              <Link to="/opportunities">
+                <Building2 className="h-6 w-6" />
+                <span>Browse All</span>
+              </Link>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => document.getElementById('tracker-section')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              <ClipboardCheck className="h-6 w-6" />
+              <span>My Tracker</span>
+            </Button>
+            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
+              <Link to={isGuest ? "/auth" : "/profile"}>
+                <User className="h-6 w-6" />
+                <span>{isGuest ? "Sign Up" : "My Profile"}</span>
+              </Link>
+            </Button>
+          </div>
         </div>
 
-        {/* Squarespace-style Video Showcase */}
-        <DashboardVideoShowcase />
-
-        {/* Quick Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Bookmark className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{trackedCount}</p>
-                  <p className="text-xs text-muted-foreground">Saved Opportunities</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{appliedCount}</p>
-                  <p className="text-xs text-muted-foreground">Applications Sent</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{interviewCount}</p>
-                  <p className="text-xs text-muted-foreground">Interviews Scheduled</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card border-border">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-purple-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{totalHours}</p>
-                  <p className="text-xs text-muted-foreground">Total Hours</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Video Showcase - Peeks from bottom, half visible */}
+        <div className="absolute bottom-0 left-0 right-0 translate-y-1/2">
+          <div className="container mx-auto px-4">
+            <DashboardVideoShowcase />
+          </div>
         </div>
+      </section>
 
-        {/* Quick Action Buttons */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-            <Link to="/map">
-              <Map className="h-6 w-6" />
-              <span>Explore Map</span>
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-            <Link to="/opportunities">
-              <Building2 className="h-6 w-6" />
-              <span>Browse All</span>
-            </Link>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-auto py-4 flex-col gap-2"
-            onClick={() => document.getElementById('tracker-section')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            <ClipboardCheck className="h-6 w-6" />
-            <span>My Tracker</span>
-          </Button>
-          <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
-            <Link to={isGuest ? "/auth" : "/profile"}>
-              <User className="h-6 w-6" />
-              <span>{isGuest ? "Sign Up" : "My Profile"}</span>
-            </Link>
-          </Button>
-        </div>
-
+      {/* Spacer to account for the video peeking up */}
+      <div className="h-[40vh]" />
+      
+      <main className="flex-1 container mx-auto px-4 pb-8">
         {/* My Opportunities Tracker */}
         <Card id="tracker-section" className="mb-8 bg-card border-border">
           <CardHeader>
