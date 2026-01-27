@@ -118,12 +118,12 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
         filter: "brightness(0.7)"
       };
     } else {
-      // For 4 items, the 4th item (normalizedDiff === 2 or -2) - show it faintly on far left to balance
+      // Hide the 4th video completely
       return {
         ...baseStyle,
-        transform: "translate(-165%, -50%) scale(0.6) rotateY(18deg)",
-        zIndex: 10,
-        opacity: 0.35,
+        transform: "translate(-50%, -50%) scale(0.5)",
+        zIndex: 0,
+        opacity: 0,
         filter: "brightness(0.5)"
       };
     }
