@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
+import carouselBg from "@/assets/carousel-bg.png";
 
 /**
  * SCENES CONFIGURATION
@@ -119,18 +120,11 @@ const FeatureShowcase = () => {
       className="relative w-full min-h-screen overflow-hidden"
       style={{ fontFamily: '"Times New Roman", Times, serif' }}
     >
-      {/* Background layers - Full bleed with crossfade */}
-      {scenes.map((scene, index) => (
-        <div
-          key={scene.id}
-          className={`absolute inset-0 ${transitionClass}`}
-          style={{
-            background: scene.bgGradient,
-            opacity: activeIndex === index ? 1 : 0,
-            zIndex: activeIndex === index ? 1 : 0,
-          }}
-        />
-      ))}
+      {/* Static background image - matches carousel section */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${carouselBg})` }}
+      />
 
       {/* Content container */}
       <div className="relative z-10 min-h-screen flex items-center">
@@ -267,10 +261,9 @@ const FeatureShowcase = () => {
                   </div>
                 </div>
 
-                {/* Decorative glow effect */}
+                {/* Subtle glow effect */}
                 <div 
-                  className={`absolute -inset-4 rounded-3xl opacity-30 blur-3xl -z-10 ${transitionClass}`}
-                  style={{ background: activeScene.bgGradient }}
+                  className={`absolute -inset-4 rounded-3xl opacity-20 blur-3xl -z-10 bg-white/10`}
                 />
               </div>
             </div>
