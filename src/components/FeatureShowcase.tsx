@@ -1,13 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
 
+/**
+ * SCENES CONFIGURATION
+ * =====================
+ * To update scenes, modify this array:
+ * - title: Main headline text
+ * - subtitle: Description text
+ * - ctaText: Button text
+ * - ctaHref: Button link destination
+ * - bgGradient: CSS gradient for background (full-bleed)
+ * - imageSrc: Path to screenshot image
+ * - imageAlt: Alt text for accessibility
+ */
 interface Scene {
   id: string;
   title: string;
   subtitle: string;
   ctaText: string;
   ctaHref: string;
+  bgGradient: string;
   imageSrc: string;
   imageAlt: string;
 }
@@ -19,6 +31,8 @@ const scenes: Scene[] = [
     subtitle: "Track saved opportunities, monitor your progress, and manage applications all in one powerful dashboard.",
     ctaText: "View Dashboard",
     ctaHref: "/dashboard",
+    // Deep navy to slate gradient
+    bgGradient: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)",
     imageSrc: "/screenshots/dashboard.png",
     imageAlt: "Clinical Hours Dashboard showing saved opportunities and progress tracking",
   },
@@ -28,6 +42,8 @@ const scenes: Scene[] = [
     subtitle: "Browse thousands of clinical positions sorted by distance. Filter by type and add promising ones to your tracker.",
     ctaText: "Browse Opportunities",
     ctaHref: "/opportunities",
+    // Warm charcoal gradient
+    bgGradient: "linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%)",
     imageSrc: "/screenshots/opportunities.png",
     imageAlt: "Opportunities page showing clinical volunteer positions",
   },
@@ -37,6 +53,8 @@ const scenes: Scene[] = [
     subtitle: "Explore opportunities on an interactive map. Set your radius and see clusters of positions in your area.",
     ctaText: "Open Map",
     ctaHref: "/map",
+    // Deep teal to dark gradient
+    bgGradient: "linear-gradient(135deg, #042f2e 0%, #134e4a 50%, #0f766e 100%)",
     imageSrc: "/screenshots/map.png",
     imageAlt: "Interactive map showing clinical opportunities near user location",
   },
@@ -46,23 +64,20 @@ const scenes: Scene[] = [
     subtitle: "Keep your information updated. Get tailored recommendations and track your total hours automatically.",
     ctaText: "Edit Profile",
     ctaHref: "/profile",
+    // Deep purple to slate gradient
+    bgGradient: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%)",
     imageSrc: "/screenshots/profile.png",
     imageAlt: "User profile page with settings and hour tracking",
   },
 ];
 
-// Pixels of scroll per scene transition - higher = less sensitive
-const SCROLL_PER_SCENE = 300;
+// Auto-rotate interval in milliseconds (adjust timing here)
+const AUTO_ROTATE_INTERVAL = 7000; // 7 seconds per scene
 
 const FeatureShowcase = () => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isLocked, setIsLocked] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const hasCompletedDown = useRef(false);
-  const hasCompletedUp = useRef(false);
-  const isMobile = useIsMobile();
 
   // Check for reduced motion preference
   useEffect(() => {
@@ -75,205 +90,63 @@ const FeatureShowcase = () => {
   }, []);
 
   const goToScene = useCallback((index: number) => {
-    const clampedIndex = Math.max(0, Math.min(scenes.length - 1, index));
-    setActiveIndex(clampedIndex);
-    setScrollProgress(clampedIndex * 100);
+    if (index === activeIndex) return;
+    setActiveIndex(index);
+  }, [activeIndex]);
+
+  const nextScene = useCallback(() => {
+    setActiveIndex((prev) => (prev + 1) % scenes.length);
   }, []);
 
-  // Intersection observer to lock based on visibility
+  // Auto-rotate when reduced motion not preferred
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-            // Only lock if we haven't just exited
-            if (!hasCompletedDown.current && !hasCompletedUp.current) {
-              setIsLocked(true);
-              container.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          } else if (!entry.isIntersecting) {
-            // Reset completion flags when fully out of view
-            hasCompletedDown.current = false;
-            hasCompletedUp.current = false;
-          }
-        });
-      },
-      { threshold: [0, 0.3, 0.5, 0.7, 1] }
-    );
-
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
-
-  // Handle wheel events when locked
-  useEffect(() => {
-    if (!isLocked) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      const delta = e.deltaY;
-      const maxProgress = (scenes.length - 1) * 100;
-      
-      setScrollProgress((prev) => {
-        const progressDelta = (delta / SCROLL_PER_SCENE) * 100;
-        const newProgress = prev + progressDelta;
-        
-        // Scrolling up past first scene
-        if (newProgress <= 0 && delta < 0) {
-          if (prev <= 0) {
-            // Already at first scene, unlock and allow normal scroll
-            setIsLocked(false);
-            hasCompletedUp.current = true;
-            return 0;
-          }
-          // Clamp to 0
-          setActiveIndex(0);
-          return 0;
-        }
-        
-        // Scrolling down past last scene
-        if (newProgress >= maxProgress && delta > 0) {
-          if (prev >= maxProgress) {
-            // Already at last scene, unlock and allow normal scroll
-            setIsLocked(false);
-            hasCompletedDown.current = true;
-            return maxProgress;
-          }
-          // Clamp to max
-          setActiveIndex(scenes.length - 1);
-          return maxProgress;
-        }
-        
-        // Prevent default only when we're handling the scroll
-        e.preventDefault();
-        
-        // Clamp within bounds
-        const clamped = Math.max(0, Math.min(maxProgress, newProgress));
-        
-        // Update active index based on progress
-        const newIndex = Math.round(clamped / 100);
-        setActiveIndex(newIndex);
-        
-        return clamped;
-      });
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, [isLocked]);
-
-  // Handle touch events for mobile
-  useEffect(() => {
-    if (!isLocked || !isMobile) return;
-
-    let touchStartY = 0;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      const touchY = e.touches[0].clientY;
-      const deltaY = touchStartY - touchY;
-      touchStartY = touchY;
-
-      const maxProgress = (scenes.length - 1) * 100;
-      
-      setScrollProgress((prev) => {
-        const progressDelta = (deltaY / SCROLL_PER_SCENE) * 100;
-        const newProgress = prev + progressDelta;
-        
-        if (newProgress <= 0 && deltaY < 0) {
-          if (prev <= 0) {
-            setIsLocked(false);
-            hasCompletedUp.current = true;
-            return 0;
-          }
-          setActiveIndex(0);
-          return 0;
-        }
-        
-        if (newProgress >= maxProgress && deltaY > 0) {
-          if (prev >= maxProgress) {
-            setIsLocked(false);
-            hasCompletedDown.current = true;
-            return maxProgress;
-          }
-          setActiveIndex(scenes.length - 1);
-          return maxProgress;
-        }
-        
-        e.preventDefault();
-        
-        const clamped = Math.max(0, Math.min(maxProgress, newProgress));
-        const newIndex = Math.round(clamped / 100);
-        setActiveIndex(newIndex);
-        
-        return clamped;
-      });
-    };
-
-    document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-    };
-  }, [isLocked, isMobile]);
+    if (prefersReducedMotion) return;
+    
+    const interval = setInterval(nextScene, AUTO_ROTATE_INTERVAL);
+    return () => clearInterval(interval);
+  }, [prefersReducedMotion, nextScene]);
 
   const activeScene = scenes[activeIndex];
   
-  // Calculate continuous transform based on scroll progress
-  const getSceneTransform = (index: number) => {
-    if (prefersReducedMotion) return "translateY(0)";
-    
-    const sceneProgress = scrollProgress - (index * 100);
-    const translateY = -sceneProgress;
-    
-    return `translateY(${translateY}%)`;
-  };
-
-  const getSceneOpacity = (index: number) => {
-    const sceneProgress = scrollProgress - (index * 100);
-    const distance = Math.abs(sceneProgress);
-    return Math.max(0, 1 - (distance / 100));
-  };
+  // Transition classes based on motion preference
+  const transitionClass = prefersReducedMotion 
+    ? "" 
+    : "transition-all duration-700 ease-out";
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full min-h-[120vh] overflow-hidden"
+      className="relative w-full min-h-screen overflow-hidden"
       style={{ fontFamily: '"Times New Roman", Times, serif' }}
     >
+
       {/* Content container */}
-      <div className="relative z-10 min-h-[120vh] flex items-center">
-        <div className="container mx-auto px-4 md:px-8 lg:px-12 py-12 md:py-20">
-          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+      <div className="relative z-10 min-h-screen flex items-center">
+        <div className="container mx-auto px-6 lg:px-12 py-20">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             
-            {/* Text content */}
-            <div className="order-2 lg:order-1 space-y-6 md:space-y-8 w-full">
+            {/* Text content - Left side on desktop, top on mobile */}
+            <div className="order-1 lg:order-1 space-y-8">
               {/* Scene indicator */}
               <div 
-                className="text-sm text-white/50 uppercase tracking-[0.3em]"
+                className={`text-xs text-white/40 uppercase tracking-[0.3em] ${transitionClass}`}
                 style={{ fontWeight: 400 }}
               >
                 {String(activeIndex + 1).padStart(2, "0")} / {String(scenes.length).padStart(2, "0")}
               </div>
 
-              {/* Title with smooth vertical scroll */}
-              <div className="relative min-h-[140px] md:min-h-[200px] lg:min-h-[240px] overflow-hidden">
+              {/* Title with crossfade */}
+              <div className="relative min-h-[120px] md:min-h-[160px]">
                 {scenes.map((scene, index) => (
                   <h2
                     key={scene.id}
-                    className="absolute inset-0 text-4xl md:text-6xl lg:text-7xl text-white leading-tight transition-none"
+                    className={`absolute inset-0 text-4xl md:text-5xl lg:text-6xl text-white leading-tight ${transitionClass}`}
                     style={{
-                      fontWeight: 300,
-                      letterSpacing: '0.02em',
-                      opacity: getSceneOpacity(index),
-                      transform: getSceneTransform(index),
+                      fontWeight: 400,
+                      opacity: activeIndex === index ? 1 : 0,
+                      transform: activeIndex === index 
+                        ? "translateY(0)" 
+                        : prefersReducedMotion ? "translateY(0)" : "translateY(20px)",
                     }}
                   >
                     {scene.title}
@@ -281,16 +154,19 @@ const FeatureShowcase = () => {
                 ))}
               </div>
 
-              {/* Subtitle with smooth vertical scroll */}
-              <div className="relative min-h-[100px] md:min-h-[120px] overflow-hidden">
+              {/* Subtitle with crossfade */}
+              <div className="relative min-h-[80px]">
                 {scenes.map((scene, index) => (
                   <p
                     key={scene.id}
-                    className="absolute inset-0 text-lg md:text-xl lg:text-2xl text-white/60 leading-relaxed max-w-xl transition-none"
+                    className={`absolute inset-0 text-lg md:text-xl text-white/60 leading-relaxed max-w-lg ${transitionClass}`}
                     style={{
                       fontWeight: 400,
-                      opacity: getSceneOpacity(index),
-                      transform: getSceneTransform(index),
+                      opacity: activeIndex === index ? 1 : 0,
+                      transform: activeIndex === index 
+                        ? "translateY(0)" 
+                        : prefersReducedMotion ? "translateY(0)" : "translateY(20px)",
+                      transitionDelay: prefersReducedMotion ? "0ms" : "100ms",
                     }}
                   >
                     {scene.subtitle}
@@ -299,15 +175,15 @@ const FeatureShowcase = () => {
               </div>
 
               {/* CTA Button */}
-              <div className="pt-4 md:pt-6">
+              <div className="pt-4">
                 <Link
                   to={activeScene.ctaHref}
-                  className="group inline-flex items-center gap-3 text-sm md:text-base uppercase tracking-widest px-8 md:px-10 py-4 md:py-5 bg-white text-black hover:bg-white/90 transition-colors"
+                  className={`group inline-flex items-center gap-3 text-sm uppercase tracking-widest px-8 py-4 bg-white text-black hover:bg-white/90 ${transitionClass}`}
                   style={{ fontWeight: 500 }}
                 >
                   <span>{activeScene.ctaText}</span>
                   <svg 
-                    className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform"
+                    className={`w-4 h-4 ${prefersReducedMotion ? "" : "group-hover:translate-x-1 transition-transform"}`}
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -318,75 +194,60 @@ const FeatureShowcase = () => {
               </div>
 
               {/* Navigation dots */}
-              <div className="flex items-center gap-3 pt-6 md:pt-8">
+              <div className="flex items-center gap-3 pt-8">
                 {scenes.map((scene, index) => (
-                  <div
+                  <button
                     key={scene.id}
                     onClick={() => goToScene(index)}
-                    className={`relative h-2 md:h-3 rounded-full cursor-pointer transition-all duration-300 ${
+                    className={`relative h-3 rounded-full ${transitionClass} ${
                       activeIndex === index 
-                        ? "w-10 md:w-12 bg-white" 
-                        : "w-2 md:w-3 bg-white/30 hover:bg-white/50"
+                        ? "w-10 bg-white" 
+                        : "w-3 bg-white/30 hover:bg-white/50"
                     }`}
-                    role="button"
-                    tabIndex={0}
                     aria-label={`Go to ${scene.title}`}
                     aria-current={activeIndex === index ? "true" : "false"}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        goToScene(index);
-                      }
-                    }}
                   />
                 ))}
               </div>
-
-              {/* Scroll hint when locked */}
-              {isLocked && (
-                <div className="flex items-center gap-2 text-white/40 text-sm animate-pulse">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                  </svg>
-                  <span>Scroll to explore</span>
-                </div>
-              )}
             </div>
 
-            {/* Device frame with screenshot - LARGER */}
-            <div className="order-1 lg:order-2 flex justify-center lg:justify-end w-full">
-              <div className="relative w-full max-w-3xl lg:max-w-4xl">
+            {/* Device frame with screenshot - Right side on desktop, bottom on mobile */}
+            <div className="order-2 lg:order-2 flex justify-center lg:justify-end">
+              <div className="relative w-full max-w-2xl">
                 {/* Device frame container */}
                 <div 
-                  className="relative rounded-xl md:rounded-2xl overflow-hidden shadow-2xl"
+                  className={`relative rounded-2xl overflow-hidden shadow-2xl ${transitionClass}`}
                   style={{
                     boxShadow: "0 50px 100px -20px rgba(0, 0, 0, 0.5), 0 30px 60px -30px rgba(0, 0, 0, 0.6)",
                   }}
                 >
                   {/* Browser-style top bar */}
-                  <div className="bg-gray-900/80 backdrop-blur px-3 md:px-4 py-2 md:py-3 flex items-center gap-2">
-                    <div className="flex gap-1 md:gap-1.5">
-                      <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-red-500/80" />
-                      <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-yellow-500/80" />
-                      <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-green-500/80" />
+                  <div className="bg-gray-900/80 backdrop-blur px-4 py-3 flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                      <div className="w-3 h-3 rounded-full bg-green-500/80" />
                     </div>
-                    <div className="flex-1 ml-3 md:ml-4">
-                      <div className="bg-gray-800 rounded-md px-2 md:px-3 py-1 text-xs text-gray-400 max-w-xs">
+                    <div className="flex-1 ml-4">
+                      <div className="bg-gray-800 rounded-md px-3 py-1 text-xs text-gray-400 max-w-xs">
                         clinicalhours.org
                       </div>
                     </div>
                   </div>
 
-                  {/* Screenshot images with smooth vertical scroll - LARGER */}
-                  <div className="relative overflow-hidden" style={{ aspectRatio: "16/10" }}>
+                  {/* Screenshot images with crossfade */}
+                  <div className="relative" style={{ aspectRatio: "16/10" }}>
                     {scenes.map((scene, index) => (
                       <img
                         key={scene.id}
                         src={scene.imageSrc}
                         alt={scene.imageAlt}
-                        className="absolute inset-0 w-full h-full object-cover object-top transition-none"
+                        className={`absolute inset-0 w-full h-full object-cover object-top ${transitionClass}`}
                         style={{
-                          opacity: getSceneOpacity(index),
-                          transform: getSceneTransform(index),
+                          opacity: activeIndex === index ? 1 : 0,
+                          transform: activeIndex === index 
+                            ? "scale(1)" 
+                            : prefersReducedMotion ? "scale(1)" : "scale(1.02)",
                         }}
                         loading={index === 0 ? "eager" : "lazy"}
                       />
@@ -395,7 +256,9 @@ const FeatureShowcase = () => {
                 </div>
 
                 {/* Subtle glow effect */}
-                <div className="absolute -inset-4 rounded-3xl opacity-20 blur-3xl -z-10 bg-white/10" />
+                <div 
+                  className={`absolute -inset-4 rounded-3xl opacity-20 blur-3xl -z-10 bg-white/10`}
+                />
               </div>
             </div>
           </div>
@@ -405,23 +268,21 @@ const FeatureShowcase = () => {
       {/* Arrow navigation - Desktop only */}
       <div className="absolute bottom-8 right-8 hidden lg:flex gap-3 z-20">
         <button
-          onClick={() => goToScene(activeIndex - 1)}
-          className="p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white transition-all disabled:opacity-30 disabled:pointer-events-none"
+          onClick={() => goToScene((activeIndex - 1 + scenes.length) % scenes.length)}
+          className={`p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white ${transitionClass}`}
           aria-label="Previous scene"
-          disabled={activeIndex === 0}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 15l7-7 7 7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <button
-          onClick={() => goToScene(activeIndex + 1)}
-          className="p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white transition-all disabled:opacity-30 disabled:pointer-events-none"
+          onClick={() => goToScene((activeIndex + 1) % scenes.length)}
+          className={`p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white ${transitionClass}`}
           aria-label="Next scene"
-          disabled={activeIndex === scenes.length - 1}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
           </svg>
         </button>
       </div>
