@@ -580,20 +580,20 @@ const Dashboard = () => {
       {/* Spacer to account for the video peeking up */}
       <div className="h-[40vh] relative z-10" />
       
-      {/* Seamless transition gradient - extends background into content area */}
-      <div className="relative z-10 h-32 sm:h-48 -mb-16 sm:-mb-24">
+      {/* Extended background fade - stretches past video toward tracker */}
+      <div className="relative z-10 h-64 sm:h-80 lg:h-96">
         <div 
           className="absolute inset-0 bg-cover bg-bottom bg-no-repeat"
           style={{ backgroundImage: `url(${dashboardBg})` }}
         >
           <div className="absolute inset-0 bg-background/40" />
         </div>
-        {/* Gradient fade to background color */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
+        {/* Gradual gradient fade to background color */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-30% to-background" />
       </div>
       </div> {/* End of Hero + Video Background Container */}
       
-      <main className="flex-1 container mx-auto px-4 pb-8 relative z-20">
+      <main className="flex-1 container mx-auto px-4 pb-8 relative z-20 -mt-16 sm:-mt-24">
         {/* My Opportunities Tracker */}
         <Card id="tracker-section" className="mb-8 bg-card border-border">
           <CardHeader>
