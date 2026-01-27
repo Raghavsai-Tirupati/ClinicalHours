@@ -11,9 +11,10 @@ import { sanitizeErrorMessage } from "@/lib/errorUtils";
 import { logAuthEvent } from "@/lib/auditLogger";
 import { setRememberMePreference, getRememberMePreference, useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
-import { ArrowLeft, Mail, Loader2, Eye } from "lucide-react";
+import { ArrowLeft, Mail, Loader2, Eye, UserCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import logo from "@/assets/logo.png";
+import authBackground from "@/assets/auth-background.png";
 
 // Google icon SVG component
 const GoogleIcon = () => (
@@ -367,8 +368,19 @@ const Auth = () => {
   // Show forgot password screen
   if (showForgotPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-        <div className="w-full max-w-md text-center space-y-6">
+      <div 
+        className="min-h-screen flex items-center justify-center p-4 relative"
+        style={{
+          backgroundImage: `url(${authBackground})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        {/* Dark overlay */}
+        <div className="absolute inset-0 bg-black/60" />
+        
+        <div className="relative z-10 w-full max-w-md text-center space-y-6 bg-card/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-border/50">
           <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
             <Mail className="w-10 h-10 text-primary" />
           </div>
@@ -431,301 +443,248 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-accent">
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
-          <h1 className="text-4xl xl:text-5xl font-bold text-primary-foreground mb-6">
-            <span>Clinical</span><span className="font-bold">Hours</span>
-          </h1>
-          <p className="text-xl xl:text-2xl text-primary-foreground/90 mb-4 font-medium">
-            Find Your Path to Clinical Experience
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative"
+      style={{
+        backgroundImage: `url(${authBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/50" />
+      
+      {/* Back to Home Link */}
+      <Link 
+        to="/" 
+        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="text-sm">Back to Home</span>
+      </Link>
+
+      {/* Centered Card */}
+      <div className="relative z-10 w-full max-w-md bg-card/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-border/50">
+        {/* Logo and Branding */}
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <img src={logo} alt="ClinicalHours" className="h-12 w-auto" />
+            <h1 className="text-2xl font-heading">
+              <span className="font-normal">Clinical</span><span className="font-bold">Hours</span>
+            </h1>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Your journey to clinical experience starts here
           </p>
-          <p className="text-primary-foreground/70 text-lg max-w-md">
-            Discover, track, and connect with clinical volunteering opportunities across the nation. Your journey to medical school starts here.
-          </p>
+        </div>
+
+        {/* Quick Actions - Google & Guest at top */}
+        <div className="space-y-3 mb-6">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-12 text-base bg-background hover:bg-muted border-border"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading || loading}
+          >
+            {googleLoading ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <GoogleIcon />
+            )}
+            Continue with Google
+          </Button>
           
-          {/* Stats or features */}
-          <div className="mt-12 space-y-4">
-            <div className="flex items-center gap-3 text-primary-foreground/80">
-              <div className="w-2 h-2 rounded-full bg-primary-foreground/60" />
-              <span>6000+ Clinical Opportunities</span>
-            </div>
-            <div className="flex items-center gap-3 text-primary-foreground/80">
-              <div className="w-2 h-2 rounded-full bg-primary-foreground/60" />
-              <span>Nationwide Hospital Network</span>
-            </div>
-            <div className="flex items-center gap-3 text-primary-foreground/80">
-              <div className="w-2 h-2 rounded-full bg-primary-foreground/60" />
-              <span>Track Your Applications</span>
-            </div>
-            <div className="flex items-center gap-3 text-primary-foreground/80">
-              <div className="w-2 h-2 rounded-full bg-primary-foreground/60" />
-              <span>Community Reviews & Insights</span>
-            </div>
-          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full h-12 text-base"
+            onClick={handleGuestMode}
+            disabled={loading || googleLoading}
+          >
+            <UserCircle className="mr-2 h-5 w-5" />
+            Continue as Guest
+          </Button>
         </div>
-      </div>
 
-      {/* Right Panel - Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 bg-background">
-        {/* Back to Home Link */}
-        <Link 
-          to="/" 
-          className="absolute top-6 left-6 lg:left-auto lg:right-6 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Back to Home</span>
-        </Link>
-
-        <div className="w-full max-w-md mx-auto">
-          {/* Logo and Header */}
-          <div className="text-center mb-8">
-            <img src={logo} alt="ClinicalHours" className="h-16 w-auto mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              Connect with clinical opportunities
-            </p>
-          </div>
-
-          {/* Mobile branding banner */}
-          <div className="lg:hidden mb-8 p-4 rounded-lg bg-primary/10 border border-primary/20">
-            <p className="text-sm text-center text-primary font-medium">
-              Your journey to medical school starts here
-            </p>
-          </div>
-
-          {/* Auth Tabs */}
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading || googleLoading}
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <button
-                      type="button"
-                      onClick={() => setShowForgotPassword(true)}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Forgot Password?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="signin-password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={loading || googleLoading}
-                      className="h-11 pr-10"
-                    />
-                    <div
-                      onMouseEnter={() => setShowPassword(true)}
-                      onMouseLeave={() => setShowPassword(false)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="remember-me"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked === true)}
-                    disabled={loading || googleLoading}
-                  />
-                  <Label
-                    htmlFor="remember-me"
-                    className="text-sm font-normal text-muted-foreground cursor-pointer"
-                  >
-                    Keep me signed in
-                  </Label>
-                </div>
-                <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading}>
-                  {loading ? "Signing in..." : "Sign In"}
-                </Button>
-                
-                <div className="relative my-6">
-                  <Separator />
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">
-                    or
-                  </span>
-                </div>
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-11 text-base"
-                  onClick={handleGoogleSignIn}
-                  disabled={googleLoading || loading}
-                >
-                  {googleLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <GoogleIcon />
-                  )}
-                  Continue with Google
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    disabled={loading || googleLoading}
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading || googleLoading}
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-phone">
-                    Phone Number <span className="text-muted-foreground text-xs">(optional)</span>
-                  </Label>
-                  <Input
-                    id="signup-phone"
-                    type="tel"
-                    placeholder="(555) 123-4567"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={loading || googleLoading}
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="signup-password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={loading || googleLoading}
-                      className="h-11 pr-10"
-                    />
-                    <div
-                      onMouseEnter={() => setShowPassword(true)}
-                      onMouseLeave={() => setShowPassword(false)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3 pt-2">
-                  <Checkbox
-                    id="email-opt-in"
-                    checked={emailOptIn}
-                    onCheckedChange={(checked) => setEmailOptIn(checked === true)}
-                    disabled={loading || googleLoading}
-                    className="mt-0.5"
-                  />
-                  <Label
-                    htmlFor="email-opt-in"
-                    className="text-sm font-normal text-muted-foreground cursor-pointer leading-tight"
-                  >
-                    Send me updates about new clinical opportunities and platform features
-                  </Label>
-                </div>
-                <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading}>
-                  {loading ? "Creating account..." : "Sign Up"}
-                </Button>
-                
-                <div className="relative my-6">
-                  <Separator />
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">
-                    or
-                  </span>
-                </div>
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-11 text-base"
-                  onClick={handleGoogleSignIn}
-                  disabled={googleLoading || loading}
-                >
-                  {googleLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <GoogleIcon />
-                  )}
-                  Continue with Google
-                </Button>
-                
-                <p className="text-xs text-muted-foreground text-center mt-4">
-                  By signing up, you agree to our{" "}
-                  <Link to="/terms" className="text-primary hover:underline">
-                    Terms & Conditions
-                  </Link>{" "}
-                  and{" "}
-                  <Link to="/privacy" className="text-primary hover:underline">
-                    Privacy Policy
-                  </Link>
-                  .
-                </p>
-              </form>
-            </TabsContent>
-          </Tabs>
-
-          {/* Guest Mode Option */}
-          <div className="mt-6 pt-6 border-t border-border">
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full text-muted-foreground hover:text-foreground"
-              onClick={handleGuestMode}
-              disabled={loading || googleLoading}
-            >
-              Continue as Guest
-            </Button>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Browse opportunities without an account
-            </p>
-          </div>
+        <div className="relative my-6">
+          <Separator className="bg-border/50" />
+          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
+            or sign in with email
+          </span>
         </div>
+
+        {/* Auth Tabs */}
+        <Tabs defaultValue="signin" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="signin">Sign In</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="signin">
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signin-email">Email</Label>
+                <Input
+                  id="signin-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading || googleLoading}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="signin-password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="signin-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading || googleLoading}
+                    className="h-11 pr-10"
+                  />
+                  <div
+                    onMouseEnter={() => setShowPassword(true)}
+                    onMouseLeave={() => setShowPassword(false)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember-me"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                  disabled={loading || googleLoading}
+                />
+                <Label
+                  htmlFor="remember-me"
+                  className="text-sm font-normal text-muted-foreground cursor-pointer"
+                >
+                  Keep me signed in
+                </Label>
+              </div>
+              <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading}>
+                {loading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="signup">
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-name">Full Name</Label>
+                <Input
+                  id="signup-name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  disabled={loading || googleLoading}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-email">Email</Label>
+                <Input
+                  id="signup-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading || googleLoading}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-phone">
+                  Phone Number <span className="text-muted-foreground text-xs">(optional)</span>
+                </Label>
+                <Input
+                  id="signup-phone"
+                  type="tel"
+                  placeholder="(555) 123-4567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading || googleLoading}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="signup-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading || googleLoading}
+                    className="h-11 pr-10"
+                  />
+                  <div
+                    onMouseEnter={() => setShowPassword(true)}
+                    onMouseLeave={() => setShowPassword(false)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3 pt-1">
+                <Checkbox
+                  id="email-opt-in"
+                  checked={emailOptIn}
+                  onCheckedChange={(checked) => setEmailOptIn(checked === true)}
+                  disabled={loading || googleLoading}
+                  className="mt-0.5"
+                />
+                <Label
+                  htmlFor="email-opt-in"
+                  className="text-sm font-normal text-muted-foreground cursor-pointer leading-tight"
+                >
+                  Send me updates about new clinical opportunities
+                </Label>
+              </div>
+              <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading}>
+                {loading ? "Creating account..." : "Sign Up"}
+              </Button>
+              
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                By signing up, you agree to our{" "}
+                <Link to="/terms" className="text-primary hover:underline">
+                  Terms
+                </Link>{" "}
+                and{" "}
+                <Link to="/privacy" className="text-primary hover:underline">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+            </form>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
