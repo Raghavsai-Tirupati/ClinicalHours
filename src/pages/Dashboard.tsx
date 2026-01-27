@@ -439,15 +439,17 @@ const Dashboard = () => {
       
       <Navigation />
       
-      {/* Hero + Video Background Container */}
+      {/* Hero + Video + Transition - Single continuous background */}
       <div className="relative">
-        {/* Background Image with Dark Overlay */}
+        {/* Single Background Image spanning entire section */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${dashboardBg})` }}
         >
           {/* Dark overlay - 40% for lighter visibility */}
           <div className="absolute inset-0 bg-background/40" />
+          {/* Single gradient fade at the bottom */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-70% to-background" />
         </div>
         
         {/* Hero Section - Full viewport with stats centered, video peeks from bottom */}
@@ -498,8 +500,8 @@ const Dashboard = () => {
             <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-success" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-foreground">{appliedCount}</p>
@@ -512,8 +514,8 @@ const Dashboard = () => {
             <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-blue-500" />
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-foreground">{interviewCount}</p>
@@ -577,23 +579,11 @@ const Dashboard = () => {
         </div>
       </section>
 
-      {/* Spacer to account for the video peeking up */}
-      <div className="h-[40vh] relative z-10" />
-      
-      {/* Extended background fade - stretches past video toward tracker */}
-      <div className="relative z-10 h-64 sm:h-80 lg:h-96">
-        <div 
-          className="absolute inset-0 bg-cover bg-bottom bg-no-repeat"
-          style={{ backgroundImage: `url(${dashboardBg})` }}
-        >
-          <div className="absolute inset-0 bg-background/40" />
-        </div>
-        {/* Gradual gradient fade to background color */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-30% to-background" />
-      </div>
+      {/* Spacer for video + extended background fade area */}
+      <div className="h-[55vh] sm:h-[50vh] relative z-10" />
       </div> {/* End of Hero + Video Background Container */}
       
-      <main className="flex-1 container mx-auto px-4 pb-8 relative z-20 -mt-16 sm:-mt-24">
+      <main className="flex-1 container mx-auto px-4 pb-8 relative z-20">
         {/* My Opportunities Tracker */}
         <Card id="tracker-section" className="mb-8 bg-card border-border">
           <CardHeader>
