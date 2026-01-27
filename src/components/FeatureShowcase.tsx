@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import carouselBg from "@/assets/carousel-bg.png";
 
 /**
  * SCENES CONFIGURATION
@@ -115,16 +114,11 @@ const FeatureShowcase = () => {
     : "transition-all duration-700 ease-out";
 
   return (
-    <section
+    <div
       ref={containerRef}
       className="relative w-full min-h-screen overflow-hidden"
       style={{ fontFamily: '"Times New Roman", Times, serif' }}
     >
-      {/* Static background image - matches carousel section */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${carouselBg})` }}
-      />
 
       {/* Content container */}
       <div className="relative z-10 min-h-screen flex items-center">
@@ -292,7 +286,7 @@ const FeatureShowcase = () => {
           </svg>
         </button>
       </div>
-    </section>
+    </div>
   );
 };
 
