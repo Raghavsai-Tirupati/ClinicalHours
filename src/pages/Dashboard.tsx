@@ -11,7 +11,7 @@ import { calculateDistance } from "@/lib/geolocation";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import ExperienceBuilder from "@/components/ExperienceBuilder";
-import DashboardVideoShowcase from "@/components/DashboardVideoShowcase";
+import DashboardVideoCarousel from "@/components/DashboardVideoCarousel";
 import dashboardBg from "@/assets/dashboard-bg.jpeg";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -571,10 +571,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Video Showcase - Peeks from bottom, half visible */}
-        <div className="absolute bottom-0 left-0 right-0 translate-y-1/2">
+        {/* Video Carousel - Rotating dashboard previews */}
+        <div className="absolute bottom-0 left-0 right-0 translate-y-1/3">
           <div className="container mx-auto px-4">
-            <DashboardVideoShowcase />
+            <DashboardVideoCarousel />
           </div>
         </div>
       </section>
