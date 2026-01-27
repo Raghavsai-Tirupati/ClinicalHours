@@ -106,14 +106,52 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
     return () => clearTimeout(timer);
   }, [isFading, activeSlot, slotAVideo, slotBVideo, onIndexChange]);
 
-  // Initial play - works on mobile too since videos are muted
+  // Aggressive autoplay - try multiple strategies for mobile
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  
+  // Strategy 1: Play immediately on mount
   useEffect(() => {
-    if (videoRefA.current) {
-      videoRefA.current.play().catch(() => {});
-    }
+    const playVideo = () => {
+      if (videoRefA.current) {
+        videoRefA.current.play().catch(() => {});
+      }
+    };
+    
+    // Try immediately
+    playVideo();
+    
+    // Also try after a short delay (helps some mobile browsers)
+    const timer = setTimeout(playVideo, 100);
+    const timer2 = setTimeout(playVideo, 500);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
   }, []);
 
-  // iOS Safari fix: play videos on first user interaction
+  // Strategy 2: Use IntersectionObserver to detect visibility and play
+  useEffect(() => {
+    const video = videoRefA.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            video.play().catch(() => {});
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(video);
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Strategy 3: iOS Safari fix - play on first user interaction
   useEffect(() => {
     const playVideosOnInteraction = () => {
       if (videoRefA.current) {
@@ -122,17 +160,19 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
       if (videoRefB.current) {
         videoRefB.current.play().catch(() => {});
       }
-      // Remove listeners after first interaction
       document.removeEventListener('touchstart', playVideosOnInteraction);
       document.removeEventListener('click', playVideosOnInteraction);
+      document.removeEventListener('scroll', playVideosOnInteraction);
     };
 
-    document.addEventListener('touchstart', playVideosOnInteraction, { once: true });
+    document.addEventListener('touchstart', playVideosOnInteraction, { once: true, passive: true });
     document.addEventListener('click', playVideosOnInteraction, { once: true });
+    document.addEventListener('scroll', playVideosOnInteraction, { once: true, passive: true });
 
     return () => {
       document.removeEventListener('touchstart', playVideosOnInteraction);
       document.removeEventListener('click', playVideosOnInteraction);
+      document.removeEventListener('scroll', playVideosOnInteraction);
     };
   }, []);
 
