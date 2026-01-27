@@ -22,8 +22,10 @@ const Navigation = () => {
   const location = useLocation();
   const { user, isGuest } = useAuth();
 
-  // Check if we're on the home page for transparent nav
+  // Check if we're on pages that should have transparent nav
   const isHomePage = location.pathname === "/";
+  const isDashboardPage = location.pathname === "/dashboard";
+  const hasTransparentNav = isHomePage || isDashboardPage;
 
   // Show hover dropdown only on homepage when not logged in (guests count as not logged in for nav)
   const showHoverDropdown = isHomePage && !user && !isGuest;
@@ -78,23 +80,23 @@ const Navigation = () => {
   const isActive = (path: string) => location.pathname === path;
 
   // Determine nav styles based on scroll and page
-  // Home page: transparent nav with white text, scrolled = black bg with white text
+  // Home/Dashboard pages: transparent nav with white text, scrolled = black bg with white text
   // Other pages: use theme colors
-  const navBackground = isHomePage
+  const navBackground = hasTransparentNav
     ? (isScrolled ? "bg-black" : "bg-transparent")
     : "bg-background";
 
-  const textColor = isHomePage
+  const textColor = hasTransparentNav
     ? "text-white"
     : "text-foreground";
 
-  const logoColor = isHomePage
+  const logoColor = hasTransparentNav
     ? "text-white"
     : "text-foreground";
 
-  const borderStyle = isHomePage && !isScrolled
+  const borderStyle = hasTransparentNav && !isScrolled
     ? "border-transparent"
-    : (isHomePage ? "border-white/10" : "border-border");
+    : (hasTransparentNav ? "border-white/10" : "border-border");
 
   return (
     <>
@@ -180,7 +182,7 @@ const Navigation = () => {
 
           {/* Mobile Navigation */}
           {isOpen && (
-            <div className={`md:hidden py-6 space-y-4 border-t ${isHomePage ? "border-white/10" : "border-border"}`}>
+            <div className={`md:hidden py-6 space-y-4 border-t ${hasTransparentNav ? "border-white/10" : "border-border"}`}>
               {links.map((link) => (
                 <Link
                   key={link.path}
