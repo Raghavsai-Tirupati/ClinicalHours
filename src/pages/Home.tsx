@@ -10,6 +10,7 @@ import HeroVideoCarousel from "@/components/HeroVideoCarousel";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import FeatureShowcaseRail from "@/components/FeatureShowcaseRail";
 import HowItWorksTimeline from "@/components/HowItWorksTimeline";
+import DashboardPreview from "@/components/DashboardPreview";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -119,6 +120,9 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Dashboard Preview - Squarespace-style floating preview */}
+      <DashboardPreview />
 
       {/* Feature Showcase - Interactive Squarespace-style section */}
       <FeatureShowcase />
