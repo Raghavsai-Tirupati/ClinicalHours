@@ -177,7 +177,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Send branded email via Resend HTTP API
+    // Banner image URL
+    const bannerUrl = "https://sysbtcikrbrrgafffody.supabase.co/storage/v1/object/public/email-assets/email-banner.png";
+
+    // Send branded email via Resend HTTP API - minimalistic dark theme
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -187,7 +190,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "ClinicalHours <support@clinicalhours.org>",
         to: [email],
-        subject: "Verify your ClinicalHours account",
+        subject: "Verify Your Email — ClinicalHours",
         html: `
           <!DOCTYPE html>
           <html>
@@ -195,58 +198,76 @@ const handler = async (req: Request): Promise<Response> => {
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
           </head>
-          <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f8;">
-            <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a;">
+            <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #0a0a0a;">
               <tr>
-                <td align="center" style="padding: 40px 0;">
-                  <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);">
-                    <!-- Header -->
+                <td align="center" style="padding: 40px 20px;">
+                  <table role="presentation" style="width: 100%; max-width: 520px; border-collapse: collapse;">
+                    
+                    <!-- Banner Image -->
                     <tr>
-                      <td style="padding: 40px 40px 20px 40px; text-align: center; background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-radius: 16px 16px 0 0;">
-                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">ClinicalHours</h1>
-                        <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Your Path to Clinical Experience</p>
+                      <td style="padding: 0;">
+                        <img src="${bannerUrl}" alt="" style="width: 100%; height: 120px; object-fit: cover; object-position: center 30%; display: block; border-radius: 4px 4px 0 0;" />
+                      </td>
+                    </tr>
+                    
+                    <!-- Logo/Brand -->
+                    <tr>
+                      <td style="padding: 32px 0 24px 0; text-align: center; background-color: #111111;">
+                        <p style="margin: 0; font-size: 24px; letter-spacing: 0.1em; color: #ffffff;">
+                          <span style="font-weight: 300;">Clinical</span><span style="font-weight: 600;">Hours</span>
+                        </p>
                       </td>
                     </tr>
                     
                     <!-- Content -->
                     <tr>
-                      <td style="padding: 40px;">
-                        <h2 style="margin: 0 0 16px 0; color: #1f2937; font-size: 24px; font-weight: 600;">Welcome, ${safeName}! 👋</h2>
-                        <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                          Thank you for joining ClinicalHours! Please verify your email address to complete your registration and start discovering clinical opportunities.
+                      <td style="padding: 0 40px 40px 40px; background-color: #111111;">
+                        <p style="margin: 0 0 8px 0; color: #888888; font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em;">
+                          Email Verification
+                        </p>
+                        <h1 style="margin: 0 0 24px 0; color: #ffffff; font-size: 28px; font-weight: 300; letter-spacing: 0.02em; line-height: 1.3;">
+                          Welcome, ${safeName}
+                        </h1>
+                        <p style="margin: 0 0 32px 0; color: #a0a0a0; font-size: 15px; line-height: 1.7; font-weight: 300;">
+                          Thank you for creating an account. Please verify your email address to complete your registration and begin exploring clinical opportunities.
                         </p>
                         
                         <!-- CTA Button -->
                         <table role="presentation" style="width: 100%; border-collapse: collapse;">
                           <tr>
-                            <td align="center" style="padding: 20px 0;">
-                              <a href="${verificationLink}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
-                                Verify Email Address
+                            <td align="center" style="padding: 0 0 32px 0;">
+                              <a href="${verificationLink}" style="display: inline-block; padding: 14px 48px; background-color: #ffffff; color: #0a0a0a; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase;">
+                                Verify Email
                               </a>
                             </td>
                           </tr>
                         </table>
                         
-                        <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                          This link will expire in 24 hours. If you didn't create an account with ClinicalHours, you can safely ignore this email.
+                        <!-- Divider -->
+                        <div style="height: 1px; background-color: #222222; margin: 0 0 24px 0;"></div>
+                        
+                        <p style="margin: 0 0 16px 0; color: #666666; font-size: 13px; line-height: 1.6;">
+                          This link expires in 24 hours. If you did not create an account, please disregard this email.
                         </p>
                         
                         <!-- Alternative Link -->
-                        <div style="margin-top: 24px; padding: 16px; background-color: #f9fafb; border-radius: 8px;">
-                          <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px;">If the button doesn't work, copy and paste this link:</p>
-                          <p style="margin: 0; color: #7c3aed; font-size: 12px; word-break: break-all;">${verificationLink}</p>
-                        </div>
+                        <p style="margin: 0; color: #555555; font-size: 11px; line-height: 1.6;">
+                          If the button doesn't work, copy this link:<br/>
+                          <span style="color: #888888; word-break: break-all;">${verificationLink}</span>
+                        </p>
                       </td>
                     </tr>
                     
                     <!-- Footer -->
                     <tr>
-                      <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 16px 16px; text-align: center;">
-                        <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                      <td style="padding: 24px 40px; background-color: #0d0d0d; text-align: center; border-radius: 0 0 4px 4px;">
+                        <p style="margin: 0; color: #444444; font-size: 11px; letter-spacing: 0.05em;">
                           © ${new Date().getFullYear()} ClinicalHours. All rights reserved.
                         </p>
                       </td>
                     </tr>
+                    
                   </table>
                 </td>
               </tr>
