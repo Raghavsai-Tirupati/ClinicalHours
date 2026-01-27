@@ -85,17 +85,16 @@ const DashboardVideoCarousel = () => {
     }
   };
 
-  // Calculate positions for the carousel items - using left/right percentages for cross-browser compatibility
+  // Calculate positions for the carousel items - symmetric layout with items on both sides
   const getItemStyle = (index: number): React.CSSProperties => {
     const diff = index - currentIndex;
     const totalItems = videos.length;
     
-    // Normalize the difference to handle wrap-around
+    // Normalize the difference to handle wrap-around (-2 to +2 for 4 items)
     let normalizedDiff = diff;
     if (diff > totalItems / 2) normalizedDiff = diff - totalItems;
     if (diff < -totalItems / 2) normalizedDiff = diff + totalItems;
 
-    // Base styles for each position - using left positioning instead of translateX for better cross-browser support
     const baseStyle: React.CSSProperties = {
       position: "absolute" as const,
       left: "50%",
@@ -112,49 +111,31 @@ const DashboardVideoCarousel = () => {
         opacity: 1,
         filter: "brightness(1)"
       };
-    } else if (normalizedDiff === 1 || normalizedDiff === -totalItems + 1) {
-      // Right
+    } else if (normalizedDiff === 1) {
+      // Right side
       return {
         ...baseStyle,
-        transform: "translate(10%, -50%) scale(0.75) rotateY(-15deg)",
+        transform: "translate(15%, -50%) scale(0.8) rotateY(-12deg)",
         zIndex: 20,
         opacity: 0.7,
         filter: "brightness(0.7)"
       };
-    } else if (normalizedDiff === -1 || normalizedDiff === totalItems - 1) {
-      // Left
+    } else if (normalizedDiff === -1) {
+      // Left side
       return {
         ...baseStyle,
-        transform: "translate(-110%, -50%) scale(0.75) rotateY(15deg)",
+        transform: "translate(-115%, -50%) scale(0.8) rotateY(12deg)",
         zIndex: 20,
         opacity: 0.7,
         filter: "brightness(0.7)"
-      };
-    } else if (normalizedDiff === 2 || normalizedDiff === -totalItems + 2) {
-      // Far right (barely visible)
-      return {
-        ...baseStyle,
-        transform: "translate(60%, -50%) scale(0.6) rotateY(-25deg)",
-        zIndex: 10,
-        opacity: 0.4,
-        filter: "brightness(0.5)"
-      };
-    } else if (normalizedDiff === -2 || normalizedDiff === totalItems - 2) {
-      // Far left (barely visible)
-      return {
-        ...baseStyle,
-        transform: "translate(-160%, -50%) scale(0.6) rotateY(25deg)",
-        zIndex: 10,
-        opacity: 0.4,
-        filter: "brightness(0.5)"
       };
     } else {
-      // Hidden
+      // For 4 items, the 4th item (normalizedDiff === 2 or -2) - show it faintly on far left to balance
       return {
         ...baseStyle,
-        transform: "translate(-50%, -50%) scale(0.5)",
-        zIndex: 0,
-        opacity: 0,
+        transform: "translate(-165%, -50%) scale(0.6) rotateY(18deg)",
+        zIndex: 10,
+        opacity: 0.35,
         filter: "brightness(0.5)"
       };
     }
