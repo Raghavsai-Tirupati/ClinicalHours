@@ -25,6 +25,7 @@ const Home = () => {
   }, [user, loading, navigate]);
   
   const { ref: statsRef, isInView: statsInView } = useInView({ threshold: 0.2 });
+  const { ref: carouselRef, isInView: carouselInView } = useInView({ threshold: 0.2 });
   const { ref: storyRef, isInView: storyInView } = useInView({ threshold: 0.2 });
   const { ref: ctaRef, isInView: ctaInView } = useInView({ threshold: 0.2 });
 
@@ -47,8 +48,8 @@ const Home = () => {
         {/* Video Background Carousel */}
         <HeroVideoCarousel onIndexChange={handleHeroVideoChange} />
         
-        {/* Gradient overlay - barely noticeable fade only at very bottom */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 from-0% via-transparent via-20% to-black to-[98%] z-[5]"></div>
+        {/* Minimal gradient - just subtle darkening at top for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 from-0% to-transparent to-30% z-[5]"></div>
         
         {/* Main hero content */}
         <div className="container mx-auto px-4 sm:px-6 relative z-10">
@@ -84,9 +85,16 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Browser Carousel Section - Seamless black background */}
-      <section className="relative py-16 sm:py-20 md:py-24 bg-black overflow-hidden">
-        <div className="container mx-auto px-4">
+      {/* Browser Carousel Section - Seamless black background with scroll animation */}
+      <section 
+        ref={carouselRef}
+        className="relative py-16 sm:py-20 md:py-24 bg-black overflow-hidden"
+      >
+        <div 
+          className={`container mx-auto px-4 transition-all duration-700 ${
+            carouselInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+          }`}
+        >
           <HeroBrowserCarousel activeIndex={heroVideoIndex} />
         </div>
       </section>
