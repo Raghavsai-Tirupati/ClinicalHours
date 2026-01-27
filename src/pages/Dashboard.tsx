@@ -11,6 +11,7 @@ import { calculateDistance } from "@/lib/geolocation";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import ExperienceBuilder from "@/components/ExperienceBuilder";
+import DashboardVideoShowcase from "@/components/DashboardVideoShowcase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -457,6 +458,9 @@ const Dashboard = () => {
             {isGuest ? "Welcome to ClinicalHours!" : `Welcome back, ${firstName}!`}
           </h1>
         </div>
+
+        {/* Squarespace-style Video Showcase */}
+        <DashboardVideoShowcase />
 
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
