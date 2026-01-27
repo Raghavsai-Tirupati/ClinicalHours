@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
  * SCENES CONFIGURATION
@@ -31,7 +32,6 @@ const scenes: Scene[] = [
     subtitle: "Track saved opportunities, monitor your progress, and manage applications all in one powerful dashboard.",
     ctaText: "View Dashboard",
     ctaHref: "/dashboard",
-    // Deep navy to slate gradient
     bgGradient: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)",
     imageSrc: "/screenshots/dashboard.png",
     imageAlt: "Clinical Hours Dashboard showing saved opportunities and progress tracking",
@@ -42,7 +42,6 @@ const scenes: Scene[] = [
     subtitle: "Browse thousands of clinical positions sorted by distance. Filter by type and add promising ones to your tracker.",
     ctaText: "Browse Opportunities",
     ctaHref: "/opportunities",
-    // Warm charcoal gradient
     bgGradient: "linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%)",
     imageSrc: "/screenshots/opportunities.png",
     imageAlt: "Opportunities page showing clinical volunteer positions",
@@ -53,7 +52,6 @@ const scenes: Scene[] = [
     subtitle: "Explore opportunities on an interactive map. Set your radius and see clusters of positions in your area.",
     ctaText: "Open Map",
     ctaHref: "/map",
-    // Deep teal to dark gradient
     bgGradient: "linear-gradient(135deg, #042f2e 0%, #134e4a 50%, #0f766e 100%)",
     imageSrc: "/screenshots/map.png",
     imageAlt: "Interactive map showing clinical opportunities near user location",
@@ -64,20 +62,25 @@ const scenes: Scene[] = [
     subtitle: "Keep your information updated. Get tailored recommendations and track your total hours automatically.",
     ctaText: "Edit Profile",
     ctaHref: "/profile",
-    // Deep purple to slate gradient
     bgGradient: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%)",
     imageSrc: "/screenshots/profile.png",
     imageAlt: "User profile page with settings and hour tracking",
   },
 ];
 
-// Auto-rotate interval in milliseconds (adjust timing here)
-const AUTO_ROTATE_INTERVAL = 7000; // 7 seconds per scene
+// Scroll threshold to trigger scene change
+const SCROLL_THRESHOLD = 80;
 
 const FeatureShowcase = () => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollAccumulator = useRef(0);
+  const isTransitioning = useRef(false);
+  const hasEnteredFromTop = useRef(false);
+  const hasExitedFromBottom = useRef(false);
+  const isMobile = useIsMobile();
 
   // Check for reduced motion preference
   useEffect(() => {
@@ -90,25 +93,163 @@ const FeatureShowcase = () => {
   }, []);
 
   const goToScene = useCallback((index: number) => {
-    if (index === activeIndex) return;
+    if (index === activeIndex || isTransitioning.current) return;
+    isTransitioning.current = true;
     setActiveIndex(index);
+    
+    // Reset transition lock after animation
+    setTimeout(() => {
+      isTransitioning.current = false;
+    }, 700);
   }, [activeIndex]);
 
   const nextScene = useCallback(() => {
-    setActiveIndex((prev) => (prev + 1) % scenes.length);
-  }, []);
+    if (activeIndex < scenes.length - 1) {
+      goToScene(activeIndex + 1);
+      return true;
+    }
+    return false;
+  }, [activeIndex, goToScene]);
 
-  // Auto-rotate when reduced motion not preferred
+  const prevScene = useCallback(() => {
+    if (activeIndex > 0) {
+      goToScene(activeIndex - 1);
+      return true;
+    }
+    return false;
+  }, [activeIndex, goToScene]);
+
+  // Scroll-hijacking logic
   useEffect(() => {
-    if (prefersReducedMotion) return;
-    
-    const interval = setInterval(nextScene, AUTO_ROTATE_INTERVAL);
-    return () => clearInterval(interval);
-  }, [prefersReducedMotion, nextScene]);
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const rect = container.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const containerCenter = rect.top + rect.height / 2;
+      const viewportCenter = viewportHeight / 2;
+      
+      // Check if container is centered in viewport (with some tolerance)
+      const tolerance = viewportHeight * 0.3;
+      const isCentered = Math.abs(containerCenter - viewportCenter) < tolerance;
+      
+      // Enter lock when scrolling down into center
+      if (isCentered && !isLocked && !hasExitedFromBottom.current) {
+        if (rect.top < viewportCenter && !hasEnteredFromTop.current) {
+          hasEnteredFromTop.current = true;
+          setIsLocked(true);
+        }
+      }
+      
+      // Reset flags when scrolled away
+      if (rect.bottom < 0 || rect.top > viewportHeight) {
+        hasEnteredFromTop.current = false;
+        hasExitedFromBottom.current = false;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isLocked]);
+
+  // Handle wheel events when locked
+  useEffect(() => {
+    if (!isLocked) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (isTransitioning.current) {
+        e.preventDefault();
+        return;
+      }
+
+      scrollAccumulator.current += e.deltaY;
+
+      if (scrollAccumulator.current > SCROLL_THRESHOLD) {
+        // Scrolling down
+        scrollAccumulator.current = 0;
+        if (!nextScene()) {
+          // At last scene, unlock and allow normal scroll
+          setIsLocked(false);
+          hasExitedFromBottom.current = true;
+        } else {
+          e.preventDefault();
+        }
+      } else if (scrollAccumulator.current < -SCROLL_THRESHOLD) {
+        // Scrolling up
+        scrollAccumulator.current = 0;
+        if (!prevScene()) {
+          // At first scene, unlock and allow normal scroll
+          setIsLocked(false);
+          hasEnteredFromTop.current = false;
+        } else {
+          e.preventDefault();
+        }
+      } else {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [isLocked, nextScene, prevScene]);
+
+  // Handle touch events for mobile
+  useEffect(() => {
+    if (!isLocked || !isMobile) return;
+
+    let touchStartY = 0;
+    let touchAccumulator = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+      touchAccumulator = 0;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isTransitioning.current) {
+        e.preventDefault();
+        return;
+      }
+
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchStartY - touchY;
+      touchAccumulator += deltaY;
+      touchStartY = touchY;
+
+      if (touchAccumulator > SCROLL_THRESHOLD) {
+        touchAccumulator = 0;
+        if (!nextScene()) {
+          setIsLocked(false);
+          hasExitedFromBottom.current = true;
+        } else {
+          e.preventDefault();
+        }
+      } else if (touchAccumulator < -SCROLL_THRESHOLD) {
+        touchAccumulator = 0;
+        if (!prevScene()) {
+          setIsLocked(false);
+          hasEnteredFromTop.current = false;
+        } else {
+          e.preventDefault();
+        }
+      } else {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [isLocked, isMobile, nextScene, prevScene]);
 
   const activeScene = scenes[activeIndex];
   
-  // Transition classes based on motion preference
+  // Transition classes based on motion preference - now vertical
   const transitionClass = prefersReducedMotion 
     ? "" 
     : "transition-all duration-700 ease-out";
@@ -119,7 +260,6 @@ const FeatureShowcase = () => {
       className="relative w-full min-h-screen overflow-hidden"
       style={{ fontFamily: '"Times New Roman", Times, serif' }}
     >
-
       {/* Content container */}
       <div className="relative z-10 min-h-screen flex items-center">
         <div className="container mx-auto px-6 lg:px-12 py-20">
@@ -135,8 +275,8 @@ const FeatureShowcase = () => {
                 {String(activeIndex + 1).padStart(2, "0")} / {String(scenes.length).padStart(2, "0")}
               </div>
 
-              {/* Title with crossfade */}
-              <div className="relative min-h-[120px] md:min-h-[160px]">
+              {/* Title with vertical crossfade */}
+              <div className="relative min-h-[120px] md:min-h-[160px] overflow-hidden">
                 {scenes.map((scene, index) => (
                   <h2
                     key={scene.id}
@@ -146,7 +286,9 @@ const FeatureShowcase = () => {
                       opacity: activeIndex === index ? 1 : 0,
                       transform: activeIndex === index 
                         ? "translateY(0)" 
-                        : prefersReducedMotion ? "translateY(0)" : "translateY(20px)",
+                        : activeIndex > index 
+                          ? (prefersReducedMotion ? "translateY(0)" : "translateY(-100%)")
+                          : (prefersReducedMotion ? "translateY(0)" : "translateY(100%)"),
                     }}
                   >
                     {scene.title}
@@ -154,8 +296,8 @@ const FeatureShowcase = () => {
                 ))}
               </div>
 
-              {/* Subtitle with crossfade */}
-              <div className="relative min-h-[80px]">
+              {/* Subtitle with vertical crossfade */}
+              <div className="relative min-h-[80px] overflow-hidden">
                 {scenes.map((scene, index) => (
                   <p
                     key={scene.id}
@@ -165,7 +307,9 @@ const FeatureShowcase = () => {
                       opacity: activeIndex === index ? 1 : 0,
                       transform: activeIndex === index 
                         ? "translateY(0)" 
-                        : prefersReducedMotion ? "translateY(0)" : "translateY(20px)",
+                        : activeIndex > index 
+                          ? (prefersReducedMotion ? "translateY(0)" : "translateY(-100%)")
+                          : (prefersReducedMotion ? "translateY(0)" : "translateY(100%)"),
                       transitionDelay: prefersReducedMotion ? "0ms" : "100ms",
                     }}
                   >
@@ -193,22 +337,39 @@ const FeatureShowcase = () => {
                 </Link>
               </div>
 
-              {/* Navigation dots */}
+              {/* Navigation dots - now vertical progress indicator */}
               <div className="flex items-center gap-3 pt-8">
                 {scenes.map((scene, index) => (
-                  <button
+                  <div
                     key={scene.id}
                     onClick={() => goToScene(index)}
-                    className={`relative h-3 rounded-full ${transitionClass} ${
+                    className={`relative h-2 rounded-full cursor-pointer ${transitionClass} ${
                       activeIndex === index 
-                        ? "w-10 bg-white" 
-                        : "w-3 bg-white/30 hover:bg-white/50"
+                        ? "w-8 bg-white" 
+                        : "w-2 bg-white/30 hover:bg-white/50"
                     }`}
+                    role="button"
+                    tabIndex={0}
                     aria-label={`Go to ${scene.title}`}
                     aria-current={activeIndex === index ? "true" : "false"}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        goToScene(index);
+                      }
+                    }}
                   />
                 ))}
               </div>
+
+              {/* Scroll hint when locked */}
+              {isLocked && (
+                <div className="flex items-center gap-2 text-white/40 text-sm animate-pulse">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                  <span>Scroll to explore</span>
+                </div>
+              )}
             </div>
 
             {/* Device frame with screenshot - Right side on desktop, bottom on mobile */}
@@ -235,8 +396,8 @@ const FeatureShowcase = () => {
                     </div>
                   </div>
 
-                  {/* Screenshot images with crossfade */}
-                  <div className="relative" style={{ aspectRatio: "16/10" }}>
+                  {/* Screenshot images with vertical crossfade */}
+                  <div className="relative overflow-hidden" style={{ aspectRatio: "16/10" }}>
                     {scenes.map((scene, index) => (
                       <img
                         key={scene.id}
@@ -246,8 +407,10 @@ const FeatureShowcase = () => {
                         style={{
                           opacity: activeIndex === index ? 1 : 0,
                           transform: activeIndex === index 
-                            ? "scale(1)" 
-                            : prefersReducedMotion ? "scale(1)" : "scale(1.02)",
+                            ? "translateY(0)" 
+                            : activeIndex > index 
+                              ? (prefersReducedMotion ? "translateY(0)" : "translateY(-100%)")
+                              : (prefersReducedMotion ? "translateY(0)" : "translateY(100%)"),
                         }}
                         loading={index === 0 ? "eager" : "lazy"}
                       />
@@ -268,21 +431,21 @@ const FeatureShowcase = () => {
       {/* Arrow navigation - Desktop only */}
       <div className="absolute bottom-8 right-8 hidden lg:flex gap-3 z-20">
         <button
-          onClick={() => goToScene((activeIndex - 1 + scenes.length) % scenes.length)}
+          onClick={() => prevScene()}
           className={`p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white ${transitionClass}`}
           aria-label="Previous scene"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 15l7-7 7 7" />
           </svg>
         </button>
         <button
-          onClick={() => goToScene((activeIndex + 1) % scenes.length)}
+          onClick={() => nextScene()}
           className={`p-4 border border-white/20 hover:border-white hover:bg-white hover:text-black text-white ${transitionClass}`}
           aria-label="Next scene"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
       </div>
