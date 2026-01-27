@@ -5,18 +5,17 @@ interface TutorialProgressProps {
 
 export default function TutorialProgress({ currentStep, totalSteps }: TutorialProgressProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center justify-center gap-2">
       {Array.from({ length: totalSteps }).map((_, index) => (
-        <button
+        <div
           key={index}
-          className={`w-2 h-2 rounded-full transition-all duration-500 ${
+          className={`h-2 rounded-full transition-all duration-300 ${
             index === currentStep
-              ? 'w-8 bg-white'
+              ? 'bg-white w-6'
               : index < currentStep
-              ? 'bg-white/60'
-              : 'bg-white/20'
+              ? 'bg-white/60 w-2'
+              : 'bg-white/30 w-2'
           }`}
-          aria-label={`Go to step ${index + 1}`}
         />
       ))}
     </div>
