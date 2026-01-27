@@ -12,6 +12,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import ExperienceBuilder from "@/components/ExperienceBuilder";
 import DashboardVideoShowcase from "@/components/DashboardVideoShowcase";
+import dashboardBg from "@/assets/dashboard-bg.jpeg";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -440,9 +441,20 @@ const Dashboard = () => {
       
       {/* Hero Section - Full viewport with stats centered, video peeks from bottom */}
       <section className="relative min-h-screen flex flex-col">
+        {/* Background Image with Dark Overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ 
+            backgroundImage: `url(${dashboardBg})`,
+            bottom: '50%' // Only cover top half (above video)
+          }}
+        >
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-background/85" />
+        </div>
         {/* Guest Banner - Fixed at top */}
         {isGuest && (
-          <div className="container mx-auto px-4 pt-24 pb-4">
+          <div className="container mx-auto px-4 pt-24 pb-4 relative z-10">
             <Alert className="bg-primary/5 border-primary/20">
               <UserPlus className="h-4 w-4" />
               <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -456,7 +468,7 @@ const Dashboard = () => {
         )}
 
         {/* Centered Content Area */}
-        <div className={`flex-1 flex flex-col justify-center container mx-auto px-4 ${isGuest ? 'pb-48' : 'pt-24 pb-48'}`}>
+        <div className={`flex-1 flex flex-col justify-center container mx-auto px-4 relative z-10 ${isGuest ? 'pb-48' : 'pt-24 pb-48'}`}>
           {/* Welcome Section - Centered */}
           <div className="text-center mb-10">
             <h1 className="text-3xl lg:text-5xl font-bold text-foreground">
