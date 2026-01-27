@@ -99,7 +99,7 @@ const DashboardVideoCarousel = () => {
     if (normalizedDiff === 0) {
       // Center (active)
       return {
-        transform: "translateX(0) scale(1) rotateY(0deg)",
+        transform: "scale(1) rotateY(0deg)",
         zIndex: 30,
         opacity: 1,
         filter: "brightness(1)"
@@ -107,7 +107,7 @@ const DashboardVideoCarousel = () => {
     } else if (normalizedDiff === 1 || normalizedDiff === -totalItems + 1) {
       // Right
       return {
-        transform: "translateX(65%) scale(0.75) rotateY(-15deg)",
+        transform: "translateX(55%) scale(0.75) rotateY(-15deg)",
         zIndex: 20,
         opacity: 0.7,
         filter: "brightness(0.7)"
@@ -115,7 +115,7 @@ const DashboardVideoCarousel = () => {
     } else if (normalizedDiff === -1 || normalizedDiff === totalItems - 1) {
       // Left
       return {
-        transform: "translateX(-65%) scale(0.75) rotateY(15deg)",
+        transform: "translateX(-55%) scale(0.75) rotateY(15deg)",
         zIndex: 20,
         opacity: 0.7,
         filter: "brightness(0.7)"
@@ -123,23 +123,23 @@ const DashboardVideoCarousel = () => {
     } else if (normalizedDiff === 2 || normalizedDiff === -totalItems + 2) {
       // Far right (barely visible)
       return {
-        transform: "translateX(110%) scale(0.6) rotateY(-25deg)",
+        transform: "translateX(95%) scale(0.6) rotateY(-25deg)",
         zIndex: 10,
-        opacity: 0.4,
+        opacity: 0.3,
         filter: "brightness(0.5)"
       };
     } else if (normalizedDiff === -2 || normalizedDiff === totalItems - 2) {
       // Far left (barely visible)
       return {
-        transform: "translateX(-110%) scale(0.6) rotateY(25deg)",
+        transform: "translateX(-95%) scale(0.6) rotateY(25deg)",
         zIndex: 10,
-        opacity: 0.4,
+        opacity: 0.3,
         filter: "brightness(0.5)"
       };
     } else {
       // Hidden
       return {
-        transform: "translateX(0) scale(0.5)",
+        transform: "scale(0.5)",
         zIndex: 0,
         opacity: 0,
         filter: "brightness(0.5)"
@@ -150,13 +150,13 @@ const DashboardVideoCarousel = () => {
   return (
     <div 
       ref={containerRef}
-      className="relative w-full overflow-hidden"
-      style={{ perspective: "1200px" }}
+      className="relative w-full overflow-visible"
     >
       <div 
         className={`relative h-[400px] sm:h-[450px] md:h-[500px] lg:h-[550px] flex items-center justify-center transition-all duration-700 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
+        style={{ perspective: "1200px", perspectiveOrigin: "center center" }}
       >
         {videos.map((video, index) => {
           const style = getItemStyle(index);
@@ -165,13 +165,15 @@ const DashboardVideoCarousel = () => {
           return (
             <div
               key={index}
-              className="absolute w-[85%] sm:w-[75%] md:w-[65%] lg:w-[55%] max-w-4xl transition-all duration-700 ease-out"
+              className="absolute w-[85%] sm:w-[75%] md:w-[65%] lg:w-[55%] max-w-4xl transition-all duration-700 ease-out left-1/2 top-1/2"
               style={{
-                transform: style.transform,
+                transform: `translate(-50%, -50%) ${style.transform}`,
                 zIndex: style.zIndex,
                 opacity: style.opacity,
                 filter: style.filter,
-                transformStyle: "preserve-3d"
+                transformStyle: "preserve-3d",
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden"
               }}
             >
               {/* Browser frame */}
