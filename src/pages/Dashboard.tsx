@@ -571,14 +571,16 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Video Carousel - Peeks from bottom, half visible */}
+        <div className="absolute bottom-0 left-0 right-0 translate-y-1/2 z-20">
+          <div className="container mx-auto px-4">
+            <DashboardVideoCarousel />
+          </div>
+        </div>
       </section>
 
-      {/* Video Carousel - Below hero with proper spacing */}
-      <div className="py-16 sm:py-20 bg-gradient-to-b from-black via-zinc-950/80 to-background">
-        <div className="container mx-auto px-4">
-          <DashboardVideoCarousel />
-        </div>
-      </div>
+      {/* Spacer for the video carousel that peeks below */}
+      <div className="h-[280px] sm:h-[320px] md:h-[360px] lg:h-[400px] bg-gradient-to-b from-black to-background" />
       </div> {/* End of Hero + Video Background Container */}
       
       <main className="flex-1 container mx-auto px-4 pb-8 relative z-20">
