@@ -57,21 +57,11 @@ const DashboardVideoShowcase = ({
   return (
     <div 
       ref={containerRef}
-      className="relative w-full mb-8"
+      className="relative w-full"
     >
-      {/* Section header */}
-      <div className="text-center mb-6">
-        <p className="text-xs text-muted-foreground uppercase tracking-[0.2em] mb-2">
-          See It In Action
-        </p>
-        <h2 className="text-xl sm:text-2xl font-semibold text-foreground">
-          Your Clinical Journey Dashboard
-        </h2>
-      </div>
-
       {/* Squarespace-style floating browser frame */}
       <div 
-        className={`relative max-w-4xl mx-auto transition-all duration-700 ${
+        className={`relative max-w-5xl mx-auto transition-all duration-700 ${
           isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
@@ -137,22 +127,6 @@ const DashboardVideoShowcase = ({
             </Button>
           </div>
         </div>
-      </div>
-
-      {/* Feature highlights below */}
-      <div 
-        className={`flex flex-wrap justify-center gap-2 sm:gap-3 mt-6 transition-all duration-500 delay-300 ${
-          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-        }`}
-      >
-        {['Track Hours', 'Save Opportunities', 'Set Reminders', 'Log Moments'].map((feature) => (
-          <span 
-            key={feature}
-            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs text-muted-foreground bg-muted/50 border border-border rounded-full"
-          >
-            {feature}
-          </span>
-        ))}
       </div>
     </div>
   );
