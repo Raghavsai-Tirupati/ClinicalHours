@@ -97,10 +97,6 @@ const Home = () => {
           style={{ backgroundImage: `url(${carouselBg})` }}
         />
         
-        {/* Subtle top gradient blend from hero */}
-        <div className="absolute inset-x-0 top-0 h-16 sm:h-24 bg-gradient-to-b from-black/80 to-transparent z-[1]" />
-        
-        {/* Carousel content */}
         <div 
           ref={carouselRef}
           className={`container mx-auto px-4 py-16 sm:py-20 md:py-24 transition-all duration-700 relative z-10 ${
@@ -149,9 +145,6 @@ const Home = () => {
             </div>
           </div>
         </div>
-        
-        {/* Bottom gradient fade to black for next section */}
-        <div className="absolute inset-x-0 bottom-0 h-24 sm:h-32 bg-gradient-to-t from-black to-transparent z-[1]" />
       </section>
 
 
