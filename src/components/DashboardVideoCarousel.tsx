@@ -85,8 +85,8 @@ const DashboardVideoCarousel = () => {
     }
   };
 
-  // Calculate positions for the carousel items
-  const getItemStyle = (index: number) => {
+  // Calculate positions for the carousel items - using left/right percentages for cross-browser compatibility
+  const getItemStyle = (index: number): React.CSSProperties => {
     const diff = index - currentIndex;
     const totalItems = videos.length;
     
@@ -95,11 +95,19 @@ const DashboardVideoCarousel = () => {
     if (diff > totalItems / 2) normalizedDiff = diff - totalItems;
     if (diff < -totalItems / 2) normalizedDiff = diff + totalItems;
 
-    // Base styles for each position
+    // Base styles for each position - using left positioning instead of translateX for better cross-browser support
+    const baseStyle: React.CSSProperties = {
+      position: "absolute" as const,
+      left: "50%",
+      top: "50%",
+      willChange: "transform, opacity",
+    };
+
     if (normalizedDiff === 0) {
       // Center (active)
       return {
-        transform: "translateX(0) scale(1) rotateY(0deg)",
+        ...baseStyle,
+        transform: "translate(-50%, -50%) scale(1) rotateY(0deg)",
         zIndex: 30,
         opacity: 1,
         filter: "brightness(1)"
@@ -107,7 +115,8 @@ const DashboardVideoCarousel = () => {
     } else if (normalizedDiff === 1 || normalizedDiff === -totalItems + 1) {
       // Right
       return {
-        transform: "translateX(65%) scale(0.75) rotateY(-15deg)",
+        ...baseStyle,
+        transform: "translate(10%, -50%) scale(0.75) rotateY(-15deg)",
         zIndex: 20,
         opacity: 0.7,
         filter: "brightness(0.7)"
@@ -115,7 +124,8 @@ const DashboardVideoCarousel = () => {
     } else if (normalizedDiff === -1 || normalizedDiff === totalItems - 1) {
       // Left
       return {
-        transform: "translateX(-65%) scale(0.75) rotateY(15deg)",
+        ...baseStyle,
+        transform: "translate(-110%, -50%) scale(0.75) rotateY(15deg)",
         zIndex: 20,
         opacity: 0.7,
         filter: "brightness(0.7)"
@@ -123,7 +133,8 @@ const DashboardVideoCarousel = () => {
     } else if (normalizedDiff === 2 || normalizedDiff === -totalItems + 2) {
       // Far right (barely visible)
       return {
-        transform: "translateX(110%) scale(0.6) rotateY(-25deg)",
+        ...baseStyle,
+        transform: "translate(60%, -50%) scale(0.6) rotateY(-25deg)",
         zIndex: 10,
         opacity: 0.4,
         filter: "brightness(0.5)"
@@ -131,7 +142,8 @@ const DashboardVideoCarousel = () => {
     } else if (normalizedDiff === -2 || normalizedDiff === totalItems - 2) {
       // Far left (barely visible)
       return {
-        transform: "translateX(-110%) scale(0.6) rotateY(25deg)",
+        ...baseStyle,
+        transform: "translate(-160%, -50%) scale(0.6) rotateY(25deg)",
         zIndex: 10,
         opacity: 0.4,
         filter: "brightness(0.5)"
@@ -139,7 +151,8 @@ const DashboardVideoCarousel = () => {
     } else {
       // Hidden
       return {
-        transform: "translateX(0) scale(0.5)",
+        ...baseStyle,
+        transform: "translate(-50%, -50%) scale(0.5)",
         zIndex: 0,
         opacity: 0,
         filter: "brightness(0.5)"
@@ -165,13 +178,12 @@ const DashboardVideoCarousel = () => {
           return (
             <div
               key={index}
-              className="absolute w-[85%] sm:w-[75%] md:w-[65%] lg:w-[55%] max-w-4xl transition-all duration-700 ease-out"
+              className="w-[85%] sm:w-[75%] md:w-[65%] lg:w-[55%] max-w-4xl transition-all duration-700 ease-out"
               style={{
-                transform: style.transform,
-                zIndex: style.zIndex,
-                opacity: style.opacity,
-                filter: style.filter,
-                transformStyle: "preserve-3d"
+                ...style,
+                transformStyle: "preserve-3d",
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
               }}
             >
               {/* Browser frame */}
