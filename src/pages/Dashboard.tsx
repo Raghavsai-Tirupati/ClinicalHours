@@ -446,8 +446,8 @@ const Dashboard = () => {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${dashboardBg})` }}
         >
-          {/* Dark overlay - lighter for better visibility */}
-          <div className="absolute inset-0 bg-background/60" />
+          {/* Dark overlay - 40% for lighter visibility */}
+          <div className="absolute inset-0 bg-background/40" />
         </div>
         
         {/* Hero Section - Full viewport with stats centered, video peeks from bottom */}
