@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface VideoItem {
   src: string;
@@ -32,6 +33,7 @@ interface HeroBrowserCarouselProps {
 }
 
 const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -73,7 +75,7 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
     }
   };
 
-  // Calculate positions for the carousel items - symmetric layout with items on both sides
+  // Calculate positions for the carousel items - simplified for mobile
   const getItemStyle = (index: number): React.CSSProperties => {
     const diff = index - activeIndex;
     const totalItems = videos.length;
@@ -90,6 +92,27 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
       willChange: "transform, opacity",
     };
 
+    // Simplified mobile layout - no 3D rotation, just fade between
+    if (isMobile) {
+      if (normalizedDiff === 0) {
+        return {
+          ...baseStyle,
+          transform: "translate(-50%, -50%) scale(1)",
+          zIndex: 30,
+          opacity: 1,
+        };
+      } else {
+        return {
+          ...baseStyle,
+          transform: "translate(-50%, -50%) scale(0.9)",
+          zIndex: 0,
+          opacity: 0,
+          pointerEvents: "none" as const,
+        };
+      }
+    }
+
+    // Desktop 3D carousel
     if (normalizedDiff === 0) {
       // Center (active)
       return {
@@ -132,10 +155,24 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
   return (
     <div 
       ref={containerRef}
-      className="relative w-full overflow-visible"
-      style={{ perspective: "1200px" }}
+      className="relative w-full overflow-hidden md:overflow-visible"
+      style={{ perspective: isMobile ? "none" : "1200px" }}
     >
-      <div className="relative h-[350px] sm:h-[400px] md:h-[450px] lg:h-[500px] flex items-center justify-center">
+      <style>{`
+        .carousel-video::-webkit-media-controls,
+        .carousel-video::-webkit-media-controls-enclosure,
+        .carousel-video::-webkit-media-controls-panel,
+        .carousel-video::-webkit-media-controls-play-button,
+        .carousel-video::-webkit-media-controls-start-playback-button,
+        .carousel-video::-webkit-media-controls-overlay-play-button {
+          display: none !important;
+          -webkit-appearance: none !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          visibility: hidden !important;
+        }
+      `}</style>
+      <div className="relative h-[280px] sm:h-[350px] md:h-[450px] lg:h-[500px] flex items-center justify-center">
         {videos.map((video, index) => {
           const style = getItemStyle(index);
           const isActive = index === activeIndex;
@@ -143,10 +180,10 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
           return (
             <div
               key={index}
-              className="w-[85%] sm:w-[75%] md:w-[65%] lg:w-[55%] max-w-4xl transition-all duration-700 ease-out"
+              className="w-[90%] sm:w-[75%] md:w-[65%] lg:w-[55%] max-w-4xl transition-all duration-500 ease-out"
               style={{
                 ...style,
-                transformStyle: "preserve-3d",
+                transformStyle: isMobile ? "flat" : "preserve-3d",
                 backfaceVisibility: "hidden",
                 WebkitBackfaceVisibility: "hidden",
               }}
@@ -154,18 +191,18 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
               {/* Browser frame */}
               <div className="relative rounded-xl overflow-hidden border border-white/20 bg-zinc-900 shadow-2xl shadow-black/50">
                 {/* Browser header */}
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-zinc-800/80 border-b border-white/10">
+                <div className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-zinc-800/80 border-b border-white/10">
                   <div className="flex gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-500/60" />
+                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-yellow-500/60" />
+                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-green-500/60" />
                   </div>
-                  <div className="flex-1 mx-3">
-                    <div className="max-w-xs mx-auto bg-zinc-700/50 rounded-md px-3 py-1 flex items-center justify-center border border-white/5">
-                      <span className="text-[10px] sm:text-xs text-white/50 truncate">clinicalhours.org</span>
+                  <div className="flex-1 mx-2 sm:mx-3">
+                    <div className="max-w-xs mx-auto bg-zinc-700/50 rounded-md px-2 sm:px-3 py-1 flex items-center justify-center border border-white/5">
+                      <span className="text-[9px] sm:text-xs text-white/50 truncate">clinicalhours.org</span>
                     </div>
                   </div>
-                  <div className="w-12" />
+                  <div className="w-8 sm:w-12" />
                 </div>
                 
                 {/* Video container */}
@@ -177,10 +214,13 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
                     muted
                     playsInline
                     loop
+                    controls={false}
+                    disablePictureInPicture
                     onLoadedData={() => handleVideoLoad(index)}
                     onPlay={() => isActive && setIsPlaying(true)}
                     onPause={() => isActive && setIsPlaying(false)}
-                    className="w-full h-full object-cover object-top"
+                    className="carousel-video w-full h-full object-cover object-top pointer-events-none"
+                    style={{ WebkitAppearance: 'none' }}
                   />
                   
                   {/* Fallback poster */}
