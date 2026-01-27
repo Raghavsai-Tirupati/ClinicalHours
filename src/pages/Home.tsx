@@ -151,6 +151,9 @@ const Home = () => {
         <div className="relative z-10">
           <FeatureShowcase />
         </div>
+        
+        {/* Bottom gradient fade to black */}
+        <div className="absolute inset-x-0 bottom-0 h-32 sm:h-48 bg-gradient-to-t from-black to-transparent z-[5] pointer-events-none" />
       </section>
 
       {/* Features Section - Horizontal scrolling rail */}
