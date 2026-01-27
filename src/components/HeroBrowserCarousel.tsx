@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Play, Pause } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface VideoItem {
@@ -36,7 +34,6 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
-  const [isPlaying, setIsPlaying] = useState(true);
   const [loadedVideos, setLoadedVideos] = useState<Set<number>>(new Set());
   const [internalIndex, setInternalIndex] = useState(activeIndex);
   const lastExternalIndex = useRef(activeIndex);
@@ -80,26 +77,37 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
     if (activeVideo) {
       activeVideo.currentTime = 0;
       activeVideo.play().catch(() => {});
-      setIsPlaying(true);
     }
   }, [internalIndex]);
 
   const handleVideoLoad = (index: number) => {
     setLoadedVideos(prev => new Set(prev).add(index));
-  };
-
-  const togglePlay = () => {
-    const video = videoRefs.current[activeIndex];
-    if (!video) return;
-    
-    if (isPlaying) {
-      video.pause();
-      setIsPlaying(false);
-    } else {
-      video.play().catch(() => {});
-      setIsPlaying(true);
+    // Try to play immediately when loaded
+    if (index === internalIndex) {
+      const video = videoRefs.current[index];
+      if (video) {
+        video.play().catch(() => {});
+      }
     }
   };
+
+  // iOS Safari fix: play videos on first user interaction
+  useEffect(() => {
+    const playVideosOnInteraction = () => {
+      const activeVideo = videoRefs.current[internalIndex];
+      if (activeVideo) {
+        activeVideo.play().catch(() => {});
+      }
+    };
+
+    document.addEventListener('touchstart', playVideosOnInteraction, { once: true });
+    document.addEventListener('click', playVideosOnInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener('touchstart', playVideosOnInteraction);
+      document.removeEventListener('click', playVideosOnInteraction);
+    };
+  }, [internalIndex]);
 
   // Calculate positions for the carousel items - simplified for mobile
   const getItemStyle = (index: number): React.CSSProperties => {
@@ -245,35 +253,17 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
                     disablePictureInPicture
                     preload="auto"
                     onLoadedData={() => handleVideoLoad(index)}
-                    onPlay={() => isActive && setIsPlaying(true)}
-                    onPause={() => isActive && setIsPlaying(false)}
                     className="carousel-video w-full h-full object-cover object-top pointer-events-none"
                     style={{ WebkitAppearance: 'none' }}
                   />
-                  
+
                   {/* Fallback poster */}
                   {!loadedVideos.has(index) && (
-                    <img 
+                    <img
                       src={video.poster}
                       alt="Dashboard Preview"
                       className="absolute inset-0 w-full h-full object-cover object-top"
                     />
-                  )}
-                  
-                  {/* Play/Pause button - only on active item */}
-                  {isActive && (
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      onClick={togglePlay}
-                      className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-black/60 backdrop-blur-sm hover:bg-black/80 shadow-lg z-10 border border-white/20"
-                    >
-                      {isPlaying ? (
-                        <Pause className="h-4 w-4 text-white" />
-                      ) : (
-                        <Play className="h-4 w-4 text-white ml-0.5" />
-                      )}
-                    </Button>
                   )}
                 </div>
               </div>

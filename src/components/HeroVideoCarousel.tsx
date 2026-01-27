@@ -113,6 +113,29 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
     }
   }, []);
 
+  // iOS Safari fix: play videos on first user interaction
+  useEffect(() => {
+    const playVideosOnInteraction = () => {
+      if (videoRefA.current) {
+        videoRefA.current.play().catch(() => {});
+      }
+      if (videoRefB.current) {
+        videoRefB.current.play().catch(() => {});
+      }
+      // Remove listeners after first interaction
+      document.removeEventListener('touchstart', playVideosOnInteraction);
+      document.removeEventListener('click', playVideosOnInteraction);
+    };
+
+    document.addEventListener('touchstart', playVideosOnInteraction, { once: true });
+    document.addEventListener('click', playVideosOnInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener('touchstart', playVideosOnInteraction);
+      document.removeEventListener('click', playVideosOnInteraction);
+    };
+  }, []);
+
   // Preload video when slot video changes
   useEffect(() => {
     if (videoRefA.current && activeSlot !== 'A') {
@@ -202,6 +225,7 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
           src={videos[slotBVideo]}
           muted
           playsInline
+          autoPlay
           controls={false}
           disablePictureInPicture
           disableRemotePlayback
