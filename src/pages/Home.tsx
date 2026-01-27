@@ -47,8 +47,8 @@ const Home = () => {
         {/* Video Background Carousel */}
         <HeroVideoCarousel onIndexChange={handleHeroVideoChange} />
         
-        {/* Gradient overlay - quick fade to black only at the very bottom */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent via-40% to-black to-95% z-[5]"></div>
+        {/* Gradient overlay - barely noticeable fade only at very bottom */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 from-0% via-transparent via-20% to-black to-[98%] z-[5]"></div>
         
         {/* Main hero content */}
         <div className="container mx-auto px-4 sm:px-6 relative z-10">
