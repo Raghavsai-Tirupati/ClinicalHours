@@ -38,25 +38,51 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [isPlaying, setIsPlaying] = useState(true);
   const [loadedVideos, setLoadedVideos] = useState<Set<number>>(new Set());
+  const [internalIndex, setInternalIndex] = useState(activeIndex);
+  const lastExternalIndex = useRef(activeIndex);
+  const fallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync with external index when it changes
+  useEffect(() => {
+    if (activeIndex !== lastExternalIndex.current) {
+      lastExternalIndex.current = activeIndex;
+      setInternalIndex(activeIndex);
+    }
+  }, [activeIndex]);
+
+  // Fallback: auto-advance if external index doesn't change (for mobile)
+  useEffect(() => {
+    fallbackTimerRef.current = setInterval(() => {
+      if (lastExternalIndex.current === activeIndex) {
+        setInternalIndex(prev => (prev + 1) % videos.length);
+      }
+    }, 8000);
+
+    return () => {
+      if (fallbackTimerRef.current) {
+        clearInterval(fallbackTimerRef.current);
+      }
+    };
+  }, [activeIndex]);
 
   // Play active video when index changes
   useEffect(() => {
     // Pause all videos first
     videoRefs.current.forEach((video, idx) => {
-      if (video && idx !== activeIndex) {
+      if (video && idx !== internalIndex) {
         video.pause();
         video.currentTime = 0;
       }
     });
 
     // Play the active one
-    const activeVideo = videoRefs.current[activeIndex];
+    const activeVideo = videoRefs.current[internalIndex];
     if (activeVideo) {
       activeVideo.currentTime = 0;
       activeVideo.play().catch(() => {});
       setIsPlaying(true);
     }
-  }, [activeIndex]);
+  }, [internalIndex]);
 
   const handleVideoLoad = (index: number) => {
     setLoadedVideos(prev => new Set(prev).add(index));
@@ -77,7 +103,7 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
 
   // Calculate positions for the carousel items - simplified for mobile
   const getItemStyle = (index: number): React.CSSProperties => {
-    const diff = index - activeIndex;
+    const diff = index - internalIndex;
     const totalItems = videos.length;
     
     // Normalize the difference to handle wrap-around (-2 to +2 for 4 items)
@@ -175,7 +201,7 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
       <div className="relative h-[280px] sm:h-[350px] md:h-[450px] lg:h-[500px] flex items-center justify-center">
         {videos.map((video, index) => {
           const style = getItemStyle(index);
-          const isActive = index === activeIndex;
+          const isActive = index === internalIndex;
           
           return (
             <div
@@ -213,9 +239,11 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
                     poster={video.poster}
                     muted
                     playsInline
+                    autoPlay={isActive}
                     loop
                     controls={false}
                     disablePictureInPicture
+                    preload="auto"
                     onLoadedData={() => handleVideoLoad(index)}
                     onPlay={() => isActive && setIsPlaying(true)}
                     onPause={() => isActive && setIsPlaying(false)}
@@ -260,8 +288,8 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
           <div
             key={index}
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              index === activeIndex 
-                ? "bg-white w-6" 
+              index === internalIndex
+                ? "bg-white w-6"
                 : "bg-white/30"
             }`}
           />

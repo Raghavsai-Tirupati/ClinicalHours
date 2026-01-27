@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import heroVideo1 from "@/assets/hero-video-1.mp4";
 import heroVideo2 from "@/assets/hero-video-2.mp4";
 import heroVideo3 from "@/assets/hero-video-3.mp4";
@@ -24,7 +23,6 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
   const videoRefA = useRef<HTMLVideoElement | null>(null);
   const videoRefB = useRef<HTMLVideoElement | null>(null);
   const fadeStartedRef = useRef(false);
-  const isMobileDevice = useIsMobile();
 
   const activeVideoRef = activeSlot === 'A' ? videoRefA : videoRefB;
   const nextVideoRef = activeSlot === 'A' ? videoRefB : videoRefA;
@@ -108,12 +106,12 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
     return () => clearTimeout(timer);
   }, [isFading, activeSlot, slotAVideo, slotBVideo, onIndexChange]);
 
-  // Initial play
+  // Initial play - works on mobile too since videos are muted
   useEffect(() => {
-    if (videoRefA.current && !isMobileDevice) {
+    if (videoRefA.current) {
       videoRefA.current.play().catch(() => {});
     }
-  }, [isMobileDevice]);
+  }, []);
 
   // Preload video when slot video changes
   useEffect(() => {
@@ -178,7 +176,7 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
           src={videos[slotAVideo]}
           muted
           playsInline
-          autoPlay={!isMobileDevice && activeSlot === 'A'}
+          autoPlay
           controls={false}
           disablePictureInPicture
           disableRemotePlayback
