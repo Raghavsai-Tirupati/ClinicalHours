@@ -244,7 +244,6 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
                   <video
                     ref={(el) => { videoRefs.current[index] = el; }}
                     src={video.src}
-                    poster={video.poster}
                     muted
                     playsInline
                     autoPlay={isActive}
@@ -256,15 +255,6 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
                     className="carousel-video w-full h-full object-cover object-top pointer-events-none"
                     style={{ WebkitAppearance: 'none' }}
                   />
-
-                  {/* Fallback poster */}
-                  {!loadedVideos.has(index) && (
-                    <img
-                      src={video.poster}
-                      alt="Dashboard Preview"
-                      className="absolute inset-0 w-full h-full object-cover object-top"
-                    />
-                  )}
                 </div>
               </div>
             </div>

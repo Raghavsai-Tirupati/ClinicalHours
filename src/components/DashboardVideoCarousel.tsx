@@ -189,24 +189,15 @@ const DashboardVideoCarousel = () => {
                   <video
                     ref={(el) => { videoRefs.current[index] = el; }}
                     src={video.src}
-                    poster={video.poster}
                     muted
                     playsInline
+                    preload="auto"
                     onLoadedData={() => handleVideoLoad(index)}
                     onEnded={isActive ? handleVideoEnded : undefined}
                     onPlay={() => isActive && setIsPlaying(true)}
                     onPause={() => isActive && setIsPlaying(false)}
                     className="w-full h-full object-cover object-top"
                   />
-                  
-                  {/* Fallback poster */}
-                  {!loadedVideos.has(index) && (
-                    <img 
-                      src={video.poster}
-                      alt="Dashboard Preview"
-                      className="absolute inset-0 w-full h-full object-cover object-top"
-                    />
-                  )}
                   
                   {/* Bottom fade gradient */}
                   <div className="absolute bottom-0 left-0 right-0 h-24 sm:h-32 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none" />
