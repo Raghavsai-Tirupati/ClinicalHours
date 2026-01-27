@@ -12,7 +12,9 @@ import {
   User,
   X,
   ChevronDown,
-  ArrowRight,
+  ChevronUp,
+  ArrowUp,
+  Rocket,
 } from 'lucide-react';
 
 interface OnboardingTutorialProps {
@@ -62,13 +64,18 @@ const TUTORIAL_STEPS = [
   },
 ];
 
+// Total steps including the final "launch" step
+const TOTAL_VISUAL_STEPS = TUTORIAL_STEPS.length + 1;
+
 export default function OnboardingTutorial({ onComplete }: OnboardingTutorialProps) {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isScrollingUp, setIsScrollingUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
+  const isLastContentStep = currentStep === TUTORIAL_STEPS.length - 1;
+  const isLaunchStep = currentStep === TUTORIAL_STEPS.length;
 
   // Check for reduced motion preference
   useEffect(() => {
@@ -91,24 +98,26 @@ export default function OnboardingTutorial({ onComplete }: OnboardingTutorialPro
   // Handle scroll-based navigation
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || isScrollingUp) return;
 
     const handleScroll = () => {
       const scrollTop = container.scrollTop;
       const stepHeight = container.clientHeight;
       const newStep = Math.round(scrollTop / stepHeight);
-      if (newStep !== currentStep && newStep >= 0 && newStep < TUTORIAL_STEPS.length) {
+      if (newStep !== currentStep && newStep >= 0 && newStep < TOTAL_VISUAL_STEPS) {
         setCurrentStep(newStep);
       }
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [currentStep]);
+  }, [currentStep, isScrollingUp]);
 
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isScrollingUp) return;
+      
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         e.preventDefault();
         goToNextStep();
@@ -122,7 +131,7 @@ export default function OnboardingTutorial({ onComplete }: OnboardingTutorialPro
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep]);
+  }, [currentStep, isScrollingUp]);
 
   const scrollToStep = useCallback((step: number) => {
     const container = containerRef.current;
@@ -136,7 +145,7 @@ export default function OnboardingTutorial({ onComplete }: OnboardingTutorialPro
   }, [prefersReducedMotion]);
 
   const goToNextStep = useCallback(() => {
-    if (currentStep < TUTORIAL_STEPS.length - 1) {
+    if (currentStep < TOTAL_VISUAL_STEPS - 1) {
       const nextStep = currentStep + 1;
       setCurrentStep(nextStep);
       scrollToStep(nextStep);
@@ -164,12 +173,26 @@ export default function OnboardingTutorial({ onComplete }: OnboardingTutorialPro
     }
   };
 
-  const handleComplete = async () => {
-    setIsClosing(true);
+  const handleLaunch = async () => {
+    setIsScrollingUp(true);
     await markComplete();
+    
+    const container = containerRef.current;
+    if (container) {
+      // Scroll all the way up with a smooth animation
+      container.scrollTo({
+        top: 0,
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      });
+    }
+    
+    // Wait for scroll animation, then fade out and complete
     setTimeout(() => {
-      onComplete();
-    }, 500);
+      setIsClosing(true);
+      setTimeout(() => {
+        onComplete();
+      }, 500);
+    }, prefersReducedMotion ? 100 : 1200);
   };
 
   const handleSkip = async () => {
@@ -193,44 +216,50 @@ export default function OnboardingTutorial({ onComplete }: OnboardingTutorialPro
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] via-transparent to-white/[0.02] pointer-events-none" />
 
-      {/* Skip button */}
-      <button
-        onClick={handleSkip}
-        className="absolute top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 text-sm text-white/50 hover:text-white/80 transition-colors"
-      >
-        Skip
-        <X className="w-4 h-4" />
-      </button>
+      {/* Skip button - hide on launch step */}
+      {!isLaunchStep && !isScrollingUp && (
+        <button
+          onClick={handleSkip}
+          className="absolute top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 text-sm text-white/50 hover:text-white/80 transition-colors"
+        >
+          Skip
+          <X className="w-4 h-4" />
+        </button>
+      )}
 
-      {/* Progress indicator - fixed at bottom */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
-        <TutorialProgress currentStep={currentStep} totalSteps={TUTORIAL_STEPS.length} />
-      </div>
+      {/* Progress indicator - fixed at bottom, hide on launch step */}
+      {!isLaunchStep && !isScrollingUp && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
+          <TutorialProgress currentStep={currentStep} totalSteps={TUTORIAL_STEPS.length} />
+        </div>
+      )}
 
-      {/* Navigation buttons */}
-      <div className="absolute bottom-8 right-8 z-50 flex items-center gap-3">
-        {isLastStep ? (
-          <Button
-            onClick={handleComplete}
-            className="bg-white text-black hover:bg-white/90 px-8 py-6 text-sm uppercase tracking-widest"
-          >
-            Get Started
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        ) : (
-          <Button
-            onClick={goToNextStep}
-            variant="outline"
-            className="border-white/20 text-white hover:bg-white/10 px-6 py-6 text-sm uppercase tracking-widest"
-          >
-            Next
-            <ChevronDown className="w-4 h-4 ml-2" />
-          </Button>
-        )}
-      </div>
+      {/* Navigation buttons - hide on launch step */}
+      {!isLaunchStep && !isScrollingUp && (
+        <div className="absolute bottom-8 right-8 z-50 flex items-center gap-3">
+          {isLastContentStep ? (
+            <Button
+              onClick={goToNextStep}
+              className="bg-white text-black hover:bg-white/90 px-8 py-6 text-sm uppercase tracking-widest"
+            >
+              Continue
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              onClick={goToNextStep}
+              variant="outline"
+              className="border-white/20 text-white hover:bg-white/10 px-6 py-6 text-sm uppercase tracking-widest"
+            >
+              Next
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Scroll hint - only on first step */}
-      {currentStep === 0 && (
+      {currentStep === 0 && !isScrollingUp && (
         <div
           className="absolute bottom-24 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2 text-white/30"
           style={{
@@ -247,7 +276,7 @@ export default function OnboardingTutorial({ onComplete }: OnboardingTutorialPro
         ref={containerRef}
         className="h-full w-full overflow-y-auto snap-y snap-mandatory"
         style={{
-          scrollSnapType: prefersReducedMotion ? 'none' : 'y mandatory',
+          scrollSnapType: prefersReducedMotion || isScrollingUp ? 'none' : 'y mandatory',
         }}
       >
         {TUTORIAL_STEPS.map((step, index) => (
@@ -266,6 +295,80 @@ export default function OnboardingTutorial({ onComplete }: OnboardingTutorialPro
             />
           </div>
         ))}
+        
+        {/* Final Launch Step */}
+        <div className="h-screen w-full snap-start snap-always flex items-center justify-center">
+          <div className="text-center px-6 max-w-lg">
+            <div 
+              className="mb-8 mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
+              style={{
+                opacity: isLaunchStep && !isScrollingUp ? 1 : 0,
+                transform: isLaunchStep && !isScrollingUp ? 'scale(1)' : 'scale(0.8)',
+                transition: prefersReducedMotion ? 'none' : 'all 0.5s ease-out',
+              }}
+            >
+              <Rocket className="w-12 h-12 text-primary" />
+            </div>
+            
+            <h2 
+              className="text-4xl md:text-5xl font-bold text-white mb-4"
+              style={{
+                opacity: isLaunchStep && !isScrollingUp ? 1 : 0,
+                transform: isLaunchStep && !isScrollingUp ? 'translateY(0)' : 'translateY(20px)',
+                transition: prefersReducedMotion ? 'none' : 'all 0.5s ease-out 0.1s',
+              }}
+            >
+              Ready to Launch?
+            </h2>
+            
+            <p 
+              className="text-lg text-white/60 mb-10"
+              style={{
+                opacity: isLaunchStep && !isScrollingUp ? 1 : 0,
+                transform: isLaunchStep && !isScrollingUp ? 'translateY(0)' : 'translateY(20px)',
+                transition: prefersReducedMotion ? 'none' : 'all 0.5s ease-out 0.2s',
+              }}
+            >
+              Your clinical journey awaits. Hit the button to blast off into your dashboard.
+            </p>
+            
+            <Button
+              onClick={handleLaunch}
+              disabled={isScrollingUp}
+              className="bg-white text-black hover:bg-white/90 px-10 py-7 text-base uppercase tracking-widest group"
+              style={{
+                opacity: isLaunchStep && !isScrollingUp ? 1 : 0,
+                transform: isLaunchStep && !isScrollingUp ? 'translateY(0)' : 'translateY(20px)',
+                transition: prefersReducedMotion ? 'none' : 'all 0.5s ease-out 0.3s',
+              }}
+            >
+              {isScrollingUp ? (
+                <>
+                  Launching...
+                  <ArrowUp className="w-5 h-5 ml-2 animate-bounce" />
+                </>
+              ) : (
+                <>
+                  Launch Dashboard
+                  <ChevronUp className="w-5 h-5 ml-2 group-hover:-translate-y-1 transition-transform" />
+                </>
+              )}
+            </Button>
+            
+            {/* Scroll up hint */}
+            {isLaunchStep && !isScrollingUp && (
+              <div 
+                className="mt-12 flex flex-col items-center gap-2 text-white/20"
+                style={{
+                  animation: prefersReducedMotion ? 'none' : 'pulse 2s ease-in-out infinite',
+                }}
+              >
+                <ChevronUp className="w-5 h-5" />
+                <span className="text-xs uppercase tracking-widest">or scroll up to go back</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
