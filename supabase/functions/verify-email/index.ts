@@ -178,8 +178,41 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Email verified successfully for user ${tokenData.user_id}`);
 
+    // Generate a one-time session token for auto-login
+    const sessionToken = crypto.randomUUID() + "-" + crypto.randomUUID();
+    const sessionExpiresAt = new Date();
+    sessionExpiresAt.setMinutes(sessionExpiresAt.getMinutes() + 5); // 5 minute expiry
+
+    // Store session token
+    await supabaseAdmin
+      .from("verification_sessions")
+      .delete()
+      .eq("user_id", tokenData.user_id); // Clean up any old tokens
+
+    const { error: sessionInsertError } = await supabaseAdmin
+      .from("verification_sessions")
+      .insert({
+        user_id: tokenData.user_id,
+        token: sessionToken,
+        expires_at: sessionExpiresAt.toISOString(),
+      });
+
+    if (sessionInsertError) {
+      console.error("Error creating session token:", sessionInsertError);
+      // Still return success, user can sign in manually
+      return new Response(
+        JSON.stringify({ success: true, email: tokenData.email }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ success: true, email: tokenData.email }),
+      JSON.stringify({
+        success: true,
+        email: tokenData.email,
+        sessionToken: sessionToken,
+        userId: tokenData.user_id
+      }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {

@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, XCircle, Loader2, ArrowLeft, Mail } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
 const VerifyEmail = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
-  
-  const [status, setStatus] = useState<"loading" | "success" | "error" | "already_verified">("loading");
+
+  const [status, setStatus] = useState<"loading" | "success" | "error" | "already_verified" | "signing_in">("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [email, setEmail] = useState("");
 
@@ -25,6 +26,65 @@ const VerifyEmail = () => {
 
     verifyEmail();
   }, [token]);
+
+  const claimSessionAndLogin = async (sessionToken: string, userId: string) => {
+    try {
+      setStatus("signing_in");
+
+      const { data, error } = await supabase.functions.invoke("claim-verification-session", {
+        body: { sessionToken, userId },
+      });
+
+      if (error || data.error) {
+        logger.error("Failed to claim session", error || data.error);
+        // Fall back to manual sign in
+        setStatus("success");
+        return;
+      }
+
+      // If we got a magic link, use it to sign in
+      if (data.magicLink) {
+        // Extract tokens from magic link and set session
+        const url = new URL(data.magicLink);
+        const hashParams = new URLSearchParams(url.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (!sessionError) {
+            toast.success("Email verified! Welcome to ClinicalHours!");
+            navigate("/dashboard");
+            return;
+          }
+        }
+      }
+
+      // If we got tokens directly
+      if (data.accessToken && data.refreshToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.accessToken,
+          refresh_token: data.refreshToken,
+        });
+
+        if (!sessionError) {
+          toast.success("Email verified! Welcome to ClinicalHours!");
+          navigate("/dashboard");
+          return;
+        }
+      }
+
+      // Fall back to showing success with sign in button
+      setStatus("success");
+    } catch (error) {
+      logger.error("Session claim error", error);
+      setStatus("success");
+    }
+  };
 
   const verifyEmail = async () => {
     try {
@@ -47,7 +107,13 @@ const VerifyEmail = () => {
       }
 
       setEmail(data.email || "");
-      setStatus("success");
+
+      // If we got a session token, try to auto-login
+      if (data.sessionToken && data.userId) {
+        await claimSessionAndLogin(data.sessionToken, data.userId);
+      } else {
+        setStatus("success");
+      }
     } catch (error: unknown) {
       logger.error("Verification error", error);
       setStatus("error");
@@ -72,12 +138,14 @@ const VerifyEmail = () => {
           <div>
             <CardTitle className="text-2xl">
               {status === "loading" && "Verifying Email..."}
+              {status === "signing_in" && "Email Verified!"}
               {status === "success" && "Email Verified!"}
               {status === "already_verified" && "Already Verified"}
               {status === "error" && "Verification Failed"}
             </CardTitle>
             <CardDescription className="mt-2">
               {status === "loading" && "Please wait while we verify your email address."}
+              {status === "signing_in" && "Signing you in automatically..."}
               {status === "success" && "Your email has been successfully verified."}
               {status === "already_verified" && "Your email address has already been verified."}
               {status === "error" && "We couldn't verify your email address."}
@@ -89,6 +157,17 @@ const VerifyEmail = () => {
             <div className="flex flex-col items-center gap-4 py-8">
               <Loader2 className="h-16 w-16 animate-spin text-primary" />
               <p className="text-muted-foreground">Verifying your email...</p>
+            </div>
+          )}
+
+          {status === "signing_in" && (
+            <div className="flex flex-col items-center gap-4 py-8">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse" />
+                <CheckCircle2 className="relative h-16 w-16 text-green-500" />
+              </div>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Email verified! Signing you in...</p>
             </div>
           )}
 
