@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { Link } from "react-router-dom";
 
 /**
@@ -242,11 +242,15 @@ const FeatureShowcase = () => {
                         key={scene.id}
                         src={scene.imageSrc}
                         alt={scene.imageAlt}
+                        width={1920}
+                        height={1200}
+                        decoding="async"
+                        fetchPriority={index === 0 ? "high" : "low"}
                         className={`absolute inset-0 w-full h-full object-cover object-top ${transitionClass}`}
                         style={{
                           opacity: activeIndex === index ? 1 : 0,
-                          transform: activeIndex === index 
-                            ? "scale(1)" 
+                          transform: activeIndex === index
+                            ? "scale(1)"
                             : prefersReducedMotion ? "scale(1)" : "scale(1.02)",
                         }}
                         loading={index === 0 ? "eager" : "lazy"}
@@ -290,4 +294,4 @@ const FeatureShowcase = () => {
   );
 };
 
-export default FeatureShowcase;
+export default memo(FeatureShowcase);

@@ -250,7 +250,7 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
                     loop
                     controls={false}
                     disablePictureInPicture
-                    preload="auto"
+                    preload={isActive ? "auto" : "none"}
                     onLoadedData={() => handleVideoLoad(index)}
                     className="carousel-video w-full h-full object-cover object-top pointer-events-none"
                     style={{ WebkitAppearance: 'none' }}

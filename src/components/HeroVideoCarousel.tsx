@@ -106,73 +106,42 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
     return () => clearTimeout(timer);
   }, [isFading, activeSlot, slotAVideo, slotBVideo, onIndexChange]);
 
-  // Aggressive autoplay - try multiple strategies for mobile
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  
-  // Strategy 1: Play immediately on mount
-  useEffect(() => {
-    const playVideo = () => {
-      if (videoRefA.current) {
-        videoRefA.current.play().catch(() => {});
-      }
-    };
-    
-    // Try immediately
-    playVideo();
-    
-    // Also try after a short delay (helps some mobile browsers)
-    const timer = setTimeout(playVideo, 100);
-    const timer2 = setTimeout(playVideo, 500);
-    
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(timer2);
-    };
-  }, []);
+  // Consolidated autoplay strategy for mobile/desktop
+  const hasInteractedRef = useRef(false);
 
-  // Strategy 2: Use IntersectionObserver to detect visibility and play
   useEffect(() => {
     const video = videoRefA.current;
     if (!video) return;
 
+    // Try to play immediately
+    video.play().catch(() => {});
+
+    // IntersectionObserver for visibility-based playback
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            video.play().catch(() => {});
-          }
-        });
+        if (entries[0]?.isIntersecting) {
+          video.play().catch(() => {});
+        }
       },
       { threshold: 0.1 }
     );
-
     observer.observe(video);
 
-    return () => observer.disconnect();
-  }, []);
-
-  // Strategy 3: iOS Safari fix - play on first user interaction
-  useEffect(() => {
-    const playVideosOnInteraction = () => {
-      if (videoRefA.current) {
-        videoRefA.current.play().catch(() => {});
-      }
-      if (videoRefB.current) {
-        videoRefB.current.play().catch(() => {});
-      }
-      document.removeEventListener('touchstart', playVideosOnInteraction);
-      document.removeEventListener('click', playVideosOnInteraction);
-      document.removeEventListener('scroll', playVideosOnInteraction);
+    // iOS Safari: play on first user interaction (single handler for all events)
+    const playOnInteraction = () => {
+      if (hasInteractedRef.current) return;
+      hasInteractedRef.current = true;
+      videoRefA.current?.play().catch(() => {});
+      videoRefB.current?.play().catch(() => {});
     };
 
-    document.addEventListener('touchstart', playVideosOnInteraction, { once: true, passive: true });
-    document.addEventListener('click', playVideosOnInteraction, { once: true });
-    document.addEventListener('scroll', playVideosOnInteraction, { once: true, passive: true });
+    document.addEventListener('touchstart', playOnInteraction, { once: true, passive: true });
+    document.addEventListener('click', playOnInteraction, { once: true });
 
     return () => {
-      document.removeEventListener('touchstart', playVideosOnInteraction);
-      document.removeEventListener('click', playVideosOnInteraction);
-      document.removeEventListener('scroll', playVideosOnInteraction);
+      observer.disconnect();
+      document.removeEventListener('touchstart', playOnInteraction);
+      document.removeEventListener('click', playOnInteraction);
     };
   }, []);
 
@@ -269,7 +238,7 @@ const HeroVideoCarousel = ({ onIndexChange }: HeroVideoCarouselProps = {}) => {
           controls={false}
           disablePictureInPicture
           disableRemotePlayback
-          preload="auto"
+          preload="metadata"
           webkit-playsinline="true"
           x-webkit-airplay="deny"
           className="w-full h-full object-cover pointer-events-none select-none"
