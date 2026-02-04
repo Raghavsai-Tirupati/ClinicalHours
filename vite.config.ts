@@ -175,26 +175,28 @@ export default defineConfig(({ mode }) => {
   // We read from BOTH loadEnv + process.env and then define them explicitly so `import.meta.env.*` is never undefined.
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
-  const DEFAULT_VITE_SUPABASE_URL = "https://sysbtcikrbrrgafffody.supabase.co";
-  const DEFAULT_VITE_SUPABASE_PUBLISHABLE_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5c2J0Y2lrcmJycmdhZmZmb2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc5MzUsImV4cCI6MjA3ODYzMzkzNX0.5jN1B2RIscA42w7FYfwxaQHFW6ROldslPzUFYtQCgLc";
-  const DEFAULT_VITE_MAPBOX_PUBLIC_TOKEN =
-    "pk.eyJ1IjoicmFnaGF2dDIwMDciLCJhIjoiY21rYTl4dGhoMGNqNjNlcHpoNG9mMDEzdSJ9.P6bq2u6zmsWVA2rWL6hYOw";
-
+  // Supabase credentials - must be set via environment variables
   const VITE_SUPABASE_URL =
-    env.VITE_SUPABASE_URL ??
-    (process.env.VITE_SUPABASE_URL as string | undefined) ??
-    DEFAULT_VITE_SUPABASE_URL;
+    env.VITE_SUPABASE_URL ?? (process.env.VITE_SUPABASE_URL as string | undefined);
 
   const VITE_SUPABASE_PUBLISHABLE_KEY =
-    env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-    (process.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
-    DEFAULT_VITE_SUPABASE_PUBLISHABLE_KEY;
+    env.VITE_SUPABASE_PUBLISHABLE_KEY ?? (process.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined);
+
+  // Mapbox public token (safe to include as fallback since it's a publishable key)
+  const DEFAULT_VITE_MAPBOX_PUBLIC_TOKEN =
+    "pk.eyJ1IjoicmFnaGF2dDIwMDciLCJhIjoiY21rYTl4dGhoMGNqNjNlcHpoNG9mMDEzdSJ9.P6bq2u6zmsWVA2rWL6hYOw";
 
   const VITE_MAPBOX_PUBLIC_TOKEN =
     env.VITE_MAPBOX_PUBLIC_TOKEN ??
     (process.env.VITE_MAPBOX_PUBLIC_TOKEN as string | undefined) ??
     DEFAULT_VITE_MAPBOX_PUBLIC_TOKEN;
+
+  // Validate required Supabase credentials
+  if (!VITE_SUPABASE_URL || !VITE_SUPABASE_PUBLISHABLE_KEY) {
+    console.warn(
+      "⚠️ Missing Supabase environment variables. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are set."
+    );
+  }
 
   return {
   server: {
