@@ -1,7 +1,10 @@
 # 🚀 Production Deployment Instructions
 
 ## Problem
-The admin dashboard is showing "Failed to fetch guest session stats" because the database migrations haven't been applied to production.
+The admin dashboard may show errors if the database migrations haven't been applied to production. This includes:
+- "Failed to fetch guest session stats"
+- Analytics tracking not working
+- Missing user profile access for admins
 
 ## Solution - 3 Steps
 
@@ -48,6 +51,7 @@ supabase functions deploy
 
 ## What This Fixes
 
+✅ Tracking events table for analytics (page views, user interactions)
 ✅ Guest session analytics will now work  
 ✅ Admin can view all user profiles  
 ✅ No more "Failed to fetch" errors  
