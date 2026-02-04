@@ -175,12 +175,17 @@ export default defineConfig(({ mode }) => {
   // We read from BOTH loadEnv + process.env and then define them explicitly so `import.meta.env.*` is never undefined.
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
-  // Supabase credentials - must be set via environment variables
+  // Supabase credentials - read from environment, with Lovable Cloud fallbacks for build compatibility
+  // These fallbacks match the connected Lovable Cloud project and are safe to include
   const VITE_SUPABASE_URL =
-    env.VITE_SUPABASE_URL ?? (process.env.VITE_SUPABASE_URL as string | undefined);
+    env.VITE_SUPABASE_URL ?? 
+    (process.env.VITE_SUPABASE_URL as string | undefined) ??
+    "https://sysbtcikrbrrgafffody.supabase.co";
 
   const VITE_SUPABASE_PUBLISHABLE_KEY =
-    env.VITE_SUPABASE_PUBLISHABLE_KEY ?? (process.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined);
+    env.VITE_SUPABASE_PUBLISHABLE_KEY ?? 
+    (process.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5c2J0Y2lrcmJycmdhZmZmb2R5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNTc5MzUsImV4cCI6MjA3ODYzMzkzNX0.5jN1B2RIscA42w7FYfwxaQHFW6ROldslPzUFYtQCgLc";
 
   // Mapbox public token (safe to include as fallback since it's a publishable key)
   const DEFAULT_VITE_MAPBOX_PUBLIC_TOKEN =
@@ -190,13 +195,6 @@ export default defineConfig(({ mode }) => {
     env.VITE_MAPBOX_PUBLIC_TOKEN ??
     (process.env.VITE_MAPBOX_PUBLIC_TOKEN as string | undefined) ??
     DEFAULT_VITE_MAPBOX_PUBLIC_TOKEN;
-
-  // Validate required Supabase credentials
-  if (!VITE_SUPABASE_URL || !VITE_SUPABASE_PUBLISHABLE_KEY) {
-    console.warn(
-      "⚠️ Missing Supabase environment variables. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are set."
-    );
-  }
 
   return {
   server: {
