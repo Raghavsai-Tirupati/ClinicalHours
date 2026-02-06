@@ -439,12 +439,13 @@ const Dashboard = () => {
       
       <Navigation />
       
-      {/* Hero + Video + Transition - Single continuous background */}
-      <div className="relative">
-        {/* Single Background Image spanning entire section */}
+      {/* Hero + Video + Transition - Single continuous background (contained so it never overlaps content) */}
+      <div className="relative min-h-screen overflow-hidden">
+        {/* Background image constrained to this section only - z-0 so it stays behind content */}
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat min-h-screen max-h-screen"
           style={{ backgroundImage: `url(${dashboardBg})` }}
+          aria-hidden
         >
           {/* Dark overlay - 40% for lighter visibility */}
           <div className="absolute inset-0 bg-background/40" />
@@ -453,7 +454,7 @@ const Dashboard = () => {
         </div>
         
         {/* Hero Section - Full viewport with stats centered, video peeks from bottom */}
-        <section className="relative min-h-screen flex flex-col z-10">
+        <section className="relative min-h-screen flex flex-col z-10 isolate">
         {/* Guest Banner - Fixed at top */}
         {isGuest && (
           <div className="container mx-auto px-4 pt-24 pb-4 relative z-10">
@@ -580,10 +581,10 @@ const Dashboard = () => {
       </section>
 
       {/* Spacer for the video carousel that peeks below */}
-      <div className="h-[280px] sm:h-[320px] md:h-[360px] lg:h-[400px] bg-gradient-to-b from-black to-background" />
+      <div className="h-[280px] sm:h-[320px] md:h-[360px] lg:h-[400px] bg-gradient-to-b from-black to-background relative z-10" />
       </div> {/* End of Hero + Video Background Container */}
       
-      <main className="flex-1 container mx-auto px-4 pb-8 relative z-20">
+      <main className="flex-1 container mx-auto px-4 pb-8 relative z-20 bg-background">
         {/* My Opportunities Tracker */}
         <Card id="tracker-section" className="mb-8 bg-card border-border">
           <CardHeader>
