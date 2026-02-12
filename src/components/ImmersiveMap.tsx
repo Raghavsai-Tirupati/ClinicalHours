@@ -95,6 +95,7 @@ const ImmersiveMap = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [showAll, setShowAll] = useState(true);
 
   // Info card state
   const [selectedFeature, setSelectedFeature] = useState<Record<string, string> | null>(null);
@@ -180,8 +181,8 @@ const ImmersiveMap = () => {
         ? savedOpportunities.map(s => s.opportunities).filter((o): o is Opportunity => Boolean(o?.latitude && o?.longitude))
         : opportunities.filter(o => o.latitude && o.longitude);
 
-      // Client-side distance filtering when we have an active center
-      if (activeCenter && viewMode === 'all') {
+    // Client-side distance filtering when we have an active center (skipped when showAll is on)
+    if (activeCenter && viewMode === 'all' && !showAll) {
         const toRad = (d: number) => (d * Math.PI) / 180;
         const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
           const R = 3958.8; // Earth radius in miles
@@ -198,7 +199,7 @@ const ImmersiveMap = () => {
         opps = opps.filter(o => o.name.toLowerCase().includes(q) || o.location.toLowerCase().includes(q));
       }
       return opps;
-    }, [viewMode, opportunities, savedOpportunities, searchQuery, activeCenter, radiusMiles]);
+    }, [viewMode, opportunities, savedOpportunities, searchQuery, activeCenter, radiusMiles, showAll]);
 
   // Init map
   useEffect(() => {
@@ -457,9 +458,9 @@ const ImmersiveMap = () => {
           <span className="text-xs font-medium">Opportunity Map</span>
         </div>
         <div className="ml-auto">
-          <span className="text-xs text-white/30 bg-white/5 rounded-full px-3 py-1 border border-white/10">
-            {displayCount.toLocaleString()} {activeCenter ? `within ${radiusMiles}mi` : 'total'}
-          </span>
+            <span className="text-xs text-white/30 bg-white/5 rounded-full px-3 py-1 border border-white/10">
+              {displayCount.toLocaleString()} {!showAll && activeCenter ? `within ${radiusMiles}mi` : 'total'}
+            </span>
         </div>
       </div>
 
@@ -526,8 +527,19 @@ const ImmersiveMap = () => {
               )}
             </div>
 
-            {/* Radius slider */}
-            {activeCenter && (
+              {/* Show All toggle */}
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-white/50">Show All Hospitals</label>
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${showAll ? 'bg-cyan-500' : 'bg-white/15'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${showAll ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              {/* Radius slider */}
+              {activeCenter && !showAll && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium text-white/50">Radius</label>
@@ -632,8 +644,19 @@ const ImmersiveMap = () => {
               />
             </div>
 
-            {/* Radius */}
-            {activeCenter && (
+              {/* Show All toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-white/50">Show All Hospitals</span>
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${showAll ? 'bg-cyan-500' : 'bg-white/15'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${showAll ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              {/* Radius */}
+              {activeCenter && !showAll && (
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-white/50">Radius</span>
