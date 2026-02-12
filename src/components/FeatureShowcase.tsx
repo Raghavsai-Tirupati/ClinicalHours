@@ -253,7 +253,6 @@ const FeatureShowcase = () => {
                             ? "scale(1)"
                             : prefersReducedMotion ? "scale(1)" : "scale(1.02)",
                         }}
-                        loading={index === 0 ? "eager" : "lazy"}
                       />
                     ))}
                   </div>
