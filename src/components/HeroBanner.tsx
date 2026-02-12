@@ -5,9 +5,14 @@ import RotatingCarousel from "@/components/RotatingCarousel";
 
 interface HeroBannerProps {
   firstName?: string;
+  isGuest?: boolean;
 }
 
-const HeroBanner = ({ firstName = "there" }: HeroBannerProps) => {
+const HeroBanner = ({ firstName, isGuest }: HeroBannerProps) => {
+  const subtitle = isGuest
+    ? 'Explore opportunities and see how the platform works.'
+    : 'Track your clinical journey and find new opportunities.';
+
   return (
     <section className="relative w-full overflow-hidden rounded-2xl min-h-[280px] sm:min-h-[320px] lg:min-h-[340px]">
       {/* No overlay — background image shows through from page layer */}
@@ -17,12 +22,18 @@ const HeroBanner = ({ firstName = "there" }: HeroBannerProps) => {
           {/* LEFT: text + CTAs */}
           <div className="flex flex-col justify-center flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-wide text-white leading-tight">
-              Welcome back,
-              <br />
-              <span className="font-medium">{firstName}!</span>
+              {isGuest ? (
+                'Welcome to ClinicalHours'
+              ) : (
+                <>
+                  Welcome back,
+                  <br />
+                  <span className="font-medium">{firstName || 'there'}!</span>
+                </>
+              )}
             </h1>
           <p className="mt-3 text-sm sm:text-base text-white/70 max-w-md">
-            Track your clinical journey and find new opportunities.
+            {subtitle}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button
@@ -35,14 +46,27 @@ const HeroBanner = ({ firstName = "there" }: HeroBannerProps) => {
                 Explore Opportunities
               </Link>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 rounded-lg text-sm"
-            >
-              <Clock className="h-4 w-4" />
-              Log Hours
-            </Button>
+            {isGuest ? (
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 rounded-lg text-sm"
+              >
+                <Link to="/auth">
+                  Sign Up to Get Started
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 rounded-lg text-sm"
+              >
+                <Clock className="h-4 w-4" />
+                Log Hours
+              </Button>
+            )}
           </div>
           </div>
 

@@ -11,7 +11,7 @@ import HeroBrowserCarousel from "@/components/HeroBrowserCarousel";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import FeatureShowcaseRail from "@/components/FeatureShowcaseRail";
 import HowItWorksTimeline from "@/components/HowItWorksTimeline";
-import HomeMapPreview from "@/components/HomeMapPreview";
+import HomeGlobe from "@/components/HomeGlobe";
 import carouselBg from "@/assets/carousel-bg.png";
 
 const Home = () => {
@@ -45,44 +45,38 @@ const Home = () => {
     <div className="min-h-screen">
       <Navigation />
 
-      {/* Hero Section - Full-screen with fade to black at bottom */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-black">
+      {/* Hero Section - Full-screen with globe */}
+      <section className="relative min-h-screen flex flex-col items-center overflow-hidden bg-black">
         {/* Video Background Carousel */}
         <HeroVideoCarousel onIndexChange={handleHeroVideoChange} />
-        
+
         {/* Gradient overlay - subtle top for text readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/25 from-0% to-transparent to-30% z-[5]"></div>
-        
-        {/* Main hero content */}
-        <div className="container mx-auto px-4 sm:px-6 relative z-10">
-          <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
+
+        {/* Main hero content — pushed down so globe sits in lower half */}
+        <div className="container mx-auto px-4 sm:px-6 relative z-10 flex flex-col items-center pt-[22vh] sm:pt-[20vh]">
+          <div className="max-w-4xl mx-auto text-center space-y-4 sm:space-y-6">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-white leading-[1.1] sm:leading-[1.05] tracking-wide animate-fade-in-up drop-shadow-[0_2px_20px_rgba(0,0,0,0.5)] font-heading uppercase">
               Find Your<br />Clinical Future
             </h1>
-            
-            <div className="pt-2 sm:pt-4 animate-fade-in-up-delay-1">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 px-4 sm:px-0">
-                <Link 
-                  to="/auth"
-                  className="group inline-flex items-center justify-center text-sm uppercase tracking-widest px-8 sm:px-12 py-4 sm:py-5 bg-white text-black hover:bg-white/90 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] relative overflow-hidden min-h-[52px]"
-                >
-                  <span className="relative z-10">Get Started</span>
-                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                </Link>
-                <Link 
-                  to="/map"
-                  className="group inline-flex items-center justify-center text-sm uppercase tracking-widest px-8 sm:px-12 py-4 sm:py-5 bg-transparent border-2 border-white text-white hover:bg-white/10 transition-all duration-300 hover:scale-105 relative overflow-hidden min-h-[52px]"
-                >
-                  <span className="relative z-10 flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    View Map
-                  </span>
-                </Link>
-              </div>
-              <p className="mt-4 sm:mt-6 text-xs text-white/50 uppercase tracking-widest animate-pulse">
+
+            <div className="pt-1 sm:pt-2 animate-fade-in-up-delay-1">
+              <Link
+                to="/auth"
+                className="group inline-flex items-center justify-center text-sm uppercase tracking-widest px-8 sm:px-12 py-4 sm:py-5 bg-white text-black hover:bg-white/90 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] relative overflow-hidden min-h-[52px]"
+              >
+                <span className="relative z-10">Get Started</span>
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+              </Link>
+              <p className="mt-3 sm:mt-4 text-xs text-white/50 uppercase tracking-widest animate-pulse">
                 Free forever. No credit card required.
               </p>
             </div>
+          </div>
+
+          {/* Spinning globe — below text, inline in hero */}
+          <div className="mt-8 sm:mt-10 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+            <HomeGlobe />
           </div>
         </div>
       </section>
@@ -161,9 +155,6 @@ const Home = () => {
 
       {/* How It Works Section - Scroll-reveal timeline */}
       <HowItWorksTimeline />
-
-      {/* Interactive Map Preview */}
-      <HomeMapPreview />
 
       {/* CTA Section */}
       <section ref={ctaRef} className="py-20 sm:py-28 md:py-40 bg-black relative overflow-hidden">
