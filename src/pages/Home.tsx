@@ -11,6 +11,7 @@ import HeroBrowserCarousel from "@/components/HeroBrowserCarousel";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import FeatureShowcaseRail from "@/components/FeatureShowcaseRail";
 import HowItWorksTimeline from "@/components/HowItWorksTimeline";
+import HomeMapPreview from "@/components/HomeMapPreview";
 import carouselBg from "@/assets/carousel-bg.png";
 
 const Home = () => {
@@ -31,8 +32,8 @@ const Home = () => {
   const { ref: ctaRef, isInView: ctaInView } = useInView({ threshold: 0.2 });
 
   const stats = [
-    { value: 6000, suffix: "+", label: "Opportunities", icon: Building2 },
-    { value: 3700, suffix: "+", label: "Cities", icon: MapPin },
+      { value: 6400, suffix: "+", label: "Opportunities", icon: Building2 },
+      { value: 3700, suffix: "+", label: "Cities", icon: MapPin },
     { value: 100, suffix: "%", label: "Free", icon: Heart },
   ];
 
@@ -160,6 +161,9 @@ const Home = () => {
 
       {/* How It Works Section - Scroll-reveal timeline */}
       <HowItWorksTimeline />
+
+      {/* Interactive Map Preview */}
+      <HomeMapPreview />
 
       {/* CTA Section */}
       <section ref={ctaRef} className="py-20 sm:py-28 md:py-40 bg-black relative overflow-hidden">
