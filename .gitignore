@@ -30,3 +30,9 @@ dist-ssr
 .vite
 node_modules
 
+# Next.js (API server)
+.next
+
+# Import checkpoint
+scripts/.import-checkpoint.json
+

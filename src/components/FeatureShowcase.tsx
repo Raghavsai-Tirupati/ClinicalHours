@@ -245,7 +245,7 @@ const FeatureShowcase = () => {
                         width={1920}
                         height={1200}
                         decoding="async"
-                        fetchPriority={index === 0 ? "high" : "low"}
+                        loading={index === 0 ? "eager" : "lazy"}
                         className={`absolute inset-0 w-full h-full object-cover object-top ${transitionClass}`}
                         style={{
                           opacity: activeIndex === index ? 1 : 0,

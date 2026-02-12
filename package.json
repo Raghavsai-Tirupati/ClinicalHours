@@ -12,7 +12,9 @@
     "import:texas": "tsx scripts/import-texas-hospitals.ts",
     "remove:duplicates": "tsx scripts/remove-duplicates.ts",
     "fix:coordinates": "tsx scripts/fix-map-coordinates.ts",
-    "fix:coordinates:direct": "tsx scripts/fix-coordinates-direct.ts"
+    "fix:coordinates:direct": "tsx scripts/fix-coordinates-direct.ts",
+    "discover:fields": "tsx scripts/discoverFields.ts",
+    "import:hospitals": "tsx scripts/importHospitals.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.2.8",
@@ -53,6 +55,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
     "dotenv": "^17.2.3",
+    "pg": "^8.13.1",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
@@ -80,6 +83,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
+    "@types/pg": "^8.11.10",
     "csv-parse": "^6.1.0",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
