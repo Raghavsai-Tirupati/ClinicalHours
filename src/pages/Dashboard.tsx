@@ -4,6 +4,8 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import HeroBanner from "@/components/HeroBanner";
 import OpportunityDialog from "@/components/OpportunityDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -362,6 +364,8 @@ function ReflectionBlock({ reflection }: { reflection: Reflection }) {
 // ─── Dashboard Page ─────────────────────────────────────────────────────────
 
 const Dashboard = () => {
+  const { user, isGuest } = useAuth();
+  const { toast } = useToast();
   const [opportunities, setOpportunities] = useState(mockOpportunities);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -369,6 +373,28 @@ const Dashboard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogOpp, setDialogOpp] = useState<Opportunity | null>(null);
   const [dialogTab, setDialogTab] = useState("overview");
+
+  // Get the user's first name from their metadata, or default for guests
+  const firstName = useMemo(() => {
+    if (isGuest || !user) return undefined; // HeroBanner defaults to "there"
+    const fullName = user.user_metadata?.full_name || user.user_metadata?.name || '';
+    if (fullName) return fullName.split(' ')[0];
+    // Fall back to email prefix
+    const email = user.email || '';
+    return email.split('@')[0] || undefined;
+  }, [user, isGuest]);
+
+  /** Guard: prompt sign-in for guest actions */
+  const requireAuth = (action: string): boolean => {
+    if (isGuest || !user) {
+      toast({
+        title: 'Sign in required',
+        description: `Create an account to ${action}.`,
+      });
+      return false;
+    }
+    return true;
+  };
 
   const openDialog = (opp: Opportunity, tab: string) => {
     setDialogOpp(opp);
@@ -406,12 +432,14 @@ const Dashboard = () => {
   }, [opportunities]);
 
   const handleStatusChange = (id: string, status: OpportunityStatus) => {
+    if (!requireAuth('update opportunity status')) return;
     setOpportunities((prev) =>
       prev.map((o) => (o.id === id ? { ...o, status } : o))
     );
   };
 
   const handleRemove = (id: string) => {
+    if (!requireAuth('remove opportunities')) return;
     setOpportunities((prev) => prev.filter((o) => o.id !== id));
   };
 
@@ -436,7 +464,23 @@ const Dashboard = () => {
 
         <main className="flex-1 container mx-auto px-4 pt-24 pb-16 relative z-10">
           {/* ─── Hero Banner ────────────────────────────────── */}
-          <HeroBanner firstName="Raghav" />
+          <HeroBanner firstName={firstName} isGuest={isGuest} />
+
+          {/* ─── Guest Banner ────────────────────────────────── */}
+          {isGuest && (
+            <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-amber-200">You&apos;re browsing as a guest</p>
+                <p className="text-xs text-amber-200/60 mt-0.5">Sign up to save opportunities, log hours, and track your progress.</p>
+              </div>
+              <Link
+                to="/auth"
+                className="inline-flex items-center justify-center text-xs font-semibold uppercase tracking-widest px-5 py-2.5 bg-white text-black hover:bg-white/90 rounded-lg transition-all shrink-0"
+              >
+                Create Account
+              </Link>
+            </div>
+          )}
 
           {/* ─── Dashboard content ─────────────────────────── */}
           <div className="mt-8">
@@ -492,8 +536,8 @@ const Dashboard = () => {
                       opp={opp}
                       onStatusChange={handleStatusChange}
                       onRemove={handleRemove}
-                      onLogHours={(o) => openDialog(o, "hours")}
-                      onAddReflection={(o) => openDialog(o, "reflections")}
+                      onLogHours={(o) => { if (requireAuth('log hours')) openDialog(o, "hours"); }}
+                      onAddReflection={(o) => { if (requireAuth('add reflections')) openDialog(o, "reflections"); }}
                       onCardClick={(o) => {
                         const isAppFlow = o.status === "Interviewing" || o.status === "Applied" || o.status === "Saved";
                         openDialog(o, isAppFlow ? "checklist" : "overview");

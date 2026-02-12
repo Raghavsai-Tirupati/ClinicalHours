@@ -6,10 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
 import { Opportunity } from '@/types';
+import { consumePrefetchedOpportunities } from '@/lib/opportunityPrefetch';
 import StarfieldBackground from './StarfieldBackground';
+import Navigation from './Navigation';
+import { useToast } from '@/hooks/use-toast';
 import {
   Map,
-  List,
   MapPin,
   RotateCcw,
   Search,
@@ -17,10 +19,14 @@ import {
   ChevronDown,
   X,
   Bookmark,
+  BookmarkCheck,
   ExternalLink,
   Globe,
   Loader2,
-  Home,
+  Clock,
+  Phone,
+  Mail,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface SavedOpportunity {
@@ -81,6 +87,7 @@ const ImmersiveMap = () => {
   const isPinModeRef = useRef(false);
 
   const { user, isReady, isGuest } = useAuth();
+  const { toast } = useToast();
   const [mapLoading, setMapLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('all');
@@ -99,6 +106,8 @@ const ImmersiveMap = () => {
 
   // Info card state
   const [selectedFeature, setSelectedFeature] = useState<Record<string, string> | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const loading = mapLoading || dataLoading;
   const activeCenter = customPin || userLocation;
@@ -108,7 +117,16 @@ const ImmersiveMap = () => {
   }, [isPinMode]);
 
     // Fetch ALL opportunities once (client-side distance filtering)
+    // Checks for prefetched data from HomeGlobe click first.
     const fetchOpportunitiesForMap = useCallback(async () => {
+      // Try to use prefetched data (fired when user clicked the home globe)
+      const prefetched = consumePrefetchedOpportunities();
+      if (prefetched && prefetched.length > 0) {
+        setOpportunities(prefetched);
+        setDataLoading(false);
+        return;
+      }
+
       setDataLoading(true);
       try {
         const allData: Opportunity[] = [];
@@ -411,6 +429,34 @@ const ImmersiveMap = () => {
     }
   };
 
+  // Populate savedIds from savedOpportunities
+  useEffect(() => {
+    setSavedIds(new Set(savedOpportunities.map(s => s.opportunity_id)));
+  }, [savedOpportunities]);
+
+  const handleSaveOpportunity = async (opportunityId: string) => {
+    if (!user || isGuest) {
+      toast({ title: 'Sign in required', description: 'Log in to save opportunities to your dashboard.' });
+      return;
+    }
+    setSavingId(opportunityId);
+    const { error } = await supabase
+      .from('saved_opportunities')
+      .insert({ user_id: user.id, opportunity_id: opportunityId });
+    setSavingId(null);
+    if (error) {
+      if (error.code === '23505') {
+        toast({ title: 'Already saved', description: 'This opportunity is already in your tracker.' });
+        setSavedIds(prev => new Set(prev).add(opportunityId));
+      } else {
+        toast({ title: 'Error', description: 'Failed to save. Please try again.', variant: 'destructive' });
+      }
+      return;
+    }
+    setSavedIds(prev => new Set(prev).add(opportunityId));
+    toast({ title: 'Added to dashboard!', description: 'Track your progress in your Dashboard.' });
+  };
+
   const displayCount = filteredOpportunities.length;
 
   if (mapError) {
@@ -447,31 +493,26 @@ const ImmersiveMap = () => {
         </div>
       )}
 
-      {/* Top nav bar — glass overlay */}
-      <div className="absolute top-0 left-0 right-0 z-30 h-14 flex items-center px-4 bg-black/30 backdrop-blur-md border-b border-white/5">
-        <Link to="/" className="flex items-center gap-2 text-white/80 hover:text-white transition-colors mr-4">
-          <Home className="w-4 h-4" />
-          <span className="text-sm font-medium hidden sm:inline">ClinicalHours</span>
-        </Link>
-        <div className="flex items-center gap-1.5 text-white/40">
-          <Globe className="w-3.5 h-3.5" />
-          <span className="text-xs font-medium">Opportunity Map</span>
-        </div>
-        <div className="ml-auto">
-            <span className="text-xs text-white/30 bg-white/5 rounded-full px-3 py-1 border border-white/10">
-              {displayCount.toLocaleString()} {!showAll && activeCenter ? `within ${radiusMiles}mi` : 'total'}
-            </span>
-        </div>
+      {/* Standard site navigation */}
+      <div className="absolute top-0 left-0 right-0 z-30">
+        <Navigation />
+      </div>
+
+      {/* Opportunity count badge — below nav */}
+      <div className="absolute top-[5.5rem] left-1/2 -translate-x-1/2 z-30">
+        <span className="text-xs text-white/40 bg-black/40 backdrop-blur-md rounded-full px-4 py-1.5 border border-white/10">
+          {displayCount.toLocaleString()} {!showAll && activeCenter ? `within ${radiusMiles}mi` : 'opportunities'}
+        </span>
       </div>
 
       {/* --- DESKTOP LEFT CONTROL PANEL --- */}
       <div className={`
-        hidden sm:flex absolute top-20 left-4 z-30 flex-col
+        hidden sm:flex absolute top-28 left-4 z-30 flex-col
         w-72 rounded-2xl overflow-hidden
         bg-black/40 backdrop-blur-xl border border-white/10
         shadow-2xl shadow-black/40
         transition-all duration-300
-        ${panelCollapsed ? 'max-h-12' : 'max-h-[calc(100vh-120px)]'}
+        ${panelCollapsed ? 'max-h-12' : 'max-h-[calc(100vh-140px)]'}
       `}>
         {/* Panel header */}
         <button
@@ -704,60 +745,132 @@ const ImmersiveMap = () => {
       </div>
 
       {/* --- FLOATING INFO CARD --- */}
-      {selectedFeature && (
-        <div className="absolute bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 z-40 w-[90vw] max-w-sm">
-          <div className="bg-black/60 backdrop-blur-xl border border-white/15 rounded-2xl p-4 shadow-2xl shadow-black/50 relative">
-            <button
-              onClick={() => setSelectedFeature(null)}
-              className="absolute top-3 right-3 text-white/30 hover:text-white/60 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+      {selectedFeature && (() => {
+        const isSaved = savedIds.has(selectedFeature.id);
+        const isSaving = savingId === selectedFeature.id;
+        const typeColor = TYPE_COLORS[selectedFeature.type] || '#94a3b8';
+        const typeLabel = selectedFeature.type === 'emt' ? 'EMT' : (TYPE_LABELS[selectedFeature.type] || selectedFeature.type || 'N/A');
 
-            <h3 className="text-white font-semibold text-sm pr-6 mb-2 leading-snug">
-              {selectedFeature.name || 'Unknown'}
-            </h3>
+        return (
+          <div className="absolute bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 z-40 w-[92vw] max-w-md">
+            <div className="bg-[#0c1222]/85 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden">
+              {/* Header with type accent bar */}
+              <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, ${typeColor}, transparent)` }} />
 
-            <div className="space-y-1.5 mb-3">
-              <div className="flex items-center gap-2">
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: TYPE_COLORS[selectedFeature.type] || '#94a3b8' }}
-                />
-                <span className="text-xs text-white/50 capitalize">
-                  {selectedFeature.type === 'emt' ? 'EMT' : selectedFeature.type || 'N/A'}
-                </span>
+              <div className="p-4 sm:p-5">
+                {/* Top row: name + close */}
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-white font-semibold text-[15px] leading-snug truncate">
+                      {selectedFeature.name || 'Unknown'}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full border"
+                        style={{
+                          color: typeColor,
+                          borderColor: `${typeColor}40`,
+                          backgroundColor: `${typeColor}15`,
+                        }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: typeColor }} />
+                        {typeLabel}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedFeature(null)}
+                    className="text-white/25 hover:text-white/60 transition-colors p-1 -m-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Info rows */}
+                <div className="space-y-2 mb-4">
+                  {selectedFeature.location && (
+                    <div className="flex items-center gap-2 text-white/45">
+                      <MapPin className="w-3.5 h-3.5 shrink-0 text-white/30" />
+                      <span className="text-xs truncate">{selectedFeature.location}</span>
+                    </div>
+                  )}
+                  {selectedFeature.hours_required && (
+                    <div className="flex items-center gap-2 text-white/45">
+                      <Clock className="w-3.5 h-3.5 shrink-0 text-white/30" />
+                      <span className="text-xs">{selectedFeature.hours_required} hours</span>
+                    </div>
+                  )}
+                  {selectedFeature.acceptance_likelihood && (
+                    <div className="flex items-center gap-2 text-white/45">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-white/30" />
+                      <span className="text-xs capitalize">{selectedFeature.acceptance_likelihood} acceptance</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Contact row */}
+                {(selectedFeature.phone || selectedFeature.email || selectedFeature.website) && (
+                  <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/[0.06]">
+                    {selectedFeature.phone && (
+                      <a href={`tel:${selectedFeature.phone}`} className="flex items-center gap-1 text-[11px] text-cyan-400/70 hover:text-cyan-300 transition-colors">
+                        <Phone className="w-3 h-3" />
+                        <span>Call</span>
+                      </a>
+                    )}
+                    {selectedFeature.email && (
+                      <a href={`mailto:${selectedFeature.email}`} className="flex items-center gap-1 text-[11px] text-cyan-400/70 hover:text-cyan-300 transition-colors">
+                        <Mail className="w-3 h-3" />
+                        <span>Email</span>
+                      </a>
+                    )}
+                    {selectedFeature.website && (
+                      <a href={selectedFeature.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11px] text-cyan-400/70 hover:text-cyan-300 transition-colors">
+                        <Globe className="w-3 h-3" />
+                        <span>Website</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  {/* Save / Already saved */}
+                  <button
+                    onClick={() => !isSaved && !isSaving && handleSaveOpportunity(selectedFeature.id)}
+                    disabled={isSaved || isSaving}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium rounded-xl transition-all ${
+                      isSaved
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 cursor-default'
+                        : isSaving
+                        ? 'bg-white/5 text-white/40 border border-white/10 cursor-wait'
+                        : 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/25 active:scale-[0.98]'
+                    }`}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : isSaved ? (
+                      <BookmarkCheck className="w-3.5 h-3.5" />
+                    ) : (
+                      <Bookmark className="w-3.5 h-3.5" />
+                    )}
+                    {isSaved ? 'Saved' : isSaving ? 'Saving...' : 'Save to Dashboard'}
+                  </button>
+
+                  {/* View Details */}
+                  {selectedFeature.id && (
+                    <Link
+                      to={`/opportunities/${selectedFeature.id}`}
+                      className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium rounded-xl bg-white/[0.06] text-white/60 border border-white/[0.08] hover:bg-white/10 hover:text-white/80 transition-all active:scale-[0.98]"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Details
+                    </Link>
+                  )}
+                </div>
               </div>
-              <p className="text-xs text-white/40">
-                {selectedFeature.location || 'N/A'}
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              {selectedFeature.id && (
-                <Link
-                  to={`/opportunities/${selectedFeature.id}`}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-colors"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  View Details
-                </Link>
-              )}
-              {selectedFeature.website && (
-                <a
-                  href={selectedFeature.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-white/5 text-white/50 border border-white/10 hover:text-white/70 transition-colors"
-                >
-                  <Globe className="w-3 h-3" />
-                  Website
-                </a>
-              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* No saved message */}
       {viewMode === 'saved' && savedOpportunities.length === 0 && !loading && (
