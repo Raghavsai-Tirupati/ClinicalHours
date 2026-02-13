@@ -143,6 +143,51 @@ export type Database = {
         }
         Relationships: []
       }
+      import_jobs: {
+        Row: {
+          checkpoint: Json
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          job_type: string
+          locked_at: string | null
+          params: Json
+          started_at: string | null
+          status: string
+          summary: Json
+          updated_at: string
+        }
+        Insert: {
+          checkpoint?: Json
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          job_type: string
+          locked_at?: string | null
+          params?: Json
+          started_at?: string | null
+          status?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Update: {
+          checkpoint?: Json
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          job_type?: string
+          locked_at?: string | null
+          params?: Json
+          started_at?: string | null
+          status?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       opportunities: {
         Row: {
           acceptance_likelihood: Database["public"]["Enums"]["acceptance_likelihood"]
