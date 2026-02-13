@@ -31,6 +31,7 @@ import {
   Mail,
   Send,
   BarChart3,
+  Globe,
 } from 'lucide-react';
 import AdminUserList from '@/components/admin/AdminUserList';
 import GuestSessionStats from '@/components/admin/GuestSessionStats';
@@ -57,6 +58,9 @@ export default function AdminDashboard() {
   const [findingLinks, setFindingLinks] = useState(false);
   const [removingDuplicates, setRemovingDuplicates] = useState(false);
   const [fixingCoordinates, setFixingCoordinates] = useState(false);
+  
+  // Healthsites import states
+  const [healthsitesImporting, setHealthsitesImporting] = useState(false);
   
   // Mass email states
   const [emailSubject, setEmailSubject] = useState('');
@@ -481,6 +485,55 @@ export default function AdminDashboard() {
     }
   }
 
+  // Healthsites Import
+  async function handleHealthsitesImport(mode: 'smoke' | 'full') {
+    setHealthsitesImporting(true);
+    setOperationResult(null);
+
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Not authenticated');
+
+      const payload = mode === 'smoke'
+        ? { countries: ['US'], limit: 200, dryRun: false, resume: false }
+        : { countries: 'all', dryRun: false, resume: true };
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-healthsites`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Import failed');
+      }
+
+      setOperationResult({
+        success: true,
+        message: `Healthsites import: ${result.totalInserted} inserted, ${result.totalSkipped} skipped across ${result.countriesProcessed?.length || 0} countries`,
+        details: result,
+      });
+      toast.success(`Healthsites: ${result.totalInserted} facilities imported`);
+    } catch (error) {
+      console.error('Healthsites import error:', error);
+      setOperationResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Import failed',
+      });
+      toast.error('Healthsites import failed');
+    } finally {
+      setHealthsitesImporting(false);
+    }
+  }
+
   return (
     <>
       <Helmet>
@@ -734,6 +787,42 @@ You can use basic formatting:
                     )}
                     {importing ? 'Importing...' : 'Import CSV'}
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* Healthsites Import */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    Healthsites.io Import
+                  </CardTitle>
+                  <CardDescription>
+                    Import global healthcare facilities from Healthsites.io API.
+                    Uses external_id for idempotent upserts — safe to re-run.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleHealthsitesImport('smoke')}
+                      disabled={healthsitesImporting}
+                    >
+                      {healthsitesImporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
+                      Smoke Test (US, 200)
+                    </Button>
+                    <Button
+                      onClick={() => handleHealthsitesImport('full')}
+                      disabled={healthsitesImporting}
+                    >
+                      {healthsitesImporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
+                      Run Full Import
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Smoke test: US only, limit 200 facilities. Full import: all countries with resume support.
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
