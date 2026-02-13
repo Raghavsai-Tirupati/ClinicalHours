@@ -23,44 +23,40 @@ const COUNTRY_NAMES: Record<string, string> = {
   MM: "Myanmar", NP: "Nepal", LK: "Sri Lanka", AF: "Afghanistan",
   HT: "Haiti", SL: "Sierra Leone", LR: "Liberia",
 };
-
 const ALL_COUNTRIES = Object.keys(COUNTRY_NAMES);
 
 const API_BASE = "https://healthsites.io/api/v3/facilities/";
 const PAGE_SIZE = 100;
-const UPSERT_BATCH = 200;
+const MAX_PAGES_PER_CHUNK = 5;
+const MAX_SECONDS_PER_CHUNK = 25;
+const LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 min stale lock
 const DELAY_MS = 500;
 
 interface HealthsiteFacility {
   attributes: {
-    amenity?: string;
-    healthcare?: string;
-    name?: string;
-    speciality?: string;
-    opening_hours?: string;
-    addr_housenumber?: string;
-    addr_street?: string;
-    addr_city?: string;
-    addr_postcode?: string;
-    "addr:city"?: string;
-    "addr:street"?: string;
-    "addr:housenumber"?: string;
-    "addr:postcode"?: string;
-    contact_number?: string;
-    "contact:phone"?: string;
-    phone?: string;
-    website?: string;
-    "contact:website"?: string;
-    email?: string;
-    "contact:email"?: string;
-    beds?: number | string;
-    uuid?: string;
-    [key: string]: unknown;
+    amenity?: string; healthcare?: string; name?: string; speciality?: string;
+    opening_hours?: string; addr_housenumber?: string; addr_street?: string;
+    addr_city?: string; addr_postcode?: string;
+    "addr:city"?: string; "addr:street"?: string; "addr:housenumber"?: string;
+    "addr:postcode"?: string; contact_number?: string; "contact:phone"?: string;
+    phone?: string; website?: string; "contact:website"?: string;
+    email?: string; "contact:email"?: string; beds?: number | string;
+    uuid?: string; [key: string]: unknown;
   };
   centroid: { type: string; coordinates: [number, number] };
-  osm_id: number;
-  osm_type: string;
-  completeness?: number;
+  osm_id: number; osm_type: string; completeness?: number;
+}
+
+interface Checkpoint {
+  countries: string[];
+  countryIndex: number;
+  page: number;
+  totalInserted: number;
+  totalSkipped: number;
+  totalFetched: number;
+  countrySummary: Record<string, { inserted: number; skipped: number }>;
+  limit?: number;
+  dryRun: boolean;
 }
 
 function mapFacilityType(f: HealthsiteFacility): "hospital" | "clinic" | "hospice" | "volunteer" {
@@ -107,10 +103,8 @@ function mapToOpportunity(f: HealthsiteFacility, cc: string): Record<string, unk
   return {
     name: String(name).slice(0, 200),
     type: mapFacilityType(f),
-    location,
-    address: [addressParts, city, postcode].filter(Boolean).join(", ") || null,
-    latitude: lat,
-    longitude: lng,
+    location, address: [addressParts, city, postcode].filter(Boolean).join(", ") || null,
+    latitude: lat, longitude: lng,
     hours_required: "Varies",
     acceptance_likelihood: mapAcceptance(),
     phone, email, website,
@@ -121,12 +115,19 @@ function mapToOpportunity(f: HealthsiteFacility, cc: string): Record<string, unk
   };
 }
 
-async function fetchWithRetry(url: string, retries = 3): Promise<HealthsiteFacility[]> {
+async function fetchWithRetry(url: string, retries = 4): Promise<HealthsiteFacility[]> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url);
       if (res.status === 429) {
-        const wait = attempt * 2000;
+        const wait = Math.min(attempt * 2000 * Math.pow(2, attempt - 1), 30000);
+        console.log(`429 rate limited, backing off ${wait}ms (attempt ${attempt})`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      if (res.status >= 500) {
+        const wait = Math.min(attempt * 1000 * Math.pow(2, attempt - 1), 20000);
+        console.log(`Server ${res.status}, backing off ${wait}ms (attempt ${attempt})`);
         await new Promise(r => setTimeout(r, wait));
         continue;
       }
@@ -135,10 +136,70 @@ async function fetchWithRetry(url: string, retries = 3): Promise<HealthsiteFacil
       return Array.isArray(data) ? data : [];
     } catch (err) {
       if (attempt === retries) throw err;
-      await new Promise(r => setTimeout(r, attempt * 1000));
+      const wait = Math.min(attempt * 1000 * Math.pow(2, attempt - 1), 20000);
+      await new Promise(r => setTimeout(r, wait));
     }
   }
   return [];
+}
+
+// ─── Lock helpers ────────────────────────────────────────────────────────────
+async function acquireLock(db: ReturnType<typeof createClient>): Promise<boolean> {
+  // Try to set status=running only if idle or stale lock
+  const { data, error } = await db.from("import_jobs")
+    .update({ status: "running", locked_at: new Date().toISOString(), error: null })
+    .eq("job_type", "healthsites")
+    .or(`status.eq.idle,status.eq.completed,status.eq.failed,locked_at.lt.${new Date(Date.now() - LOCK_TIMEOUT_MS).toISOString()}`)
+    .select("id");
+
+  if (error) { console.error("Lock acquire error:", error.message); return false; }
+  return (data?.length || 0) > 0;
+}
+
+async function releaseLock(db: ReturnType<typeof createClient>, status: string, error?: string) {
+  await db.from("import_jobs")
+    .update({
+      status,
+      locked_at: null,
+      ...(status === "completed" ? { completed_at: new Date().toISOString() } : {}),
+      ...(error ? { error } : { error: null }),
+    })
+    .eq("job_type", "healthsites");
+}
+
+async function saveCheckpoint(db: ReturnType<typeof createClient>, cp: Checkpoint) {
+  await db.from("import_jobs")
+    .update({ checkpoint: cp as unknown as Record<string, unknown>, summary: cp.countrySummary as unknown as Record<string, unknown> })
+    .eq("job_type", "healthsites");
+}
+
+async function loadCheckpoint(db: ReturnType<typeof createClient>): Promise<Checkpoint | null> {
+  const { data } = await db.from("import_jobs")
+    .select("checkpoint")
+    .eq("job_type", "healthsites")
+    .maybeSingle();
+  if (!data?.checkpoint || typeof data.checkpoint !== "object") return null;
+  const cp = data.checkpoint as unknown as Checkpoint;
+  if (!cp.countries || cp.countryIndex === undefined) return null;
+  return cp;
+}
+
+// ─── Self-invoke next chunk ──────────────────────────────────────────────────
+async function scheduleNextChunk(token: string) {
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/import-healthsites`;
+  try {
+    // Fire-and-forget with short timeout awareness
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({ _continue: true }),
+    });
+  } catch (err) {
+    console.error("Self-schedule failed (will resume on next manual call):", err);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -146,38 +207,36 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    // ── Auth check (admin only) ──────────────────────────────────────────
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const apiKey = Deno.env.get("HEALTHSITES_API_KEY");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const apiKey = Deno.env.get("HEALTHSITES_API_KEY");
 
-    if (!apiKey) {
-      return new Response(JSON.stringify({ success: false, error: "HEALTHSITES_API_KEY not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
+  if (!apiKey) {
+    return new Response(JSON.stringify({ success: false, error: "HEALTHSITES_API_KEY not configured" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
 
+  const db = createClient(supabaseUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  try {
+    // ── Auth ──────────────────────────────────────────────────────────────
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ success: false, error: "Auth required" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authErr } = await db.auth.getUser(token);
     if (authErr || !user) {
       return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const { data: roleData } = await supabaseAdmin
+    const { data: roleData } = await db
       .from("user_roles").select("role")
       .eq("user_id", user.id).eq("role", "admin").maybeSingle();
     if (!roleData) {
@@ -187,124 +246,187 @@ Deno.serve(async (req) => {
     }
 
     // ── Parse params ─────────────────────────────────────────────────────
-    const body = await req.json();
-    const {
-      countries: reqCountries,
-      limit,
-      dryRun = false,
-      resume = false,
-    } = body as {
-      countries?: string[] | "all";
-      limit?: number;
-      dryRun?: boolean;
-      resume?: boolean;
-    };
+    const body = await req.json().catch(() => ({}));
+    const isContinue = body._continue === true;
+    const isStatus = body._status === true;
+    const isCancel = body._cancel === true;
 
-    const countries: string[] =
-      reqCountries === "all" ? ALL_COUNTRIES :
-      Array.isArray(reqCountries) && reqCountries.length > 0 ? reqCountries.map(c => c.toUpperCase()) :
-      ["US"];
+    // ── Status check ─────────────────────────────────────────────────────
+    if (isStatus) {
+      const { data: job } = await db.from("import_jobs")
+        .select("*").eq("job_type", "healthsites").maybeSingle();
+      return new Response(JSON.stringify({ success: true, job }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const maxRows = limit || Infinity;
-    let totalInserted = 0;
-    let totalUpdated = 0;
-    let totalSkipped = 0;
-    let totalFetched = 0;
-    const countrySummary: Record<string, { inserted: number; updated: number; skipped: number }> = {};
+    // ── Cancel ───────────────────────────────────────────────────────────
+    if (isCancel) {
+      await releaseLock(db, "idle");
+      await db.from("import_jobs").update({ checkpoint: {} }).eq("job_type", "healthsites");
+      return new Response(JSON.stringify({ success: true, cancelled: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    console.log(`Import starting: countries=${countries.join(",")}, limit=${limit || "none"}, dryRun=${dryRun}, resume=${resume}`);
+    // ── Acquire lock ─────────────────────────────────────────────────────
+    const gotLock = await acquireLock(db);
+    if (!gotLock) {
+      return new Response(JSON.stringify({
+        success: false, error: "Import already running. Use _status to check progress or _cancel to abort.",
+      }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
-    for (const cc of countries) {
-      if (totalFetched >= maxRows) break;
-
-      const countryName = COUNTRY_NAMES[cc] || cc;
-      let page = 1;
-      let cInserted = 0, cUpdated = 0, cSkipped = 0;
-
-      // If resume, find what page to start from by checking existing count
-      if (resume) {
-        const { count } = await supabaseAdmin
-          .from("opportunities")
-          .select("id", { count: "exact", head: true })
-          .eq("source", "healthsites")
-          .eq("country_code", cc);
-        if (count && count > 0) {
-          page = Math.floor(count / PAGE_SIZE) + 1;
-          console.log(`Resuming ${cc} from page ${page} (${count} existing)`);
-        }
+    // ── Build or resume checkpoint ───────────────────────────────────────
+    let cp: Checkpoint;
+    if (isContinue) {
+      const saved = await loadCheckpoint(db);
+      if (!saved) {
+        await releaseLock(db, "idle");
+        return new Response(JSON.stringify({ success: true, done: true, message: "No checkpoint to resume" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      cp = saved;
+    } else {
+      const { countries: reqCountries, limit, dryRun = false } = body as {
+        countries?: string[] | "all"; limit?: number; dryRun?: boolean;
+      };
+      const countries =
+        reqCountries === "all" ? ALL_COUNTRIES :
+        Array.isArray(reqCountries) && reqCountries.length > 0 ? reqCountries.map((c: string) => c.toUpperCase()) :
+        ["US"];
 
-      while (totalFetched < maxRows) {
-        const remaining = maxRows - totalFetched;
+      cp = {
+        countries, countryIndex: 0, page: 1,
+        totalInserted: 0, totalSkipped: 0, totalFetched: 0,
+        countrySummary: {}, limit, dryRun,
+      };
+      // Record start
+      await db.from("import_jobs").update({
+        params: body, started_at: new Date().toISOString(), completed_at: null, summary: {},
+      }).eq("job_type", "healthsites");
+    }
+
+    const maxRows = cp.limit || Infinity;
+    const startTime = Date.now();
+    let pagesThisChunk = 0;
+    let done = false;
+
+    console.log(`Chunk start: country=${cp.countries[cp.countryIndex]}, page=${cp.page}, fetched=${cp.totalFetched}`);
+
+    // ── Process pages in bounded chunk ───────────────────────────────────
+    outer:
+    while (cp.countryIndex < cp.countries.length) {
+      const cc = cp.countries[cp.countryIndex];
+      const countryName = COUNTRY_NAMES[cc] || cc;
+      if (!cp.countrySummary[cc]) cp.countrySummary[cc] = { inserted: 0, skipped: 0 };
+
+      while (cp.totalFetched < maxRows) {
+        // Check chunk bounds
+        if (pagesThisChunk >= MAX_PAGES_PER_CHUNK || (Date.now() - startTime) > MAX_SECONDS_PER_CHUNK * 1000) {
+          break outer;
+        }
+
+        const remaining = maxRows - cp.totalFetched;
         const fetchSize = Math.min(PAGE_SIZE, remaining);
-        const url = `${API_BASE}?api-key=${apiKey}&country=${encodeURIComponent(countryName)}&page=${page}&page_size=${fetchSize}`;
+        const url = `${API_BASE}?api-key=${apiKey}&country=${encodeURIComponent(countryName)}&page=${cp.page}&page_size=${fetchSize}`;
 
         const facilities = await fetchWithRetry(url);
-        if (facilities.length === 0) break;
+        pagesThisChunk++;
+
+        if (facilities.length === 0) {
+          // Country done
+          cp.countryIndex++;
+          cp.page = 1;
+          break;
+        }
 
         const batch: Record<string, unknown>[] = [];
         for (const f of facilities) {
           const mapped = mapToOpportunity(f, cc);
-          if (!mapped) { cSkipped++; continue; }
+          if (!mapped) { cp.countrySummary[cc].skipped++; cp.totalSkipped++; continue; }
           batch.push(mapped);
-          totalFetched++;
-          if (totalFetched >= maxRows) break;
+          cp.totalFetched++;
+          if (cp.totalFetched >= maxRows) break;
         }
 
-        if (batch.length > 0 && !dryRun) {
-          // Upsert by external_id — updates if exists, inserts if not
-          const { error, data } = await supabaseAdmin
+        if (batch.length > 0 && !cp.dryRun) {
+          const { error, data } = await db
             .from("opportunities")
             .upsert(batch, { onConflict: "source,external_id", ignoreDuplicates: false })
             .select("id");
 
           if (error) {
-            console.error(`Upsert error for ${cc} page ${page}:`, error.message);
-            // Fallback: try one-by-one
+            console.error(`Upsert error ${cc} p${cp.page}:`, error.message);
             for (const row of batch) {
-              const { error: rowErr } = await supabaseAdmin
+              const { error: rowErr } = await db
                 .from("opportunities")
                 .upsert(row, { onConflict: "source,external_id", ignoreDuplicates: false });
-              if (rowErr) { cSkipped++; } else { cInserted++; }
+              if (rowErr) { cp.countrySummary[cc].skipped++; cp.totalSkipped++; }
+              else { cp.countrySummary[cc].inserted++; cp.totalInserted++; }
             }
           } else {
-            // Count: upsert returns all rows (both inserted and updated)
-            cInserted += data?.length || batch.length;
+            const count = data?.length || batch.length;
+            cp.countrySummary[cc].inserted += count;
+            cp.totalInserted += count;
           }
-        } else if (dryRun) {
-          cInserted += batch.length; // would-be inserts
+        } else if (cp.dryRun) {
+          cp.countrySummary[cc].inserted += batch.length;
+          cp.totalInserted += batch.length;
         }
 
-        console.log(`${cc} page ${page}: fetched=${facilities.length}, batch=${batch.length}, total=${totalFetched}`);
-        page++;
+        console.log(`${cc} p${cp.page}: fetched=${facilities.length}, batch=${batch.length}, total=${cp.totalFetched}`);
+        cp.page++;
         await new Promise(r => setTimeout(r, DELAY_MS));
+
+        if (cp.totalFetched >= maxRows) { done = true; break outer; }
       }
 
-      countrySummary[cc] = { inserted: cInserted, updated: cUpdated, skipped: cSkipped };
-      totalInserted += cInserted;
-      totalUpdated += cUpdated;
-      totalSkipped += cSkipped;
+      // If we exited the inner while because totalFetched >= maxRows
+      if (cp.totalFetched >= maxRows) { done = true; break; }
+
+      // Country finished naturally, move to next
+      cp.countryIndex++;
+      cp.page = 1;
     }
 
-    const result = {
+    // Check if truly done
+    if (cp.countryIndex >= cp.countries.length) done = true;
+
+    // ── Save checkpoint ──────────────────────────────────────────────────
+    await saveCheckpoint(db, cp);
+
+    if (done) {
+      await releaseLock(db, "completed");
+      console.log("Import complete:", JSON.stringify({ totalInserted: cp.totalInserted, totalSkipped: cp.totalSkipped }));
+    } else {
+      // Schedule next chunk (self-call)
+      console.log(`Chunk done, scheduling next. Progress: ${cp.totalFetched} fetched, country ${cp.countryIndex}/${cp.countries.length}`);
+      // Keep lock as running, fire next chunk
+      scheduleNextChunk(token);
+    }
+
+    return new Response(JSON.stringify({
       success: true,
-      dryRun,
-      totalInserted,
-      totalUpdated,
-      totalSkipped,
-      totalFetched,
-      countriesProcessed: Object.keys(countrySummary),
-      countrySummary,
-    };
+      done,
+      nextRunScheduled: !done,
+      totalInserted: cp.totalInserted,
+      totalSkipped: cp.totalSkipped,
+      totalFetched: cp.totalFetched,
+      currentCountry: done ? null : cp.countries[cp.countryIndex],
+      currentPage: cp.page,
+      countriesProcessed: Object.keys(cp.countrySummary),
+      countrySummary: cp.countrySummary,
+      dryRun: cp.dryRun,
+      pagesThisChunk,
+      elapsedMs: Date.now() - startTime,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    console.log("Import complete:", JSON.stringify(result));
-
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (error: unknown) {
     console.error("Import error:", error);
     const msg = error instanceof Error ? error.message : "Unknown error";
+    await releaseLock(db, "failed", msg);
     return new Response(JSON.stringify({ success: false, error: msg }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
