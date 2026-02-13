@@ -9,7 +9,7 @@ import {
 const MapView = () => {
   const hasTransition = !!(window as any).__globeTransition;
   const [mapVisible, setMapVisible] = useState(!hasTransition);
-  const safetyTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const morphedRef = useRef(false);
 
   useEffect(() => {
