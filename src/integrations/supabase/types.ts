@@ -147,10 +147,12 @@ export type Database = {
         Row: {
           acceptance_likelihood: Database["public"]["Enums"]["acceptance_likelihood"]
           address: string | null
+          country_code: string | null
           created_at: string
           created_by: string | null
           description: string | null
           email: string | null
+          external_id: string | null
           hours_required: string
           id: string
           latitude: number | null
@@ -159,6 +161,7 @@ export type Database = {
           name: string
           phone: string | null
           requirements: string[] | null
+          source: string | null
           type: Database["public"]["Enums"]["opportunity_type"]
           updated_at: string
           website: string | null
@@ -166,10 +169,12 @@ export type Database = {
         Insert: {
           acceptance_likelihood: Database["public"]["Enums"]["acceptance_likelihood"]
           address?: string | null
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           email?: string | null
+          external_id?: string | null
           hours_required: string
           id?: string
           latitude?: number | null
@@ -178,6 +183,7 @@ export type Database = {
           name: string
           phone?: string | null
           requirements?: string[] | null
+          source?: string | null
           type: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
           website?: string | null
@@ -185,10 +191,12 @@ export type Database = {
         Update: {
           acceptance_likelihood?: Database["public"]["Enums"]["acceptance_likelihood"]
           address?: string | null
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           email?: string | null
+          external_id?: string | null
           hours_required?: string
           id?: string
           latitude?: number | null
@@ -197,6 +205,7 @@ export type Database = {
           name?: string
           phone?: string | null
           requirements?: string[] | null
+          source?: string | null
           type?: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
           website?: string | null
