@@ -31,7 +31,6 @@ import {
   Mail,
   Send,
   BarChart3,
-  Globe,
 } from 'lucide-react';
 import AdminUserList from '@/components/admin/AdminUserList';
 import GuestSessionStats from '@/components/admin/GuestSessionStats';
@@ -58,11 +57,6 @@ export default function AdminDashboard() {
   const [findingLinks, setFindingLinks] = useState(false);
   const [removingDuplicates, setRemovingDuplicates] = useState(false);
   const [fixingCoordinates, setFixingCoordinates] = useState(false);
-  
-  // Healthsites import states
-  const [healthsitesImporting, setHealthsitesImporting] = useState(false);
-  const [healthsitesStatus, setHealthsitesStatus] = useState<Record<string, unknown> | null>(null);
-  const [healthsitesPolling, setHealthsitesPolling] = useState(false);
   
   // Mass email states
   const [emailSubject, setEmailSubject] = useState('');
@@ -487,144 +481,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Healthsites Import - auto-continue version
-  async function handleHealthsitesImport(mode: 'smoke' | 'full') {
-    setHealthsitesImporting(true);
-    setOperationResult(null);
-
-    try {
-      const token = await getAuthToken();
-      if (!token) throw new Error('Not authenticated');
-
-      const payload = mode === 'smoke'
-        ? { countries: ['US'], limit: 200, dryRun: false }
-        : { countries: 'all', dryRun: false };
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-healthsites`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Import failed');
-      }
-
-      setHealthsitesStatus(result);
-      if (!result.done) {
-        // Start polling for progress
-        startHealthsitesPolling();
-      }
-
-      setOperationResult({
-        success: true,
-        message: result.done
-          ? `Import complete: ${result.totalInserted} inserted, ${result.totalSkipped} skipped`
-          : `Import started: ${result.totalFetched} fetched so far, auto-continuing...`,
-        details: result,
-      });
-      toast.success(result.done ? 'Import complete!' : 'Import started, auto-continuing in background...');
-    } catch (error) {
-      console.error('Healthsites import error:', error);
-      setOperationResult({
-        success: false,
-        message: error instanceof Error ? error.message : 'Import failed',
-      });
-      toast.error('Healthsites import failed');
-    } finally {
-      setHealthsitesImporting(false);
-    }
-  }
-
-  // Poll healthsites import status
-  function startHealthsitesPolling() {
-    setHealthsitesPolling(true);
-    const interval = setInterval(async () => {
-      try {
-        const token = await getAuthToken();
-        if (!token) return;
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-healthsites`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ _status: true }),
-          }
-        );
-        const data = await res.json();
-        if (data.success && data.job) {
-          const job = data.job;
-          setHealthsitesStatus(job);
-          if (job.status === 'completed' || job.status === 'failed' || job.status === 'idle') {
-            clearInterval(interval);
-            setHealthsitesPolling(false);
-            if (job.status === 'completed') toast.success('Healthsites import completed!');
-            if (job.status === 'failed') toast.error(`Import failed: ${job.error}`);
-          }
-        }
-      } catch {
-        // ignore polling errors
-      }
-    }, 5000);
-    // Safety: stop polling after 30 minutes
-    setTimeout(() => { clearInterval(interval); setHealthsitesPolling(false); }, 30 * 60 * 1000);
-  }
-
-  // Cancel healthsites import
-  async function handleHealthsitesCancel() {
-    try {
-      const token = await getAuthToken();
-      if (!token) return;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-healthsites`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ _cancel: true }),
-        }
-      );
-      const data = await res.json();
-      if (data.success) {
-        setHealthsitesStatus(null);
-        setHealthsitesPolling(false);
-        toast.success('Import cancelled');
-      }
-    } catch {
-      toast.error('Failed to cancel import');
-    }
-  }
-
-  // Check status on mount-ish
-  async function handleHealthsitesCheckStatus() {
-    try {
-      const token = await getAuthToken();
-      if (!token) return;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-healthsites`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ _status: true }),
-        }
-      );
-      const data = await res.json();
-      if (data.success && data.job) {
-        setHealthsitesStatus(data.job);
-        if (data.job.status === 'running') startHealthsitesPolling();
-      }
-    } catch {
-      // ignore
-    }
-  }
-
   return (
     <>
       <Helmet>
@@ -878,93 +734,6 @@ You can use basic formatting:
                     )}
                     {importing ? 'Importing...' : 'Import CSV'}
                   </Button>
-                </CardContent>
-              </Card>
-
-              {/* Healthsites Import */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="h-5 w-5" />
-                    Healthsites.io Import
-                    {healthsitesPolling && (
-                      <Badge variant="secondary" className="ml-2">
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        Running
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription>
-                    Import global healthcare facilities from Healthsites.io API.
-                    Auto-continues in chunks until complete. Safe to re-run (idempotent upserts).
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-3 flex-wrap">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleHealthsitesImport('smoke')}
-                      disabled={healthsitesImporting || healthsitesPolling}
-                    >
-                      {healthsitesImporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
-                      Smoke Test (US, 200)
-                    </Button>
-                    <Button
-                      onClick={() => handleHealthsitesImport('full')}
-                      disabled={healthsitesImporting || healthsitesPolling}
-                    >
-                      {healthsitesImporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
-                      Run Full Import
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleHealthsitesCheckStatus}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Check Status
-                    </Button>
-                    {healthsitesPolling && (
-                      <Button
-                        variant="destructive"
-                        onClick={handleHealthsitesCancel}
-                      >
-                        Cancel Import
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Status display */}
-                  {healthsitesStatus && (
-                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="font-medium">Status:</span>
-                        <Badge variant={
-                          (healthsitesStatus as any).status === 'running' ? 'default' :
-                          (healthsitesStatus as any).status === 'completed' ? 'secondary' :
-                          (healthsitesStatus as any).status === 'failed' ? 'destructive' : 'outline'
-                        }>
-                          {(healthsitesStatus as any).status || 'unknown'}
-                        </Badge>
-                      </div>
-                      {(healthsitesStatus as any).checkpoint && typeof (healthsitesStatus as any).checkpoint === 'object' && (healthsitesStatus as any).checkpoint.totalFetched !== undefined && (
-                        <div className="grid grid-cols-3 gap-2 text-sm">
-                          <div><span className="text-muted-foreground">Fetched:</span> {(healthsitesStatus as any).checkpoint.totalFetched}</div>
-                          <div><span className="text-muted-foreground">Inserted:</span> {(healthsitesStatus as any).checkpoint.totalInserted}</div>
-                          <div><span className="text-muted-foreground">Skipped:</span> {(healthsitesStatus as any).checkpoint.totalSkipped}</div>
-                        </div>
-                      )}
-                      {(healthsitesStatus as any).error && (
-                        <p className="text-sm text-destructive">{(healthsitesStatus as any).error}</p>
-                      )}
-                      <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
-                        {JSON.stringify(healthsitesStatus, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-muted-foreground">
-                    Processes 5 pages per chunk, then auto-schedules the next chunk. Only one import runs at a time.
-                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
