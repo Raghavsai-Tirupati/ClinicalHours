@@ -86,8 +86,8 @@ function AppContent() {
               <Route path="/test-headers" element={<TestHeaders />} />
               <Route path="/auth-test" element={<AuthTest />} />
               <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/:slug/application" element={<ApplicationForm />} />
-              <Route path="/:slug/admin" element={<HospitalAdmin />} />
+              <Route path="/opportunities/:slug/application" element={<ApplicationForm />} />
+              <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>
