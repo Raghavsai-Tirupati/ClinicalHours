@@ -37,7 +37,6 @@ interface Opportunity {
 
 const OpportunityDetail = () => {
   const { slug } = useParams<{ slug: string }>();
-  const id = slug; // kept for legacy reference below
   const navigate = useNavigate();
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
   const { toast } = useToast();
@@ -60,23 +59,10 @@ const OpportunityDetail = () => {
 
       setLoading(true);
       try {
-        // Step 1: resolve slug → id from base table (slug not in view)
-        const { data: slugData, error: slugError } = await supabase
-          .from("opportunities")
-          .select("id")
-          .eq("slug", slug)
-          .maybeSingle();
-
-        if (slugError) throw slugError;
-        if (!slugData) throw new Error("Opportunity not found");
-
-        const resolvedId = slugData.id;
-
-        // Step 2: fetch full details including ratings from view using id
         const { data, error } = await supabase
           .from("opportunities_with_ratings")
           .select("*")
-          .eq("id", resolvedId)
+          .eq("slug", slug)
           .single();
 
         if (error) throw error;
@@ -118,32 +104,32 @@ const OpportunityDetail = () => {
 
   useEffect(() => {
     const checkSaved = async () => {
-      if (!user || !id) return;
+      if (!user || !opportunity?.id) return;
 
       const { data } = await supabase
         .from("saved_opportunities")
         .select("id")
         .eq("user_id", user.id)
-        .eq("opportunity_id", id)
+        .eq("opportunity_id", opportunity.id)
         .single();
 
       setSaved(!!data);
     };
 
     checkSaved();
-  }, [user, id]);
+  }, [user, opportunity?.id]);
 
   const handleAddToTracker = async () => {
     if (isGuest) {
       setGuestGateOpen(true);
       return;
     }
-    if (!user || !id) return;
+    if (!user || !opportunity?.id) return;
 
     setSaving(true);
     const { error } = await supabase.from("saved_opportunities").insert({
       user_id: user.id,
-      opportunity_id: id,
+      opportunity_id: opportunity.id,
     });
 
     setSaving(false);
