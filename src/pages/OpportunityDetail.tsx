@@ -36,7 +36,8 @@ interface Opportunity {
 }
 
 const OpportunityDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const id = slug; // kept for legacy reference below
   const navigate = useNavigate();
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
   const { toast } = useToast();
@@ -55,14 +56,14 @@ const OpportunityDetail = () => {
 
   useEffect(() => {
     const fetchOpportunity = async () => {
-      if (!id) return;
+      if (!slug) return;
 
       setLoading(true);
       try {
         const { data, error } = await supabase
           .from("opportunities_with_ratings")
           .select("*")
-          .eq("id", id)
+          .eq("slug", slug)
           .single();
 
         if (error) throw error;
@@ -160,11 +161,11 @@ const OpportunityDetail = () => {
   const handleReviewSubmitted = async () => {
     setReviewRefreshTrigger((prev) => prev + 1);
     // Refresh opportunity data to update rating
-    if (id) {
+    if (slug) {
       const { data, error } = await supabase
         .from("opportunities_with_ratings")
         .select("*")
-        .eq("id", id)
+        .eq("slug", slug)
         .single();
       
       if (error) {

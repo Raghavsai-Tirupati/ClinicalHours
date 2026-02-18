@@ -355,7 +355,7 @@ const Opportunities = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => navigate(`/opportunities/${opportunity.id}`)}
+                          onClick={() => navigate(`/opportunities/${opportunity.slug ?? opportunity.id}`)}
                           className="flex-1 sm:flex-none h-11 sm:h-9"
                         >
                           View Details

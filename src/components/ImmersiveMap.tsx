@@ -66,6 +66,7 @@ const opportunitiesToGeoJSON = (opportunities: Opportunity[]): GeoJSON.FeatureCo
       },
       properties: {
         id: opp.id,
+        slug: opp.slug ?? opp.id,
         name: opp.name,
         type: opp.type,
         location: opp.location,
@@ -856,9 +857,9 @@ const ImmersiveMap = () => {
                   </button>
 
                   {/* View Details */}
-                  {selectedFeature.id && (
+                  {(selectedFeature.slug || selectedFeature.id) && (
                     <Link
-                      to={`/opportunities/${selectedFeature.id}`}
+                      to={`/opportunities/${selectedFeature.slug ?? selectedFeature.id}`}
                       className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium rounded-xl bg-white/[0.06] text-white/60 border border-white/[0.08] hover:bg-white/10 hover:text-white/80 transition-all active:scale-[0.98]"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
