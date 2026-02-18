@@ -143,14 +143,61 @@ export type Database = {
         }
         Relationships: []
       }
+      import_jobs: {
+        Row: {
+          checkpoint: Json
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          job_type: string
+          locked_at: string | null
+          params: Json
+          started_at: string | null
+          status: string
+          summary: Json
+          updated_at: string
+        }
+        Insert: {
+          checkpoint?: Json
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          job_type: string
+          locked_at?: string | null
+          params?: Json
+          started_at?: string | null
+          status?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Update: {
+          checkpoint?: Json
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          job_type?: string
+          locked_at?: string | null
+          params?: Json
+          started_at?: string | null
+          status?: string
+          summary?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       opportunities: {
         Row: {
           acceptance_likelihood: Database["public"]["Enums"]["acceptance_likelihood"]
           address: string | null
+          country_code: string | null
           created_at: string
           created_by: string | null
           description: string | null
           email: string | null
+          external_id: string | null
           hours_required: string
           id: string
           latitude: number | null
@@ -159,6 +206,7 @@ export type Database = {
           name: string
           phone: string | null
           requirements: string[] | null
+          source: string | null
           type: Database["public"]["Enums"]["opportunity_type"]
           updated_at: string
           website: string | null
@@ -166,10 +214,12 @@ export type Database = {
         Insert: {
           acceptance_likelihood: Database["public"]["Enums"]["acceptance_likelihood"]
           address?: string | null
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           email?: string | null
+          external_id?: string | null
           hours_required: string
           id?: string
           latitude?: number | null
@@ -178,6 +228,7 @@ export type Database = {
           name: string
           phone?: string | null
           requirements?: string[] | null
+          source?: string | null
           type: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
           website?: string | null
@@ -185,10 +236,12 @@ export type Database = {
         Update: {
           acceptance_likelihood?: Database["public"]["Enums"]["acceptance_likelihood"]
           address?: string | null
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           email?: string | null
+          external_id?: string | null
           hours_required?: string
           id?: string
           latitude?: number | null
@@ -197,6 +250,7 @@ export type Database = {
           name?: string
           phone?: string | null
           requirements?: string[] | null
+          source?: string | null
           type?: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
           website?: string | null
