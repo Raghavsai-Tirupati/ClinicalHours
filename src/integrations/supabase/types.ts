@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      applications: {
+        Row: {
+          created_at: string
+          essay_responses: Json | null
+          id: string
+          opportunity_id: string
+          resume_url: string | null
+          status: string
+          student_email: string
+          student_name: string
+          student_phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          essay_responses?: Json | null
+          id?: string
+          opportunity_id: string
+          resume_url?: string | null
+          status?: string
+          student_email: string
+          student_name: string
+          student_phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          essay_responses?: Json | null
+          id?: string
+          opportunity_id?: string
+          resume_url?: string | null
+          status?: string
+          student_email?: string
+          student_name?: string
+          student_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities_with_ratings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discussion_votes: {
         Row: {
           created_at: string
@@ -206,6 +257,7 @@ export type Database = {
           name: string
           phone: string | null
           requirements: string[] | null
+          slug: string | null
           source: string | null
           type: Database["public"]["Enums"]["opportunity_type"]
           updated_at: string
@@ -228,6 +280,7 @@ export type Database = {
           name: string
           phone?: string | null
           requirements?: string[] | null
+          slug?: string | null
           source?: string | null
           type: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
@@ -250,6 +303,7 @@ export type Database = {
           name?: string
           phone?: string | null
           requirements?: string[] | null
+          slug?: string | null
           source?: string | null
           type?: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
