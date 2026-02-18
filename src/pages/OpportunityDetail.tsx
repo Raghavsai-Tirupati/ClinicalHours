@@ -60,10 +60,23 @@ const OpportunityDetail = () => {
 
       setLoading(true);
       try {
+        // Step 1: resolve slug → id from base table (slug not in view)
+        const { data: slugData, error: slugError } = await supabase
+          .from("opportunities")
+          .select("id")
+          .eq("slug", slug)
+          .maybeSingle();
+
+        if (slugError) throw slugError;
+        if (!slugData) throw new Error("Opportunity not found");
+
+        const resolvedId = slugData.id;
+
+        // Step 2: fetch full details including ratings from view using id
         const { data, error } = await supabase
           .from("opportunities_with_ratings")
           .select("*")
-          .eq("slug", slug)
+          .eq("id", resolvedId)
           .single();
 
         if (error) throw error;
@@ -101,7 +114,7 @@ const OpportunityDetail = () => {
     };
 
     fetchOpportunity();
-  }, [id, navigate, toast]);
+  }, [slug, navigate, toast]);
 
   useEffect(() => {
     const checkSaved = async () => {
@@ -161,11 +174,11 @@ const OpportunityDetail = () => {
   const handleReviewSubmitted = async () => {
     setReviewRefreshTrigger((prev) => prev + 1);
     // Refresh opportunity data to update rating
-    if (slug) {
+    if (opportunity?.id) {
       const { data, error } = await supabase
         .from("opportunities_with_ratings")
         .select("*")
-        .eq("slug", slug)
+        .eq("id", opportunity.id)
         .single();
       
       if (error) {

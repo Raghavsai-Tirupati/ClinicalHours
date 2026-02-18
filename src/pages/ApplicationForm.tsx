@@ -12,7 +12,11 @@ interface Opportunity {
   description: string | null;
 }
 
-const MIN_ESSAY_LENGTH = 500;
+const MAX_ESSAY_WORDS = 500;
+
+function countWords(text: string): number {
+  return text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+}
 
 export default function ApplicationForm() {
   const { slug } = useParams<{ slug: string }>();
@@ -64,10 +68,10 @@ export default function ApplicationForm() {
     if (!email.trim()) errors.email = "Email is required.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Enter a valid email address.";
     if (!resumeFile) errors.resume = "Resume is required.";
-    if (essay1.trim().length < MIN_ESSAY_LENGTH)
-      errors.essay1 = `Please write at least ${MIN_ESSAY_LENGTH} characters (currently ${essay1.trim().length}).`;
-    if (essay2.trim().length < MIN_ESSAY_LENGTH)
-      errors.essay2 = `Please write at least ${MIN_ESSAY_LENGTH} characters (currently ${essay2.trim().length}).`;
+    if (countWords(essay1) > MAX_ESSAY_WORDS)
+      errors.essay1 = `Please keep your response under ${MAX_ESSAY_WORDS} words (currently ${countWords(essay1)}).`;
+    if (countWords(essay2) > MAX_ESSAY_WORDS)
+      errors.essay2 = `Please keep your response under ${MAX_ESSAY_WORDS} words (currently ${countWords(essay2)}).`;
     return errors;
   }
 
@@ -87,9 +91,12 @@ export default function ApplicationForm() {
 
       const { error: uploadError } = await supabase.storage
         .from("resumes")
-        .upload(fileName, resumeFile!);
+        .upload(fileName, resumeFile!, { upsert: false });
 
       if (uploadError) {
+        if (uploadError.message.includes("row-level security") || uploadError.message.includes("policy")) {
+          throw new Error("Resume uploads are not yet enabled. Please contact support.");
+        }
         throw new Error(`Resume upload failed: ${uploadError.message}`);
       }
 
@@ -320,7 +327,7 @@ export default function ApplicationForm() {
                     Why do you want to volunteer at this facility?{" "}
                     <span className="text-destructive">*</span>
                   </label>
-                  <p className="text-xs text-muted-foreground mb-2">Minimum 500 characters</p>
+                  <p className="text-xs text-muted-foreground mb-2">Maximum 500 words</p>
                   <textarea
                     value={essay1}
                     onChange={(e) => setEssay1(e.target.value)}
@@ -338,12 +345,12 @@ export default function ApplicationForm() {
                     )}
                     <span
                       className={`text-xs ${
-                        essay1.trim().length >= MIN_ESSAY_LENGTH
-                          ? "text-green-500"
+                        countWords(essay1) > MAX_ESSAY_WORDS
+                          ? "text-destructive"
                           : "text-muted-foreground"
                       }`}
                     >
-                      {essay1.trim().length} / {MIN_ESSAY_LENGTH}
+                      {countWords(essay1)} / {MAX_ESSAY_WORDS} words
                     </span>
                   </div>
                 </div>
@@ -353,7 +360,7 @@ export default function ApplicationForm() {
                     Describe any relevant healthcare or volunteer experience{" "}
                     <span className="text-destructive">*</span>
                   </label>
-                  <p className="text-xs text-muted-foreground mb-2">Minimum 500 characters</p>
+                  <p className="text-xs text-muted-foreground mb-2">Maximum 500 words</p>
                   <textarea
                     value={essay2}
                     onChange={(e) => setEssay2(e.target.value)}
@@ -371,12 +378,12 @@ export default function ApplicationForm() {
                     )}
                     <span
                       className={`text-xs ${
-                        essay2.trim().length >= MIN_ESSAY_LENGTH
-                          ? "text-green-500"
+                        countWords(essay2) > MAX_ESSAY_WORDS
+                          ? "text-destructive"
                           : "text-muted-foreground"
                       }`}
                     >
-                      {essay2.trim().length} / {MIN_ESSAY_LENGTH}
+                      {countWords(essay2)} / {MAX_ESSAY_WORDS} words
                     </span>
                   </div>
                 </div>
