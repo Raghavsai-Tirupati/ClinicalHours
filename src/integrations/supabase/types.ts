@@ -1209,6 +1209,10 @@ export type Database = {
         Args: { filter_type?: string; search_term?: string }
         Returns: number
       }
+      deploy_hospital_opportunity: {
+        Args: { p_hospital_id: string }
+        Returns: string
+      }
       get_opportunities_by_distance: {
         Args: {
           filter_type?: string
