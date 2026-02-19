@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.admin-get-user-profile]
 verify_jwt = false
+
+[functions.hospital-signup]
+verify_jwt = false

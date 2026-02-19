@@ -33,6 +33,7 @@ const HospitalOnboarding = lazy(() => import("./pages/HospitalOnboarding"));
 const HospitalDashboard = lazy(() => import("./pages/HospitalDashboard"));
 const HospitalApply = lazy(() => import("./pages/HospitalApply"));
 const HospitalProfile = lazy(() => import("./pages/HospitalProfile"));
+const HospitalAuth = lazy(() => import("./pages/HospitalAuth"));
 const AdminHospitals = lazy(() => import("./pages/AdminHospitals"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -95,6 +96,8 @@ function AppContent() {
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
               <Route path="/hospital/onboarding" element={<HospitalOnboarding />} />
               <Route path="/hospital/admin" element={<HospitalDashboard />} />
+              <Route path="/hospital/portal" element={<HospitalDashboard />} />
+              <Route path="/hospital/auth" element={<HospitalAuth />} />
               <Route path="/hospital/apply/:accountId" element={<HospitalApply />} />
               <Route path="/hospitals/:slug" element={<HospitalProfile />} />
               <Route path="/admin/hospitals" element={<AdminHospitals />} />

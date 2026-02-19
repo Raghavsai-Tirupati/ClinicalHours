@@ -523,21 +523,17 @@ const Auth = () => {
         <div className="bg-muted/30 border border-border/50 rounded-xl p-4 mb-6">
           <p className="text-sm font-medium text-foreground mb-1">Hospital / Clinic?</p>
           <p className="text-xs text-muted-foreground mb-3">
-            Create a hospital account to manage applications and recruit volunteers.
+            Manage applications and recruit clinical volunteers.
           </p>
           <Button
             type="button"
             variant="outline"
             className="w-full h-10 text-sm gap-2"
-            onClick={() => {
-              localStorage.setItem("clinicalhours_hospital_redirect", "true");
-              // Switch to signup tab or just let them use the existing auth
-            }}
             asChild
           >
-            <Link to="/auth?hospital=true">
+            <Link to="/hospital/auth">
               <Building2 className="h-4 w-4" />
-              Create Hospital Account
+              Hospital Login
             </Link>
           </Button>
         </div>
