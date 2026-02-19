@@ -184,6 +184,13 @@ export default function HospitalOnboarding() {
         } else {
           hospitalId = newHosp.id;
         }
+
+        // Link the source opportunity back to this new hospital so "Direct Apply" works.
+        // Uses a security-definer RPC because the opportunity may not be owned by this user.
+        await supabase.rpc("link_opportunity_to_hospital", {
+          p_opportunity_id: selected.id,
+          p_hospital_id: hospitalId,
+        });
       }
 
       // Create hospital_accounts row (may already exist)

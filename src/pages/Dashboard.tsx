@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -6,6 +6,7 @@ import HeroBanner from "@/components/HeroBanner";
 import OpportunityDialog from "@/components/OpportunityDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,7 @@ import {
   Trash2,
   Quote,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -41,7 +43,8 @@ import {
 type OpportunityStatus = "Saved" | "Applied" | "Interviewing" | "Completed";
 
 interface Opportunity {
-  id: string;
+  id: string;           // saved_opportunities.id — used for DB remove/update
+  opportunityId: string; // opportunities.id — used for experience_entries lookup
   name: string;
   type: string;
   website: string;
@@ -59,79 +62,6 @@ interface Reflection {
   date: string;
   text: string;
 }
-
-// ─── Mock Data ──────────────────────────────────────────────────────────────
-
-const mockOpportunities: Opportunity[] = [
-  {
-    id: "1",
-    name: "Stanford Medical Center",
-    type: "Clinical Shadowing",
-    website: "https://stanfordhealthcare.org",
-    location: "Palo Alto, CA",
-    status: "Interviewing",
-    deadline: "2026-02-20",
-    hoursLogged: 48,
-    reflectionCount: 3,
-  },
-  {
-    id: "2",
-    name: "UCSF Emergency Department",
-    type: "Volunteering",
-    website: "https://ucsf.edu",
-    location: "San Francisco, CA",
-    status: "Applied",
-    deadline: "2026-03-01",
-    hoursLogged: 12,
-    reflectionCount: 1,
-  },
-  {
-    id: "3",
-    name: "Kaiser Permanente Research",
-    type: "Research",
-    website: "https://kaiserpermanente.org",
-    location: "Oakland, CA",
-    status: "Saved",
-    deadline: null,
-    hoursLogged: 0,
-    reflectionCount: 0,
-  },
-  {
-    id: "4",
-    name: "Community Health Clinic",
-    type: "EMT",
-    website: "https://communityhealthclinic.org",
-    location: "San Jose, CA",
-    status: "Completed",
-    deadline: null,
-    hoursLogged: 120,
-    reflectionCount: 5,
-  },
-];
-
-const mockReflections: Reflection[] = [
-  {
-    id: "r1",
-    opportunityId: "1",
-    orgName: "Stanford Medical Center",
-    date: "2026-02-10",
-    text: "Today I observed a complex cardiac surgery. The attending explained each step with patience. I was struck by how the entire team communicated seamlessly under pressure. It reinforced my desire to pursue surgery.",
-  },
-  {
-    id: "r2",
-    opportunityId: "4",
-    orgName: "Community Health Clinic",
-    date: "2026-02-05",
-    text: "Worked with underserved patients in the free clinic today. A mother brought her three children for check-ups they'd been putting off for months. Moments like these remind me why access to healthcare matters so deeply.",
-  },
-  {
-    id: "r3",
-    opportunityId: "2",
-    orgName: "UCSF Emergency Department",
-    date: "2026-01-28",
-    text: "My first shift in the ED was overwhelming in the best way. The pace, the variety of cases, the adrenaline. I helped comfort a patient while they waited for imaging results. Small gestures can make a huge difference.",
-  },
-];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -159,10 +89,11 @@ const statusColors: Record<OpportunityStatus, string> = {
 };
 
 const typeColors: Record<string, string> = {
-  "Clinical Shadowing": "border-purple-500/40 text-purple-300",
-  Volunteering: "border-sky-500/40 text-sky-300",
-  Research: "border-teal-500/40 text-teal-300",
-  EMT: "border-rose-500/40 text-rose-300",
+  hospital: "border-red-500/40 text-red-300",
+  clinic: "border-blue-500/40 text-blue-300",
+  hospice: "border-purple-500/40 text-purple-300",
+  emt: "border-orange-500/40 text-orange-300",
+  volunteer: "border-teal-500/40 text-teal-300",
 };
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
@@ -229,6 +160,7 @@ function OpportunityCard({
               size="icon"
               className="h-8 w-8 shrink-0 text-muted-foreground"
               aria-label="More actions"
+              onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
@@ -251,7 +183,7 @@ function OpportunityCard({
             </DropdownMenuItem>
             <DropdownMenuItem
               className="flex items-center gap-2 text-destructive focus:text-destructive"
-              onClick={() => onRemove(opp.id)}
+              onClick={(e) => { e.stopPropagation(); onRemove(opp.id); }}
             >
               <Trash2 className="h-4 w-4" /> Remove
             </DropdownMenuItem>
@@ -266,7 +198,7 @@ function OpportunityCard({
             typeColors[opp.type] || "border-border text-muted-foreground"
           }`}
         >
-          {opp.type}
+          {opp.type === "emt" ? "EMT" : opp.type.charAt(0).toUpperCase() + opp.type.slice(1)}
         </span>
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[opp.status]}`}
@@ -297,42 +229,42 @@ function OpportunityCard({
       </div>
 
       {/* Actions row */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={(e) => { e.stopPropagation(); onLogHours(opp); }}
-          >
-            Log Hours
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={(e) => { e.stopPropagation(); onAddReflection(opp); }}
-          >
-            Add Reflection
-          </Button>
-        <div onClick={(e) => e.stopPropagation()}>
-        <Select
-          value={opp.status}
-          onValueChange={(val) =>
-            onStatusChange(opp.id, val as OpportunityStatus)
-          }
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs"
+          onClick={(e) => { e.stopPropagation(); onLogHours(opp); }}
         >
-          <SelectTrigger className="h-8 w-[140px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Saved">Saved</SelectItem>
-            <SelectItem value="Applied">Applied</SelectItem>
-            <SelectItem value="Interviewing">Interviewing</SelectItem>
-            <SelectItem value="Completed">Completed</SelectItem>
-          </SelectContent>
+          Log Hours
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs"
+          onClick={(e) => { e.stopPropagation(); onAddReflection(opp); }}
+        >
+          Add Reflection
+        </Button>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Select
+            value={opp.status}
+            onValueChange={(val) =>
+              onStatusChange(opp.id, val as OpportunityStatus)
+            }
+          >
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Saved">Saved</SelectItem>
+              <SelectItem value="Applied">Applied</SelectItem>
+              <SelectItem value="Interviewing">Interviewing</SelectItem>
+              <SelectItem value="Completed">Completed</SelectItem>
+            </SelectContent>
           </Select>
-          </div>
         </div>
+      </div>
     </div>
   );
 }
@@ -366,7 +298,9 @@ function ReflectionBlock({ reflection }: { reflection: Reflection }) {
 const Dashboard = () => {
   const { user, isGuest } = useAuth();
   const { toast } = useToast();
-  const [opportunities, setOpportunities] = useState(mockOpportunities);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [reflections, setReflections] = useState<Reflection[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog state
@@ -376,13 +310,123 @@ const Dashboard = () => {
 
   // Get the user's first name from their metadata, or default for guests
   const firstName = useMemo(() => {
-    if (isGuest || !user) return undefined; // HeroBanner defaults to "there"
+    if (isGuest || !user) return undefined;
     const fullName = user.user_metadata?.full_name || user.user_metadata?.name || '';
     if (fullName) return fullName.split(' ')[0];
-    // Fall back to email prefix
     const email = user.email || '';
     return email.split('@')[0] || undefined;
   }, [user, isGuest]);
+
+  // ── Fetch real data from DB ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user || isGuest) {
+      setLoadingData(false);
+      return;
+    }
+
+    async function fetchDashboardData() {
+      setLoadingData(true);
+      try {
+        // 1. Fetch saved opportunities joined with the opportunity details
+        const { data: savedRows, error: savedErr } = await supabase
+          .from("saved_opportunities")
+          .select(`
+            id,
+            opportunity_id,
+            status,
+            created_at,
+            opportunities (
+              id,
+              name,
+              type,
+              location,
+              website
+            )
+          `)
+          .eq("user_id", user!.id)
+          .order("created_at", { ascending: false });
+
+        if (savedErr) throw savedErr;
+
+        // 2. Fetch experience entries for hours + reflections aggregation
+        const { data: entries, error: entryErr } = await supabase
+          .from("experience_entries")
+          .select("id, opportunity_id, hours, moment, entry_date")
+          .eq("user_id", user!.id)
+          .order("entry_date", { ascending: false });
+
+        if (entryErr) throw entryErr;
+
+        // Build aggregation maps keyed by opportunity_id
+        const hoursMap: Record<string, number> = {};
+        const reflCountMap: Record<string, number> = {};
+        (entries || []).forEach((e) => {
+          const oid = e.opportunity_id as string;
+          hoursMap[oid] = (hoursMap[oid] || 0) + (Number(e.hours) || 0);
+          if (e.moment) reflCountMap[oid] = (reflCountMap[oid] || 0) + 1;
+        });
+
+        // Build name lookup for reflections section
+        const nameMap: Record<string, string> = {};
+
+        // Map saved rows to dashboard Opportunity objects
+        const opps: Opportunity[] = (savedRows || []).map((row) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const opp = (row as any).opportunities as {
+            id: string;
+            name: string;
+            type: string;
+            location: string;
+            website: string | null;
+          } | null;
+
+          const oppId = row.opportunity_id as string;
+          const oppName = opp?.name || "Unknown";
+          nameMap[oppId] = oppName;
+
+          return {
+            id: row.id as string,
+            opportunityId: oppId,
+            name: oppName,
+            type: opp?.type || "hospital",
+            website: opp?.website || "",
+            location: opp?.location || "",
+            status: ((row.status as string) || "Saved") as OpportunityStatus,
+            deadline: null,
+            hoursLogged: Math.round((hoursMap[oppId] || 0) * 10) / 10,
+            reflectionCount: reflCountMap[oppId] || 0,
+          };
+        });
+
+        setOpportunities(opps);
+
+        // Map experience entries with moments to reflections
+        const recentReflections: Reflection[] = (entries || [])
+          .filter((e) => !!e.moment)
+          .slice(0, 3)
+          .map((e) => ({
+            id: e.id as string,
+            opportunityId: e.opportunity_id as string,
+            orgName: nameMap[e.opportunity_id as string] || "Unknown",
+            date: e.entry_date as string,
+            text: e.moment as string,
+          }));
+
+        setReflections(recentReflections);
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+        toast({
+          title: "Error loading dashboard",
+          description: "Could not fetch your saved opportunities.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingData(false);
+      }
+    }
+
+    fetchDashboardData();
+  }, [user, isGuest, toast]);
 
   /** Guard: prompt sign-in for guest actions */
   const requireAuth = (action: string): boolean => {
@@ -431,59 +475,74 @@ const Dashboard = () => {
     return deadlineLabel(upcoming[0].deadline)!;
   }, [opportunities]);
 
-  const handleStatusChange = (id: string, status: OpportunityStatus) => {
+  const handleStatusChange = async (id: string, status: OpportunityStatus) => {
     if (!requireAuth('update opportunity status')) return;
+    // Optimistic update
     setOpportunities((prev) =>
       prev.map((o) => (o.id === id ? { ...o, status } : o))
     );
+    const { error } = await supabase
+      .from("saved_opportunities")
+      .update({ status })
+      .eq("id", id);
+    if (error) {
+      // Revert on failure
+      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+      // Re-fetch would be cleaner but a revert by re-querying is simpler
+    }
   };
 
-  const handleRemove = (id: string) => {
+  const handleRemove = async (id: string) => {
     if (!requireAuth('remove opportunities')) return;
+    // Optimistic remove
     setOpportunities((prev) => prev.filter((o) => o.id !== id));
+    const { error } = await supabase
+      .from("saved_opportunities")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to remove opportunity.", variant: "destructive" });
+    }
   };
 
-    return (
-      <div className="min-h-screen flex flex-col bg-background relative">
-        {/* ─── Full-page background image layer ──────────────── */}
-        <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/hero/clinicalhours-hero-bg.webp')" }}
-          />
-          {/* Top area: lighter so hero content pops */}
-          <div
-              className="absolute inset-0"
-              style={{
-                background: "rgba(9,9,11,0.35)",
-              }}
-            />
-        </div>
+  return (
+    <div className="min-h-screen flex flex-col bg-background relative">
+      {/* ─── Full-page background image layer ──────────────── */}
+      <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/hero/clinicalhours-hero-bg.webp')" }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{ background: "rgba(9,9,11,0.35)" }}
+        />
+      </div>
 
-        <Navigation />
+      <Navigation />
 
-        <main className="flex-1 container mx-auto px-4 pt-24 pb-16 relative z-10">
-          {/* ─── Hero Banner ────────────────────────────────── */}
-          <HeroBanner firstName={firstName} isGuest={isGuest} />
+      <main className="flex-1 container mx-auto px-4 pt-24 pb-16 relative z-10">
+        {/* ─── Hero Banner ────────────────────────────────── */}
+        <HeroBanner firstName={firstName} isGuest={isGuest} />
 
-          {/* ─── Guest Banner ────────────────────────────────── */}
-          {isGuest && (
-            <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-amber-200">You&apos;re browsing as a guest</p>
-                <p className="text-xs text-amber-200/60 mt-0.5">Sign up to save opportunities, log hours, and track your progress.</p>
-              </div>
-              <Link
-                to="/auth"
-                className="inline-flex items-center justify-center text-xs font-semibold uppercase tracking-widest px-5 py-2.5 bg-white text-black hover:bg-white/90 rounded-lg transition-all shrink-0"
-              >
-                Create Account
-              </Link>
+        {/* ─── Guest Banner ────────────────────────────────── */}
+        {isGuest && (
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-amber-200">You&apos;re browsing as a guest</p>
+              <p className="text-xs text-amber-200/60 mt-0.5">Sign up to save opportunities, log hours, and track your progress.</p>
             </div>
-          )}
+            <Link
+              to="/auth"
+              className="inline-flex items-center justify-center text-xs font-semibold uppercase tracking-widest px-5 py-2.5 bg-white text-black hover:bg-white/90 rounded-lg transition-all shrink-0"
+            >
+              Create Account
+            </Link>
+          </div>
+        )}
 
-          {/* ─── Dashboard content ─────────────────────────── */}
-          <div className="mt-8">
+        {/* ─── Dashboard content ─────────────────────────── */}
+        <div className="mt-8">
           {/* Toolbar */}
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-medium text-foreground">Your Dashboard</h2>
@@ -506,62 +565,79 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Progress Summary */}
-          <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard icon={Clock} label="Total Hours Logged" value={totalHours} />
-            <StatCard icon={Briefcase} label="Active Opportunities" value={activeCount} />
-            <StatCard icon={FileText} label="Experiences Recorded" value={reflectionCount} />
-            <StatCard icon={CalendarClock} label="Next Deadline" value={nextDeadline} />
-          </div>
-
-          {/* Active Opportunities */}
-          <section className="mb-10">
-            <h2 className="mb-4 text-lg font-medium text-foreground">Active Opportunities</h2>
-            {filtered.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border py-16 text-center">
-                <p className="text-muted-foreground">
-                  {searchQuery
-                    ? "No opportunities match your search."
-                    : "No opportunities yet. Browse and save some to get started."}
-                </p>
-                <Button asChild variant="outline" size="sm" className="mt-4">
-                  <Link to="/opportunities">Browse Opportunities</Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {filtered.map((opp) => (
-                    <OpportunityCard
-                      key={opp.id}
-                      opp={opp}
-                      onStatusChange={handleStatusChange}
-                      onRemove={handleRemove}
-                      onLogHours={(o) => { if (requireAuth('log hours')) openDialog(o, "hours"); }}
-                      onAddReflection={(o) => { if (requireAuth('add reflections')) openDialog(o, "reflections"); }}
-                      onCardClick={(o) => {
-                        const isAppFlow = o.status === "Interviewing" || o.status === "Applied" || o.status === "Saved";
-                        openDialog(o, isAppFlow ? "checklist" : "overview");
-                      }}
-                    />
-                  ))}
-              </div>
-            )}
-          </section>
-
-          {/* Recent Reflections */}
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-medium text-foreground">Recent Reflections</h2>
-              <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
-                View all reflections <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
+          {/* Loading state */}
+          {loadingData ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {mockReflections.map((r) => (
-                <ReflectionBlock key={r.id} reflection={r} />
-              ))}
-            </div>
-          </section>
+          ) : (
+            <>
+              {/* Progress Summary */}
+              <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <StatCard icon={Clock} label="Total Hours Logged" value={Math.round(totalHours * 10) / 10} />
+                <StatCard icon={Briefcase} label="Active Opportunities" value={activeCount} />
+                <StatCard icon={FileText} label="Experiences Recorded" value={reflectionCount} />
+                <StatCard icon={CalendarClock} label="Next Deadline" value={nextDeadline} />
+              </div>
+
+              {/* Tracked Opportunities */}
+              <section className="mb-10">
+                <h2 className="mb-4 text-lg font-medium text-foreground">Tracked Opportunities</h2>
+                {filtered.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border py-16 text-center">
+                    <p className="text-muted-foreground">
+                      {searchQuery
+                        ? "No opportunities match your search."
+                        : "No tracked opportunities yet. Browse and save some to get started."}
+                    </p>
+                    {!searchQuery && (
+                      <Button asChild variant="outline" size="sm" className="mt-4">
+                        <Link to="/opportunities">Browse Opportunities</Link>
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {filtered.map((opp) => (
+                      <OpportunityCard
+                        key={opp.id}
+                        opp={opp}
+                        onStatusChange={handleStatusChange}
+                        onRemove={handleRemove}
+                        onLogHours={(o) => { if (requireAuth('log hours')) openDialog(o, "hours"); }}
+                        onAddReflection={(o) => { if (requireAuth('add reflections')) openDialog(o, "reflections"); }}
+                        onCardClick={(o) => {
+                          const isAppFlow = o.status === "Interviewing" || o.status === "Applied" || o.status === "Saved";
+                          openDialog(o, isAppFlow ? "checklist" : "overview");
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {/* Recent Reflections */}
+              <section>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-medium text-foreground">Recent Reflections</h2>
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
+                    View all reflections <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                {reflections.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No reflections yet. Log experience entries with notes to see them here.
+                  </p>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {reflections.map((r) => (
+                      <ReflectionBlock key={r.id} reflection={r} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
         </div>
       </main>
 

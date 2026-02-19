@@ -20,6 +20,7 @@ import {
   Phone,
   Mail,
   Globe,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +35,8 @@ const Opportunities = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [savedOpportunityIds, setSavedOpportunityIds] = useState<Set<string>>(new Set());
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  // Maps hospital_id -> hospital_accounts.id for opportunities with a linked hospital
+  const [hospitalAccountMap, setHospitalAccountMap] = useState<Map<string, string>>(new Map());
   const [guestGateOpen, setGuestGateOpen] = useState(false);
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
   const navigate = useNavigate();
@@ -73,6 +76,30 @@ const Opportunities = () => {
 
     fetchSavedOpportunities();
   }, [user, isReady]);
+
+  // Batch-fetch hospital accounts for opportunities that have a hospital_id
+  useEffect(() => {
+    const hospitalIds = opportunities
+      .map((o) => o.hospital_id)
+      .filter((id): id is string => !!id);
+
+    if (hospitalIds.length === 0) {
+      setHospitalAccountMap(new Map());
+      return;
+    }
+
+    supabase
+      .from("hospital_accounts")
+      .select("id, hospital_id")
+      .in("hospital_id", hospitalIds)
+      .then(({ data }) => {
+        const map = new Map<string, string>();
+        (data || []).forEach((acc) => {
+          if (acc.hospital_id) map.set(acc.hospital_id, acc.id);
+        });
+        setHospitalAccountMap(map);
+      });
+  }, [opportunities]);
 
   useEffect(() => {
     if (!authLoading && !user && !isGuest) {
@@ -352,14 +379,28 @@ const Opportunities = () => {
                             Add to Tracker
                           </Button>
                         )}
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => navigate(`/opportunities/${opportunity.slug ?? opportunity.id}`)}
                           className="flex-1 sm:flex-none h-11 sm:h-9"
                         >
                           View Details
                         </Button>
+                        {/* Direct Apply: show when this opportunity is linked to a hospital account */}
+                        {opportunity.hospital_id && hospitalAccountMap.has(opportunity.hospital_id) && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() =>
+                              navigate(`/hospital/apply/${hospitalAccountMap.get(opportunity.hospital_id!)}`)
+                            }
+                            className="flex-1 sm:flex-none h-11 sm:h-9 gap-1.5"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Direct Apply
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

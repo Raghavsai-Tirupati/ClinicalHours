@@ -17,6 +17,7 @@ export interface Opportunity {
   email?: string | null;
   website?: string | null;
   slug?: string | null;
+  hospital_id?: string | null;
   avg_rating?: number;
   review_count?: number;
   distance?: number;
@@ -153,6 +154,8 @@ export interface OpportunityRow {
   phone?: string | null;
   email?: string | null;
   website?: string | null;
+  slug?: string | null;
+  hospital_id?: string | null;
   avg_rating?: number | null;
   review_count?: number | null;
 }

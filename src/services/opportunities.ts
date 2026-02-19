@@ -86,6 +86,8 @@ export async function fetchOpportunities(
       phone: opp.phone,
       email: opp.email,
       website: opp.website,
+      slug: opp.slug,
+      hospital_id: opp.hospital_id,
       avg_rating: opp.avg_rating,
       review_count: opp.review_count,
     }));
@@ -158,6 +160,8 @@ async function fetchOpportunitiesWithDistance(
       phone?: string;
       email?: string;
       website?: string;
+      slug?: string;
+      hospital_id?: string;
       avg_rating?: number;
       review_count?: number;
       distance_miles?: number;
@@ -175,6 +179,8 @@ async function fetchOpportunitiesWithDistance(
       phone: opp.phone,
       email: opp.email,
       website: opp.website,
+      slug: opp.slug,
+      hospital_id: opp.hospital_id,
       avg_rating: opp.avg_rating,
       review_count: opp.review_count,
       distance: opp.distance_miles,

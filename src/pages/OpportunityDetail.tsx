@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Clock, Phone, Mail, Star, Loader2, Plus, Check, ArrowLeft } from "lucide-react";
+import { MapPin, Clock, Phone, Mail, Star, Loader2, Plus, Check, ArrowLeft, ExternalLink } from "lucide-react";
 import { ReminderDialog } from "@/components/ReminderDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +31,7 @@ interface Opportunity {
   phone: string | null;
   email: string | null;
   website: string | null;
+  hospital_id?: string | null;
   avg_rating?: number;
   review_count?: number;
 }
@@ -46,6 +47,8 @@ const OpportunityDetail = () => {
   const [saving, setSaving] = useState(false);
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   const [guestGateOpen, setGuestGateOpen] = useState(false);
+  // If a hospital account is linked to this opportunity, store its id for Direct Apply
+  const [directApplyAccountId, setDirectApplyAccountId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isReady && !user && !isGuest) {
@@ -99,6 +102,8 @@ const OpportunityDetail = () => {
             phone: data.phone,
             email: data.email,
             website: data.website,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            hospital_id: (data as any).hospital_id ?? null,
             avg_rating: data.avg_rating,
             review_count: data.review_count,
           });
@@ -134,6 +139,21 @@ const OpportunityDetail = () => {
 
     checkSaved();
   }, [user, opportunity?.id]);
+
+  // Look up the hospital_accounts row linked to this opportunity (if any)
+  useEffect(() => {
+    setDirectApplyAccountId(null);
+    if (!opportunity?.hospital_id) return;
+
+    supabase
+      .from("hospital_accounts")
+      .select("id")
+      .eq("hospital_id", opportunity.hospital_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.id) setDirectApplyAccountId(data.id);
+      });
+  }, [opportunity?.hospital_id]);
 
   const handleAddToTracker = async () => {
     if (isGuest) {
@@ -354,6 +374,24 @@ const OpportunityDetail = () => {
                   Add to Tracker
                 </Button>
               )}
+
+              {/* Direct Apply: shown when a hospital admin has set up this hospital */}
+              {directApplyAccountId ? (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate(`/hospital/apply/${directApplyAccountId}`)}
+                  className="gap-1.5"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Direct Apply
+                </Button>
+              ) : opportunity?.hospital_id ? (
+                <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-50">
+                  <ExternalLink className="h-4 w-4" />
+                  Direct Apply (not enabled)
+                </Button>
+              ) : null}
 
               <ReviewForm
                 opportunityId={opportunity.id}
