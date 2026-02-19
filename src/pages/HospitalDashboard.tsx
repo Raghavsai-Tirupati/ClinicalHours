@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,6 +97,9 @@ export default function HospitalDashboard() {
     "questions"
   );
 
+  const location = useLocation();
+  const justOnboarded = (location.state as any)?.justOnboarded === true;
+
   // Auth guards
   useEffect(() => {
     if (!isReady) return;
@@ -106,16 +109,14 @@ export default function HospitalDashboard() {
   }, [isReady, user, isGuest, navigate]);
 
   // Only redirect to onboarding if member check is done AND no member found
-  // Use a small delay to avoid race conditions with fresh signups
+  // Skip redirect if we just came from onboarding (member query may not have returned yet)
   useEffect(() => {
+    if (justOnboarded) return; // don't bounce back
     if (memberLoading || !isReady) return;
     if (!member) {
-      const timer = setTimeout(() => {
-        navigate("/hospital/onboarding", { replace: true });
-      }, 500);
-      return () => clearTimeout(timer);
+      navigate("/hospital/onboarding", { replace: true });
     }
-  }, [memberLoading, member, navigate, isReady]);
+  }, [memberLoading, member, navigate, isReady, justOnboarded]);
 
 
 
