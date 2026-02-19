@@ -491,6 +491,7 @@ export type Database = {
           description: string | null
           email: string | null
           external_id: string | null
+          hospital_id: string | null
           hours_required: string
           id: string
           latitude: number | null
@@ -514,6 +515,7 @@ export type Database = {
           description?: string | null
           email?: string | null
           external_id?: string | null
+          hospital_id?: string | null
           hours_required: string
           id?: string
           latitude?: number | null
@@ -537,6 +539,7 @@ export type Database = {
           description?: string | null
           email?: string | null
           external_id?: string | null
+          hospital_id?: string | null
           hours_required?: string
           id?: string
           latitude?: number | null
@@ -564,6 +567,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
             referencedColumns: ["id"]
           },
         ]
@@ -888,6 +898,7 @@ export type Database = {
           notes: string | null
           opportunity_id: string
           scheduled_interview: boolean | null
+          status: string
           updated_at: string | null
           user_id: string
         }
@@ -902,6 +913,7 @@ export type Database = {
           notes?: string | null
           opportunity_id: string
           scheduled_interview?: boolean | null
+          status?: string
           updated_at?: string | null
           user_id: string
         }
@@ -916,6 +928,7 @@ export type Database = {
           notes?: string | null
           opportunity_id?: string
           scheduled_interview?: boolean | null
+          status?: string
           updated_at?: string | null
           user_id?: string
         }
@@ -1084,6 +1097,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           email: string | null
+          hospital_id: string | null
           hours_required: string | null
           id: string | null
           latitude: number | null
@@ -1112,6 +1126,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
             referencedColumns: ["id"]
           },
         ]
@@ -1228,6 +1249,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      link_opportunity_to_hospital: {
+        Args: { p_hospital_id: string; p_opportunity_id: string }
+        Returns: undefined
       }
     }
     Enums: {
