@@ -194,6 +194,221 @@ export type Database = {
         }
         Relationships: []
       }
+      hospital_accounts: {
+        Row: {
+          created_at: string
+          hospital_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          hospital_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          hospital_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_accounts_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: true
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hospital_application_answers: {
+        Row: {
+          answer_options: Json | null
+          answer_text: string | null
+          application_id: string
+          created_at: string
+          id: string
+          question_id: string
+        }
+        Insert: {
+          answer_options?: Json | null
+          answer_text?: string | null
+          application_id: string
+          created_at?: string
+          id?: string
+          question_id: string
+        }
+        Update: {
+          answer_options?: Json | null
+          answer_text?: string | null
+          application_id?: string
+          created_at?: string
+          id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_application_answers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hospital_application_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_application_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hospital_application_questions: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          options: Json | null
+          order_index: number
+          question_text: string
+          required: boolean
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_index?: number
+          question_text: string
+          required?: boolean
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_index?: number
+          question_text?: string
+          required?: boolean
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_application_questions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hospital_applications: {
+        Row: {
+          account_id: string
+          id: string
+          notes: string | null
+          status: string
+          student_id: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          id?: string
+          notes?: string | null
+          status?: string
+          student_id: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          student_id?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_applications_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hospital_members: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["hospital_role"]
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["hospital_role"]
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["hospital_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_members_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hospitals: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          id: string
+          name: string
+          state: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          state?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          state?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       import_jobs: {
         Row: {
           checkpoint: Json
@@ -851,6 +1066,8 @@ export type Database = {
           phone: string | null
           requirements: string[] | null
           review_count: number | null
+          slug: string | null
+          source: string | null
           type: Database["public"]["Enums"]["opportunity_type"] | null
           updated_at: string | null
           website: string | null
@@ -985,6 +1202,7 @@ export type Database = {
     Enums: {
       acceptance_likelihood: "high" | "medium" | "low"
       app_role: "admin" | "moderator" | "user"
+      hospital_role: "owner" | "admin" | "viewer"
       opportunity_type: "hospital" | "clinic" | "hospice" | "emt" | "volunteer"
       votable_type: "question" | "answer"
     }
@@ -1116,6 +1334,7 @@ export const Constants = {
     Enums: {
       acceptance_likelihood: ["high", "medium", "low"],
       app_role: ["admin", "moderator", "user"],
+      hospital_role: ["owner", "admin", "viewer"],
       opportunity_type: ["hospital", "clinic", "hospice", "emt", "volunteer"],
       votable_type: ["question", "answer"],
     },

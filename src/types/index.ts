@@ -16,6 +16,7 @@ export interface Opportunity {
   phone?: string | null;
   email?: string | null;
   website?: string | null;
+  slug?: string | null;
   avg_rating?: number;
   review_count?: number;
   distance?: number;
