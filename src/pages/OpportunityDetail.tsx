@@ -59,13 +59,30 @@ const OpportunityDetail = () => {
 
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // Try slug first, fall back to ID
+        let { data, error } = await supabase
           .from("opportunities_with_ratings")
           .select("*")
           .eq("slug", slug)
-          .single();
+          .maybeSingle();
+
+        // If not found by slug, try by ID
+        if (!data && !error) {
+          const byId = await supabase
+            .from("opportunities_with_ratings")
+            .select("*")
+            .eq("id", slug)
+            .maybeSingle();
+          data = byId.data;
+          error = byId.error;
+        }
 
         if (error) throw error;
+        if (!data) {
+          setOpportunity(null);
+          setLoading(false);
+          return;
+        }
 
         if (data) {
           setOpportunity({
@@ -93,7 +110,6 @@ const OpportunityDetail = () => {
           description: "Failed to load opportunity. Please try again.",
           variant: "destructive",
         });
-        navigate("/opportunities");
       } finally {
         setLoading(false);
       }
