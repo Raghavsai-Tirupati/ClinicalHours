@@ -18,6 +18,10 @@ import {
   Globe,
   CheckCircle2,
   AlertCircle,
+  Clock,
+  User,
+  Mail,
+  Phone,
 } from "lucide-react";
 
 interface Hospital {
@@ -27,9 +31,10 @@ interface Hospital {
   state: string | null;
   address: string | null;
   website: string | null;
+  status: string | null;
 }
 
-type Step = "search" | "create" | "confirm";
+type Step = "search" | "create" | "confirm" | "pending";
 
 export default function HospitalOnboarding() {
   const { user, isReady, isGuest } = useAuth();
@@ -44,12 +49,14 @@ export default function HospitalOnboarding() {
   const [selected, setSelected] = useState<Hospital | null>(null);
   const [step, setStep] = useState<Step>("search");
 
-  // Create hospital form fields
+  // Create hospital form fields (for new/pending request)
   const [newName, setNewName] = useState("");
-  const [newAddress, setNewAddress] = useState("");
   const [newCity, setNewCity] = useState("");
   const [newState, setNewState] = useState("");
   const [newWebsite, setNewWebsite] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
 
   // Submission state
   const [submitting, setSubmitting] = useState(false);
@@ -60,7 +67,7 @@ export default function HospitalOnboarding() {
   useEffect(() => {
     if (!isReady) return;
     if (!user || isGuest) {
-      navigate("/auth");
+      navigate("/auth?hospital=true");
     }
   }, [isReady, user, isGuest, navigate]);
 
@@ -80,7 +87,7 @@ export default function HospitalOnboarding() {
     setSearching(true);
     supabase
       .from("hospitals")
-      .select("id, name, city, state, address, website")
+      .select("id, name, city, state, address, website, status")
       .ilike("name", `%${debouncedQuery}%`)
       .limit(8)
       .then(({ data }) => {
@@ -94,39 +101,13 @@ export default function HospitalOnboarding() {
     setStep("confirm");
   }
 
-  async function handleSubmit() {
-    if (!user) return;
+  async function handleClaimExisting() {
+    if (!user || !selected) return;
     setSubmitting(true);
     setError(null);
 
     try {
-      let hospitalId: string;
-
-      if (step === "create") {
-        if (!newName.trim()) {
-          setError("Hospital name is required.");
-          setSubmitting(false);
-          return;
-        }
-        const { data: newHosp, error: hospErr } = await supabase
-          .from("hospitals")
-          .insert({
-            name: newName.trim(),
-            address: newAddress.trim() || null,
-            city: newCity.trim() || null,
-            state: newState.trim() || null,
-            website: newWebsite.trim() || null,
-          })
-          .select("id")
-          .single();
-
-        if (hospErr || !newHosp) {
-          throw new Error(hospErr?.message || "Failed to create hospital.");
-        }
-        hospitalId = newHosp.id;
-      } else {
-        hospitalId = selected!.id;
-      }
+      const hospitalId = selected.id;
 
       // Create hospital_accounts row (may already exist)
       const { data: account, error: accErr } = await supabase
@@ -138,7 +119,6 @@ export default function HospitalOnboarding() {
       let accountId: string;
 
       if (accErr) {
-        // Unique constraint: hospital already has an account
         if (accErr.code === "23505" || accErr.message.includes("unique")) {
           const { data: existing, error: findErr } = await supabase
             .from("hospital_accounts")
@@ -182,6 +162,79 @@ export default function HospitalOnboarding() {
     }
   }
 
+  async function handleRequestNew() {
+    if (!user) return;
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      if (!newName.trim()) {
+        setError("Hospital name is required.");
+        setSubmitting(false);
+        return;
+      }
+      if (!contactName.trim() || !contactEmail.trim()) {
+        setError("Contact name and email are required.");
+        setSubmitting(false);
+        return;
+      }
+
+      // Generate slug
+      const baseSlug = newName.trim().toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-');
+
+      const { error: insertErr } = await supabase
+        .from("hospitals")
+        .insert({
+          name: newName.trim(),
+          city: newCity.trim() || null,
+          state: newState.trim() || null,
+          website: newWebsite.trim() || null,
+          status: "pending",
+          slug: baseSlug || null,
+          contact_name: contactName.trim(),
+          contact_email: contactEmail.trim(),
+          contact_phone: contactPhone.trim() || null,
+          submitted_by_user_id: user.id,
+          submitted_at: new Date().toISOString(),
+        });
+
+      if (insertErr) {
+        // If slug conflict, try with suffix
+        if (insertErr.code === "23505" && insertErr.message.includes("slug")) {
+          const slugWithSuffix = `${baseSlug}-${Date.now().toString(36)}`;
+          const { error: retryErr } = await supabase
+            .from("hospitals")
+            .insert({
+              name: newName.trim(),
+              city: newCity.trim() || null,
+              state: newState.trim() || null,
+              website: newWebsite.trim() || null,
+              status: "pending",
+              slug: slugWithSuffix,
+              contact_name: contactName.trim(),
+              contact_email: contactEmail.trim(),
+              contact_phone: contactPhone.trim() || null,
+              submitted_by_user_id: user.id,
+              submitted_at: new Date().toISOString(),
+            });
+          if (retryErr) throw new Error(retryErr.message);
+        } else {
+          throw new Error(insertErr.message);
+        }
+      }
+
+      setStep("pending");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "An error occurred. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   // Loading states
   if (!isReady || memberLoading) {
     return (
@@ -207,6 +260,31 @@ export default function HospitalOnboarding() {
     );
   }
 
+  if (step === "pending") {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navigation />
+        <main className="flex-1 flex items-center justify-center px-4 pt-28 pb-16">
+          <div className="bg-card border border-border rounded-2xl p-10 max-w-md w-full text-center">
+            <Clock className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Pending Approval
+            </h2>
+            <p className="text-muted-foreground">
+              Your hospital registration for{" "}
+              <span className="font-semibold text-foreground">{newName}</span>{" "}
+              has been submitted. A platform admin will review your request shortly.
+            </p>
+            <Button variant="outline" className="mt-6" onClick={() => navigate("/dashboard")}>
+              Return to Dashboard
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navigation />
@@ -222,8 +300,7 @@ export default function HospitalOnboarding() {
               Set up your hospital account
             </h1>
             <p className="text-muted-foreground">
-              Search for your hospital to get started. If it's not listed, you
-              can add it.
+              Search for your hospital to get started. If it's not listed, you can request to add it.
             </p>
           </div>
 
@@ -231,12 +308,9 @@ export default function HospitalOnboarding() {
           {step === "search" && (
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="bg-muted/30 border-b border-border px-6 py-4">
-                <h2 className="font-semibold text-foreground">
-                  Find your hospital
-                </h2>
+                <h2 className="font-semibold text-foreground">Find your hospital</h2>
               </div>
               <div className="p-6">
-                {/* Search input */}
                 <div className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
@@ -251,7 +325,6 @@ export default function HospitalOnboarding() {
                   )}
                 </div>
 
-                {/* Search results */}
                 {results.length > 0 && (
                   <div className="space-y-1 mb-4">
                     {results.map((h) => (
@@ -261,15 +334,11 @@ export default function HospitalOnboarding() {
                         className="w-full text-left px-4 py-3 rounded-xl hover:bg-muted/40 transition-colors group flex items-center justify-between gap-3"
                       >
                         <div className="min-w-0">
-                          <p className="font-medium text-foreground truncate">
-                            {h.name}
-                          </p>
+                          <p className="font-medium text-foreground truncate">{h.name}</p>
                           {(h.city || h.state) && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                               <MapPin className="h-3 w-3 flex-shrink-0" />
-                              <span>
-                                {[h.city, h.state].filter(Boolean).join(", ")}
-                              </span>
+                              <span>{[h.city, h.state].filter(Boolean).join(", ")}</span>
                             </div>
                           )}
                         </div>
@@ -285,18 +354,15 @@ export default function HospitalOnboarding() {
                   </p>
                 )}
 
-                {/* Add new hospital option */}
                 <button
                   onClick={() => setStep("create")}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors group"
                 >
                   <Plus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                   <div className="text-left">
-                    <p className="text-sm font-medium text-foreground">
-                      Add a new hospital
-                    </p>
+                    <p className="text-sm font-medium text-foreground">Request a new hospital</p>
                     <p className="text-xs text-muted-foreground">
-                      Can't find your hospital? Add it here
+                      Can't find your hospital? Submit it for approval
                     </p>
                   </div>
                 </button>
@@ -304,7 +370,7 @@ export default function HospitalOnboarding() {
             </div>
           )}
 
-          {/* ── Step: Create new hospital ─────────────────────────────────── */}
+          {/* ── Step: Create / Request new hospital ────────────────────────── */}
           {step === "create" && (
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <div className="bg-muted/30 border-b border-border px-6 py-4 flex items-center gap-3">
@@ -314,75 +380,62 @@ export default function HospitalOnboarding() {
                 >
                   ← Back
                 </button>
-                <h2 className="font-semibold text-foreground">
-                  Add a new hospital
-                </h2>
+                <h2 className="font-semibold text-foreground">Request a new hospital</h2>
               </div>
               <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
                     Hospital Name <span className="text-destructive">*</span>
                   </label>
-                  <Input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="e.g. Memorial General Hospital"
-                    autoFocus
-                  />
+                  <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Memorial General Hospital" autoFocus />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      City
-                    </label>
-                    <Input
-                      value={newCity}
-                      onChange={(e) => setNewCity(e.target.value)}
-                      placeholder="San Francisco"
-                    />
+                    <label className="block text-sm font-medium text-foreground mb-1.5">City</label>
+                    <Input value={newCity} onChange={(e) => setNewCity(e.target.value)} placeholder="San Francisco" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
-                      State
-                    </label>
-                    <Input
-                      value={newState}
-                      onChange={(e) => setNewState(e.target.value)}
-                      placeholder="CA"
-                    />
+                    <label className="block text-sm font-medium text-foreground mb-1.5">State</label>
+                    <Input value={newState} onChange={(e) => setNewState(e.target.value)} placeholder="CA" />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Address{" "}
-                    <span className="text-muted-foreground text-xs font-normal">
-                      (optional)
-                    </span>
-                  </label>
-                  <Input
-                    value={newAddress}
-                    onChange={(e) => setNewAddress(e.target.value)}
-                    placeholder="123 Medical Drive"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">
-                    Website{" "}
-                    <span className="text-muted-foreground text-xs font-normal">
-                      (optional)
-                    </span>
+                    Website <span className="text-muted-foreground text-xs font-normal">(optional)</span>
                   </label>
                   <div className="relative">
                     <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                      value={newWebsite}
-                      onChange={(e) => setNewWebsite(e.target.value)}
-                      placeholder="https://hospital.com"
-                      className="pl-9"
-                    />
+                    <Input value={newWebsite} onChange={(e) => setNewWebsite(e.target.value)} placeholder="https://hospital.com" className="pl-9" />
+                  </div>
+                </div>
+
+                {/* Contact info */}
+                <div className="border-t border-border pt-4 mt-4">
+                  <p className="text-sm font-medium text-foreground mb-3">Contact Information</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        <User className="h-3.5 w-3.5 inline mr-1" />
+                        Contact Name <span className="text-destructive">*</span>
+                      </label>
+                      <Input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Your name" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        <Mail className="h-3.5 w-3.5 inline mr-1" />
+                        Contact Email <span className="text-destructive">*</span>
+                      </label>
+                      <Input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@hospital.com" type="email" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        <Phone className="h-3.5 w-3.5 inline mr-1" />
+                        Contact Phone <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                      </label>
+                      <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="(555) 123-4567" />
+                    </div>
                   </div>
                 </div>
 
@@ -393,18 +446,14 @@ export default function HospitalOnboarding() {
                   </div>
                 )}
 
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting || !newName.trim()}
-                  className="w-full h-11"
-                >
+                <Button onClick={handleRequestNew} disabled={submitting || !newName.trim()} className="w-full h-11">
                   {submitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Creating account…
+                      Submitting…
                     </>
                   ) : (
-                    "Create Hospital & Continue"
+                    "Submit for Approval"
                   )}
                 </Button>
               </div>
@@ -424,40 +473,24 @@ export default function HospitalOnboarding() {
                 >
                   ← Back
                 </button>
-                <h2 className="font-semibold text-foreground">
-                  Confirm hospital
-                </h2>
+                <h2 className="font-semibold text-foreground">Confirm hospital</h2>
               </div>
               <div className="p-6">
-                {/* Hospital preview card */}
                 <div className="bg-muted/30 rounded-xl p-4 mb-6 space-y-2">
                   <div>
-                    <span className="text-xs text-muted-foreground">
-                      Hospital Name
-                    </span>
-                    <p className="font-semibold text-foreground text-lg">
-                      {selected.name}
-                    </p>
+                    <span className="text-xs text-muted-foreground">Hospital Name</span>
+                    <p className="font-semibold text-foreground text-lg">{selected.name}</p>
                   </div>
                   {(selected.city || selected.state) && (
                     <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
                       <MapPin className="h-4 w-4 flex-shrink-0" />
-                      <span>
-                        {[selected.city, selected.state]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
+                      <span>{[selected.city, selected.state].filter(Boolean).join(", ")}</span>
                     </div>
                   )}
                   {selected.website && (
                     <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
                       <Globe className="h-4 w-4 flex-shrink-0" />
-                      <a
-                        href={selected.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline text-primary truncate"
-                      >
+                      <a href={selected.website} target="_blank" rel="noopener noreferrer" className="hover:underline text-primary truncate">
                         {selected.website}
                       </a>
                     </div>
@@ -465,10 +498,7 @@ export default function HospitalOnboarding() {
                 </div>
 
                 <p className="text-sm text-muted-foreground mb-6">
-                  You will be added as the{" "}
-                  <strong className="text-foreground">owner</strong> of this
-                  hospital's account. You can invite additional team members
-                  after setup.
+                  You will be added as the <span className="text-foreground font-medium">owner</span> of this hospital's account. This gives you full control over application questions and applicant management.
                 </p>
 
                 {error && (
@@ -478,18 +508,14 @@ export default function HospitalOnboarding() {
                   </div>
                 )}
 
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="w-full h-11"
-                >
+                <Button onClick={handleClaimExisting} disabled={submitting} className="w-full h-11">
                   {submitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Setting up account…
+                      Setting up…
                     </>
                   ) : (
-                    "Confirm & Set Up Account"
+                    "Claim & Continue"
                   )}
                 </Button>
               </div>

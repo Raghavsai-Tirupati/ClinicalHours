@@ -380,30 +380,57 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           id: string
           name: string
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          slug: string | null
           state: string | null
+          status: string | null
+          submitted_at: string | null
+          submitted_by_user_id: string | null
           updated_at: string
           website: string | null
         }
         Insert: {
           address?: string | null
           city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           id?: string
           name: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          slug?: string | null
           state?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          submitted_by_user_id?: string | null
           updated_at?: string
           website?: string | null
         }
         Update: {
           address?: string | null
           city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           id?: string
           name?: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          slug?: string | null
           state?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          submitted_by_user_id?: string | null
           updated_at?: string
           website?: string | null
         }
