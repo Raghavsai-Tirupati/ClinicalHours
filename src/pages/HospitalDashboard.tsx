@@ -92,10 +92,11 @@ const QUESTION_TYPE_LABELS: Record<Question["type"], string> = {
 export default function HospitalDashboard() {
   const { user, isReady, isGuest } = useAuth();
   const navigate = useNavigate();
-  const { member, loading: memberLoading, refresh } = useHospitalMember();
+  const { member, loading: memberLoading, error: memberError, refresh } = useHospitalMember();
   const [activeTab, setActiveTab] = useState<"questions" | "applicants">(
     "questions"
   );
+  const [timedOut, setTimedOut] = useState(false);
 
   const location = useLocation();
   const justOnboarded = (location.state as any)?.justOnboarded === true;
@@ -109,22 +110,44 @@ export default function HospitalDashboard() {
   }, [isReady, user, isGuest, navigate]);
 
   // Only redirect to onboarding if member check is done AND no member found
-  // Skip redirect if we just came from onboarding (member query may not have returned yet)
   useEffect(() => {
-    if (justOnboarded) return; // don't bounce back
+    if (justOnboarded) return;
     if (memberLoading || !isReady) return;
-    if (!member) {
+    if (!member && !memberError) {
       navigate("/hospital/onboarding", { replace: true });
     }
-  }, [memberLoading, member, navigate, isReady, justOnboarded]);
+  }, [memberLoading, member, memberError, navigate, isReady, justOnboarded]);
 
   // When arriving from onboarding, poll for member data until it's available
   useEffect(() => {
     if (!justOnboarded || member) return;
-    const interval = setInterval(() => refresh(), 1000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => refresh(), 1500);
+    const timeout = setTimeout(() => setTimedOut(true), 10000);
+    return () => { clearInterval(interval); clearTimeout(timeout); };
   }, [justOnboarded, member, refresh]);
 
+  // Show error state
+  if (memberError || timedOut) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+        <div className="bg-card border border-border rounded-2xl p-10 max-w-md w-full text-center">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-foreground mb-2">Unable to load hospital data</h2>
+          <p className="text-muted-foreground text-sm mb-4">
+            {memberError || "Request timed out. Please try again."}
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" onClick={() => { setTimedOut(false); refresh(); }}>
+              <RefreshCw className="h-4 w-4 mr-2" /> Retry
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/hospital/onboarding")}>
+              Back to Onboarding
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isReady || memberLoading || (justOnboarded && !member)) {
     return (

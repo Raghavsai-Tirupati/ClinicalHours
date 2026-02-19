@@ -13,6 +13,7 @@ export interface HospitalMemberInfo {
 interface UseHospitalMemberResult {
   member: HospitalMemberInfo | null;
   loading: boolean;
+  error: string | null;
   refresh: () => void;
 }
 
@@ -20,6 +21,7 @@ export function useHospitalMember(): UseHospitalMemberResult {
   const { user, isReady } = useAuth();
   const [member, setMember] = useState<HospitalMemberInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export function useHospitalMember(): UseHospitalMemberResult {
     }
 
     setLoading(true);
+    setError(null);
 
     async function fetchMember() {
       const { data, error } = await supabase
@@ -53,6 +56,7 @@ export function useHospitalMember(): UseHospitalMemberResult {
 
       if (error) {
         console.error('useHospitalMember error:', error);
+        setError(error.message);
         setMember(null);
       } else if (data) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -79,6 +83,7 @@ export function useHospitalMember(): UseHospitalMemberResult {
   return {
     member,
     loading,
+    error,
     refresh: () => setTick((t) => t + 1),
   };
 }
