@@ -23,7 +23,10 @@ import {
   FileText,
   RefreshCw,
   AlertCircle,
+  Zap,
+  CheckCircle2,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -191,6 +194,9 @@ export default function HospitalDashboard() {
           </div>
         </div>
 
+        {/* Deploy panel */}
+        <DeployPanel hospitalId={member.hospitalId} canEdit={canEdit} />
+
         {/* Tab switcher */}
         <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1 mb-6 w-fit">
           {(["questions", "applicants"] as const).map((tab) => (
@@ -221,6 +227,128 @@ export default function HospitalDashboard() {
         )}
       </main>
       <Footer />
+    </div>
+  );
+}
+
+// ─── Deploy Panel ─────────────────────────────────────────────────────────────
+
+function DeployPanel({
+  hospitalId,
+  canEdit,
+}: {
+  hospitalId: string;
+  canEdit: boolean;
+}) {
+  const [opportunityId, setOpportunityId] = useState<string | null | undefined>(
+    undefined // undefined = still loading
+  );
+  const [opportunitySlug, setOpportunitySlug] = useState<string | null>(null);
+  const [deploying, setDeploying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hospitalId) return;
+    supabase
+      .from("opportunities")
+      .select("id, slug")
+      .eq("hospital_id", hospitalId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setOpportunityId(data?.id ?? null);
+        setOpportunitySlug(data?.slug ?? null);
+      });
+  }, [hospitalId]);
+
+  async function handleDeploy() {
+    setDeploying(true);
+    setError(null);
+    const { data, error: rpcError } = await supabase.rpc(
+      "deploy_hospital_opportunity",
+      { p_hospital_id: hospitalId }
+    );
+    if (rpcError) {
+      setError(rpcError.message);
+    } else {
+      // Fetch the slug of the newly created opportunity
+      const { data: opp } = await supabase
+        .from("opportunities")
+        .select("id, slug")
+        .eq("id", data)
+        .single();
+      setOpportunityId(opp?.id ?? data);
+      setOpportunitySlug(opp?.slug ?? null);
+    }
+    setDeploying(false);
+  }
+
+  // Still loading
+  if (opportunityId === undefined) return null;
+
+  const isLive = !!opportunityId;
+  const viewPath = opportunitySlug
+    ? `/opportunities/${opportunitySlug}`
+    : opportunityId
+    ? `/opportunities/${opportunityId}`
+    : null;
+
+  return (
+    <div
+      className={`mb-6 rounded-xl border px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4 ${
+        isLive
+          ? "bg-green-500/10 border-green-500/30"
+          : "bg-muted/30 border-border"
+      }`}
+    >
+      <div className="flex items-center gap-3 flex-1">
+        {isLive ? (
+          <CheckCircle2 className="h-5 w-5 text-green-400 flex-shrink-0" />
+        ) : (
+          <Zap className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        )}
+        <div>
+          <p className="text-sm font-semibold text-foreground">
+            {isLive ? "Application is Live" : "Not Published Yet"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {isLive
+              ? "Students can find and apply to your hospital."
+              : "Publish to make your hospital visible to students on the Opportunities page."}
+          </p>
+          {error && (
+            <p className="text-xs text-destructive mt-1">{error}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {isLive && viewPath && (
+          <Link
+            to={viewPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300 transition-colors font-medium"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            View Listing
+          </Link>
+        )}
+        {!isLive && canEdit && (
+          <Button
+            size="sm"
+            onClick={handleDeploy}
+            disabled={deploying}
+            className="gap-1.5"
+          >
+            {deploying ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4" />
+            )}
+            {deploying ? "Publishing…" : "Publish to Students"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
