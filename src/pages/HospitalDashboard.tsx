@@ -42,7 +42,9 @@ interface Question {
 
 interface Applicant {
   id: string;
-  student_id: string;
+  student_id: string | null;
+  applicant_email: string | null;
+  applicant_name: string | null;
   status: "submitted" | "in_review" | "accepted" | "rejected";
   notes: string | null;
   submitted_at: string;
@@ -58,6 +60,10 @@ interface Applicant {
     question_text?: string;
     question_type?: string;
   }[];
+}
+
+function getApplicantDisplayName(app: Applicant): string {
+  return app.student_profile?.full_name ?? app.applicant_name ?? "Guest Applicant";
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -797,7 +803,7 @@ function ApplicantsTab({ accountId }: { accountId: string }) {
 
     const { data: apps } = await supabase
       .from("hospital_applications")
-      .select("id, student_id, status, notes, submitted_at")
+      .select("id, student_id, applicant_email, applicant_name, status, notes, submitted_at")
       .eq("account_id", accountId)
       .order("submitted_at", { ascending: false });
 
@@ -807,7 +813,7 @@ function ApplicantsTab({ accountId }: { accountId: string }) {
       return;
     }
 
-    const studentIds = apps.map((a) => a.student_id);
+    const studentIds = apps.map((a) => a.student_id).filter(Boolean) as string[];
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, full_name, university, resume_url")
@@ -839,10 +845,12 @@ function ApplicantsTab({ accountId }: { accountId: string }) {
     const enriched: Applicant[] = apps.map((app) => ({
       id: app.id,
       student_id: app.student_id,
+      applicant_email: app.applicant_email ?? null,
+      applicant_name: app.applicant_name ?? null,
       status: app.status as Applicant["status"],
       notes: app.notes,
       submitted_at: app.submitted_at,
-      student_profile: profileMap[app.student_id]
+      student_profile: app.student_id && profileMap[app.student_id]
         ? {
             full_name: profileMap[app.student_id].full_name,
             university: profileMap[app.student_id].university,
@@ -1032,9 +1040,19 @@ function ApplicantsTab({ accountId }: { accountId: string }) {
                     }`}
                   >
                     <td className="px-4 py-3">
-                      <p className="font-medium text-foreground">
-                        {app.student_profile?.full_name ?? "Unknown Student"}
+                      <p className="font-medium text-foreground flex items-center gap-2">
+                        {getApplicantDisplayName(app)}
+                        {!app.student_id && (
+                          <span className="text-xs bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded-full">
+                            Guest
+                          </span>
+                        )}
                       </p>
+                      {!app.student_id && app.applicant_email && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {app.applicant_email}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                       {app.student_profile?.university ?? "—"}
@@ -1094,17 +1112,35 @@ function ApplicantDetail({
   const [notes, setNotes] = useState(applicant.notes || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
-  async function handleSave() {
+  async function sendNotification(status: Applicant["status"]) {
+    if (!["accepted", "rejected"].includes(status)) return;
+    try {
+      await supabase.functions.invoke("notify-application-status", {
+        body: { application_id: applicant.id, status },
+      });
+      setEmailSent(true);
+    } catch (err) {
+      // Email failure is non-blocking
+      console.error("Failed to send notification email:", err);
+    }
+  }
+
+  async function handleSave(overrideStatus?: Applicant["status"]) {
+    const statusToSave = overrideStatus ?? newStatus;
     setSaving(true);
     setSaved(false);
+    setEmailSent(false);
     const { error } = await supabase
       .from("hospital_applications")
-      .update({ status: newStatus, notes: notes.trim() || null })
+      .update({ status: statusToSave, notes: notes.trim() || null })
       .eq("id", applicant.id);
     if (!error) {
-      onUpdate(applicant.id, newStatus, notes.trim() || null);
+      if (overrideStatus) setNewStatus(overrideStatus);
+      onUpdate(applicant.id, statusToSave, notes.trim() || null);
       setSaved(true);
+      await sendNotification(statusToSave);
     }
     setSaving(false);
   }
@@ -1112,6 +1148,8 @@ function ApplicantDetail({
   const isDirty =
     newStatus !== applicant.status ||
     notes.trim() !== (applicant.notes || "").trim();
+
+  const displayName = getApplicantDisplayName(applicant);
 
   return (
     <div
@@ -1131,7 +1169,7 @@ function ApplicantDetail({
         </div>
 
         <div className="p-6 space-y-6 flex-1">
-          {/* Student info */}
+          {/* Student / Guest info */}
           <section>
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Applicant
@@ -1139,15 +1177,28 @@ function ApplicantDetail({
             <div className="bg-muted/30 rounded-xl p-4 space-y-2">
               <div>
                 <span className="text-xs text-muted-foreground">Full Name</span>
-                <p className="text-sm font-medium text-foreground">
-                  {applicant.student_profile?.full_name ?? "Unknown"}
+                <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                  {displayName}
+                  {!applicant.student_id && (
+                    <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                      Guest
+                    </span>
+                  )}
                 </p>
               </div>
+              {/* Guest email */}
+              {!applicant.student_id && applicant.applicant_email && (
+                <div>
+                  <span className="text-xs text-muted-foreground">Email</span>
+                  <p className="text-sm text-foreground">
+                    {applicant.applicant_email}
+                  </p>
+                </div>
+              )}
+              {/* Authenticated profile details */}
               {applicant.student_profile?.university && (
                 <div>
-                  <span className="text-xs text-muted-foreground">
-                    University
-                  </span>
+                  <span className="text-xs text-muted-foreground">University</span>
                   <p className="text-sm text-foreground">
                     {applicant.student_profile.university}
                   </p>
@@ -1232,37 +1283,64 @@ function ApplicantDetail({
             </section>
           )}
 
-          {/* Status update */}
+          {/* Decision */}
           <section>
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Update Status
+              Decision
             </h3>
-            <div className="bg-muted/30 rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-muted-foreground">Current:</span>
-                <span
-                  className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_COLORS[applicant.status]}`}
+            <div className="space-y-3">
+              {/* Quick-action accept / reject buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleSave("accepted")}
+                  disabled={saving || newStatus === "accepted"}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors border ${
+                    newStatus === "accepted"
+                      ? "bg-green-500/20 text-green-400 border-green-500/40 cursor-default"
+                      : "bg-green-500/10 hover:bg-green-500/20 text-green-400 border-green-500/30"
+                  }`}
                 >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[applicant.status]}`}
-                  />
-                  {STATUS_LABELS[applicant.status]}
-                </span>
+                  {saving && newStatus !== "accepted" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleSave("rejected")}
+                  disabled={saving || newStatus === "rejected"}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors border ${
+                    newStatus === "rejected"
+                      ? "bg-red-500/20 text-red-400 border-red-500/40 cursor-default"
+                      : "bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30"
+                  }`}
+                >
+                  <X className="h-4 w-4" />
+                  Reject
+                </button>
               </div>
 
-              <select
-                value={newStatus}
-                onChange={(e) => {
-                  setNewStatus(e.target.value as Applicant["status"]);
-                  setSaved(false);
-                }}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="submitted">Submitted</option>
-                <option value="in_review">In Review</option>
-                <option value="accepted">Accepted</option>
-                <option value="rejected">Rejected</option>
-              </select>
+              {/* Full status dropdown for finer control */}
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                  Status
+                </label>
+                <select
+                  value={newStatus}
+                  onChange={(e) => {
+                    setNewStatus(e.target.value as Applicant["status"]);
+                    setSaved(false);
+                    setEmailSent(false);
+                  }}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="submitted">Submitted</option>
+                  <option value="in_review">In Review</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
 
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">
@@ -1281,7 +1359,7 @@ function ApplicantDetail({
               </div>
 
               <Button
-                onClick={handleSave}
+                onClick={() => handleSave()}
                 disabled={saving || !isDirty}
                 className="w-full"
               >
@@ -1296,7 +1374,9 @@ function ApplicantDetail({
               </Button>
               {saved && (
                 <p className="text-xs text-green-400 text-center">
-                  Saved successfully!
+                  {emailSent
+                    ? "Saved & notification email sent."
+                    : "Saved successfully!"}
                 </p>
               )}
             </div>
