@@ -92,7 +92,7 @@ const QUESTION_TYPE_LABELS: Record<Question["type"], string> = {
 export default function HospitalDashboard() {
   const { user, isReady, isGuest } = useAuth();
   const navigate = useNavigate();
-  const { member, loading: memberLoading } = useHospitalMember();
+  const { member, loading: memberLoading, refresh } = useHospitalMember();
   const [activeTab, setActiveTab] = useState<"questions" | "applicants">(
     "questions"
   );
@@ -118,9 +118,15 @@ export default function HospitalDashboard() {
     }
   }, [memberLoading, member, navigate, isReady, justOnboarded]);
 
+  // When arriving from onboarding, poll for member data until it's available
+  useEffect(() => {
+    if (!justOnboarded || member) return;
+    const interval = setInterval(() => refresh(), 1000);
+    return () => clearInterval(interval);
+  }, [justOnboarded, member, refresh]);
 
 
-  if (!isReady || memberLoading) {
+  if (!isReady || memberLoading || (justOnboarded && !member)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
