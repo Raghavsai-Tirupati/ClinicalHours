@@ -67,14 +67,14 @@ export default function HospitalOnboarding() {
   useEffect(() => {
     if (!isReady) return;
     if (!user || isGuest) {
-      navigate("/auth?hospital=true");
+      navigate("/hospital/auth");
     }
   }, [isReady, user, isGuest, navigate]);
 
   // Redirect to admin if already a member
   useEffect(() => {
     if (!memberLoading && member) {
-      navigate("/hospital/admin");
+      navigate("/hospital/portal");
     }
   }, [memberLoading, member, navigate]);
 
@@ -152,7 +152,7 @@ export default function HospitalOnboarding() {
 
       setDone(true);
       refresh();
-      setTimeout(() => navigate("/hospital/admin"), 1500);
+      setTimeout(() => navigate("/hospital/portal"), 1500);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "An error occurred. Please try again."

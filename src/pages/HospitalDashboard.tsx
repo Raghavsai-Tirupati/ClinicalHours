@@ -101,7 +101,7 @@ export default function HospitalDashboard() {
   useEffect(() => {
     if (!isReady) return;
     if (!user || isGuest) {
-      navigate("/auth");
+      navigate("/hospital/auth");
     }
   }, [isReady, user, isGuest, navigate]);
 
@@ -110,6 +110,8 @@ export default function HospitalDashboard() {
       navigate("/hospital/onboarding");
     }
   }, [memberLoading, member, navigate]);
+
+
 
   if (!isReady || memberLoading) {
     return (
