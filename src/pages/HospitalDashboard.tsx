@@ -126,6 +126,13 @@ export default function HospitalDashboard() {
     return () => { clearInterval(interval); clearTimeout(timeout); };
   }, [justOnboarded, member, refresh]);
 
+  // General timeout: if still loading after 12s on any visit, show error
+  useEffect(() => {
+    if (!memberLoading) return;
+    const timeout = setTimeout(() => setTimedOut(true), 12000);
+    return () => clearTimeout(timeout);
+  }, [memberLoading]);
+
   // Show error state
   if (memberError || timedOut) {
     return (

@@ -37,44 +37,51 @@ export function useHospitalMember(): UseHospitalMemberResult {
     setError(null);
 
     async function fetchMember() {
-      const { data, error } = await supabase
-        .from('hospital_members')
-        .select(`
-          id,
-          account_id,
-          role,
-          hospital_accounts (
-            hospital_id,
-            hospitals (
-              id,
-              name
+      try {
+        const { data, error: queryError } = await supabase
+          .from('hospital_members')
+          .select(`
+            id,
+            account_id,
+            role,
+            hospital_accounts (
+              hospital_id,
+              hospitals (
+                id,
+                name
+              )
             )
-          )
-        `)
-        .eq('user_id', user!.id)
-        .maybeSingle();
+          `)
+          .eq('user_id', user!.id)
+          .limit(1)
+          .maybeSingle();
 
-      if (error) {
-        console.error('useHospitalMember error:', error);
-        setError(error.message);
+        if (queryError) {
+          console.error('useHospitalMember query error:', queryError);
+          setError(queryError.message);
+          setMember(null);
+        } else if (data) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const account = data.hospital_accounts as any;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const hospital = account?.hospitals as any;
+          setMember({
+            memberId: data.id,
+            accountId: data.account_id,
+            hospitalId: hospital?.id ?? account?.hospital_id,
+            hospitalName: hospital?.name ?? 'Unknown Hospital',
+            role: data.role as HospitalMemberInfo['role'],
+          });
+        } else {
+          setMember(null);
+        }
+      } catch (err: unknown) {
+        console.error('useHospitalMember unexpected error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load membership');
         setMember(null);
-      } else if (data) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const account = data.hospital_accounts as any;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const hospital = account?.hospitals as any;
-        setMember({
-          memberId: data.id,
-          accountId: data.account_id,
-          hospitalId: hospital?.id ?? account?.hospital_id,
-          hospitalName: hospital?.name ?? 'Unknown Hospital',
-          role: data.role as HospitalMemberInfo['role'],
-        });
-      } else {
-        setMember(null);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     fetchMember();
