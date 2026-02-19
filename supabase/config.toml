@@ -56,3 +56,18 @@ verify_jwt = false
 
 [functions.hospital-signup]
 verify_jwt = false
+
+[functions.notify-application-status]
+verify_jwt = false
+
+[functions.admin-get-users]
+verify_jwt = false
+
+[functions.import-csv-hospitals]
+verify_jwt = false
+
+[functions.fix-missing-states]
+verify_jwt = false
+
+[functions.send-mass-email]
+verify_jwt = false

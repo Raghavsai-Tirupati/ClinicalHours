@@ -309,28 +309,34 @@ export type Database = {
       hospital_applications: {
         Row: {
           account_id: string
+          applicant_email: string | null
+          applicant_name: string | null
           id: string
           notes: string | null
           status: string
-          student_id: string
+          student_id: string | null
           submitted_at: string
           updated_at: string
         }
         Insert: {
           account_id: string
+          applicant_email?: string | null
+          applicant_name?: string | null
           id?: string
           notes?: string | null
           status?: string
-          student_id: string
+          student_id?: string | null
           submitted_at?: string
           updated_at?: string
         }
         Update: {
           account_id?: string
+          applicant_email?: string | null
+          applicant_name?: string | null
           id?: string
           notes?: string | null
           status?: string
-          student_id?: string
+          student_id?: string | null
           submitted_at?: string
           updated_at?: string
         }
@@ -1257,6 +1263,15 @@ export type Database = {
       link_opportunity_to_hospital: {
         Args: { p_hospital_id: string; p_opportunity_id: string }
         Returns: undefined
+      }
+      submit_guest_hospital_application: {
+        Args: {
+          p_account_id: string
+          p_answers: Json
+          p_email: string
+          p_name: string
+        }
+        Returns: string
       }
     }
     Enums: {
