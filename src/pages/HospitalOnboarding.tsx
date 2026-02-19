@@ -32,6 +32,7 @@ interface Hospital {
   address: string | null;
   website: string | null;
   status: string | null;
+  source?: "hospitals" | "opportunities";
 }
 
 type Step = "search" | "create" | "confirm" | "pending";
@@ -71,29 +72,62 @@ export default function HospitalOnboarding() {
     }
   }, [isReady, user, isGuest, navigate]);
 
-  // Redirect to admin if already a member
+  // Redirect to portal if already a member (but not if we just completed onboarding)
   useEffect(() => {
-    if (!memberLoading && member) {
-      navigate("/hospital/portal");
+    if (!memberLoading && member && !done) {
+      navigate("/hospital/portal", { replace: true });
     }
-  }, [memberLoading, member, navigate]);
+  }, [memberLoading, member, navigate, done]);
 
-  // Search hospitals as user types
+  // Search hospitals from both hospitals table and opportunities table
   useEffect(() => {
     if (!debouncedQuery.trim()) {
       setResults([]);
       return;
     }
     setSearching(true);
-    supabase
-      .from("hospitals")
-      .select("id, name, city, state, address, website, status")
-      .ilike("name", `%${debouncedQuery}%`)
-      .limit(8)
-      .then(({ data }) => {
-        setResults((data as Hospital[]) || []);
-        setSearching(false);
-      });
+
+    const q = debouncedQuery.trim();
+
+    Promise.all([
+      supabase
+        .from("hospitals")
+        .select("id, name, city, state, address, website, status")
+        .ilike("name", `%${q}%`)
+        .limit(5),
+      supabase
+        .from("opportunities")
+        .select("id, name, location, address, website")
+        .eq("type", "hospital")
+        .ilike("name", `%${q}%`)
+        .limit(15),
+    ]).then(([hospitalsRes, oppsRes]) => {
+      const hospitalRows = (hospitalsRes.data || []).map((h) => ({
+        ...h,
+        source: "hospitals" as const,
+      }));
+      const hospitalIds = new Set(hospitalRows.map((h) => h.name.toLowerCase()));
+
+      const oppRows = (oppsRes.data || [])
+        .filter((o) => !hospitalIds.has(o.name.toLowerCase()))
+        .map((o) => {
+          // Parse city/state from location string like "City, ST"
+          const parts = o.location?.split(",").map((s: string) => s.trim()) || [];
+          return {
+            id: o.id,
+            name: o.name,
+            city: parts[0] || null,
+            state: parts[1] || null,
+            address: o.address,
+            website: o.website,
+            status: "seeded" as const,
+            source: "opportunities" as const,
+          };
+        });
+
+      setResults([...hospitalRows, ...oppRows].slice(0, 15));
+      setSearching(false);
+    });
   }, [debouncedQuery]);
 
   function handleSelectHospital(h: Hospital) {
@@ -107,7 +141,50 @@ export default function HospitalOnboarding() {
     setError(null);
 
     try {
-      const hospitalId = selected.id;
+      let hospitalId = selected.id;
+
+      // If from opportunities table, create a hospitals row first
+      if (selected.source === "opportunities") {
+        const slug = selected.name.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+        const { data: newHosp, error: hospErr } = await supabase
+          .from("hospitals")
+          .insert({
+            name: selected.name,
+            city: selected.city,
+            state: selected.state,
+            address: selected.address,
+            website: selected.website,
+            status: "seeded",
+            slug: slug || null,
+          })
+          .select("id")
+          .single();
+
+        if (hospErr) {
+          // If slug conflict, try with suffix
+          if (hospErr.code === "23505" && hospErr.message.includes("slug")) {
+            const { data: retry, error: retryErr } = await supabase
+              .from("hospitals")
+              .insert({
+                name: selected.name,
+                city: selected.city,
+                state: selected.state,
+                address: selected.address,
+                website: selected.website,
+                status: "seeded",
+                slug: `${slug}-${Date.now().toString(36)}`,
+              })
+              .select("id")
+              .single();
+            if (retryErr || !retry) throw new Error(retryErr?.message || "Failed to create hospital record");
+            hospitalId = retry.id;
+          } else {
+            throw new Error(hospErr.message);
+          }
+        } else {
+          hospitalId = newHosp.id;
+        }
+      }
 
       // Create hospital_accounts row (may already exist)
       const { data: account, error: accErr } = await supabase
@@ -151,8 +228,8 @@ export default function HospitalOnboarding() {
       }
 
       setDone(true);
-      refresh();
-      setTimeout(() => navigate("/hospital/portal"), 1500);
+      // Navigate immediately to portal, don't wait for member refresh
+      setTimeout(() => navigate("/hospital/portal", { replace: true }), 1200);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "An error occurred. Please try again."

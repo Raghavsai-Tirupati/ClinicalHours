@@ -105,11 +105,17 @@ export default function HospitalDashboard() {
     }
   }, [isReady, user, isGuest, navigate]);
 
+  // Only redirect to onboarding if member check is done AND no member found
+  // Use a small delay to avoid race conditions with fresh signups
   useEffect(() => {
-    if (!memberLoading && !member) {
-      navigate("/hospital/onboarding");
+    if (memberLoading || !isReady) return;
+    if (!member) {
+      const timer = setTimeout(() => {
+        navigate("/hospital/onboarding", { replace: true });
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [memberLoading, member, navigate]);
+  }, [memberLoading, member, navigate, isReady]);
 
 
 
