@@ -32,6 +32,8 @@ const HospitalAdmin = lazy(() => import("./pages/HospitalAdmin"));
 const HospitalOnboarding = lazy(() => import("./pages/HospitalOnboarding"));
 const HospitalDashboard = lazy(() => import("./pages/HospitalDashboard"));
 const HospitalApply = lazy(() => import("./pages/HospitalApply"));
+const HospitalProfile = lazy(() => import("./pages/HospitalProfile"));
+const AdminHospitals = lazy(() => import("./pages/AdminHospitals"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback component
@@ -94,6 +96,8 @@ function AppContent() {
               <Route path="/hospital/onboarding" element={<HospitalOnboarding />} />
               <Route path="/hospital/admin" element={<HospitalDashboard />} />
               <Route path="/hospital/apply/:accountId" element={<HospitalApply />} />
+              <Route path="/hospitals/:slug" element={<HospitalProfile />} />
+              <Route path="/admin/hospitals" element={<AdminHospitals />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>

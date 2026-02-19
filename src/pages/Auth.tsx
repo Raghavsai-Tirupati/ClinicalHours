@@ -11,7 +11,7 @@ import { sanitizeErrorMessage } from "@/lib/errorUtils";
 import { logAuthEvent } from "@/lib/auditLogger";
 import { setRememberMePreference, getRememberMePreference, useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
-import { ArrowLeft, Mail, Loader2, Eye, UserCircle } from "lucide-react";
+import { ArrowLeft, Mail, Loader2, Eye, UserCircle, Building2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import logo from "@/assets/logo.png";
 import authBackground from "@/assets/auth-background.png";
@@ -72,6 +72,9 @@ const Auth = () => {
     navigate("/dashboard?showTutorial=true");
   };
 
+  // Check if hospital redirect is set
+  const isHospitalFlow = new URLSearchParams(window.location.search).get('hospital') === 'true';
+
   useEffect(() => {
     const handleAuthCallback = async () => {
       // Check for OAuth callback in URL hash (for Google Sign-In)
@@ -89,7 +92,9 @@ const Auth = () => {
         if (data.session && !error) {
           // Clear the hash from the URL
           window.history.replaceState(null, '', window.location.pathname);
-          navigate("/dashboard");
+          const shouldRedirectHospital = localStorage.getItem("clinicalhours_hospital_redirect") === "true";
+          localStorage.removeItem("clinicalhours_hospital_redirect");
+          navigate(shouldRedirectHospital ? "/hospital/onboarding" : "/dashboard");
           return;
         }
       }
@@ -97,7 +102,9 @@ const Auth = () => {
       // Check for existing session
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/dashboard");
+        const shouldRedirectHospital = localStorage.getItem("clinicalhours_hospital_redirect") === "true";
+        localStorage.removeItem("clinicalhours_hospital_redirect");
+        navigate(shouldRedirectHospital ? "/hospital/onboarding" : "/dashboard");
       }
     };
     
@@ -308,13 +315,17 @@ const Auth = () => {
 
         logAuthEvent("login_success", { email: validatedData.email });
         toast.success("Logged in successfully!");
-        navigate("/dashboard");
+        const shouldRedirectHospital = localStorage.getItem("clinicalhours_hospital_redirect") === "true";
+        localStorage.removeItem("clinicalhours_hospital_redirect");
+        navigate(shouldRedirectHospital ? "/hospital/onboarding" : "/dashboard");
         return;
       }
 
       logAuthEvent("login_success", { email: validatedData.email });
       toast.success("Logged in successfully!");
-      navigate("/dashboard");
+      const shouldRedirectHospital2 = localStorage.getItem("clinicalhours_hospital_redirect") === "true";
+      localStorage.removeItem("clinicalhours_hospital_redirect");
+      navigate(shouldRedirectHospital2 ? "/hospital/onboarding" : "/dashboard");
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -505,6 +516,29 @@ const Auth = () => {
           >
             <UserCircle className="mr-2 h-5 w-5" />
             Continue as Guest
+          </Button>
+        </div>
+
+        {/* Hospital CTA */}
+        <div className="bg-muted/30 border border-border/50 rounded-xl p-4 mb-6">
+          <p className="text-sm font-medium text-foreground mb-1">Hospital / Clinic?</p>
+          <p className="text-xs text-muted-foreground mb-3">
+            Create a hospital account to manage applications and recruit volunteers.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-10 text-sm gap-2"
+            onClick={() => {
+              localStorage.setItem("clinicalhours_hospital_redirect", "true");
+              // Switch to signup tab or just let them use the existing auth
+            }}
+            asChild
+          >
+            <Link to="/auth?hospital=true">
+              <Building2 className="h-4 w-4" />
+              Create Hospital Account
+            </Link>
           </Button>
         </div>
 
