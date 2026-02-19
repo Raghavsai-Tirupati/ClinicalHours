@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Home, MapPin, Mail, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useHospitalMember } from "@/hooks/useHospitalMember";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import logo from "@/assets/logo.png";
 
@@ -21,6 +22,7 @@ const Navigation = () => {
   const dropdownTimeoutRef = useRef<number | null>(null);
   const location = useLocation();
   const { user, isGuest } = useAuth();
+  const { member: hospitalMember } = useHospitalMember();
 
   // Check if we're on pages that should have transparent nav
   const isHomePage = location.pathname === "/";
@@ -72,6 +74,9 @@ const Navigation = () => {
     { name: "Opportunities", path: "/opportunities" },
     { name: "Map", path: "/map" },
     { name: "Contact", path: "/contact" },
+    ...(hospitalMember
+      ? [{ name: "Hospital Admin", path: "/hospital/admin" }]
+      : []),
   ];
 
   // Guests see authenticated links (Dashboard, Opportunities, etc.) but with Sign Up instead of Profile

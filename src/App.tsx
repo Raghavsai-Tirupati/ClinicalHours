@@ -29,6 +29,9 @@ const AuthTest = lazy(() => import("./pages/AuthTest"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const ApplicationForm = lazy(() => import("./pages/ApplicationForm"));
 const HospitalAdmin = lazy(() => import("./pages/HospitalAdmin"));
+const HospitalOnboarding = lazy(() => import("./pages/HospitalOnboarding"));
+const HospitalDashboard = lazy(() => import("./pages/HospitalDashboard"));
+const HospitalApply = lazy(() => import("./pages/HospitalApply"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback component
@@ -88,6 +91,9 @@ function AppContent() {
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/opportunities/:slug/application" element={<ApplicationForm />} />
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
+              <Route path="/hospital/onboarding" element={<HospitalOnboarding />} />
+              <Route path="/hospital/admin" element={<HospitalDashboard />} />
+              <Route path="/hospital/apply/:accountId" element={<HospitalApply />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>
