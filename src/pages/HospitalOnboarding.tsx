@@ -228,8 +228,9 @@ export default function HospitalOnboarding() {
       }
 
       setDone(true);
-      // Navigate immediately to portal, don't wait for member refresh
-      setTimeout(() => navigate("/hospital/portal", { replace: true }), 1200);
+      // Refresh member state, then navigate immediately with state flag
+      refresh();
+      navigate("/hospital/portal", { replace: true, state: { justOnboarded: true } });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "An error occurred. Please try again."
