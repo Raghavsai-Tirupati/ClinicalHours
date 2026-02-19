@@ -56,17 +56,24 @@ export default function HospitalAuth() {
     try {
       const validated = authSchema.parse({ email, password, fullName });
 
-      // Use the hospital-signup edge function to create a pre-confirmed account
-      const { data, error } = await supabase.functions.invoke("hospital-signup", {
-        body: {
+      // Call hospital-signup directly (bypass CSRF since user isn't authenticated yet)
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const res = await fetch(`${supabaseUrl}/functions/v1/hospital-signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": anonKey,
+          "Authorization": `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({
           email: validated.email,
           password: validated.password,
           fullName: validated.fullName,
-        },
+        }),
       });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const data = await res.json();
+      if (!res.ok || data?.error) throw new Error(data?.error || "Signup failed");
 
       // Now sign in immediately
       const { error: signInError } = await supabase.auth.signInWithPassword({
