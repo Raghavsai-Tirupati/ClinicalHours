@@ -170,6 +170,54 @@ export type Database = {
           },
         ]
       }
+      hospital_accounts: {
+        Row: {
+          account_status: string
+          admin_note: string | null
+          address: string | null
+          contact_email: string
+          contact_phone: string | null
+          created_at: string
+          description: string | null
+          hospital_name: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          account_status?: string
+          admin_note?: string | null
+          address?: string | null
+          contact_email: string
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          hospital_name: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          account_status?: string
+          admin_note?: string | null
+          address?: string | null
+          contact_email?: string
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          hospital_name?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       guest_sessions: {
         Row: {
           converted_to_user_id: string | null
@@ -191,254 +239,6 @@ export type Database = {
           id?: string
           session_id?: string
           user_agent?: string | null
-        }
-        Relationships: []
-      }
-      hospital_accounts: {
-        Row: {
-          created_at: string
-          hospital_id: string
-          id: string
-        }
-        Insert: {
-          created_at?: string
-          hospital_id: string
-          id?: string
-        }
-        Update: {
-          created_at?: string
-          hospital_id?: string
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hospital_accounts_hospital_id_fkey"
-            columns: ["hospital_id"]
-            isOneToOne: true
-            referencedRelation: "hospitals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hospital_application_answers: {
-        Row: {
-          answer_options: Json | null
-          answer_text: string | null
-          application_id: string
-          created_at: string
-          id: string
-          question_id: string
-        }
-        Insert: {
-          answer_options?: Json | null
-          answer_text?: string | null
-          application_id: string
-          created_at?: string
-          id?: string
-          question_id: string
-        }
-        Update: {
-          answer_options?: Json | null
-          answer_text?: string | null
-          application_id?: string
-          created_at?: string
-          id?: string
-          question_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hospital_application_answers_application_id_fkey"
-            columns: ["application_id"]
-            isOneToOne: false
-            referencedRelation: "hospital_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "hospital_application_answers_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "hospital_application_questions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hospital_application_questions: {
-        Row: {
-          account_id: string
-          created_at: string
-          id: string
-          options: Json | null
-          order_index: number
-          question_text: string
-          required: boolean
-          type: string
-          updated_at: string
-        }
-        Insert: {
-          account_id: string
-          created_at?: string
-          id?: string
-          options?: Json | null
-          order_index?: number
-          question_text: string
-          required?: boolean
-          type?: string
-          updated_at?: string
-        }
-        Update: {
-          account_id?: string
-          created_at?: string
-          id?: string
-          options?: Json | null
-          order_index?: number
-          question_text?: string
-          required?: boolean
-          type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hospital_application_questions_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "hospital_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hospital_applications: {
-        Row: {
-          account_id: string
-          applicant_email: string | null
-          applicant_name: string | null
-          id: string
-          notes: string | null
-          status: string
-          student_id: string | null
-          submitted_at: string
-          updated_at: string
-        }
-        Insert: {
-          account_id: string
-          applicant_email?: string | null
-          applicant_name?: string | null
-          id?: string
-          notes?: string | null
-          status?: string
-          student_id?: string | null
-          submitted_at?: string
-          updated_at?: string
-        }
-        Update: {
-          account_id?: string
-          applicant_email?: string | null
-          applicant_name?: string | null
-          id?: string
-          notes?: string | null
-          status?: string
-          student_id?: string | null
-          submitted_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hospital_applications_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "hospital_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hospital_members: {
-        Row: {
-          account_id: string
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["hospital_role"]
-          user_id: string
-        }
-        Insert: {
-          account_id: string
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["hospital_role"]
-          user_id: string
-        }
-        Update: {
-          account_id?: string
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["hospital_role"]
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hospital_members_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "hospital_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hospitals: {
-        Row: {
-          address: string | null
-          city: string | null
-          contact_email: string | null
-          contact_name: string | null
-          contact_phone: string | null
-          created_at: string
-          id: string
-          name: string
-          reviewed_at: string | null
-          reviewed_by_user_id: string | null
-          slug: string | null
-          state: string | null
-          status: string | null
-          submitted_at: string | null
-          submitted_by_user_id: string | null
-          updated_at: string
-          website: string | null
-        }
-        Insert: {
-          address?: string | null
-          city?: string | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          created_at?: string
-          id?: string
-          name: string
-          reviewed_at?: string | null
-          reviewed_by_user_id?: string | null
-          slug?: string | null
-          state?: string | null
-          status?: string | null
-          submitted_at?: string | null
-          submitted_by_user_id?: string | null
-          updated_at?: string
-          website?: string | null
-        }
-        Update: {
-          address?: string | null
-          city?: string | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          created_at?: string
-          id?: string
-          name?: string
-          reviewed_at?: string | null
-          reviewed_by_user_id?: string | null
-          slug?: string | null
-          state?: string | null
-          status?: string | null
-          submitted_at?: string | null
-          submitted_by_user_id?: string | null
-          updated_at?: string
-          website?: string | null
         }
         Relationships: []
       }
@@ -497,7 +297,6 @@ export type Database = {
           description: string | null
           email: string | null
           external_id: string | null
-          hospital_id: string | null
           hours_required: string
           id: string
           latitude: number | null
@@ -521,7 +320,6 @@ export type Database = {
           description?: string | null
           email?: string | null
           external_id?: string | null
-          hospital_id?: string | null
           hours_required: string
           id?: string
           latitude?: number | null
@@ -545,7 +343,6 @@ export type Database = {
           description?: string | null
           email?: string | null
           external_id?: string | null
-          hospital_id?: string | null
           hours_required?: string
           id?: string
           latitude?: number | null
@@ -573,13 +370,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "opportunities_hospital_id_fkey"
-            columns: ["hospital_id"]
-            isOneToOne: false
-            referencedRelation: "hospitals"
             referencedColumns: ["id"]
           },
         ]
@@ -904,7 +694,6 @@ export type Database = {
           notes: string | null
           opportunity_id: string
           scheduled_interview: boolean | null
-          status: string
           updated_at: string | null
           user_id: string
         }
@@ -919,7 +708,6 @@ export type Database = {
           notes?: string | null
           opportunity_id: string
           scheduled_interview?: boolean | null
-          status?: string
           updated_at?: string | null
           user_id: string
         }
@@ -934,7 +722,6 @@ export type Database = {
           notes?: string | null
           opportunity_id?: string
           scheduled_interview?: boolean | null
-          status?: string
           updated_at?: string | null
           user_id?: string
         }
@@ -1103,7 +890,6 @@ export type Database = {
           created_by: string | null
           description: string | null
           email: string | null
-          hospital_id: string | null
           hours_required: string | null
           id: string | null
           latitude: number | null
@@ -1113,8 +899,6 @@ export type Database = {
           phone: string | null
           requirements: string[] | null
           review_count: number | null
-          slug: string | null
-          source: string | null
           type: Database["public"]["Enums"]["opportunity_type"] | null
           updated_at: string | null
           website: string | null
@@ -1132,13 +916,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "opportunities_hospital_id_fkey"
-            columns: ["hospital_id"]
-            isOneToOne: false
-            referencedRelation: "hospitals"
             referencedColumns: ["id"]
           },
         ]
@@ -1215,10 +992,6 @@ export type Database = {
         Args: { filter_type?: string; search_term?: string }
         Returns: number
       }
-      deploy_hospital_opportunity: {
-        Args: { p_hospital_id: string }
-        Returns: string
-      }
       get_opportunities_by_distance: {
         Args: {
           filter_type?: string
@@ -1249,10 +1022,6 @@ export type Database = {
           website: string
         }[]
       }
-      get_user_hospital_account_ids: {
-        Args: { _user_id: string }
-        Returns: string[]
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1260,24 +1029,10 @@ export type Database = {
         }
         Returns: boolean
       }
-      link_opportunity_to_hospital: {
-        Args: { p_hospital_id: string; p_opportunity_id: string }
-        Returns: undefined
-      }
-      submit_guest_hospital_application: {
-        Args: {
-          p_account_id: string
-          p_answers: Json
-          p_email: string
-          p_name: string
-        }
-        Returns: string
-      }
     }
     Enums: {
       acceptance_likelihood: "high" | "medium" | "low"
-      app_role: "admin" | "moderator" | "user"
-      hospital_role: "owner" | "admin" | "viewer"
+      app_role: "admin" | "moderator" | "user" | "hospital"
       opportunity_type: "hospital" | "clinic" | "hospice" | "emt" | "volunteer"
       votable_type: "question" | "answer"
     }
@@ -1409,7 +1164,6 @@ export const Constants = {
     Enums: {
       acceptance_likelihood: ["high", "medium", "low"],
       app_role: ["admin", "moderator", "user"],
-      hospital_role: ["owner", "admin", "viewer"],
       opportunity_type: ["hospital", "clinic", "hospice", "emt", "volunteer"],
       votable_type: ["question", "answer"],
     },
