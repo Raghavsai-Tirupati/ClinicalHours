@@ -67,13 +67,36 @@ const Auth = () => {
   const [emailOptIn, setEmailOptIn] = useState(false);
   const isSubmittingRef = useRef(false);
 
+  // Hospital signup fields
+  const [isHospitalSignup, setIsHospitalSignup] = useState(false);
+  const [hospitalName, setHospitalName] = useState("");
+  const [hospitalWebsite, setHospitalWebsite] = useState("");
+  const [hospitalAddress, setHospitalAddress] = useState("");
+  const [hospitalDescription, setHospitalDescription] = useState("");
+
   const handleGuestMode = () => {
     enterGuestMode();
     navigate("/dashboard?showTutorial=true");
   };
 
-  // Check if hospital redirect is set
-  const isHospitalFlow = new URLSearchParams(window.location.search).get('hospital') === 'true';
+  // Check hospital account status and redirect accordingly
+  const redirectByAccountType = async (userId: string) => {
+    const { data: hospitalAccount } = await supabase
+      .from("hospital_accounts")
+      .select("account_status")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (hospitalAccount) {
+      if (hospitalAccount.account_status === "approved") {
+        navigate("/hospital-dashboard");
+      } else {
+        navigate("/pending-approval");
+      }
+    } else {
+      navigate("/dashboard");
+    }
+  };
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -81,33 +104,29 @@ const Auth = () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
-      
+
       if (accessToken) {
         // Set the session from the OAuth callback
         const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken || '',
         });
-        
+
         if (data.session && !error) {
           // Clear the hash from the URL
           window.history.replaceState(null, '', window.location.pathname);
-          const shouldRedirectHospital = localStorage.getItem("clinicalhours_hospital_redirect") === "true";
-          localStorage.removeItem("clinicalhours_hospital_redirect");
-          navigate(shouldRedirectHospital ? "/hospital/onboarding" : "/dashboard");
+          await redirectByAccountType(data.session.user.id);
           return;
         }
       }
-      
+
       // Check for existing session
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const shouldRedirectHospital = localStorage.getItem("clinicalhours_hospital_redirect") === "true";
-        localStorage.removeItem("clinicalhours_hospital_redirect");
-        navigate(shouldRedirectHospital ? "/hospital/onboarding" : "/dashboard");
+        await redirectByAccountType(session.user.id);
       }
     };
-    
+
     handleAuthCallback();
   }, [navigate]);
 
@@ -192,11 +211,27 @@ const Auth = () => {
         if (validatedData.phone) {
           profileUpdates.phone = validatedData.phone;
         }
-        
+
         await supabase
           .from("profiles")
           .update(profileUpdates)
           .eq("id", data.user.id);
+
+        // Create hospital account record if this is a hospital signup
+        if (isHospitalSignup && hospitalName.trim()) {
+          await supabase
+            .from("hospital_accounts")
+            .insert({
+              user_id: data.user.id,
+              hospital_name: hospitalName.trim(),
+              contact_email: validatedData.email,
+              contact_phone: validatedData.phone || null,
+              website: hospitalWebsite.trim() || null,
+              address: hospitalAddress.trim() || null,
+              description: hospitalDescription.trim() || null,
+              account_status: "pending",
+            });
+        }
       }
 
       // Send verification email and redirect to check-email page
@@ -315,17 +350,17 @@ const Auth = () => {
 
         logAuthEvent("login_success", { email: validatedData.email });
         toast.success("Logged in successfully!");
-        const shouldRedirectHospital = localStorage.getItem("clinicalhours_hospital_redirect") === "true";
-        localStorage.removeItem("clinicalhours_hospital_redirect");
-        navigate(shouldRedirectHospital ? "/hospital/onboarding" : "/dashboard");
+        await redirectByAccountType(data.user.id);
         return;
       }
 
       logAuthEvent("login_success", { email: validatedData.email });
       toast.success("Logged in successfully!");
-      const shouldRedirectHospital2 = localStorage.getItem("clinicalhours_hospital_redirect") === "true";
-      localStorage.removeItem("clinicalhours_hospital_redirect");
-      navigate(shouldRedirectHospital2 ? "/hospital/onboarding" : "/dashboard");
+      if (data.user) {
+        await redirectByAccountType(data.user.id);
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -519,25 +554,6 @@ const Auth = () => {
           </Button>
         </div>
 
-        {/* Hospital CTA */}
-        <div className="bg-muted/30 border border-border/50 rounded-xl p-4 mb-6">
-          <p className="text-sm font-medium text-foreground mb-1">Hospital / Clinic?</p>
-          <p className="text-xs text-muted-foreground mb-3">
-            Manage applications and recruit clinical volunteers.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-10 text-sm gap-2"
-            asChild
-          >
-            <Link to="/hospital/auth">
-              <Building2 className="h-4 w-4" />
-              Hospital Login
-            </Link>
-          </Button>
-        </div>
-
         <div className="relative my-6">
           <Separator className="bg-border/50" />
           <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
@@ -620,12 +636,78 @@ const Auth = () => {
           
           <TabsContent value="signup">
             <form onSubmit={handleSignUp} className="space-y-4">
+              {/* Hospital toggle */}
+              <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border border-border/50">
+                <Checkbox
+                  id="hospital-toggle"
+                  checked={isHospitalSignup}
+                  onCheckedChange={(checked) => setIsHospitalSignup(checked === true)}
+                  disabled={loading || googleLoading}
+                />
+                <Label
+                  htmlFor="hospital-toggle"
+                  className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                >
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  I'm registering as a hospital / clinical site
+                </Label>
+              </div>
+
+              {/* Hospital-specific fields */}
+              {isHospitalSignup && (
+                <div className="space-y-3 p-3 bg-muted/20 rounded-lg border border-border/30">
+                  <div className="space-y-2">
+                    <Label htmlFor="hospital-name">Hospital / Facility Name</Label>
+                    <Input
+                      id="hospital-name"
+                      type="text"
+                      placeholder="City General Hospital"
+                      value={hospitalName}
+                      onChange={(e) => setHospitalName(e.target.value)}
+                      required={isHospitalSignup}
+                      disabled={loading || googleLoading}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hospital-website">
+                      Website <span className="text-muted-foreground text-xs">(optional)</span>
+                    </Label>
+                    <Input
+                      id="hospital-website"
+                      type="url"
+                      placeholder="https://www.hospital.org"
+                      value={hospitalWebsite}
+                      onChange={(e) => setHospitalWebsite(e.target.value)}
+                      disabled={loading || googleLoading}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hospital-address">
+                      Address <span className="text-muted-foreground text-xs">(optional)</span>
+                    </Label>
+                    <Input
+                      id="hospital-address"
+                      type="text"
+                      placeholder="123 Medical Center Dr, City, State"
+                      value={hospitalAddress}
+                      onChange={(e) => setHospitalAddress(e.target.value)}
+                      disabled={loading || googleLoading}
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="signup-name">Full Name</Label>
+                <Label htmlFor="signup-name">
+                  {isHospitalSignup ? "Contact Person Name" : "Full Name"}
+                </Label>
                 <Input
                   id="signup-name"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder={isHospitalSignup ? "Dr. Jane Smith" : "John Doe"}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
@@ -698,8 +780,14 @@ const Auth = () => {
                 </Label>
               </div>
               <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading}>
-                {loading ? "Creating account..." : "Sign Up"}
+                {loading ? "Creating account..." : isHospitalSignup ? "Register Hospital" : "Sign Up"}
               </Button>
+
+              {isHospitalSignup && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Hospital accounts require admin approval before access is granted.
+                </p>
+              )}
               
               <p className="text-xs text-muted-foreground text-center mt-3">
                 By signing up, you agree to our{" "}
