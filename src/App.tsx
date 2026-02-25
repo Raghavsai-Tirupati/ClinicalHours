@@ -29,12 +29,8 @@ const AuthTest = lazy(() => import("./pages/AuthTest"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const ApplicationForm = lazy(() => import("./pages/ApplicationForm"));
 const HospitalAdmin = lazy(() => import("./pages/HospitalAdmin"));
-const HospitalOnboarding = lazy(() => import("./pages/HospitalOnboarding"));
-const HospitalDashboard = lazy(() => import("./pages/HospitalDashboard"));
-const HospitalApply = lazy(() => import("./pages/HospitalApply"));
-const HospitalProfile = lazy(() => import("./pages/HospitalProfile"));
-const HospitalAuth = lazy(() => import("./pages/HospitalAuth"));
-const AdminHospitals = lazy(() => import("./pages/AdminHospitals"));
+const HospitalDashboardPage = lazy(() => import("./pages/HospitalDashboard"));
+const PendingApproval = lazy(() => import("./pages/PendingApproval"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback component
@@ -94,13 +90,8 @@ function AppContent() {
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/opportunities/:slug/application" element={<ApplicationForm />} />
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
-              <Route path="/hospital/onboarding" element={<HospitalOnboarding />} />
-              <Route path="/hospital/admin" element={<HospitalDashboard />} />
-              <Route path="/hospital/portal" element={<HospitalDashboard />} />
-              <Route path="/hospital/auth" element={<HospitalAuth />} />
-              <Route path="/hospital/apply/:accountId" element={<HospitalApply />} />
-              <Route path="/hospitals/:slug" element={<HospitalProfile />} />
-              <Route path="/admin/hospitals" element={<AdminHospitals />} />
+              <Route path="/hospital-dashboard" element={<HospitalDashboardPage />} />
+              <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>
