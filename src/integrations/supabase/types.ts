@@ -350,6 +350,36 @@ export type Database = {
           },
         ]
       }
+      hospital_deletion_log: {
+        Row: {
+          deleted_at: string
+          deleted_by: string | null
+          deleted_hospital_id: string
+          deleted_hospital_name: string | null
+          duplicate_reason: string
+          id: string
+          kept_hospital_id: string
+        }
+        Insert: {
+          deleted_at?: string
+          deleted_by?: string | null
+          deleted_hospital_id: string
+          deleted_hospital_name?: string | null
+          duplicate_reason: string
+          id?: string
+          kept_hospital_id: string
+        }
+        Update: {
+          deleted_at?: string
+          deleted_by?: string | null
+          deleted_hospital_id?: string
+          deleted_hospital_name?: string | null
+          duplicate_reason?: string
+          id?: string
+          kept_hospital_id?: string
+        }
+        Relationships: []
+      }
       hospital_members: {
         Row: {
           account_id: string
