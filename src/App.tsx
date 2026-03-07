@@ -24,8 +24,6 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const CheckEmail = lazy(() => import("./pages/CheckEmail"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const TestHeaders = lazy(() => import("./pages/TestHeaders"));
-const AuthTest = lazy(() => import("./pages/AuthTest"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const ApplicationForm = lazy(() => import("./pages/ApplicationForm"));
 const HospitalAdmin = lazy(() => import("./pages/HospitalAdmin"));
@@ -85,8 +83,6 @@ function AppContent() {
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verify" element={<VerifyEmail />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/test-headers" element={<TestHeaders />} />
-              <Route path="/auth-test" element={<AuthTest />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/opportunities/:slug/application" element={<ApplicationForm />} />
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
