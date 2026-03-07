@@ -1,4 +1,6 @@
 import { lazy, Suspense } from "react";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -57,6 +59,18 @@ function KeyboardShortcuts() {
   return null;
 }
 
+// Onboarding modal — must be inside BrowserRouter for useNavigate
+function OnboardingWrapper() {
+  const { showOnboarding, completeOnboarding, skipOnboarding } = useOnboarding();
+  return (
+    <OnboardingFlow
+      open={showOnboarding}
+      onComplete={completeOnboarding}
+      onSkip={skipOnboarding}
+    />
+  );
+}
+
 function AppContent() {
   return (
     <>
@@ -65,6 +79,7 @@ function AppContent() {
       <BrowserRouter>
         <KeyboardShortcuts />
         <ScrollToTop />
+        <OnboardingWrapper />
         <Suspense fallback={<PageLoader />}>
           <ErrorBoundary>
             <Routes>
