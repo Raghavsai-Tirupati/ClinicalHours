@@ -2,9 +2,11 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-// Self-hosted fonts (no external CDN dependency, eliminates SRI warnings)
+// @ts-ignore - font packages have no type declarations
 import "@fontsource-variable/inter";
+// @ts-ignore
 import "@fontsource-variable/dm-sans";
+// @ts-ignore
 import "@fontsource-variable/plus-jakarta-sans";
 
 createRoot(document.getElementById("root")!).render(<App />);
