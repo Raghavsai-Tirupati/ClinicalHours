@@ -5,8 +5,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function parseCsvLine(line: string): string[] {
-  return line.split(";").map(f => f.trim());
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const VALID_LIKELIHOOD = new Set(["high", "medium", "low"]);
+const VALID_TYPE = new Set(["hospital", "clinic", "hospice", "emt", "volunteer"]);
+const EXPECTED_COLS = 22;
+
+function isUuid(s: string): boolean {
+  return UUID_RE.test(s.trim());
+}
+
+function emptyToNull(s: string | undefined): string | null {
+  if (!s || s.trim() === "" || s.trim() === "N/A") return null;
+  return s.trim();
 }
 
 Deno.serve(async (req) => {
@@ -21,101 +31,113 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // For service-level invocation (curl_edge_functions uses service role)
-    // We verify via the service role key presence which is already authenticated
     console.log("Running as service role - admin bypass for data migration");
 
     // Fetch CSV from storage
     const csvUrl = `${supabaseUrl}/storage/v1/object/public/email-assets/imports/opportunities-deduped.csv`;
-    console.log("Fetching CSV from:", csvUrl);
     const csvRes = await fetch(csvUrl);
     if (!csvRes.ok) throw new Error(`CSV fetch failed: ${csvRes.status}`);
     const csvText = await csvRes.text();
 
     const lines = csvText.split("\n").filter(l => l.trim().length > 0);
-    const header = parseCsvLine(lines[0]);
-    console.log("Header:", header.join(", "));
-    console.log("Total data rows:", lines.length - 1);
+    console.log("Total lines (incl header):", lines.length);
 
-    // Map header indices
+    // Build header index from first line
+    const header = lines[0].split(";").map(h => h.trim());
     const idx: Record<string, number> = {};
     header.forEach((h, i) => { idx[h] = i; });
+    console.log("Columns:", header.length, "Header:", header.join("|"));
 
-    // Parse all rows
     const rows: Record<string, unknown>[] = [];
+    let skipped = 0;
+
     for (let i = 1; i < lines.length; i++) {
-      const cols = parseCsvLine(lines[i]);
-      if (cols.length < 5) continue;
+      const cols = lines[i].split(";");
 
-      const name = cols[idx["name"]] || "";
-      if (!name) continue;
+      // If we have more columns than expected, the description likely contains semicolons
+      // Merge extra columns back into the description field (index 13)
+      if (cols.length > EXPECTED_COLS) {
+        const descIdx = idx["description"];
+        const extra = cols.length - EXPECTED_COLS;
+        // Merge cols[descIdx] through cols[descIdx + extra] into one field
+        const mergedDesc = cols.slice(descIdx, descIdx + extra + 1).join(";");
+        cols.splice(descIdx, extra + 1, mergedDesc);
+      }
 
-      const lat = parseFloat(cols[idx["latitude"]] || "");
-      const lon = parseFloat(cols[idx["longitude"]] || "");
+      if (cols.length < EXPECTED_COLS) {
+        skipped++;
+        continue;
+      }
 
-      // Parse requirements array - comes as "[]" or "[""req1"",""req2""]"
-      let requirements: string[] = [];
-      const reqStr = cols[idx["requirements"]] || "[]";
-      try {
-        if (reqStr && reqStr !== "[]") {
-          requirements = JSON.parse(reqStr.replace(/""/g, '"'));
-        }
-      } catch { requirements = []; }
+      const name = cols[idx["name"]]?.trim();
+      if (!name) { skipped++; continue; }
+
+      const rawId = cols[idx["id"]]?.trim();
+      const rawCreatedBy = emptyToNull(cols[idx["created_by"]]);
+      const rawHospitalId = emptyToNull(cols[idx["hospital_id"]]);
+      const rawLikelihood = cols[idx["acceptance_likelihood"]]?.trim().toLowerCase() || "medium";
+      const rawType = cols[idx["type"]]?.trim().toLowerCase() || "hospital";
+
+      const lat = parseFloat(cols[idx["latitude"]]?.trim() || "");
+      const lon = parseFloat(cols[idx["longitude"]]?.trim() || "");
 
       rows.push({
-        id: cols[idx["id"]] || undefined,
-        name,
-        type: cols[idx["type"]] || "hospital",
-        location: cols[idx["location"]] || "Unknown",
-        address: cols[idx["address"]] || null,
+        id: isUuid(rawId) ? rawId : undefined,
+        name: name.slice(0, 300),
+        type: VALID_TYPE.has(rawType) ? rawType : "hospital",
+        location: cols[idx["location"]]?.trim() || "Unknown",
+        address: emptyToNull(cols[idx["address"]]),
         latitude: isNaN(lat) ? null : lat,
         longitude: isNaN(lon) ? null : lon,
-        hours_required: cols[idx["hours_required"]] || "Varies",
-        acceptance_likelihood: cols[idx["acceptance_likelihood"]] || "medium",
-        phone: cols[idx["phone"]] || null,
-        email: cols[idx["email"]] || null,
-        website: cols[idx["website"]] === "N/A" ? null : (cols[idx["website"]] || null),
-        requirements,
-        description: cols[idx["description"]] || null,
-        created_by: cols[idx["created_by"]] || null,
-        source: cols[idx["source"]] || null,
-        external_id: cols[idx["external_id"]] || null,
-        country_code: cols[idx["country_code"]] || null,
-        slug: cols[idx["slug"]] || null,
-        hospital_id: cols[idx["hospital_id"]] || null,
+        hours_required: cols[idx["hours_required"]]?.trim() || "Varies",
+        acceptance_likelihood: VALID_LIKELIHOOD.has(rawLikelihood) ? rawLikelihood : "medium",
+        phone: emptyToNull(cols[idx["phone"]]),
+        email: emptyToNull(cols[idx["email"]]),
+        website: emptyToNull(cols[idx["website"]]),
+        requirements: [],
+        description: emptyToNull(cols[idx["description"]]),
+        created_by: rawCreatedBy && isUuid(rawCreatedBy) ? rawCreatedBy : null,
+        source: emptyToNull(cols[idx["source"]]),
+        external_id: emptyToNull(cols[idx["external_id"]]),
+        country_code: emptyToNull(cols[idx["country_code"]]),
+        slug: emptyToNull(cols[idx["slug"]]),
+        hospital_id: rawHospitalId && isUuid(rawHospitalId) ? rawHospitalId : null,
       });
     }
 
-    console.log("Parsed rows:", rows.length);
+    console.log(`Parsed: ${rows.length}, Skipped: ${skipped}`);
 
-    // Step 1: Delete all existing opportunities
+    // Delete all existing opportunities
     const { error: delErr } = await supabase
       .from("opportunities")
       .delete()
       .neq("id", "00000000-0000-0000-0000-000000000000");
     if (delErr) throw new Error(`Delete failed: ${delErr.message}`);
-    console.log("Deleted all existing opportunities");
+    console.log("Cleared opportunities table");
 
-    // Step 2: Insert in batches of 500
-    const BATCH = 500;
+    // Insert in batches of 200
+    const BATCH = 200;
     let inserted = 0;
     let errors = 0;
+    const errorMsgs: string[] = [];
+
     for (let i = 0; i < rows.length; i += BATCH) {
       const batch = rows.slice(i, i + BATCH);
       const { error: insErr } = await supabase.from("opportunities").insert(batch);
       if (insErr) {
-        console.error(`Batch ${i}-${i + batch.length} error:`, insErr.message);
+        console.error(`Batch ${i} error:`, insErr.message);
+        errorMsgs.push(`Batch ${i}: ${insErr.message}`);
         errors += batch.length;
       } else {
         inserted += batch.length;
       }
-      console.log(`Progress: ${Math.min(i + BATCH, rows.length)}/${rows.length}`);
+      if ((i / BATCH) % 5 === 0) console.log(`Progress: ${i + batch.length}/${rows.length}`);
     }
 
     console.log(`Done. Inserted: ${inserted}, Errors: ${errors}`);
 
     return new Response(
-      JSON.stringify({ success: true, inserted, errors, total: rows.length }),
+      JSON.stringify({ success: true, inserted, errors, skipped, total: rows.length, errorSamples: errorMsgs.slice(0, 5) }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
