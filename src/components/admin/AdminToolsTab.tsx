@@ -23,6 +23,7 @@ import {
   Send,
   Wrench,
 } from 'lucide-react';
+import AdminDuplicateHospitals from './AdminDuplicateHospitals';
 
 interface OperationResult {
   success: boolean;
