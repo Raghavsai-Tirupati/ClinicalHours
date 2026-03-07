@@ -18,12 +18,14 @@ import {
   Clock,
   BarChart3,
   Wrench,
+  Radio,
 } from 'lucide-react';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
 import AdminUserList from '@/components/admin/AdminUserList';
 import AdminHospitalsTab from '@/components/admin/AdminHospitalsTab';
 import AdminPendingApprovalsTab from '@/components/admin/AdminPendingApprovalsTab';
 import AdminToolsTab from '@/components/admin/AdminToolsTab';
+import { AdminActivityTab } from '@/components/admin/AdminActivityTab';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -118,7 +120,7 @@ export default function AdminDashboard() {
 
           {/* Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview</span>
@@ -144,6 +146,10 @@ export default function AdminDashboard() {
                 <Wrench className="h-4 w-4" />
                 <span className="hidden sm:inline">Tools</span>
               </TabsTrigger>
+              <TabsTrigger value="activity" className="flex items-center gap-2">
+                <Radio className="h-4 w-4" />
+                <span className="hidden sm:inline">Activity</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
@@ -164,6 +170,10 @@ export default function AdminDashboard() {
 
             <TabsContent value="tools">
               <AdminToolsTab />
+            </TabsContent>
+
+            <TabsContent value="activity">
+              <AdminActivityTab />
             </TabsContent>
           </Tabs>
         </div>
