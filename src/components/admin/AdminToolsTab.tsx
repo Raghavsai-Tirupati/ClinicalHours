@@ -542,12 +542,14 @@ export default function AdminToolsTab() {
         </TabsContent>
 
         {/* Maintenance Tab */}
-        <TabsContent value="maintenance">
+        <TabsContent value="maintenance" className="space-y-6">
+          <AdminDuplicateHospitals />
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trash2 className="h-5 w-5" />
-                Remove Duplicates
+                Remove Opportunity Duplicates
               </CardTitle>
               <CardDescription>
                 Find and remove duplicate opportunities based on matching name and location.
