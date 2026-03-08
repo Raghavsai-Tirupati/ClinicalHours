@@ -1,4 +1,6 @@
 import { lazy, Suspense } from "react";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -24,8 +26,6 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const CheckEmail = lazy(() => import("./pages/CheckEmail"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const TestHeaders = lazy(() => import("./pages/TestHeaders"));
-const AuthTest = lazy(() => import("./pages/AuthTest"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const ApplicationForm = lazy(() => import("./pages/ApplicationForm"));
 const HospitalAdmin = lazy(() => import("./pages/HospitalAdmin"));
@@ -59,6 +59,18 @@ function KeyboardShortcuts() {
   return null;
 }
 
+// Onboarding modal — must be inside BrowserRouter for useNavigate
+function OnboardingWrapper() {
+  const { showOnboarding, completeOnboarding, skipOnboarding } = useOnboarding();
+  return (
+    <OnboardingFlow
+      open={showOnboarding}
+      onComplete={completeOnboarding}
+      onSkip={skipOnboarding}
+    />
+  );
+}
+
 function AppContent() {
   return (
     <>
@@ -67,6 +79,7 @@ function AppContent() {
       <BrowserRouter>
         <KeyboardShortcuts />
         <ScrollToTop />
+        <OnboardingWrapper />
         <Suspense fallback={<PageLoader />}>
           <ErrorBoundary>
             <Routes>
@@ -85,8 +98,6 @@ function AppContent() {
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verify" element={<VerifyEmail />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/test-headers" element={<TestHeaders />} />
-              <Route path="/auth-test" element={<AuthTest />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/opportunities/:slug/application" element={<ApplicationForm />} />
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />

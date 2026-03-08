@@ -219,7 +219,7 @@ const Auth = () => {
 
         // Create hospital account record if this is a hospital signup
         if (isHospitalSignup && hospitalName.trim()) {
-          await supabase
+          const { error: hospitalError } = await supabase
             .from("hospital_accounts")
             .insert({
               user_id: data.user.id,
@@ -231,6 +231,11 @@ const Auth = () => {
               description: hospitalDescription.trim() || null,
               account_status: "pending",
             });
+
+          if (hospitalError) {
+            toast.error("Account created but hospital profile failed to save. Please contact support@clinicalhours.org.");
+            return;
+          }
         }
       }
 

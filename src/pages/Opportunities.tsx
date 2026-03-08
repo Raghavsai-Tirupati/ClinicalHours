@@ -22,6 +22,7 @@ import {
   Globe,
   ExternalLink,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useOpportunities } from "@/hooks/useOpportunities";
@@ -34,6 +35,7 @@ const Opportunities = () => {
   const [filterType, setFilterType] = useState("all");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [savedOpportunityIds, setSavedOpportunityIds] = useState<Set<string>>(new Set());
+  const [savedLoading, setSavedLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   // Maps hospital_id -> hospital_accounts.id for opportunities with a linked hospital
   const [hospitalAccountMap, setHospitalAccountMap] = useState<Map<string, string>>(new Map());
@@ -62,15 +64,22 @@ const Opportunities = () => {
   // Fetch saved opportunities on mount - wait for auth to be ready
   useEffect(() => {
     const fetchSavedOpportunities = async () => {
-      if (!user || !isReady) return;
-      
-      const { data, error } = await supabase
-        .from("saved_opportunities")
-        .select("opportunity_id")
-        .eq("user_id", user.id);
-      
-      if (!error && data) {
-        setSavedOpportunityIds(new Set(data.map((item) => item.opportunity_id)));
+      if (!isReady || !user) {
+        setSavedLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("saved_opportunities")
+          .select("opportunity_id")
+          .eq("user_id", user.id);
+
+        if (!error && data) {
+          setSavedOpportunityIds(new Set(data.map((item) => item.opportunity_id)));
+        }
+      } finally {
+        setSavedLoading(false);
       }
     };
 
@@ -359,7 +368,9 @@ const Opportunities = () => {
                       </div>
                       {/* Buttons: horizontal full-width on mobile, vertical on desktop */}
                       <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>
-                        {savedOpportunityIds.has(opportunity.id) ? (
+                        {savedLoading ? (
+                          <Skeleton className="h-11 sm:h-9 w-full sm:w-28 rounded-md flex-1 sm:flex-none" />
+                        ) : savedOpportunityIds.has(opportunity.id) ? (
                           <Button variant="secondary" size="sm" disabled className="flex-1 sm:flex-none h-11 sm:h-9">
                             <Check className="h-4 w-4 mr-2" />
                             In Tracker

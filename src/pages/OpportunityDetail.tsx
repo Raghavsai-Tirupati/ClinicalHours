@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Clock, Phone, Mail, Star, Loader2, Plus, Check, ArrowLeft, ExternalLink } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ReminderDialog } from "@/components/ReminderDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +45,7 @@ const OpportunityDetail = () => {
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [savedLoading, setSavedLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   const [guestGateOpen, setGuestGateOpen] = useState(false);
@@ -125,20 +127,27 @@ const OpportunityDetail = () => {
 
   useEffect(() => {
     const checkSaved = async () => {
-      if (!user || !opportunity?.id) return;
+      if (!isReady || !user || !opportunity?.id) {
+        setSavedLoading(false);
+        return;
+      }
 
-      const { data } = await supabase
-        .from("saved_opportunities")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("opportunity_id", opportunity.id)
-        .single();
+      try {
+        const { data } = await supabase
+          .from("saved_opportunities")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("opportunity_id", opportunity.id)
+          .single();
 
-      setSaved(!!data);
+        setSaved(!!data);
+      } finally {
+        setSavedLoading(false);
+      }
     };
 
     checkSaved();
-  }, [user, opportunity?.id]);
+  }, [isReady, user, opportunity?.id]);
 
   // Look up the hospital_accounts row linked to this opportunity (if any)
   useEffect(() => {
@@ -354,7 +363,9 @@ const OpportunityDetail = () => {
                 </Button>
               )}
 
-              {saved ? (
+              {savedLoading ? (
+                <Skeleton className="h-9 w-28 rounded-md" />
+              ) : saved ? (
                 <Button variant="secondary" size="sm" disabled>
                   <Check className="mr-2 h-4 w-4" />
                   In Tracker
