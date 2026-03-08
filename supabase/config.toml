@@ -57,6 +57,9 @@ verify_jwt = false
 [functions.hospital-signup]
 verify_jwt = false
 
+[functions.hospital-duplicates]
+verify_jwt = false
+
 [functions.notify-application-status]
 verify_jwt = false
 
@@ -70,4 +73,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-mass-email]
+verify_jwt = false
+
+[functions.replace-opportunities]
 verify_jwt = false
