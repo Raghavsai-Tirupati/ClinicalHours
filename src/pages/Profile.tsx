@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
+import CinematicLayout from "@/components/layout/CinematicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -381,10 +380,8 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <div className="container mx-auto px-4 pt-28 pb-8">
-        <div className="max-w-3xl mx-auto space-y-6">
+    <CinematicLayout title="Clinical Profile" subtitle="Manage your clinical portfolio and track your application readiness">
+      <div className="max-w-3xl mx-auto space-y-6">
           {/* Profile Completeness Card */}
           <Card className={isProfileComplete ? "border-primary/50 bg-primary/5" : "border-destructive/30 bg-destructive/5"}>
             <CardContent className="p-4">
@@ -806,9 +803,7 @@ const Profile = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
-      <Footer />
-    </div>
+    </CinematicLayout>
   );
 };
 

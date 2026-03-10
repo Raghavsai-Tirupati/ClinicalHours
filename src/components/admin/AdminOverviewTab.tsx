@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Users, Building2, Briefcase, FileText, Clock, Activity, RefreshCw } from 'lucide-react';
 import GuestSessionStats from './GuestSessionStats';
+import ActivityFeed from './ActivityFeed';
 
 interface OverviewStats {
   totalStudents: number;
@@ -172,8 +173,24 @@ export default function AdminOverviewTab() {
         </div>
       )}
 
-      {/* Guest session / activity chart */}
-      <GuestSessionStats />
+      {/* Live Activity Stream + Guest Session Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Live Activity Stream
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ActivityFeed />
+          </CardContent>
+        </Card>
+
+        <div>
+          <GuestSessionStats />
+        </div>
+      </div>
     </div>
   );
 }
