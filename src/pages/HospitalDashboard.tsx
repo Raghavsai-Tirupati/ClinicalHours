@@ -164,7 +164,7 @@ export default function HospitalDashboard() {
           setHaAnswers([]);
           return;
         }
-        const list = (data as { answer_text: string | null; hospital_application_questions: { question_text: string } | null }[]).map(
+        const list = (data as any[]).map(
           (r) => ({
             question_text: r.hospital_application_questions?.question_text ?? "Question",
             answer_text: r.answer_text,
