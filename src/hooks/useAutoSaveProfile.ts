@@ -45,7 +45,7 @@ export function useAutoSaveProfile(
   const [status, setStatus] = useState<AutoSaveStatus>("idle");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedDataRef = useRef<string>("");
   const isInitialMount = useRef(true);
   const isSavingRef = useRef(false);

@@ -166,7 +166,7 @@ export default function HospitalDashboard() {
         }
         const list = (data as any[]).map(
           (r) => ({
-            question_text: r.hospital_application_questions?.question_text ?? "Question",
+            question_text: (Array.isArray(r.hospital_application_questions) ? r.hospital_application_questions[0]?.question_text : r.hospital_application_questions?.question_text) ?? "Question",
             answer_text: r.answer_text,
           })
         );
