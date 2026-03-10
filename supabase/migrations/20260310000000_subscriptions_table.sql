@@ -35,6 +35,12 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_subscription_id ON subscript
 CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
 
 -- ============================================================
+-- 1b. Add premium columns to profiles (if missing)
+-- ============================================================
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium boolean NOT NULL DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS premium_expires_at timestamptz;
+
+-- ============================================================
 -- 2. Trigger: sync profiles.is_premium when subscriptions change
 -- ============================================================
 CREATE OR REPLACE FUNCTION sync_premium_status()
