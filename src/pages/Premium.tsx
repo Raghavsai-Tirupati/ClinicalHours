@@ -4,6 +4,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { useOpportunityCount } from "@/hooks/useOpportunityCount";
 import { Button } from "@/components/ui/button";
 import {
   Check,
@@ -32,7 +33,7 @@ const PLANS = [
     cta: "Current Plan",
     ctaDisabled: true,
     features: [
-      { text: "Browse 6,000+ opportunities", included: true },
+      { text: "Browse thousands of opportunities", included: true },
       { text: "Interactive map view", included: true },
       { text: "Hospital / clinic website links", included: true },
       { text: "Search within 25-mile radius", included: true },
@@ -93,7 +94,7 @@ const FEATURE_HIGHLIGHTS = [
   {
     icon: Brain,
     title: "AI Opportunity Matcher",
-    description: "Take a quick quiz and get personalized matches from 6,000+ opportunities ranked by fit.",
+    description: "Take a quick quiz and get personalized matches from thousands of opportunities ranked by fit.",
     color: "text-violet-400",
     bg: "bg-violet-500/10",
   },
@@ -152,6 +153,8 @@ const Premium = () => {
   const { user } = useAuth();
   const { isPremium, activatePremium, deactivatePremium } = usePremiumStatus();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
+  const opportunityCount = useOpportunityCount();
+  const countLabel = opportunityCount > 0 ? opportunityCount.toLocaleString() + "+" : "6,000+";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -356,7 +359,7 @@ const Premium = () => {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 max-w-4xl mx-auto">
               {[
-                { icon: MapPin, text: "Interactive map of 6,000+ locations" },
+                { icon: MapPin, text: `Interactive map of ${countLabel} locations` },
                 { icon: Search, text: "Search hospitals & clinics" },
                 { icon: DollarSign, text: "Application cost calculator" },
                 { icon: Star, text: "Reviews & community Q&A" },

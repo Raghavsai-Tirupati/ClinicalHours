@@ -9,19 +9,19 @@ interface VideoItem {
 const videos: VideoItem[] = [
   {
     src: "/screenshots/dashboard-preview.mp4",
-    poster: "/screenshots/dashboard.png"
+    poster: "/screenshots/opportunities.png"
   },
   {
     src: "/screenshots/dashboard-preview2.mp4",
-    poster: "/screenshots/dashboard.png"
+    poster: "/screenshots/opportunities.png"
   },
   {
     src: "/screenshots/dashboard-preview3.mp4",
-    poster: "/screenshots/dashboard.png"
+    poster: "/screenshots/map.png"
   },
   {
     src: "/screenshots/dashboard-preview4.mp4",
-    poster: "/screenshots/dashboard.png"
+    poster: "/screenshots/profile.png"
   }
 ];
 
@@ -241,16 +241,17 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
                 
                 {/* Video container */}
                 <div className="relative aspect-[16/10] overflow-hidden bg-zinc-900">
-                  <video
+                    <video
                     ref={(el) => { videoRefs.current[index] = el; }}
                     src={video.src}
+                    poster={video.poster}
                     muted
                     playsInline
                     autoPlay={isActive}
                     loop
                     controls={false}
                     disablePictureInPicture
-                    preload={isActive ? "auto" : "none"}
+                    preload={isActive ? "auto" : "metadata"}
                     onLoadedData={() => handleVideoLoad(index)}
                     className="carousel-video w-full h-full object-cover object-top pointer-events-none"
                     style={{ WebkitAppearance: 'none' }}
