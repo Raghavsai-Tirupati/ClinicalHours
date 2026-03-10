@@ -11,15 +11,32 @@ import HeroBrowserCarousel from "@/components/HeroBrowserCarousel";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import FeatureShowcaseRail from "@/components/FeatureShowcaseRail";
 import HowItWorksTimeline from "@/components/HowItWorksTimeline";
-import HomeGlobe from "@/components/HomeGlobe";
 import carouselBg from "@/assets/carousel-bg.png";
+
+const HOSPITAL_NAMES = [
+  "Mayo Clinic",
+  "Johns Hopkins",
+  "Cleveland Clinic",
+  "Mass General",
+  "UCLA Health",
+  "NYU Langone",
+  "Stanford Health Care",
+  "Duke Health",
+  "UCSF Medical Center",
+  "Cedars-Sinai",
+  "Mount Sinai",
+  "Northwestern Medicine",
+  "Penn Medicine",
+  "Houston Methodist",
+  "Emory Healthcare",
+  "Vanderbilt Health",
+];
 
 const Home = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [heroVideoIndex, setHeroVideoIndex] = useState(0);
 
-  // Redirect authenticated users to dashboard
   useEffect(() => {
     if (!loading && user) {
       navigate("/dashboard");
@@ -41,42 +58,62 @@ const Home = () => {
     setHeroVideoIndex(index);
   };
 
+  const duplicatedHospitals = [...HOSPITAL_NAMES, ...HOSPITAL_NAMES];
+
   return (
     <div className="min-h-screen">
       <Navigation />
 
-      {/* Hero Section - Full-screen with globe */}
-      <section className="relative min-h-screen flex flex-col items-center overflow-hidden bg-black">
-        {/* Video Background Carousel */}
+      {/* Hero Section — full-viewport, video bg, centered text, hospital reel */}
+      <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden bg-black">
         <HeroVideoCarousel onIndexChange={handleHeroVideoChange} />
 
-        {/* Gradient overlay - subtle top for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 from-0% to-transparent to-30% z-[5]"></div>
+        {/* Top gradient for nav readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 from-0% via-transparent via-30% to-black/50 to-100% z-[5]" />
 
-        {/* Main hero content — pushed down so globe sits in lower half */}
-        <div className="container mx-auto px-4 sm:px-6 relative z-10 flex flex-col items-center pt-[22vh] sm:pt-[20vh]">
-          <div className="max-w-4xl mx-auto text-center space-y-4 sm:space-y-6">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-white leading-[1.1] sm:leading-[1.05] tracking-wide animate-fade-in-up drop-shadow-[0_2px_20px_rgba(0,0,0,0.5)] font-heading uppercase">
-              Find Your<br />Clinical Future
-            </h1>
+        {/* Centered hero content */}
+        <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl mx-auto">
+          <h1 className="font-mono text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold uppercase leading-[1.15] tracking-wide text-white animate-fade-in-up drop-shadow-[0_2px_20px_rgba(0,0,0,0.5)]">
+            Find Your
+            <br />
+            Clinical Future.
+          </h1>
 
-            <div className="pt-1 sm:pt-2 animate-fade-in-up-delay-1">
-              <Link
-                to="/auth"
-                className="group inline-flex items-center justify-center text-sm uppercase tracking-widest px-8 sm:px-12 py-4 sm:py-5 bg-white text-black hover:bg-white/90 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] relative overflow-hidden min-h-[52px]"
-              >
-                <span className="relative z-10">Get Started</span>
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-              </Link>
-              <p className="mt-3 sm:mt-4 text-xs text-white/50 uppercase tracking-widest animate-pulse">
-                Free forever. No credit card required.
-              </p>
-            </div>
+          <p className="mt-4 sm:mt-5 text-xs sm:text-sm text-white/50 max-w-md leading-relaxed animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+            Connecting pre-health students with 6,000+ clinical
+            opportunities across the country.
+          </p>
+
+          <div className="mt-7 sm:mt-8 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+            <Link
+              to="/auth"
+              className="inline-flex items-center justify-center text-xs font-medium uppercase tracking-widest px-8 sm:px-10 py-3 sm:py-3.5 border border-white/40 text-white hover:bg-white/10 transition-all duration-300"
+            >
+              Get Started
+            </Link>
           </div>
+        </div>
 
-          {/* Spinning globe — below text, inline in hero */}
-          <div className="mt-8 sm:mt-10 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-            <HomeGlobe />
+        {/* Hospital reel — anchored to bottom of hero */}
+        <div className="absolute bottom-0 inset-x-0 z-10 pb-8 sm:pb-10">
+          <p className="text-[10px] sm:text-xs text-white/30 uppercase tracking-[0.25em] text-center mb-4">
+            Trusted by students at leading institutions
+          </p>
+          <div className="relative overflow-hidden">
+            {/* Fade edges */}
+            <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-40 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-40 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
+
+            <div className="flex animate-marquee whitespace-nowrap">
+              {duplicatedHospitals.map((name, i) => (
+                <span
+                  key={i}
+                  className="mx-6 sm:mx-10 text-xs sm:text-sm font-medium uppercase tracking-[0.15em] text-white/40 shrink-0"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -85,13 +122,11 @@ const Home = () => {
       <section 
         className="relative overflow-hidden"
       >
-        {/* Single background image spanning all content */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${carouselBg})` }}
         />
         
-        {/* Carousel content */}
         <div 
           ref={carouselRef}
           className={`container mx-auto px-4 py-16 sm:py-20 md:py-24 transition-all duration-700 relative z-10 ${
@@ -101,7 +136,6 @@ const Home = () => {
           <HeroBrowserCarousel activeIndex={heroVideoIndex} />
         </div>
 
-        {/* Stats content */}
         <div 
           ref={statsRef}
           className="relative z-10 py-4 sm:py-6 md:py-8"
@@ -141,24 +175,19 @@ const Home = () => {
           </div>
         </div>
 
-        {/* Feature Showcase - now inside unified background */}
         <div className="relative z-10">
           <FeatureShowcase />
         </div>
         
-        {/* Bottom gradient fade to black */}
         <div className="absolute inset-x-0 bottom-0 h-32 sm:h-48 bg-gradient-to-t from-black to-transparent z-[5] pointer-events-none" />
       </section>
 
-      {/* Features Section - Horizontal scrolling rail */}
       <FeatureShowcaseRail />
 
-      {/* How It Works Section - Scroll-reveal timeline */}
       <HowItWorksTimeline />
 
       {/* CTA Section */}
       <section ref={ctaRef} className="py-20 sm:py-28 md:py-40 bg-black relative overflow-hidden">
-        {/* Gradient overlay for emphasis */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/40 pointer-events-none"></div>
         <div className="container mx-auto px-4 sm:px-6 relative z-10">
           <div className={`max-w-3xl mx-auto text-center space-y-6 sm:space-y-10 ${ctaInView ? 'animate-fade-in-up' : 'opacity-0'}`}>

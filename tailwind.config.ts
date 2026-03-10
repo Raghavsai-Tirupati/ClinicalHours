@@ -17,7 +17,7 @@ export default {
         'sans': ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Inter', 'DM Sans', 'Segoe UI', 'sans-serif'],
         'heading': ['Plus Jakarta Sans', 'DM Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'sans-serif'],
         'display': ['Playfair Display', 'Georgia', 'serif'],
-        'mono': ['Courier New', 'Courier', 'monospace'],
+        'mono': ['"Geist Mono Variable"', 'Courier New', 'Courier', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -114,6 +114,10 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(var(--primary) / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(var(--primary) / 0.5)" },
         },
+        marquee: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -126,6 +130,7 @@ export default {
         float: "float 6s ease-in-out infinite",
         "float-slow": "float-slow 8s ease-in-out infinite",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        marquee: "marquee 30s linear infinite",
       },
     },
   },

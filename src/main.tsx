@@ -8,5 +8,7 @@ import "@fontsource-variable/inter";
 import "@fontsource-variable/dm-sans";
 // @ts-ignore
 import "@fontsource-variable/plus-jakarta-sans";
+// @ts-ignore
+import "@fontsource-variable/geist-mono";
 
 createRoot(document.getElementById("root")!).render(<App />);
