@@ -8,6 +8,7 @@ import { HelmetProvider } from "react-helmet-async";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
 import PageViewTracker from "./components/PageViewTracker";
+import { StudentOnlyRoute } from "./components/StudentOnlyRoute";
 import { useAppKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 // Lazy load pages for code splitting
@@ -85,15 +86,15 @@ function AppContent() {
           <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/opportunities" element={<Opportunities />} />
-              <Route path="/opportunities/:slug" element={<OpportunityDetail />} />
+              <Route path="/opportunities" element={<StudentOnlyRoute><Opportunities /></StudentOnlyRoute>} />
+              <Route path="/opportunities/:slug" element={<StudentOnlyRoute><OpportunityDetail /></StudentOnlyRoute>} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/my-applications" element={<MyApplications />} />
-              <Route path="/map" element={<MapView />} />
+              <Route path="/dashboard" element={<StudentOnlyRoute><Dashboard /></StudentOnlyRoute>} />
+              <Route path="/my-applications" element={<StudentOnlyRoute><MyApplications /></StudentOnlyRoute>} />
+              <Route path="/map" element={<StudentOnlyRoute><MapView /></StudentOnlyRoute>} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/check-email" element={<CheckEmail />} />
@@ -101,8 +102,8 @@ function AppContent() {
               <Route path="/verify" element={<VerifyEmail />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/opportunities/:slug/application" element={<ApplicationForm />} />
-              <Route path="/opportunities/:slug/apply" element={<HospitalApplyPage />} />
+              <Route path="/opportunities/:slug/application" element={<StudentOnlyRoute><ApplicationForm /></StudentOnlyRoute>} />
+              <Route path="/opportunities/:slug/apply" element={<StudentOnlyRoute><HospitalApplyPage /></StudentOnlyRoute>} />
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
               <Route path="/hospital-dashboard" element={<HospitalDashboardPage />} />
               <Route path="/hospital/admin" element={<HospitalDashboardPage />} />

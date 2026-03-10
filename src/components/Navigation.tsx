@@ -81,23 +81,11 @@ const Navigation = () => {
     { name: "My Applications", path: "/my-applications" },
     { name: "Opportunities", path: "/opportunities" },
     { name: "Map", path: "/map" },
-    ...(hospitalMember
-      ? [{ name: "Hospital Admin", path: "/hospital-dashboard" }]
-      : []),
   ];
 
-  // Hospital-specific nav: no student features (Dashboard, Opportunities, Tools)
-  const isHospitalContext =
-    hospitalMember &&
-    (location.pathname === "/hospital-dashboard" ||
-      (location.pathname.startsWith("/opportunities/") && location.pathname.endsWith("/admin")));
-
-  const hospitalLinks = [
-    { name: "Home", path: "/" },
-    { name: "Map", path: "/map" },
-    { name: "Contact", path: "/contact" },
-    { name: "Hospital Admin", path: "/hospital-dashboard" },
-  ];
+  // Hospital members see only one tab: Admin portal. No opportunities, map, or my-applications.
+  const isHospitalContext = !!hospitalMember;
+  const hospitalLinks = [{ name: "Admin", path: "/hospital-dashboard" }];
 
   const toolsLinks = [
     { name: "Hour Tracker", path: "/hours" },
