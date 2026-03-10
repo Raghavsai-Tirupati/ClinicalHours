@@ -283,6 +283,12 @@ const Auth = () => {
               toast.error("Account created but hospital profile failed to save. Please contact support@clinicalhours.org.");
               return;
             }
+
+            // 4) Mark email as verified so hospital users skip verification
+            await supabase
+              .from("profiles")
+              .update({ email_verified: true })
+              .eq("id", data.user.id);
           } catch (hospitalFlowError) {
             console.error("Hospital signup flow failed:", hospitalFlowError);
             toast.error("Account created but hospital profile failed to save. Please contact support@clinicalhours.org.");
@@ -294,18 +300,22 @@ const Auth = () => {
       if (data.user) {
         logAuthEvent("signup", { email: validatedData.email });
         trackSignup(data.user.id, isHospitalSignup ? "hospital" : "email");
-        
-        await supabase.auth.signOut();
-        
-        await sendVerificationEmail(
-          data.user.id,
-          validatedData.email,
-          validatedData.fullName || "User"
-        );
 
-        toast.success("Account created! Check your email to verify your account.");
-        
-        navigate(`/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(validatedData.fullName || "User")}`);
+        if (isHospitalSignup) {
+          // Hospital accounts: skip email verification, go straight to pending approval
+          toast.success("Account created! Your hospital account is pending admin approval.");
+          await redirectByAccountType(data.user.id);
+        } else {
+          // Student accounts: require email verification
+          await supabase.auth.signOut();
+          await sendVerificationEmail(
+            data.user.id,
+            validatedData.email,
+            validatedData.fullName || "User"
+          );
+          toast.success("Account created! Check your email to verify your account.");
+          navigate(`/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(validatedData.fullName || "User")}`);
+        }
       }
     } catch (error: unknown) {
       console.error("Sign up error:", error);
