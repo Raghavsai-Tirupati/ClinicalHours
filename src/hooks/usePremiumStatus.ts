@@ -1,5 +1,8 @@
-import { useCallback } from "react";
-import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useState, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
+
+// LOCAL DEV: everything is unlocked. Flip to false when you wire up real payments.
+const DEV_PREMIUM_BYPASS = true;
 
 interface PremiumStatus {
   isPremium: boolean;
@@ -10,21 +13,18 @@ interface PremiumStatus {
 }
 
 export function usePremiumStatus(): PremiumStatus {
-  const { isAdmin, isLoading } = useAdminCheck();
+  const { user } = useAuth();
+  const [isPremium, setIsPremium] = useState(DEV_PREMIUM_BYPASS);
+  const isLoading = false;
+  const premiumExpiresAt = null;
 
   const activatePremium = useCallback(async () => {
-    // No-op until real payments are wired up
+    setIsPremium(true);
   }, []);
 
   const deactivatePremium = useCallback(async () => {
-    // No-op until real payments are wired up
+    setIsPremium(false);
   }, []);
 
-  return {
-    isPremium: isAdmin,
-    isLoading,
-    premiumExpiresAt: null,
-    activatePremium,
-    deactivatePremium,
-  };
+  return { isPremium, isLoading, premiumExpiresAt, activatePremium, deactivatePremium };
 }
