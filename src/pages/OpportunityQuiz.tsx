@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import { PremiumGate } from "@/components/PremiumGate";
 import { useAuth } from "@/hooks/useAuth";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { Button } from "@/components/ui/button";
@@ -176,6 +177,7 @@ const OpportunityQuiz = () => {
           </p>
         </div>
 
+        <PremiumGate featureName="AI Opportunity Matcher" description="Get personalized opportunity matches based on your interests, location, and schedule with ClinicalHours Premium.">
         <StepIndicator current={stepIndex} steps={stepLabels} />
 
         {isLoading && (
@@ -401,6 +403,7 @@ const OpportunityQuiz = () => {
             </div>
           </div>
         )}
+        </PremiumGate>
       </main>
       <Footer />
     </div>

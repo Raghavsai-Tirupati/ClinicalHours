@@ -40,13 +40,13 @@ const PLANS = [
       { text: "Search within 25-mile radius", included: true },
       { text: "Up to 10 search results", included: true },
       { text: "Application cost calculator", included: true },
+      { text: "Hour Tracker & Reflections", included: true },
+      { text: "LOR Tracker", included: true },
+      { text: "Timeline Planner", included: true },
       { text: "Basic profile", included: true },
       { text: "AI Opportunity Matcher", included: false },
-      { text: "Hour Tracker & Reflections", included: false },
       { text: "AMCAS Description Generator", included: false },
       { text: "Competency Mapper", included: false },
-      { text: "LOR Tracker", included: false },
-      { text: "Timeline Planner", included: false },
       { text: "Secondary Essay Engine", included: false },
       { text: "School List Builder", included: false },
     ],
@@ -63,12 +63,9 @@ const PLANS = [
       { text: "Everything in Free", included: true },
       { text: "Unlimited search radius & results", included: true },
       { text: "AI Opportunity Matcher (quiz)", included: true },
-      { text: "Hour Tracker & Reflection Journal", included: true },
       { text: "AMCAS Activity Description Generator", included: true },
       { text: "Most Meaningful Experience Drafter", included: true },
       { text: "Competency Mapper (17 AAMC competencies)", included: true },
-      { text: "LOR Tracker & Relationship CRM", included: true },
-      { text: "Timeline & Deadline Planner", included: true },
       { text: "Secondary Essay Reuse Engine", included: true },
       { text: "AI School List Builder", included: true },
       { text: "PDF export for all data", included: true },
@@ -354,11 +351,14 @@ const Premium = () => {
                 These core tools will always be free for all students.
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 max-w-4xl mx-auto">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 max-w-5xl mx-auto">
               {[
                 { icon: MapPin, text: `Interactive map of ${countLabel} locations` },
                 { icon: Search, text: "Search hospitals & clinics" },
                 { icon: DollarSign, text: "Application cost calculator" },
+                { icon: Clock, text: "Hour Tracker & Reflections" },
+                { icon: Users, text: "LOR Tracker" },
+                { icon: Calendar, text: "Timeline Planner" },
                 { icon: Star, text: "Reviews & community Q&A" },
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-3 rounded-lg border border-border bg-card p-4">

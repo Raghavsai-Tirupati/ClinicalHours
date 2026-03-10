@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { PremiumGate } from "@/components/PremiumGate";
+
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -258,9 +258,7 @@ const LORTracker = () => (
         <h1 className="text-2xl font-bold text-foreground font-heading">LOR Tracker</h1>
         <p className="text-muted-foreground mt-1">Track recommendation letters, manage relationships, and monitor submission status.</p>
       </div>
-      <PremiumGate featureName="LOR Tracker" description="Manage your recommendation letters with ClinicalHours Premium.">
-        <LORTrackerContent />
-      </PremiumGate>
+      <LORTrackerContent />
     </main>
     <Footer />
   </div>

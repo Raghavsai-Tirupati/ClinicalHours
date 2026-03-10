@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { PremiumGate } from "@/components/PremiumGate";
+
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -485,9 +485,7 @@ const HourTracker = () => (
         <h1 className="text-2xl font-bold text-foreground font-heading">Hour Tracker & Reflections</h1>
         <p className="text-muted-foreground mt-1">Log clinical hours, write reflections, and track your progress.</p>
       </div>
-      <PremiumGate featureName="Hour Tracker" description="Track your clinical hours and write structured reflections with ClinicalHours Premium.">
-        <HourTrackerContent />
-      </PremiumGate>
+      <HourTrackerContent />
     </main>
     <Footer />
   </div>

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import { PremiumGate } from "@/components/PremiumGate";
+
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -186,9 +186,7 @@ const TimelinePlanner = () => (
         <h1 className="text-2xl font-bold text-foreground font-heading">Timeline & Deadline Planner</h1>
         <p className="text-muted-foreground mt-1">Your personalized application timeline with key milestones and deadlines.</p>
       </div>
-      <PremiumGate featureName="Timeline Planner" description="Get a personalized application timeline with ClinicalHours Premium.">
-        <TimelinePlannerContent />
-      </PremiumGate>
+      <TimelinePlannerContent />
     </main>
     <Footer />
   </div>
