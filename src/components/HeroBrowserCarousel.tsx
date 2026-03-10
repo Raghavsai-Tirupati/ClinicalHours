@@ -12,6 +12,10 @@ const videos: VideoItem[] = [
     poster: "/screenshots/opportunities.png"
   },
   {
+    src: "/screenshots/dashboard-preview.mp4",
+    poster: "/screenshots/opportunities.png"
+  },
+  {
     src: "/screenshots/dashboard-preview2.mp4",
     poster: "/screenshots/opportunities.png"
   },
