@@ -181,7 +181,7 @@ const OpportunityQuiz = () => {
         {isLoading && (
           <div className="text-center py-20">
             <Loader2 className="h-12 w-12 animate-spin text-violet-400 mx-auto mb-4" />
-            <p className="text-lg font-medium text-foreground">Analyzing 6,000+ opportunities...</p>
+            <p className="text-lg font-medium text-foreground">Analyzing opportunities...</p>
             <p className="text-sm text-muted-foreground mt-1">Finding your best matches</p>
           </div>
         )}

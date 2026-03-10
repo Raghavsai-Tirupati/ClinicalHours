@@ -12,6 +12,7 @@ import FeatureShowcase from "@/components/FeatureShowcase";
 import FeatureShowcaseRail from "@/components/FeatureShowcaseRail";
 import HowItWorksTimeline from "@/components/HowItWorksTimeline";
 import carouselBg from "@/assets/carousel-bg.png";
+import { useOpportunityCount } from "@/hooks/useOpportunityCount";
 
 const HOSPITAL_NAMES = [
   "Mayo Clinic",
@@ -36,6 +37,7 @@ const Home = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [heroVideoIndex, setHeroVideoIndex] = useState(0);
+  const opportunityCount = useOpportunityCount();
 
   useEffect(() => {
     if (!loading && user) {
@@ -49,7 +51,7 @@ const Home = () => {
   const { ref: ctaRef, isInView: ctaInView } = useInView({ threshold: 0.2 });
 
   const stats = [
-      { value: 6400, suffix: "+", label: "Opportunities", icon: Building2 },
+      { value: opportunityCount, suffix: "+", label: "Opportunities", icon: Building2 },
       { value: 3700, suffix: "+", label: "Cities", icon: MapPin },
     { value: 100, suffix: "%", label: "Free", icon: Heart },
   ];
@@ -80,7 +82,7 @@ const Home = () => {
           </h1>
 
           <p className="mt-4 sm:mt-5 text-xs sm:text-sm text-white/50 max-w-md leading-relaxed animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-            Connecting pre-health students with 6,000+ clinical
+            Connecting pre-health students with {opportunityCount > 0 ? opportunityCount.toLocaleString() + "+" : ""} clinical
             opportunities across the country.
           </p>
 
