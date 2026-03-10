@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, CheckCircle2, AlertCircle, Upload, FileText, MapPin, Building2 } from "lucide-react";
@@ -20,6 +21,7 @@ function countWords(text: string): number {
 
 export default function ApplicationForm() {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
 
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,13 +105,14 @@ export default function ApplicationForm() {
       const { data: urlData } = supabase.storage.from("resumes").getPublicUrl(fileName);
       const resumeUrl = urlData.publicUrl;
 
-      // Insert application record
+      // Insert application record (include student_id when logged in for GPA lookup)
       const { error: insertError } = await supabase.from("applications").insert({
         opportunity_id: opportunity.id,
         student_name: studentName.trim(),
         student_email: email.trim(),
         student_phone: phone.trim() || null,
         resume_url: resumeUrl,
+        student_id: user?.id ?? null,
         essay_responses: {
           question1: essay1.trim(),
           question2: essay2.trim(),

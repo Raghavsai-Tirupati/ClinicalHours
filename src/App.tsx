@@ -101,6 +101,7 @@ function AppContent() {
               <Route path="/opportunities/:slug/application" element={<ApplicationForm />} />
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
               <Route path="/hospital-dashboard" element={<HospitalDashboardPage />} />
+              <Route path="/hospital/admin" element={<HospitalDashboardPage />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
               {/* Premium features */}
               <Route path="/premium" element={<Premium />} />

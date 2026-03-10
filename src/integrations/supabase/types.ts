@@ -23,6 +23,7 @@ export type Database = {
           resume_url: string | null
           status: string
           student_email: string
+          student_id: string | null
           student_name: string
           student_phone: string | null
         }
@@ -34,6 +35,7 @@ export type Database = {
           resume_url?: string | null
           status?: string
           student_email: string
+          student_id?: string | null
           student_name: string
           student_phone?: string | null
         }

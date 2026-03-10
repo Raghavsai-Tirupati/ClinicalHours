@@ -81,7 +81,7 @@ const Navigation = () => {
     { name: "Opportunities", path: "/opportunities" },
     { name: "Map", path: "/map" },
     ...(hospitalMember
-      ? [{ name: "Hospital Admin", path: "/hospital/admin" }]
+      ? [{ name: "Hospital Admin", path: "/hospital-dashboard" }]
       : []),
   ];
 

@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
-import { useHospitalAccount } from "@/hooks/useHospitalAccount";
+import { useHospitalMember } from "@/hooks/useHospitalMember";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Building2,
   MapPin,
@@ -17,6 +18,11 @@ import {
   Calendar,
   RefreshCw,
   Briefcase,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Settings,
+  ListChecks,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -31,89 +37,165 @@ interface OpportunityWithApps {
   new_application_count: number;
 }
 
+interface Application {
+  id: string;
+  opportunity_id: string;
+  student_name: string;
+  student_email: string;
+  student_phone: string | null;
+  student_id: string | null;
+  resume_url: string;
+  essay_responses: { question1: string; question2: string } | null;
+  status: "new" | "under_review" | "accepted" | "rejected";
+  created_at: string;
+}
+
+interface ApplicationWithGpa extends Application {
+  gpa: number | null;
+}
+
+interface AppQuestion {
+  id: string;
+  question_text: string;
+  type: string;
+  required: boolean;
+  order_index: number;
+}
+
+type StatusFilter = "all" | Application["status"];
+type SortKey = "student_name" | "created_at" | "status" | "gpa";
+type SortDir = "asc" | "desc";
+
+const STATUS_LABELS: Record<Application["status"], string> = {
+  new: "New",
+  under_review: "Under Review",
+  accepted: "Accepted",
+  rejected: "Rejected",
+};
+
+const STATUS_COLORS: Record<Application["status"], string> = {
+  new: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  under_review: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+  accepted: "bg-green-500/15 text-green-400 border-green-500/30",
+  rejected: "bg-red-500/15 text-red-400 border-red-500/30",
+};
+
+type Tab = "overview" | "requirements" | "applications";
+
 export default function HospitalDashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { hospitalAccount, isLoading: hospitalLoading } = useHospitalAccount();
+  const { member, loading: memberLoading } = useHospitalMember();
+
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [opportunities, setOpportunities] = useState<OpportunityWithApps[]>([]);
+  const [applications, setApplications] = useState<ApplicationWithGpa[]>([]);
+  const [questions, setQuestions] = useState<AppQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/auth");
       return;
     }
-    if (!hospitalLoading && !hospitalAccount) {
+    if (!memberLoading && !member) {
       navigate("/dashboard");
       return;
     }
-    if (!hospitalLoading && hospitalAccount?.account_status === "pending") {
-      navigate("/pending-approval");
-      return;
-    }
-    if (!hospitalLoading && hospitalAccount?.account_status === "rejected") {
-      navigate("/pending-approval");
-      return;
-    }
-  }, [authLoading, user, hospitalLoading, hospitalAccount, navigate]);
+  }, [authLoading, user, memberLoading, member, navigate]);
 
   useEffect(() => {
-    if (user && hospitalAccount?.account_status === "approved") {
-      fetchOpportunities();
+    if (user && member) {
+      fetchData();
     }
-  }, [user, hospitalAccount]);
+  }, [user, member]);
 
-  async function fetchOpportunities(showRefresh = false) {
+  async function fetchData(showRefresh = false) {
     if (showRefresh) setRefreshing(true);
+    if (!member) return;
     try {
-      // Get opportunities created by this user
       const { data: opps, error: oppsError } = await supabase
         .from("opportunities")
         .select("id, name, location, type, slug, created_at")
-        .eq("created_by", user!.id)
+        .eq("hospital_id", member.hospitalId)
         .order("created_at", { ascending: false });
 
       if (oppsError) {
         console.error("Error fetching opportunities:", oppsError);
         setOpportunities([]);
-        return;
-      }
+      } else if (opps && opps.length > 0) {
+        const oppIds = opps.map((o) => o.id);
+        const { data: apps } = await supabase
+          .from("applications")
+          .select("opportunity_id, status")
+          .in("opportunity_id", oppIds);
 
-      if (!opps || opps.length === 0) {
+        const appCounts: Record<string, { total: number; new: number }> = {};
+        (apps || []).forEach((app: { opportunity_id: string; status: string }) => {
+          if (!appCounts[app.opportunity_id]) appCounts[app.opportunity_id] = { total: 0, new: 0 };
+          appCounts[app.opportunity_id].total++;
+          if (app.status === "new") appCounts[app.opportunity_id].new++;
+        });
+
+        setOpportunities(
+          opps.map((opp) => ({
+            ...opp,
+            type: opp.type || "hospital",
+            slug: opp.slug,
+            application_count: appCounts[opp.id]?.total || 0,
+            new_application_count: appCounts[opp.id]?.new || 0,
+          }))
+        );
+      } else {
         setOpportunities([]);
-        setLoading(false);
-        setRefreshing(false);
-        return;
       }
 
-      // Get application counts for each opportunity
-      const oppIds = opps.map((o) => o.id);
-      const { data: apps } = await supabase
-        .from("applications")
-        .select("opportunity_id, status")
-        .in("opportunity_id", oppIds);
+      if (opps && opps.length > 0) {
+        const { data: allApps } = await supabase
+          .from("applications")
+          .select("*")
+          .in("opportunity_id", opps.map((o) => o.id))
+          .order("created_at", { ascending: false });
 
-      const appCounts: Record<string, { total: number; new: number }> = {};
-      (apps || []).forEach((app) => {
-        if (!appCounts[app.opportunity_id]) {
-          appCounts[app.opportunity_id] = { total: 0, new: 0 };
+        const appsList = (allApps || []) as Application[];
+        const studentIds = [...new Set(appsList.map((a) => a.student_id).filter(Boolean))] as string[];
+
+        let gpaMap: Record<string, number | null> = {};
+        if (studentIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, gpa")
+            .in("id", studentIds);
+          if (profiles) {
+            profiles.forEach((p: { id: string; gpa: number | null }) => {
+              gpaMap[p.id] = p.gpa ?? null;
+            });
+          }
         }
-        appCounts[app.opportunity_id].total++;
-        if (app.status === "new") {
-          appCounts[app.opportunity_id].new++;
-        }
-      });
 
-      const result: OpportunityWithApps[] = opps.map((opp) => ({
-        ...opp,
-        type: opp.type || "hospital",
-        slug: opp.slug,
-        application_count: appCounts[opp.id]?.total || 0,
-        new_application_count: appCounts[opp.id]?.new || 0,
-      }));
+        setApplications(
+          appsList.map((a) => ({
+            ...a,
+            gpa: a.student_id ? gpaMap[a.student_id] ?? null : null,
+          }))
+        );
+      } else {
+        setApplications([]);
+      }
 
-      setOpportunities(result);
+      const { data: qs } = await supabase
+        .from("hospital_application_questions")
+        .select("id, question_text, type, required, order_index")
+        .eq("account_id", member.accountId)
+        .order("order_index");
+
+      setQuestions((qs as AppQuestion[]) || []);
     } catch (err) {
       console.error("Error:", err);
     } finally {
@@ -122,7 +204,52 @@ export default function HospitalDashboard() {
     }
   }
 
-  if (authLoading || hospitalLoading || loading) {
+  const filtered = useMemo(() => {
+    let list = applications;
+    if (statusFilter !== "all") list = list.filter((a) => a.status === statusFilter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (a) =>
+          a.student_name.toLowerCase().includes(q) ||
+          a.student_email.toLowerCase().includes(q)
+      );
+    }
+    list = [...list].sort((a, b) => {
+      if (sortKey === "gpa") {
+        const aVal = a.gpa ?? -1;
+        const bVal = b.gpa ?? -1;
+        return sortDir === "asc" ? (aVal - bVal) : (bVal - aVal);
+      }
+      let aVal = a[sortKey] as string | number;
+      let bVal = b[sortKey] as string | number;
+      if (typeof aVal === "string") aVal = aVal.toLowerCase();
+      if (typeof bVal === "string") bVal = bVal.toLowerCase();
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [applications, statusFilter, search, sortKey, sortDir]);
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir(key === "gpa" ? "desc" : "asc");
+    }
+  }
+
+  const newCount = applications.filter((a) => a.status === "new").length;
+  const totalApplications = opportunities.reduce((sum, o) => sum + o.application_count, 0);
+
+  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "overview", label: "Overview", icon: Briefcase },
+    { id: "requirements", label: "Application Requirements", icon: Settings },
+    { id: "applications", label: "Student Applications", icon: ListChecks },
+  ];
+
+  if (authLoading || memberLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -130,36 +257,29 @@ export default function HospitalDashboard() {
     );
   }
 
-  const totalApplications = opportunities.reduce((sum, o) => sum + o.application_count, 0);
-  const totalNewApplications = opportunities.reduce((sum, o) => sum + o.new_application_count, 0);
-
   return (
     <>
       <Helmet>
-        <title>Hospital Dashboard | ClinicalHours</title>
+        <title>Hospital Admin | ClinicalHours</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
-
       <Navigation />
 
       <main className="min-h-screen bg-background pt-20 pb-12">
         <div className="container mx-auto px-4 max-w-7xl">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-8">
+          <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
             <div>
               <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
                 <Building2 className="h-4 w-4" />
-                <span>Hospital Dashboard</span>
+                <span>Hospital Admin</span>
               </div>
-              <h1 className="text-3xl font-bold text-foreground">
-                {hospitalAccount?.hospital_name}
-              </h1>
+              <h1 className="text-3xl font-bold text-foreground">{member?.hospitalName}</h1>
               <p className="text-muted-foreground mt-1">
-                Manage your posted opportunities and applications
+                Edit requirements, track applications, and filter by GPA
               </p>
             </div>
             <button
-              onClick={() => fetchOpportunities(true)}
+              onClick={() => fetchData(true)}
               disabled={refreshing}
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted border border-border"
             >
@@ -168,132 +288,264 @@ export default function HospitalDashboard() {
             </button>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
-            <div className="bg-card border border-border rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Briefcase className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Opportunities</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{opportunities.length}</p>
-            </div>
-            <div className="bg-card border border-border rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Total Applications</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{totalApplications}</p>
-            </div>
-            <div className="bg-card border border-border rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="h-2 w-2 rounded-full bg-blue-400" />
-                <span className="text-xs text-muted-foreground">New Applications</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">{totalNewApplications}</p>
-            </div>
+          {/* Tabs */}
+          <div className="flex gap-1 mb-6 border-b border-border">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === id
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* Opportunities List */}
-          {opportunities.length === 0 ? (
-            <div className="bg-card border border-border rounded-xl p-12 text-center">
-              <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-foreground font-medium mb-1">No opportunities posted</p>
-              <p className="text-muted-foreground text-sm">
-                Your posted opportunities will appear here once they've been added to the platform.
+          {/* Overview */}
+          {activeTab === "overview" && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Opportunities</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{opportunities.length}</p>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Total Applications</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{totalApplications}</p>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="h-2 w-2 rounded-full bg-blue-400" />
+                    <span className="text-xs text-muted-foreground">New Applications</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{newCount}</p>
+                </div>
+              </div>
+
+              {opportunities.length === 0 ? (
+                <div className="bg-card border border-border rounded-xl p-12 text-center">
+                  <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-foreground font-medium mb-1">No opportunities posted</p>
+                  <p className="text-muted-foreground text-sm">
+                    Deploy your hospital as an opportunity to start receiving applications.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-card border border-border rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/20">
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Opportunity</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden sm:table-cell">Location</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden md:table-cell">Date Posted</th>
+                          <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Applications</th>
+                          <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {opportunities.map((opp, i) => (
+                          <tr
+                            key={opp.id}
+                            className={`border-b border-border last:border-0 hover:bg-muted/20 ${i % 2 === 0 ? "" : "bg-muted/5"}`}
+                          >
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-foreground">{opp.name}</p>
+                              <Badge variant="outline" className="text-xs capitalize mt-1">{opp.type}</Badge>
+                            </td>
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <MapPin className="h-3 w-3" />
+                                <span className="truncate max-w-[200px]">{opp.location}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                              <Calendar className="h-3 w-3 inline mr-1" />
+                              {format(new Date(opp.created_at), "MMM d, yyyy")}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="font-medium">{opp.application_count}</span>
+                              {opp.new_application_count > 0 && (
+                                <span className="ml-1.5 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                  {opp.new_application_count} new
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {opp.slug && (
+                                <Link to={`/opportunities/${opp.slug}/admin`}>
+                                  <Button size="sm" variant="outline" className="text-xs h-7">
+                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                    Manage
+                                  </Button>
+                                </Link>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Application Requirements */}
+          {activeTab === "requirements" && (
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Application Requirements</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Custom questions shown on your hospital application form (hospital_application_questions).
               </p>
+              {questions.length === 0 ? (
+                <p className="text-muted-foreground text-sm py-4">
+                  No custom questions configured. Questions are managed per hospital account.
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {questions.map((q, i) => (
+                    <li key={q.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                      <span className="text-xs text-muted-foreground font-mono">{i + 1}.</span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{q.question_text}</p>
+                        <div className="flex gap-2 mt-1">
+                          <Badge variant="outline" className="text-[10px]">{q.type}</Badge>
+                          {q.required && <Badge variant="secondary" className="text-[10px]">Required</Badge>}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-          ) : (
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/20">
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Opportunity
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
-                        Location
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">
-                        Date Posted
-                      </th>
-                      <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Applications
-                      </th>
-                      <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {opportunities.map((opp, i) => (
-                      <tr
-                        key={opp.id}
-                        className={`border-b border-border last:border-0 hover:bg-muted/20 transition-colors ${
-                          i % 2 === 0 ? "" : "bg-muted/5"
+          )}
+
+          {/* Student Applications */}
+          {activeTab === "applications" && (
+            <>
+              <div className="bg-card border border-border rounded-xl p-4 mb-4">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or email..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1 flex-wrap">
+                    {(["all", "new", "under_review", "accepted", "rejected"] as StatusFilter[]).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setStatusFilter(s)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                          statusFilter === s ? "bg-card text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        <td className="px-4 py-3">
-                          <div>
-                            <p className="font-medium text-foreground">{opp.name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs capitalize">
-                                {opp.type}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground sm:hidden">
-                                {opp.location}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <MapPin className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate max-w-[200px]">{opp.location}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(opp.created_at), "MMM d, yyyy")}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <span className="font-medium text-foreground">
-                              {opp.application_count}
-                            </span>
-                            {opp.new_application_count > 0 && (
-                              <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                                {opp.new_application_count} new
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {opp.slug ? (
-                            <Link to={`/opportunities/${opp.slug}/admin`}>
-                              <Button size="sm" variant="outline" className="text-xs h-7">
-                                <ExternalLink className="h-3 w-3 mr-1" />
-                                Manage
-                              </Button>
-                            </Link>
-                          ) : (
-                            <Button size="sm" variant="outline" className="text-xs h-7" disabled>
-                              No Link
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
+                        {s === "all" ? "All" : STATUS_LABELS[s as Application["status"]]}
+                        {s === "new" && newCount > 0 && (
+                          <span className="ml-1.5 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{newCount}</span>
+                        )}
+                      </button>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Showing {filtered.length} of {applications.length} applications
+                </p>
               </div>
-            </div>
+
+              {filtered.length === 0 ? (
+                <div className="bg-card border border-border rounded-xl p-12 text-center">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-foreground font-medium mb-1">No applications found</p>
+                  <p className="text-muted-foreground text-sm">
+                    {applications.length === 0 ? "No applications yet." : "Try adjusting your search or filter."}
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-card border border-border rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/20">
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">
+                            <button className="flex items-center hover:text-foreground" onClick={() => handleSort("student_name")}>
+                              Student <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                            </button>
+                          </th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden sm:table-cell">Email</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">
+                            <button className="flex items-center hover:text-foreground" onClick={() => handleSort("gpa")}>
+                              GPA {sortKey === "gpa" && (sortDir === "asc" ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />)}
+                            </button>
+                          </th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden md:table-cell">
+                            <button className="flex items-center hover:text-foreground" onClick={() => handleSort("created_at")}>
+                              Date Applied <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                            </button>
+                          </th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">
+                            <button className="flex items-center hover:text-foreground" onClick={() => handleSort("status")}>
+                              Status <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                            </button>
+                          </th>
+                          <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map((app) => (
+                          <tr key={app.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-foreground">{app.student_name}</p>
+                              <p className="text-xs text-muted-foreground sm:hidden">{app.student_email}</p>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{app.student_email}</td>
+                            <td className="px-4 py-3">
+                              {app.gpa != null ? app.gpa.toFixed(2) : <span className="text-muted-foreground">—</span>}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{format(new Date(app.created_at), "MMM d, yyyy")}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${STATUS_COLORS[app.status]}`}>
+                                {STATUS_LABELS[app.status]}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {(() => {
+                                const slug = opportunities.find((o) => o.id === app.opportunity_id)?.slug;
+                                return slug ? (
+                                  <Link to={`/opportunities/${slug}/admin`}>
+                                    <Button size="sm" variant="outline" className="text-xs h-7">View</Button>
+                                  </Link>
+                                ) : (
+                                  <Button size="sm" variant="outline" className="text-xs h-7" disabled>View</Button>
+                                );
+                              })()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
-
       <Footer />
     </>
   );
