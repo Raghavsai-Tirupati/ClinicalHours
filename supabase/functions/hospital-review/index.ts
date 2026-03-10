@@ -178,21 +178,39 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch the hospital account with hospital name from join
-    const { data: row, error: fetchError } = await supabaseAdmin
+    // Fetch the hospital account - support both schemas:
+    // 1) Ecosystem: hospital_id FK -> hospitals(name)
+    // 2) Verification (20260223): hospital_name column, no hospitals FK
+    let row: { id?: string; contact_email?: string; account_status?: string; hospital_name?: string; hospitals?: { name?: string } | null } | null = null;
+    let fetchError: { message?: string; code?: string } | null = null;
+
+    const { data: rowWithJoin, error: errJoin } = await supabaseAdmin
       .from("hospital_accounts")
       .select("id, contact_email, account_status, hospitals(name)")
       .eq("id", hospitalId)
       .single();
 
-    if (fetchError || !row) {
+    if (!errJoin && rowWithJoin) {
+      row = rowWithJoin;
+    } else {
+      // Fallback: no hospitals FK (20260223 schema) - select hospital_name if it exists
+      const { data: rowDirect, error: errDirect } = await supabaseAdmin
+        .from("hospital_accounts")
+        .select("id, contact_email, account_status, hospital_name")
+        .eq("id", hospitalId)
+        .single();
+      if (!errDirect && rowDirect) row = rowDirect;
+      else fetchError = errDirect ?? errJoin;
+    }
+
+    if (!row) {
       return new Response(
         JSON.stringify({ success: false, error: "Hospital account not found" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    const hospitalName = (row.hospitals as { name?: string } | null)?.name ?? "Hospital";
+    const hospitalName = row.hospital_name ?? (row.hospitals as { name?: string } | null)?.name ?? "Hospital";
     const contactEmail = row.contact_email ?? "";
 
     // Update the hospital account
