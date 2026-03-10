@@ -78,11 +78,25 @@ const Navigation = () => {
 
   const authenticatedLinks = [
     { name: "Dashboard", path: "/dashboard" },
+    { name: "My Applications", path: "/my-applications" },
     { name: "Opportunities", path: "/opportunities" },
     { name: "Map", path: "/map" },
     ...(hospitalMember
       ? [{ name: "Hospital Admin", path: "/hospital-dashboard" }]
       : []),
+  ];
+
+  // Hospital-specific nav: no student features (Dashboard, Opportunities, Tools)
+  const isHospitalContext =
+    hospitalMember &&
+    (location.pathname === "/hospital-dashboard" ||
+      (location.pathname.startsWith("/opportunities/") && location.pathname.endsWith("/admin")));
+
+  const hospitalLinks = [
+    { name: "Home", path: "/" },
+    { name: "Map", path: "/map" },
+    { name: "Contact", path: "/contact" },
+    { name: "Hospital Admin", path: "/hospital-dashboard" },
   ];
 
   const toolsLinks = [
@@ -97,8 +111,16 @@ const Navigation = () => {
     { name: "School List", path: "/school-list" },
   ];
 
-  // Guests see authenticated links (Dashboard, Opportunities, etc.) but with Sign Up instead of Profile
-  const links = (user || isGuest) ? authenticatedLinks : publicLinks;
+  // Hospital context: no student features. Otherwise authenticated or public.
+  const links =
+    user || isGuest
+      ? isHospitalContext
+        ? hospitalLinks
+        : authenticatedLinks
+      : publicLinks;
+
+  // Hide Tools dropdown in hospital context
+  const showToolsDropdown = (user || isGuest) && !isHospitalContext;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -149,8 +171,8 @@ const Navigation = () => {
                     {link.name}
                   </Link>
                 ))}
-                {/* Tools dropdown for authenticated users */}
-                {(user || isGuest) && (
+                {/* Tools dropdown for authenticated users (hidden in hospital context) */}
+                {showToolsDropdown && (
                   <DropdownMenu>
                     <DropdownMenuTrigger className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor} outline-none`}>
                       Tools <ChevronDown className="h-3 w-3" />
@@ -240,8 +262,8 @@ const Navigation = () => {
                   {link.name}
                 </Link>
               ))}
-              {/* Mobile tools section */}
-              {(user || isGuest) && (
+              {/* Mobile tools section (hidden in hospital context) */}
+              {showToolsDropdown && (
                 <div className={`pt-2 border-t ${hasTransparentNav ? "border-white/10" : "border-border"}`}>
                   <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2 ${textColor} opacity-50`}>Tools</p>
                   {toolsLinks.map((link) => (

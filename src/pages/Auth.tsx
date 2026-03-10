@@ -93,20 +93,29 @@ const Auth = () => {
 
   // Check hospital account status and redirect accordingly
   const redirectByAccountType = async (userId: string) => {
-    const { data: hospitalAccount } = await supabase
+    // Find owner memberships for this user
+    const { data: members } = await supabase
+      .from("hospital_members")
+      .select("account_id")
+      .eq("user_id", userId)
+      .eq("role", "owner");
+
+    if (!members?.length) {
+      navigate("/dashboard");
+      return;
+    }
+
+    const accountIds = members.map((m) => m.account_id);
+    const { data: accounts } = await supabase
       .from("hospital_accounts")
       .select("account_status")
-      .eq("user_id", userId)
-      .maybeSingle();
+      .in("id", accountIds);
 
-    if (hospitalAccount) {
-      if (hospitalAccount.account_status === "approved") {
-        navigate("/hospital-dashboard");
-      } else {
-        navigate("/pending-approval");
-      }
+    const hasApproved = accounts?.some((a) => a.account_status === "approved");
+    if (hasApproved) {
+      navigate("/hospital-dashboard");
     } else {
-      navigate("/dashboard");
+      navigate("/pending-approval");
     }
   };
 
@@ -254,11 +263,15 @@ const Auth = () => {
               return;
             }
 
-            // 2) Create the hospital account linked to the hospital
+            // 2) Create the hospital account (pending admin approval)
             const { data: account, error: accountError } = await supabase
               .from("hospital_accounts")
               .insert({
                 hospital_id: hospital.id,
+                account_status: "pending",
+                contact_email: validatedData.email,
+                contact_phone: validatedData.phone || null,
+                description: hospitalDescription.trim() || null,
               })
               .select("id")
               .single();

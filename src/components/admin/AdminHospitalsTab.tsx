@@ -71,7 +71,7 @@ export default function AdminHospitalsTab() {
       let query = supabase
         .from('hospital_accounts')
         .select(
-          'id, user_id, hospital_name, contact_email, contact_phone, website, address, description, created_at, reviewed_at',
+          'id, contact_email, contact_phone, description, created_at, reviewed_at, hospitals(name, website, address)',
           { count: 'exact' }
         )
         .eq('account_status', 'approved')
@@ -79,17 +79,47 @@ export default function AdminHospitalsTab() {
         .range((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE - 1);
 
       if (search.trim()) {
-        query = query.or(
-          `hospital_name.ilike.%${search.trim()}%,contact_email.ilike.%${search.trim()}%`
-        );
+        query = query.ilike('contact_email', `%${search.trim()}%`);
       }
 
-      const { data, error, count } = await query;
+      const { data: rawData, error, count } = await query;
       if (error) throw error;
 
-      // Enrich with opportunity + applicant counts
+      if (!rawData?.length) {
+        setHospitals([]);
+        setTotalCount(count ?? 0);
+        setLoading(false);
+        return;
+      }
+
+      const accountIds = rawData.map((r) => r.id);
+      const { data: owners } = await supabase
+        .from('hospital_members')
+        .select('account_id, user_id')
+        .in('account_id', accountIds)
+        .eq('role', 'owner');
+
+      const accountToUser = new Map<string, string>();
+      (owners || []).forEach((o) => accountToUser.set(o.account_id, o.user_id));
+
+      const base: { id: string; user_id: string; hospital_name: string; contact_email: string; contact_phone: string | null; website: string | null; address: string | null; description: string | null; created_at: string; reviewed_at: string | null }[] = rawData.map((r) => {
+        const h = r.hospitals as { name?: string; website?: string; address?: string } | null;
+        return {
+          id: r.id,
+          user_id: accountToUser.get(r.id) ?? '',
+          hospital_name: h?.name ?? 'Unknown',
+          contact_email: r.contact_email ?? '',
+          contact_phone: r.contact_phone,
+          website: h?.website ?? null,
+          address: h?.address ?? null,
+          description: r.description,
+          created_at: r.created_at,
+          reviewed_at: r.reviewed_at,
+        };
+      });
+
       const enriched: HospitalRow[] = await Promise.all(
-        (data || []).map(async (h) => {
+        base.map(async (h) => {
           const { data: opps } = await supabase
             .from('opportunities')
             .select('id')

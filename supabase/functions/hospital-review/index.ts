@@ -178,19 +178,22 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch the hospital account
-    const { data: hospital, error: fetchError } = await supabaseAdmin
+    // Fetch the hospital account with hospital name from join
+    const { data: row, error: fetchError } = await supabaseAdmin
       .from("hospital_accounts")
-      .select("id, hospital_name, contact_email, account_status")
+      .select("id, contact_email, account_status, hospitals(name)")
       .eq("id", hospitalId)
       .single();
 
-    if (fetchError || !hospital) {
+    if (fetchError || !row) {
       return new Response(
         JSON.stringify({ success: false, error: "Hospital account not found" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
+
+    const hospitalName = (row.hospitals as { name?: string } | null)?.name ?? "Hospital";
+    const contactEmail = row.contact_email ?? "";
 
     // Update the hospital account
     const newStatus = action === "approve" ? "approved" : "rejected";
@@ -210,10 +213,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send email (non-blocking — don't fail the request if email fails)
-    if (action === "approve") {
-      await sendApprovalEmail(hospital.contact_email, hospital.hospital_name);
-    } else {
-      await sendRejectionEmail(hospital.contact_email, hospital.hospital_name, note);
+    if (contactEmail) {
+      if (action === "approve") {
+        await sendApprovalEmail(contactEmail, hospitalName);
+      } else {
+        await sendRejectionEmail(contactEmail, hospitalName, note);
+      }
     }
 
     return new Response(

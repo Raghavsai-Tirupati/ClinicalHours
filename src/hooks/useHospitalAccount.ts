@@ -4,7 +4,6 @@ import { useAuth } from './useAuth';
 
 interface HospitalAccount {
   id: string;
-  user_id: string;
   hospital_name: string;
   contact_email: string;
   contact_phone: string | null;
@@ -39,17 +38,43 @@ export function useHospitalAccount(): HospitalAccountResult {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('hospital_accounts')
-          .select('*')
+        const { data: member, error: memberError } = await supabase
+          .from('hospital_members')
+          .select('account_id')
           .eq('user_id', user.id)
+          .eq('role', 'owner')
+          .limit(1)
           .maybeSingle();
 
-        if (error) {
-          console.error('Error checking hospital account:', error);
+        if (memberError || !member) {
+          setHospitalAccount(null);
+          setIsLoading(false);
+          return;
+        }
+
+        const { data: row, error } = await supabase
+          .from('hospital_accounts')
+          .select('id, account_status, contact_email, contact_phone, description, admin_note, reviewed_at, created_at, hospitals(name, website, address)')
+          .eq('id', member.account_id)
+          .maybeSingle();
+
+        if (error || !row) {
           setHospitalAccount(null);
         } else {
-          setHospitalAccount(data as HospitalAccount | null);
+          const h = row.hospitals as { name?: string; website?: string; address?: string } | null;
+          setHospitalAccount({
+            id: row.id,
+            hospital_name: h?.name ?? '',
+            contact_email: row.contact_email ?? '',
+            contact_phone: row.contact_phone,
+            website: h?.website ?? null,
+            address: h?.address ?? null,
+            description: row.description,
+            account_status: (row.account_status as HospitalAccount['account_status']) ?? 'pending',
+            admin_note: row.admin_note,
+            reviewed_at: row.reviewed_at,
+            created_at: row.created_at,
+          });
         }
       } catch (err) {
         console.error('Error in hospital account check:', err);

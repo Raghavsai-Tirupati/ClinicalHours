@@ -79,22 +79,38 @@ export default function AdminPendingApprovalsTab({ onPendingCountChange }: Admin
         supabase
           .from('hospital_accounts')
           .select(
-            'id, hospital_name, contact_email, contact_phone, website, address, description, created_at'
+            'id, contact_email, contact_phone, description, created_at, hospitals(name, website, address)'
           )
           .eq('account_status', 'pending')
           .order('created_at', { ascending: true }),
         supabase
           .from('hospital_accounts')
-          .select('id, hospital_name, contact_email, account_status, admin_note, reviewed_at')
+          .select('id, contact_email, account_status, admin_note, reviewed_at, hospitals(name)')
           .in('account_status', ['approved', 'rejected'])
           .not('reviewed_at', 'is', null)
           .order('reviewed_at', { ascending: false })
           .limit(50),
       ]);
 
-      const newPending = (pendingData || []) as PendingHospital[];
+      const newPending = (pendingData || []).map((r: { id: string; contact_email: string | null; contact_phone: string | null; description: string | null; created_at: string; hospitals: { name?: string; website?: string; address?: string } | null }) => ({
+        id: r.id,
+        hospital_name: r.hospitals?.name ?? 'Unknown',
+        contact_email: r.contact_email ?? '',
+        contact_phone: r.contact_phone,
+        website: r.hospitals?.website ?? null,
+        address: r.hospitals?.address ?? null,
+        description: r.description,
+        created_at: r.created_at,
+      })) as PendingHospital[];
       setPending(newPending);
-      setReviewed((reviewedData || []) as ReviewedHospital[]);
+      setReviewed((reviewedData || []).map((r: { id: string; contact_email: string | null; account_status: string; admin_note: string | null; reviewed_at: string; hospitals: { name?: string } | null }) => ({
+        id: r.id,
+        hospital_name: r.hospitals?.name ?? 'Unknown',
+        contact_email: r.contact_email ?? '',
+        account_status: r.account_status,
+        admin_note: r.admin_note,
+        reviewed_at: r.reviewed_at,
+      })) as ReviewedHospital[]);
       pendingCountRef.current = newPending.length;
       onPendingCountChange?.(newPending.length);
     } catch (err) {
