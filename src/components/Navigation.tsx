@@ -1,10 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Home, MapPin, Mail, LogIn } from "lucide-react";
+import { Menu, X, Home, MapPin, Mail, LogIn, Sparkles, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import logo from "@/assets/logo.png";
 
 // Icons for dropdown menu
@@ -73,10 +80,21 @@ const Navigation = () => {
     { name: "Dashboard", path: "/dashboard" },
     { name: "Opportunities", path: "/opportunities" },
     { name: "Map", path: "/map" },
-    { name: "Contact", path: "/contact" },
     ...(hospitalMember
       ? [{ name: "Hospital Admin", path: "/hospital/admin" }]
       : []),
+  ];
+
+  const toolsLinks = [
+    { name: "Hour Tracker", path: "/hours" },
+    { name: "AI Matcher Quiz", path: "/quiz" },
+    { name: "AMCAS Generator", path: "/amcas" },
+    { name: "Competency Map", path: "/competencies" },
+    { name: "LOR Tracker", path: "/lor" },
+    { name: "Timeline Planner", path: "/timeline" },
+    { name: "Secondary Essays", path: "/secondaries" },
+    { name: "Cost Calculator", path: "/costs" },
+    { name: "School List", path: "/school-list" },
   ];
 
   // Guests see authenticated links (Dashboard, Opportunities, etc.) but with Sign Up instead of Profile
@@ -131,6 +149,28 @@ const Navigation = () => {
                     {link.name}
                   </Link>
                 ))}
+                {/* Tools dropdown for authenticated users */}
+                {(user || isGuest) && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor} outline-none`}>
+                      Tools <ChevronDown className="h-3 w-3" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {toolsLinks.map((link) => (
+                        <DropdownMenuItem key={link.path} asChild>
+                          <Link to={link.path} className="cursor-pointer">{link.name}</Link>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/premium" className="cursor-pointer flex items-center gap-1.5">
+                          <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                          <span className="text-amber-400">Premium</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                 {user && !isGuest ? (
                   <Link
                     to="/profile"
@@ -200,6 +240,29 @@ const Navigation = () => {
                   {link.name}
                 </Link>
               ))}
+              {/* Mobile tools section */}
+              {(user || isGuest) && (
+                <div className={`pt-2 border-t ${hasTransparentNav ? "border-white/10" : "border-border"}`}>
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2 ${textColor} opacity-50`}>Tools</p>
+                  {toolsLinks.map((link) => (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      onClick={() => setIsOpen(false)}
+                      className={`block text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
+                  <Link
+                    to="/premium"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 text-amber-400 font-heading"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Premium
+                  </Link>
+                </div>
+              )}
               {user && !isGuest ? (
                 <Link
                   to="/profile"

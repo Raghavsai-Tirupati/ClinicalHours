@@ -7,6 +7,7 @@ import OpportunityDialog from "@/components/OpportunityDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { localSelect, TABLES } from "@/lib/localStore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -279,7 +280,7 @@ function ReflectionBlock({ reflection }: { reflection: Reflection }) {
         </span>
         <span>&middot;</span>
         <time>
-          {new Date(reflection.date).toLocaleDateString("en-US", {
+          {new Date(reflection.date.includes("T") ? reflection.date : reflection.date + "T00:00:00").toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
             year: "numeric",
@@ -403,7 +404,6 @@ const Dashboard = () => {
         // Map experience entries with moments to reflections
         const recentReflections: Reflection[] = (entries || [])
           .filter((e) => !!e.moment)
-          .slice(0, 3)
           .map((e) => ({
             id: e.id as string,
             opportunityId: e.opportunity_id as string,
@@ -412,7 +412,34 @@ const Dashboard = () => {
             text: e.moment as string,
           }));
 
-        setReflections(recentReflections);
+        // Merge in reflections from local store (Hour Tracker)
+        const localReflections = localSelect<{
+          id: string; activity_log_id: string;
+          what_happened: string | null; what_stood_out: string | null;
+          what_learned: string | null; created_at: string;
+        }>(TABLES.REFLECTIONS);
+        const localLogs = localSelect<{
+          id: string; custom_organization_name: string | null; session_date: string; hours: number;
+        }>(TABLES.ACTIVITY_LOGS);
+        const logMap = new Map(localLogs.map((l) => [l.id, l]));
+
+        const localMapped: Reflection[] = localReflections.map((r) => {
+          const log = logMap.get(r.activity_log_id);
+          const text = [r.what_happened, r.what_stood_out, r.what_learned].filter(Boolean).join(" — ");
+          return {
+            id: `local-${r.id}`,
+            opportunityId: "",
+            orgName: log?.custom_organization_name || "Hour Tracker",
+            date: log?.session_date || r.created_at,
+            text: text || "Reflection recorded",
+          };
+        });
+
+        const allReflections = [...recentReflections, ...localMapped]
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 6);
+
+        setReflections(allReflections);
       } catch (err) {
         console.error("Dashboard fetch error:", err);
         toast({
@@ -458,7 +485,9 @@ const Dashboard = () => {
     );
   }, [opportunities, searchQuery]);
 
-  const totalHours = opportunities.reduce((s, o) => s + o.hoursLogged, 0);
+  const localTrackerLogs = localSelect<{ hours: number }>(TABLES.ACTIVITY_LOGS);
+  const localTrackerHours = localTrackerLogs.reduce((s, l) => s + (l.hours || 0), 0);
+  const totalHours = opportunities.reduce((s, o) => s + o.hoursLogged, 0) + localTrackerHours;
   const activeCount = opportunities.filter(
     (o) => o.status !== "Completed"
   ).length;

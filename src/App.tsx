@@ -33,6 +33,18 @@ const HospitalDashboardPage = lazy(() => import("./pages/HospitalDashboard"));
 const PendingApproval = lazy(() => import("./pages/PendingApproval"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// Premium feature pages
+const Premium = lazy(() => import("./pages/Premium"));
+const HourTracker = lazy(() => import("./pages/HourTracker"));
+const OpportunityQuiz = lazy(() => import("./pages/OpportunityQuiz"));
+const CompetencyMapper = lazy(() => import("./pages/CompetencyMapper"));
+const AMCASGenerator = lazy(() => import("./pages/AMCASGenerator"));
+const LORTracker = lazy(() => import("./pages/LORTracker"));
+const TimelinePlanner = lazy(() => import("./pages/TimelinePlanner"));
+const SecondaryEngine = lazy(() => import("./pages/SecondaryEngine"));
+const CostSimulator = lazy(() => import("./pages/CostSimulator"));
+const SchoolListBuilder = lazy(() => import("./pages/SchoolListBuilder"));
+
 // Loading fallback component
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -103,6 +115,17 @@ function AppContent() {
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
               <Route path="/hospital-dashboard" element={<HospitalDashboardPage />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
+              {/* Premium features */}
+              <Route path="/premium" element={<Premium />} />
+              <Route path="/hours" element={<HourTracker />} />
+              <Route path="/quiz" element={<OpportunityQuiz />} />
+              <Route path="/competencies" element={<CompetencyMapper />} />
+              <Route path="/amcas" element={<AMCASGenerator />} />
+              <Route path="/lor" element={<LORTracker />} />
+              <Route path="/timeline" element={<TimelinePlanner />} />
+              <Route path="/secondaries" element={<SecondaryEngine />} />
+              <Route path="/costs" element={<CostSimulator />} />
+              <Route path="/school-list" element={<SchoolListBuilder />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>
