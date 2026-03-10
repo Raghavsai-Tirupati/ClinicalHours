@@ -237,7 +237,7 @@ export default defineConfig(({ mode }) => {
             "query-vendor": ["@tanstack/react-query"],
             "map-vendor": ["mapbox-gl"],
             // Large components
-            map: ["./src/pages/MapView", "./src/components/OpportunityMap"],
+            map: ["./src/pages/MapView"],
           },
         },
       },
