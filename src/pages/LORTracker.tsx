@@ -92,7 +92,7 @@ const LORTrackerContent = () => {
   useEffect(() => { loadContacts(); }, []);
 
   function handleAdd() {
-    localInsert(TABLES.LOR_CONTACTS, {
+    localInsert(TABLES.LOR_CONTACTS, ({
       recommender_name: form.recommender_name,
       recommender_title: form.recommender_title || null,
       recommender_email: form.recommender_email || null,
