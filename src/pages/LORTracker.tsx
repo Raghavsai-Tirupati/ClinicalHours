@@ -104,7 +104,7 @@ const LORTrackerContent = () => {
       letter_status: form.letter_status,
       schools_assigned: [],
       notes: form.notes || null,
-    });
+    } as any);
     setShowAdd(false);
     toast({ title: "Recommender added!" });
     loadContacts();

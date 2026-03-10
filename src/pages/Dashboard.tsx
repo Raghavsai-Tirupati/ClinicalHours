@@ -485,7 +485,7 @@ const Dashboard = () => {
     );
   }, [opportunities, searchQuery]);
 
-  const localTrackerLogs = localSelect<{ hours: number }>(TABLES.ACTIVITY_LOGS);
+  const localTrackerLogs = localSelect<{ id: string; hours: number }>(TABLES.ACTIVITY_LOGS);
   const localTrackerHours = localTrackerLogs.reduce((s, l) => s + (l.hours || 0), 0);
   const totalHours = opportunities.reduce((s, o) => s + o.hoursLogged, 0) + localTrackerHours;
   const activeCount = opportunities.filter(
