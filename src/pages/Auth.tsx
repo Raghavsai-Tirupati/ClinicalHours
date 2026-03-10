@@ -7,11 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { sanitizeErrorMessage } from "@/lib/errorUtils";
 import { logAuthEvent } from "@/lib/auditLogger";
+import { trackLogin, trackSignup, trackEvent } from "@/lib/tracking";
 import { setRememberMePreference, getRememberMePreference, useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
-import { ArrowLeft, Mail, Loader2, Eye, UserCircle, Building2 } from "lucide-react";
+import { ArrowLeft, Mail, Loader2, Eye, UserCircle, Building2, Check, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import logo from "@/assets/logo.png";
 import authBackground from "@/assets/auth-background.png";
@@ -38,16 +38,27 @@ const GoogleIcon = () => (
   </svg>
 );
 
-// Password validation: letters and numbers (both required) and at least 8 characters
-const authSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }).max(255),
+const PasswordReq = ({ met, label }: { met: boolean; label: string }) => (
+  <div className={`flex items-center gap-1.5 ${met ? "text-green-500" : "text-muted-foreground"}`}>
+    {met ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+    <span>{label}</span>
+  </div>
+);
+
+const loginSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address." }).max(255),
+  password: z.string().min(1, { message: "Please enter your password." }),
+});
+
+const signupSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address." }).max(255),
   password: z.string()
-    .min(8, { message: "Use letters and numbers (both required) and at least 8 digits" })
+    .min(8, { message: "Password needs at least 8 characters with both letters and numbers." })
     .max(128)
     .refine((val) => /[a-zA-Z]/.test(val) && /[0-9]/.test(val), {
-      message: "Use letters and numbers (both required) and at least 8 digits"
+      message: "Password needs at least 8 characters with both letters and numbers."
     }),
-  fullName: z.string().trim().min(1, { message: "Full name is required" }).max(100).optional(),
+  fullName: z.string().trim().min(1, { message: "Full name is required." }).max(100).optional(),
   phone: z.string().max(20).optional().or(z.literal("")),
 });
 
@@ -75,6 +86,7 @@ const Auth = () => {
   const [hospitalDescription, setHospitalDescription] = useState("");
 
   const handleGuestMode = () => {
+    trackEvent("page_view", { action: "guest_mode_entered" });
     enterGuestMode();
     navigate("/dashboard?showTutorial=true");
   };
@@ -113,8 +125,8 @@ const Auth = () => {
         });
 
         if (data.session && !error) {
-          // Clear the hash from the URL
           window.history.replaceState(null, '', window.location.pathname);
+          trackLogin(data.session.user.id, "google");
           await redirectByAccountType(data.session.user.id);
           return;
         }
@@ -188,7 +200,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const validatedData = authSchema.parse({ email, password, fullName, phone });
+      const validatedData = signupSchema.parse({ email, password, fullName, phone });
       
       const { data, error } = await supabase.auth.signUp({
         email: validatedData.email,
@@ -203,7 +215,13 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Update phone number and email opt-in preference in profile
+      // Supabase returns a user with empty identities when the email already exists
+      // (instead of an error, for security). Detect this and give a helpful message.
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        toast.error("An account with this email already exists. Try signing in or resetting your password.");
+        return;
+      }
+
       if (data.user) {
         const profileUpdates: Record<string, unknown> = {
           email_opt_in: emailOptIn,
@@ -217,7 +235,6 @@ const Auth = () => {
           .update(profileUpdates)
           .eq("id", data.user.id);
 
-        // Create hospital account record if this is a hospital signup
         if (isHospitalSignup && hospitalName.trim()) {
           const { error: hospitalError } = await supabase
             .from("hospital_accounts")
@@ -239,33 +256,28 @@ const Auth = () => {
         }
       }
 
-      // Send verification email and redirect to check-email page
       if (data.user) {
         logAuthEvent("signup", { email: validatedData.email });
+        trackSignup(data.user.id, isHospitalSignup ? "hospital" : "email");
         
-        // Sign out immediately - user must verify email first
         await supabase.auth.signOut();
         
-        // Send verification email via our custom edge function (sends from clinicalhours.org)
         await sendVerificationEmail(
           data.user.id,
           validatedData.email,
           validatedData.fullName || "User"
         );
 
-        toast.success("Account created! Please check your email to verify your account.");
+        toast.success("Account created! Check your email to verify your account.");
         
-        // Redirect to check-email page
         navigate(`/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(validatedData.fullName || "User")}`);
       }
     } catch (error: unknown) {
+      console.error("Sign up error:", error);
+
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {
-        // Show actual error message from Supabase to help diagnose issues
-        let errorMessage = "Unable to create account. Please check your information and try again.";
-        
-        // Extract error message from various error formats
         let errorMsg = "";
         if (error instanceof Error) {
           errorMsg = error.message;
@@ -276,23 +288,20 @@ const Auth = () => {
             errorMsg = error.error;
           }
         }
-        
-        if (errorMsg) {
-          const lowerMsg = errorMsg.toLowerCase();
-          // Show only the specific password error message
-          if (lowerMsg.includes('password') || lowerMsg.includes('length') || lowerMsg.includes('character') || lowerMsg.includes('letter') || lowerMsg.includes('number') || lowerMsg.includes('digit')) {
-            errorMessage = "Use letters and numbers (both required) and at least 8 digits";
-          } else if (lowerMsg.includes('email') || lowerMsg.includes('already') || lowerMsg.includes('exists')) {
-            // Don't reveal if email exists for security (prevent email enumeration)
-            errorMessage = "Unable to create account. Please check your information and try again.";
-          } else {
-            // For other errors, show the message
-            errorMessage = errorMsg;
-          }
+
+        const lowerMsg = errorMsg.toLowerCase();
+
+        if (lowerMsg.includes('already') || lowerMsg.includes('registered') || lowerMsg.includes('exists')) {
+          toast.error("An account with this email already exists. Try signing in or resetting your password.");
+        } else if (lowerMsg.includes('password') || lowerMsg.includes('length') || lowerMsg.includes('character')) {
+          toast.error("Password needs at least 8 characters with both letters and numbers.");
+        } else if (lowerMsg.includes('rate') || lowerMsg.includes('too many')) {
+          toast.error("Too many attempts. Please wait a moment and try again.");
+        } else if (errorMsg) {
+          toast.error(errorMsg);
+        } else {
+          toast.error("Something went wrong creating your account. Please try again.");
         }
-        
-        console.error("Sign up error:", error);
-        toast.error(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -312,10 +321,8 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const validatedData = authSchema.parse({ email, password });
+      const validatedData = loginSchema.parse({ email, password });
       
-      // Save "remember me" preference BEFORE signing in
-      // This ensures the useAuth hook picks it up when exchanging tokens
       setRememberMePreference(rememberMe);
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -328,8 +335,6 @@ const Auth = () => {
         throw error;
       }
 
-      // Check if email is verified for new accounts (created after 2026-01-09)
-      // Existing accounts are grandfathered in
       if (data.user) {
         const { data: profile } = await supabase
           .from("profiles")
@@ -341,26 +346,26 @@ const Auth = () => {
         const accountCreatedAt = profile?.created_at ? new Date(profile.created_at) : new Date(0);
         const isNewAccount = accountCreatedAt >= verificationCutoffDate;
 
-        // Only require verification for NEW accounts that haven't verified
         if (isNewAccount && !profile?.email_verified) {
           await supabase.auth.signOut();
           
           const userEmail = data.user.email || email;
           const userName = data.user.user_metadata?.full_name || "User";
           
-          toast.error("Please verify your email before signing in.");
+          toast.error("Please verify your email before signing in. Check your inbox for the verification link.");
           navigate(`/check-email?email=${encodeURIComponent(userEmail)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(userName)}`);
           return;
         }
 
         logAuthEvent("login_success", { email: validatedData.email });
-        toast.success("Logged in successfully!");
+        trackLogin(data.user.id, "email");
+        toast.success("Welcome back!");
         await redirectByAccountType(data.user.id);
         return;
       }
 
       logAuthEvent("login_success", { email: validatedData.email });
-      toast.success("Logged in successfully!");
+      toast.success("Welcome back!");
       if (data.user) {
         await redirectByAccountType(data.user.id);
       } else {
@@ -370,9 +375,18 @@ const Auth = () => {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {
-        // Generic error message to prevent information disclosure and email enumeration
-        // Don't reveal if email exists or specific error details
-        toast.error("Invalid email or password. Please try again.");
+        console.error("Sign in error:", error);
+        const errorMsg = error instanceof Error ? error.message.toLowerCase() : "";
+
+        if (errorMsg.includes('invalid login credentials') || errorMsg.includes('invalid_credentials')) {
+          toast.error("Incorrect email or password. Try again or reset your password.");
+        } else if (errorMsg.includes('rate') || errorMsg.includes('too many')) {
+          toast.error("Too many login attempts. Please wait a moment and try again.");
+        } else if (errorMsg.includes('email not confirmed')) {
+          toast.error("Please verify your email before signing in. Check your inbox for the verification link.");
+        } else {
+          toast.error("Something went wrong signing in. Please try again.");
+        }
       }
     } finally {
       setLoading(false);
@@ -768,6 +782,13 @@ const Auth = () => {
                     <Eye className="h-4 w-4" />
                   </div>
                 </div>
+                {password.length > 0 && (
+                  <div className="space-y-1 text-xs">
+                    <PasswordReq met={password.length >= 8} label="At least 8 characters" />
+                    <PasswordReq met={/[a-zA-Z]/.test(password)} label="Contains a letter" />
+                    <PasswordReq met={/[0-9]/.test(password)} label="Contains a number" />
+                  </div>
+                )}
               </div>
               <div className="flex items-start space-x-3 pt-1">
                 <Checkbox

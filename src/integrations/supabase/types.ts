@@ -703,11 +703,13 @@ export type Database = {
           gpa: number | null
           graduation_year: number | null
           id: string
+          is_premium: boolean | null
           linkedin_url: string | null
           major: string | null
           onboarding_complete: boolean | null
           phone: string | null
           pre_med_track: string | null
+          premium_expires_at: string | null
           research_experience: string | null
           resume_url: string | null
           state: string | null
@@ -727,11 +729,13 @@ export type Database = {
           gpa?: number | null
           graduation_year?: number | null
           id: string
+          is_premium?: boolean | null
           linkedin_url?: string | null
           major?: string | null
           onboarding_complete?: boolean | null
           phone?: string | null
           pre_med_track?: string | null
+          premium_expires_at?: string | null
           research_experience?: string | null
           resume_url?: string | null
           state?: string | null
@@ -751,11 +755,13 @@ export type Database = {
           gpa?: number | null
           graduation_year?: number | null
           id?: string
+          is_premium?: boolean | null
           linkedin_url?: string | null
           major?: string | null
           onboarding_complete?: boolean | null
           phone?: string | null
           pre_med_track?: string | null
+          premium_expires_at?: string | null
           research_experience?: string | null
           resume_url?: string | null
           state?: string | null
@@ -981,6 +987,56 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities_with_ratings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          plan_type: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          current_period_start: string
+          current_period_end: string
+          cancel_at_period_end: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          plan_type?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          current_period_start?: string
+          current_period_end?: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          plan_type?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          current_period_start?: string
+          current_period_end?: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

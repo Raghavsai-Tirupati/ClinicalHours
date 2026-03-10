@@ -10,6 +10,7 @@ import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
+import PageViewTracker from "./components/PageViewTracker";
 import { useAppKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 // Lazy load pages for code splitting
@@ -97,6 +98,7 @@ function AppContent() {
       <BrowserRouter>
         <KeyboardShortcuts />
         <ScrollToTop />
+        <PageViewTracker />
         <OnboardingWrapper />
         <Suspense fallback={<PageLoader />}>
           <ErrorBoundary>

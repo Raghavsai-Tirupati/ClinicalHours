@@ -254,17 +254,17 @@ export function validateLinkedInURL(url: string | null | undefined): { valid: bo
  */
 export function validatePasswordStrength(password: string): { valid: boolean; error?: string } {
   if (!password || typeof password !== 'string') {
-    return { valid: false, error: "Use letters and numbers (both required) and at least 8 digits" };
+    return { valid: false, error: "Password needs at least 8 characters with both letters and numbers." };
   }
 
   // Minimum length: 8 characters
   if (password.length < 8) {
-    return { valid: false, error: "Use letters and numbers (both required) and at least 8 digits" };
+    return { valid: false, error: "Password needs at least 8 characters with both letters and numbers." };
   }
 
   // Maximum length: 128 characters
   if (password.length > 128) {
-    return { valid: false, error: "Use letters and numbers (both required) and at least 8 digits" };
+    return { valid: false, error: "Password needs at least 8 characters with both letters and numbers." };
   }
 
   // Check for letters
@@ -273,7 +273,7 @@ export function validatePasswordStrength(password: string): { valid: boolean; er
   const hasNumber = /[0-9]/.test(password);
 
   if (!hasLetter || !hasNumber) {
-    return { valid: false, error: "Use letters and numbers (both required) and at least 8 digits" };
+    return { valid: false, error: "Password needs at least 8 characters with both letters and numbers." };
   }
 
   return { valid: true };

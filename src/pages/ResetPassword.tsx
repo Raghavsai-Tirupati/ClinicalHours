@@ -31,7 +31,7 @@ const ResetPassword = () => {
 
     const passwordValidation = validatePasswordStrength(password);
     if (!passwordValidation.valid) {
-      toast.error(passwordValidation.error || "Use letters and numbers (both required) and at least 8 digits");
+      toast.error(passwordValidation.error || "Password needs at least 8 characters with both letters and numbers.");
       return;
     }
 
@@ -53,7 +53,7 @@ const ResetPassword = () => {
       const displayMessage = errMsg.includes("expired") || errMsg.includes("invalid")
         ? "This reset link is invalid or has expired. Please request a new one."
         : errMsg.includes("password") || errMsg.includes("length") || errMsg.includes("character") || errMsg.includes("letter") || errMsg.includes("number") || errMsg.includes("digit")
-        ? "Use letters and numbers (both required) and at least 8 digits"
+        ? "Password needs at least 8 characters with both letters and numbers."
         : "Failed to reset password. Please try again.";
       setErrorMessage(displayMessage);
       toast.error(displayMessage);

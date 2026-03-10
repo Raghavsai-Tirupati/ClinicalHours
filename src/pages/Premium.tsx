@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useOpportunityCount } from "@/hooks/useOpportunityCount";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Check,
   Sparkles,
@@ -151,7 +152,13 @@ const FEATURE_HIGHLIGHTS = [
 
 const Premium = () => {
   const { user } = useAuth();
-  const { isPremium, activatePremium, deactivatePremium } = usePremiumStatus();
+  const { isPremium } = usePremiumStatus();
+
+  const handleUpgradeClick = () => {
+    toast.info("Payments coming soon! We're setting up Premium checkout now.", {
+      duration: 4000,
+    });
+  };
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
   const opportunityCount = useOpportunityCount();
   const countLabel = opportunityCount > 0 ? opportunityCount.toLocaleString() + "+" : "6,000+";
@@ -164,17 +171,11 @@ const Premium = () => {
         {/* Active Premium Banner */}
         {isPremium && (
           <div className="container mx-auto px-6 pt-4">
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 flex items-center justify-between">
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 flex items-center">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-emerald-400" />
                 <span className="text-sm font-medium text-emerald-300">Premium is active — all features are unlocked.</span>
               </div>
-              <button
-                onClick={() => deactivatePremium()}
-                className="text-xs text-emerald-400/70 hover:text-emerald-400 transition-colors underline"
-              >
-                Deactivate (for testing)
-              </button>
             </div>
           </div>
         )}
@@ -266,15 +267,7 @@ const Premium = () => {
                     <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
                   </div>
 
-                  {plan.name === "Free" && isPremium ? (
-                    <Button
-                      className="w-full mb-6"
-                      variant="outline"
-                      onClick={() => deactivatePremium()}
-                    >
-                      Switch to Free
-                    </Button>
-                  ) : isCurrentPlan ? (
+                  {isCurrentPlan ? (
                     <Button className="w-full mb-6" variant="outline" disabled>
                       Current Plan
                     </Button>
@@ -282,11 +275,15 @@ const Premium = () => {
                     <Button className="w-full mb-6" variant={plan.popular ? "default" : "outline"} asChild>
                       <Link to="/auth">Sign Up First</Link>
                     </Button>
+                  ) : plan.ctaDisabled ? (
+                    <Button className="w-full mb-6" variant="outline" disabled>
+                      {plan.cta}
+                    </Button>
                   ) : (
                     <Button
                       className="w-full mb-6"
                       variant={plan.popular ? "default" : "outline"}
-                      onClick={() => activatePremium()}
+                      onClick={handleUpgradeClick}
                     >
                       {plan.cta}
                     </Button>
@@ -386,7 +383,7 @@ const Premium = () => {
             {isPremium ? (
               <p className="text-sm text-emerald-400 font-medium">You're already a Premium member. Enjoy all features!</p>
             ) : user ? (
-              <Button size="lg" className="gap-2" onClick={() => activatePremium()}>
+              <Button size="lg" className="gap-2" onClick={handleUpgradeClick}>
                 Get Started <ArrowRight className="h-4 w-4" />
               </Button>
             ) : (
