@@ -39,8 +39,15 @@ import {
   ListChecks,
   ArrowDownToLine,
   Layers,
+  Plus,
+  Pencil,
+  Trash2,
+  Rocket,
+  CalendarCheck,
+  MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface OpportunityWithApps {
   id: string;
@@ -69,6 +76,8 @@ interface Application {
 interface ApplicationWithGpa extends Application {
   gpa: number | null;
   _source?: "legacy" | "hospital";
+  interview_requested_at?: string | null;
+  interview_confirmed_at?: string | null;
 }
 
 interface AppQuestion {
@@ -127,6 +136,16 @@ export default function HospitalDashboard() {
   const [haAnswers, setHaAnswers] = useState<{ question_text: string; answer_text: string | null }[]>([]);
   const [haAnswersLoading, setHaAnswersLoading] = useState(false);
   const [haStatusUpdating, setHaStatusUpdating] = useState(false);
+  const [deployLoading, setDeployLoading] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<AppQuestion | null>(null);
+  const [editingQuestionText, setEditingQuestionText] = useState("");
+  const [newQuestionText, setNewQuestionText] = useState("");
+  const [newQuestionType, setNewQuestionType] = useState<string>("short_text");
+  const [newQuestionRequired, setNewQuestionRequired] = useState(true);
+  const [questionSaving, setQuestionSaving] = useState(false);
+  const [haInterviewLoading, setHaInterviewLoading] = useState(false);
+  const [haConfirmSlot, setHaConfirmSlot] = useState("");
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -262,7 +281,7 @@ export default function HospitalDashboard() {
 
       const { data: hospApps } = await supabase
         .from("hospital_applications")
-        .select("id, account_id, applicant_name, applicant_email, opportunity_id, status, submitted_at, student_id")
+        .select("id, account_id, applicant_name, applicant_email, opportunity_id, status, submitted_at, student_id, interview_requested_at, interview_confirmed_at")
         .eq("account_id", member.accountId)
         .order("submitted_at", { ascending: false });
 
@@ -297,6 +316,8 @@ export default function HospitalDashboard() {
             status: string;
             submitted_at: string;
             student_id: string | null;
+            interview_requested_at?: string | null;
+            interview_confirmed_at?: string | null;
           };
           haApps.push({
             id: h.id,
@@ -310,6 +331,8 @@ export default function HospitalDashboard() {
             status: (statusMap[h.status] ?? "new") as Application["status"],
             created_at: h.submitted_at,
             gpa: h.student_id ? haGpaMap[h.student_id] ?? null : null,
+            interview_requested_at: h.interview_requested_at ?? null,
+            interview_confirmed_at: h.interview_confirmed_at ?? null,
             _source: "hospital" as const,
           });
         });
@@ -329,6 +352,144 @@ export default function HospitalDashboard() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  async function handleDeploy() {
+    if (!member) return;
+    setDeployLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("deploy_hospital_opportunity", {
+        p_hospital_id: member.hospitalId,
+      });
+      if (error) throw error;
+      toast.success("Position posted. Your hospital is now visible to students.");
+      fetchData();
+    } catch (err) {
+      console.error("Deploy error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to post position");
+    } finally {
+      setDeployLoading(false);
+    }
+  }
+
+  async function handleAddQuestion() {
+    if (!member || !newQuestionText.trim()) return;
+    setQuestionSaving(true);
+    try {
+      const maxOrder = questions.length > 0 ? Math.max(...questions.map((q) => q.order_index)) : -1;
+      const { error } = await supabase.from("hospital_application_questions").insert({
+        account_id: member.accountId,
+        question_text: newQuestionText.trim(),
+        type: newQuestionType,
+        required: newQuestionRequired,
+        order_index: maxOrder + 1,
+      });
+      if (error) throw error;
+      setNewQuestionText("");
+      setNewQuestionType("short_text");
+      setNewQuestionRequired(true);
+      toast.success("Question added");
+      fetchData();
+    } catch (err) {
+      console.error("Add question error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to add question");
+    } finally {
+      setQuestionSaving(false);
+    }
+  }
+
+  async function handleUpdateQuestion(q: AppQuestion, text: string) {
+    if (!member || !text.trim()) return;
+    setQuestionSaving(true);
+    try {
+      const { error } = await supabase
+        .from("hospital_application_questions")
+        .update({ question_text: text.trim() })
+        .eq("id", q.id)
+        .eq("account_id", member.accountId);
+      if (error) throw error;
+      setEditingQuestion(null);
+      toast.success("Question updated");
+      fetchData();
+    } catch (err) {
+      console.error("Update question error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to update question");
+    } finally {
+      setQuestionSaving(false);
+    }
+  }
+
+  async function handleDeleteQuestion(q: AppQuestion) {
+    if (!member || !confirm("Delete this question?")) return;
+    setQuestionSaving(true);
+    try {
+      const { error } = await supabase
+        .from("hospital_application_questions")
+        .delete()
+        .eq("id", q.id)
+        .eq("account_id", member.accountId);
+      if (error) throw error;
+      setEditingQuestion(null);
+      toast.success("Question deleted");
+      fetchData();
+    } catch (err) {
+      console.error("Delete question error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete question");
+    } finally {
+      setQuestionSaving(false);
+    }
+  }
+
+  async function handleRequestInterviewHa(appId: string) {
+    setHaInterviewLoading(true);
+    try {
+      const { error } = await supabase.rpc("hospital_request_interview_ha", { p_application_id: appId });
+      if (error) throw error;
+      toast.success("Interview requested. Contact the applicant to schedule.");
+      setSelectedHaApp((prev) =>
+        prev && prev.id === appId ? { ...prev, interview_requested_at: new Date().toISOString() } : prev
+      );
+      setApplications((prev) =>
+        prev.map((a) =>
+          a.id === appId ? { ...a, interview_requested_at: new Date().toISOString() } : a
+        )
+      );
+    } catch (err) {
+      console.error("Request interview error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to request interview");
+    } finally {
+      setHaInterviewLoading(false);
+    }
+  }
+
+  async function handleConfirmInterviewHa(appId: string, slot: string) {
+    const dt = new Date(slot);
+    if (isNaN(dt.getTime())) {
+      toast.error("Please enter a valid date and time");
+      return;
+    }
+    setHaInterviewLoading(true);
+    try {
+      const { error } = await supabase.rpc("hospital_confirm_interview_ha", {
+        p_application_id: appId,
+        p_slot: dt.toISOString(),
+      });
+      if (error) throw error;
+      const iso = dt.toISOString();
+      toast.success("Interview confirmed");
+      setSelectedHaApp((prev) =>
+        prev && prev.id === appId ? { ...prev, interview_confirmed_at: iso } : prev
+      );
+      setApplications((prev) =>
+        prev.map((a) => (a.id === appId ? { ...a, interview_confirmed_at: iso } : a))
+      );
+      setHaConfirmSlot("");
+    } catch (err) {
+      console.error("Confirm interview error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to confirm interview");
+    } finally {
+      setHaInterviewLoading(false);
     }
   }
 
@@ -456,10 +617,14 @@ export default function HospitalDashboard() {
               {opportunities.length === 0 ? (
                 <div className="bg-card border border-border rounded-xl p-12 text-center">
                   <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-foreground font-medium mb-1">No opportunities posted</p>
-                  <p className="text-muted-foreground text-sm">
-                    Deploy your hospital as an opportunity to start receiving applications.
+                  <p className="text-foreground font-medium mb-1">No positions posted</p>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    Post your hospital as an opportunity to start receiving applications.
                   </p>
+                  <Button onClick={handleDeploy} disabled={deployLoading} className="gap-2">
+                    {deployLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                    Post Position
+                  </Button>
                 </div>
               ) : (
                 <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -525,30 +690,96 @@ export default function HospitalDashboard() {
           {/* Application Requirements */}
           {activeTab === "requirements" && (
             <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Application Requirements</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-2">Custom Application Questions</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Custom questions shown on your hospital application form (hospital_application_questions).
+                Add custom questions to your application form. Students will answer these when they apply.
               </p>
-              {questions.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-4">
-                  No custom questions configured. Questions are managed per hospital account.
-                </p>
-              ) : (
-                <ul className="space-y-3">
-                  {questions.map((q, i) => (
-                    <li key={q.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-                      <span className="text-xs text-muted-foreground font-mono">{i + 1}.</span>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{q.question_text}</p>
-                        <div className="flex gap-2 mt-1">
-                          <Badge variant="outline" className="text-[10px]">{q.type}</Badge>
-                          {q.required && <Badge variant="secondary" className="text-[10px]">Required</Badge>}
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    placeholder="Add a question (e.g. Why do you want to volunteer here?)"
+                    value={newQuestionText}
+                    onChange={(e) => setNewQuestionText(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Select value={newQuestionType} onValueChange={setNewQuestionType}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short_text">Short text</SelectItem>
+                      <SelectItem value="long_text">Long text</SelectItem>
+                      <SelectItem value="mcq">Multiple choice</SelectItem>
+                      <SelectItem value="checkbox">Checkbox</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={newQuestionRequired}
+                      onChange={(e) => setNewQuestionRequired(e.target.checked)}
+                      className="rounded"
+                    />
+                    Required
+                  </label>
+                  <Button onClick={handleAddQuestion} disabled={!newQuestionText.trim() || questionSaving} size="sm" className="gap-1.5">
+                    {questionSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    Add
+                  </Button>
+                </div>
+                {questions.length === 0 ? (
+                  <p className="text-muted-foreground text-sm py-6 border border-dashed border-border rounded-lg text-center">
+                    No custom questions yet. Add questions above.
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {questions.map((q, i) => (
+                      <li key={q.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                        <span className="text-xs text-muted-foreground font-mono shrink-0 pt-0.5">{i + 1}.</span>
+                        <div className="flex-1 min-w-0">
+                          {editingQuestion?.id === q.id ? (
+                            <div className="flex gap-2">
+                              <Input
+                                value={editingQuestionText}
+                                onChange={(e) => setEditingQuestionText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleUpdateQuestion(q, editingQuestionText);
+                                  if (e.key === "Escape") { setEditingQuestion(null); setEditingQuestionText(""); }
+                                }}
+                                onBlur={() => {
+                                  const v = editingQuestionText.trim();
+                                  if (v && v !== q.question_text) handleUpdateQuestion(q, v);
+                                  setEditingQuestion(null);
+                                  setEditingQuestionText("");
+                                }}
+                                autoFocus
+                                className="flex-1"
+                              />
+                              <Button size="sm" variant="ghost" onClick={() => { setEditingQuestion(null); setEditingQuestionText(""); }}>Cancel</Button>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-sm font-medium text-foreground">{q.question_text}</p>
+                              <div className="flex flex-wrap gap-2 mt-1 items-center">
+                                <Badge variant="outline" className="text-[10px]">{q.type}</Badge>
+                                {q.required && <Badge variant="secondary" className="text-[10px]">Required</Badge>}
+                                <div className="flex gap-1 ml-auto">
+                                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditingQuestion(q); setEditingQuestionText(q.question_text); }} aria-label="Edit">
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => handleDeleteQuestion(q)} aria-label="Delete">
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
 
@@ -770,6 +1001,48 @@ export default function HospitalDashboard() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Interview</p>
+                {selectedHaApp.interview_confirmed_at ? (
+                  <div className="flex items-center gap-2 text-sm text-foreground">
+                    <CalendarCheck className="h-4 w-4 text-green-500" />
+                    Scheduled: {format(new Date(selectedHaApp.interview_confirmed_at), "PPP 'at' p")}
+                  </div>
+                ) : selectedHaApp.interview_requested_at ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Requested {format(new Date(selectedHaApp.interview_requested_at), "PP")}. Contact applicant to agree on a time, then confirm below.</p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="datetime-local"
+                        value={haConfirmSlot}
+                        onChange={(e) => setHaConfirmSlot(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleConfirmInterviewHa(selectedHaApp.id, haConfirmSlot)}
+                        disabled={!haConfirmSlot || haInterviewLoading}
+                      >
+                        {haInterviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => handleRequestInterviewHa(selectedHaApp.id)}
+                      disabled={haInterviewLoading}
+                    >
+                      {haInterviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                      Request interview
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1.5">Request interview times from this applicant. Contact them to schedule.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

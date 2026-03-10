@@ -27,6 +27,7 @@ import { format } from 'date-fns';
 interface HospitalRow {
   id: string;
   user_id: string;
+  hospital_id: string | null;
   hospital_name: string;
   contact_email: string;
   contact_phone: string | null;
@@ -48,6 +49,16 @@ interface HospitalOpportunity {
   applicationCount: number;
 }
 
+interface ApplicantRow {
+  id: string;
+  name: string;
+  email: string;
+  opportunityName: string;
+  appliedAt: string;
+  status: string;
+  source: 'legacy' | 'hospital';
+}
+
 const PAGE_SIZE = 20;
 
 export default function AdminHospitalsTab() {
@@ -59,6 +70,7 @@ export default function AdminHospitalsTab() {
   const [selectedHospital, setSelectedHospital] = useState<HospitalRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerOpportunities, setDrawerOpportunities] = useState<HospitalOpportunity[]>([]);
+  const [drawerApplicants, setDrawerApplicants] = useState<ApplicantRow[]>([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
 
   useEffect(() => {
@@ -71,7 +83,7 @@ export default function AdminHospitalsTab() {
       let query = supabase
         .from('hospital_accounts')
         .select(
-          'id, contact_email, contact_phone, description, created_at, reviewed_at, hospitals(name, website, address)',
+          'id, hospital_id, contact_email, contact_phone, description, created_at, reviewed_at, hospitals(name, website, address)',
           { count: 'exact' }
         )
         .eq('account_status', 'approved')
@@ -102,11 +114,12 @@ export default function AdminHospitalsTab() {
       const accountToUser = new Map<string, string>();
       (owners || []).forEach((o) => accountToUser.set(o.account_id, o.user_id));
 
-      const base: { id: string; user_id: string; hospital_name: string; contact_email: string; contact_phone: string | null; website: string | null; address: string | null; description: string | null; created_at: string; reviewed_at: string | null }[] = rawData.map((r) => {
+      const base: { id: string; user_id: string; hospital_id: string | null; hospital_name: string; contact_email: string; contact_phone: string | null; website: string | null; address: string | null; description: string | null; created_at: string; reviewed_at: string | null }[] = rawData.map((r) => {
         const h = r.hospitals as { name?: string; website?: string; address?: string } | null;
         return {
           id: r.id,
           user_id: accountToUser.get(r.id) ?? '',
+          hospital_id: (r as { hospital_id?: string }).hospital_id ?? null,
           hospital_name: h?.name ?? 'Unknown',
           contact_email: r.contact_email ?? '',
           contact_phone: r.contact_phone,
@@ -120,12 +133,18 @@ export default function AdminHospitalsTab() {
 
       const enriched: HospitalRow[] = await Promise.all(
         base.map(async (h) => {
-          const { data: opps } = await supabase
-            .from('opportunities')
-            .select('id')
-            .eq('created_by', h.user_id);
+          const { data: oppsByHospital } = h.hospital_id
+            ? await supabase.from('opportunities').select('id').eq('hospital_id', h.hospital_id)
+            : { data: null };
+          const { data: oppsByUser } = h.user_id
+            ? await supabase.from('opportunities').select('id').eq('created_by', h.user_id)
+            : { data: null };
+          const oppIdsSet = new Set([
+            ...((oppsByHospital || []).map((o) => o.id)),
+            ...((oppsByUser || []).map((o) => o.id)),
+          ]);
+          const oppIds = Array.from(oppIdsSet);
 
-          const oppIds = (opps || []).map((o) => o.id);
           let applicantCount = 0;
           if (oppIds.length > 0) {
             const { count: appCount } = await supabase
@@ -134,10 +153,15 @@ export default function AdminHospitalsTab() {
               .in('opportunity_id', oppIds);
             applicantCount = appCount ?? 0;
           }
+          const { count: haCount } = await supabase
+            .from('hospital_applications')
+            .select('*', { count: 'exact', head: true })
+            .eq('account_id', h.id);
+          applicantCount += haCount ?? 0;
 
           return {
             ...h,
-            opportunityCount: opps?.length ?? 0,
+            opportunityCount: oppIds.length,
             applicantCount,
           };
         })
@@ -153,30 +177,123 @@ export default function AdminHospitalsTab() {
     }
   }
 
+  const statusLabel = (s: string) => {
+    const m: Record<string, string> = {
+      new: 'New',
+      submitted: 'New',
+      under_review: 'Under Review',
+      in_review: 'Under Review',
+      accepted: 'Accepted',
+      rejected: 'Rejected',
+    };
+    return m[s] ?? s;
+  };
+
   async function openDrawer(hospital: HospitalRow) {
     setSelectedHospital(hospital);
     setDrawerOpen(true);
     setDrawerLoading(true);
     setDrawerOpportunities([]);
+    setDrawerApplicants([]);
     try {
-      const { data: opps } = await supabase
-        .from('opportunities')
-        .select('id, name, location, type, created_at')
-        .eq('created_by', hospital.user_id)
-        .order('created_at', { ascending: false });
+      const { data: oppsByHospital } = hospital.hospital_id
+        ? await supabase
+            .from('opportunities')
+            .select('id, name, location, type, created_at')
+            .eq('hospital_id', hospital.hospital_id)
+            .order('created_at', { ascending: false })
+        : { data: null };
+      const { data: oppsByUser } = hospital.user_id
+        ? await supabase
+            .from('opportunities')
+            .select('id, name, location, type, created_at')
+            .eq('created_by', hospital.user_id)
+            .order('created_at', { ascending: false })
+        : { data: null };
+      const seen = new Set<string>();
+      const oppsList: { id: string; name: string; location: string; type: string; created_at: string }[] = [];
+      for (const o of oppsByHospital || []) {
+        if (!seen.has(o.id)) {
+          seen.add(o.id);
+          oppsList.push(o);
+        }
+      }
+      for (const o of oppsByUser || []) {
+        if (!seen.has(o.id)) {
+          seen.add(o.id);
+          oppsList.push(o);
+        }
+      }
+      oppsList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       const enrichedOpps: HospitalOpportunity[] = await Promise.all(
-        (opps || []).map(async (o) => {
-          const { count } = await supabase
+        oppsList.map(async (o) => {
+          const { count: appCount } = await supabase
             .from('applications')
             .select('*', { count: 'exact', head: true })
             .eq('opportunity_id', o.id);
-          return { ...o, type: o.type || 'hospital', applicationCount: count ?? 0 };
+          const { count: haCount } = await supabase
+            .from('hospital_applications')
+            .select('*', { count: 'exact', head: true })
+            .eq('account_id', hospital.id)
+            .eq('opportunity_id', o.id);
+          return {
+            ...o,
+            type: o.type || 'hospital',
+            applicationCount: (appCount ?? 0) + (haCount ?? 0),
+          };
         })
       );
       setDrawerOpportunities(enrichedOpps);
+
+      const oppIdToName = new Map(oppsList.map((o) => [o.id, o.name]));
+      const applicants: ApplicantRow[] = [];
+
+      if (oppsList.length > 0) {
+        const oppIds = oppsList.map((o) => o.id);
+        const { data: legacyApps } = await supabase
+          .from('applications')
+          .select('id, student_name, student_email, opportunity_id, created_at, status')
+          .in('opportunity_id', oppIds)
+          .order('created_at', { ascending: false });
+        (legacyApps || []).forEach((a) => {
+          applicants.push({
+            id: a.id,
+            name: a.student_name,
+            email: a.student_email ?? '',
+            opportunityName: oppIdToName.get(a.opportunity_id) ?? '—',
+            appliedAt: a.created_at,
+            status: statusLabel(a.status ?? 'new'),
+            source: 'legacy',
+          });
+        });
+      }
+
+      const { data: haApps } = await supabase
+        .from('hospital_applications')
+        .select('id, applicant_name, applicant_email, opportunity_id, submitted_at, status')
+        .eq('account_id', hospital.id)
+        .order('submitted_at', { ascending: false });
+      (haApps || []).forEach((ha) => {
+        applicants.push({
+          id: ha.id,
+          name: ha.applicant_name ?? '—',
+          email: ha.applicant_email ?? '',
+          opportunityName: ha.opportunity_id
+            ? oppIdToName.get(ha.opportunity_id) ?? '—'
+            : 'Direct application',
+          appliedAt: ha.submitted_at,
+          status: statusLabel(ha.status ?? 'submitted'),
+          source: 'hospital',
+        });
+      });
+
+      applicants.sort(
+        (a, b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()
+      );
+      setDrawerApplicants(applicants);
     } catch (err) {
-      console.error('Error fetching hospital opportunities:', err);
+      console.error('Error fetching hospital details:', err);
     } finally {
       setDrawerLoading(false);
     }
@@ -344,7 +461,7 @@ export default function AdminHospitalsTab() {
 
       {/* Detail Drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
           {selectedHospital && (
             <>
               <SheetHeader className="mb-6">
@@ -406,7 +523,7 @@ export default function AdminHospitalsTab() {
               </div>
 
               {/* Opportunities list */}
-              <div>
+              <div className="mb-6">
                 <h3 className="text-sm font-semibold mb-3">Posted Opportunities</h3>
                 {drawerLoading ? (
                   <div className="flex justify-center py-8">
@@ -444,6 +561,69 @@ export default function AdminHospitalsTab() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Applicants list */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Applicants ({drawerApplicants.length})
+                </h3>
+                {drawerLoading ? (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : drawerApplicants.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No applicants yet
+                  </p>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Opportunity</TableHead>
+                          <TableHead>Applied</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {drawerApplicants.slice(0, 50).map((a) => (
+                          <TableRow key={`${a.source}-${a.id}`}>
+                            <TableCell className="font-medium">{a.name}</TableCell>
+                            <TableCell>
+                              <a
+                                href={`mailto:${a.email}`}
+                                className="text-primary hover:underline flex items-center gap-1"
+                              >
+                                <Mail className="h-3 w-3" />
+                                {a.email}
+                              </a>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground max-w-[120px] truncate" title={a.opportunityName}>
+                              {a.opportunityName}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                              {format(new Date(a.appliedAt), 'MMM d, yyyy')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {a.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {drawerApplicants.length > 50 && (
+                      <p className="text-xs text-muted-foreground text-center py-2 border-t">
+                        Showing first 50 of {drawerApplicants.length} applicants
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

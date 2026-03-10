@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useHospitalAccount } from "@/hooks/useHospitalAccount";
+import { useHospitalMember } from "@/hooks/useHospitalMember";
 import { supabase } from "@/integrations/supabase/client";
 import CinematicLayout from "@/components/layout/CinematicLayout";
 import { Button } from "@/components/ui/button";
@@ -12,7 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { UserProfileBadge } from "@/components/UserProfileBadge";
 import { REQUIRED_FIELDS } from "@/hooks/useProfileComplete";
 import { toast } from "sonner";
-import { Upload, Loader2, ExternalLink, CheckCircle2, AlertCircle, Mail, Cloud, CloudOff, Check, LogOut, Bell } from "lucide-react";
+import { Upload, Loader2, ExternalLink, CheckCircle2, AlertCircle, Mail, Cloud, CloudOff, Check, LogOut, Bell, Building2, Globe, Phone, MapPin } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { logger } from "@/lib/logger";
 import { sanitizeErrorMessage } from "@/lib/errorUtils";
@@ -36,6 +38,8 @@ import { getGraduationYears } from "@/lib/data/graduationYears";
 const Profile = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, isReady, signOut, isGuest } = useAuth();
+  const { isHospital, hospitalAccount, isLoading: hospitalLoading } = useHospitalAccount();
+  const { member: hospitalMember, loading: memberLoading } = useHospitalMember();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [resumeSignedUrl, setResumeSignedUrl] = useState<string | null>(null);
@@ -371,11 +375,149 @@ const Profile = () => {
     <span className="text-destructive ml-1">*</span>
   );
 
-  if (authLoading || !isReady) {
+  if (authLoading || !isReady || (user && (hospitalLoading || memberLoading))) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  // Hospital profile view - hospital info only (for any hospital user: owner, admin, viewer)
+  const isHospitalUser = !!hospitalMember;
+  if (isHospitalUser && hospitalMember) {
+    const statusLabels: Record<string, string> = {
+      approved: "Approved",
+      pending: "Pending Approval",
+      rejected: "Rejected",
+    };
+    const statusColors: Record<string, string> = {
+      approved: "bg-green-500/15 text-green-600 border-green-500/30",
+      pending: "bg-amber-500/15 text-amber-600 border-amber-500/30",
+      rejected: "bg-red-500/15 text-red-600 border-red-500/30",
+    };
+    const roleLabels: Record<string, string> = {
+      owner: "Owner",
+      admin: "Admin",
+      viewer: "Viewer",
+    };
+    return (
+      <CinematicLayout title="Hospital Profile" subtitle="Your hospital account information">
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Hospital Info Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Hospital Information
+              </CardTitle>
+              <CardDescription>
+                {hospitalAccount
+                  ? "Details for your hospital account"
+                  : `You have access to this hospital as ${roleLabels[hospitalMember.role] ?? hospitalMember.role}`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {hospitalAccount && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Account Status</span>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full border ${statusColors[hospitalAccount.account_status] ?? "bg-muted text-muted-foreground"}`}>
+                      {statusLabels[hospitalAccount.account_status] ?? hospitalAccount.account_status}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground">Hospital Name</Label>
+                    <p className="font-medium">{hospitalAccount.hospital_name || hospitalMember.hospitalName || "—"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Contact Email
+                    </Label>
+                    <p>{hospitalAccount.contact_email || "—"}</p>
+                  </div>
+                  {hospitalAccount.contact_phone && (
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        Contact Phone
+                      </Label>
+                      <p>{hospitalAccount.contact_phone}</p>
+                    </div>
+                  )}
+                  {hospitalAccount.website && (
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        Website
+                      </Label>
+                      <a
+                        href={hospitalAccount.website.startsWith("http") ? hospitalAccount.website : `https://${hospitalAccount.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline flex items-center gap-1"
+                      >
+                        {hospitalAccount.website}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
+                  {hospitalAccount.address && (
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Address
+                      </Label>
+                      <p>{hospitalAccount.address}</p>
+                    </div>
+                  )}
+                  {hospitalAccount.description && (
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Description</Label>
+                      <p className="text-sm">{hospitalAccount.description}</p>
+                    </div>
+                  )}
+                </>
+              )}
+              {!hospitalAccount && (
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Hospital Name</Label>
+                  <p className="font-medium">{hospitalMember.hospitalName || "—"}</p>
+                </div>
+              )}
+              <div className="pt-4">
+                <Button variant="outline" asChild>
+                  <Link to="/hospital-dashboard">Go to Hospital Dashboard</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Logout Section */}
+          <Card className="border-destructive/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-medium text-destructive">Sign Out</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Sign out of your account on this device
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleSignOut}
+                  className="w-full sm:w-auto"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log Out
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </CinematicLayout>
     );
   }
 
