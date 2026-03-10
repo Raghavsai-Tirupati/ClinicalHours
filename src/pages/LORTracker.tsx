@@ -92,7 +92,7 @@ const LORTrackerContent = () => {
   useEffect(() => { loadContacts(); }, []);
 
   function handleAdd() {
-    localInsert(TABLES.LOR_CONTACTS, ({
+    localInsert(TABLES.LOR_CONTACTS, {
       recommender_name: form.recommender_name,
       recommender_title: form.recommender_title || null,
       recommender_email: form.recommender_email || null,
@@ -104,7 +104,7 @@ const LORTrackerContent = () => {
       letter_status: form.letter_status,
       schools_assigned: [],
       notes: form.notes || null,
-    });
+    } as any);
     setShowAdd(false);
     toast({ title: "Recommender added!" });
     loadContacts();
