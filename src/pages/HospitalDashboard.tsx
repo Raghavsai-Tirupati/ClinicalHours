@@ -10,6 +10,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Building2,
   MapPin,
   Users,
@@ -23,6 +37,8 @@ import {
   ChevronUp,
   Settings,
   ListChecks,
+  ArrowDownToLine,
+  Layers,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -52,6 +68,7 @@ interface Application {
 
 interface ApplicationWithGpa extends Application {
   gpa: number | null;
+  _source?: "legacy" | "hospital";
 }
 
 interface AppQuestion {
@@ -80,6 +97,13 @@ const STATUS_COLORS: Record<Application["status"], string> = {
   rejected: "bg-red-500/15 text-red-400 border-red-500/30",
 };
 
+const SORT_LABELS: Record<SortKey, string> = {
+  student_name: "Name",
+  created_at: "Date Applied",
+  status: "Status",
+  gpa: "GPA",
+};
+
 type Tab = "overview" | "requirements" | "applications";
 
 export default function HospitalDashboard() {
@@ -99,6 +123,11 @@ export default function HospitalDashboard() {
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
+  const [selectedHaApp, setSelectedHaApp] = useState<ApplicationWithGpa | null>(null);
+  const [haAnswers, setHaAnswers] = useState<{ question_text: string; answer_text: string | null }[]>([]);
+  const [haAnswersLoading, setHaAnswersLoading] = useState(false);
+  const [haStatusUpdating, setHaStatusUpdating] = useState(false);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/auth");
@@ -115,6 +144,35 @@ export default function HospitalDashboard() {
       fetchData();
     }
   }, [user, member]);
+
+  useEffect(() => {
+    if (!selectedHaApp || selectedHaApp._source !== "hospital") {
+      setHaAnswers([]);
+      return;
+    }
+    setHaAnswersLoading(true);
+    supabase
+      .from("hospital_application_answers")
+      .select(`
+        answer_text,
+        hospital_application_questions(question_text)
+      `)
+      .eq("application_id", selectedHaApp.id)
+      .then(({ data, error }) => {
+        setHaAnswersLoading(false);
+        if (error || !data) {
+          setHaAnswers([]);
+          return;
+        }
+        const list = (data as { answer_text: string | null; hospital_application_questions: { question_text: string } | null }[]).map(
+          (r) => ({
+            question_text: r.hospital_application_questions?.question_text ?? "Question",
+            answer_text: r.answer_text,
+          })
+        );
+        setHaAnswers(list);
+      });
+  }, [selectedHaApp?.id, selectedHaApp?._source]);
 
   async function fetchData(showRefresh = false) {
     if (showRefresh) setRefreshing(true);
@@ -142,6 +200,16 @@ export default function HospitalDashboard() {
           appCounts[app.opportunity_id].total++;
           if (app.status === "new") appCounts[app.opportunity_id].new++;
         });
+        const { data: haCounts } = await supabase
+          .from("hospital_applications")
+          .select("opportunity_id, status")
+          .eq("account_id", member.accountId)
+          .not("opportunity_id", "is", null);
+        (haCounts || []).forEach((ha: { opportunity_id: string; status: string }) => {
+          if (!appCounts[ha.opportunity_id]) appCounts[ha.opportunity_id] = { total: 0, new: 0 };
+          appCounts[ha.opportunity_id].total++;
+          if (ha.status === "submitted") appCounts[ha.opportunity_id].new++;
+        });
 
         setOpportunities(
           opps.map((opp) => ({
@@ -156,11 +224,15 @@ export default function HospitalDashboard() {
         setOpportunities([]);
       }
 
+      const legacyApps: ApplicationWithGpa[] = [];
+      const haApps: ApplicationWithGpa[] = [];
+
       if (opps && opps.length > 0) {
+        const oppIds = opps.map((o) => o.id);
         const { data: allApps } = await supabase
           .from("applications")
           .select("*")
-          .in("opportunity_id", opps.map((o) => o.id))
+          .in("opportunity_id", oppIds)
           .order("created_at", { ascending: false });
 
         const appsList = (allApps || []) as Application[];
@@ -179,15 +251,71 @@ export default function HospitalDashboard() {
           }
         }
 
-        setApplications(
-          appsList.map((a) => ({
+        appsList.forEach((a) => {
+          legacyApps.push({
             ...a,
             gpa: a.student_id ? gpaMap[a.student_id] ?? null : null,
-          }))
-        );
-      } else {
-        setApplications([]);
+            _source: "legacy" as const,
+          });
+        });
       }
+
+      const { data: hospApps } = await supabase
+        .from("hospital_applications")
+        .select("id, account_id, applicant_name, applicant_email, opportunity_id, status, submitted_at, student_id")
+        .eq("account_id", member.accountId)
+        .order("submitted_at", { ascending: false });
+
+      if (hospApps && hospApps.length > 0) {
+        const haStudentIds = [...new Set((hospApps as { student_id: string | null }[]).map((a) => a.student_id).filter(Boolean))] as string[];
+        let haGpaMap: Record<string, number | null> = {};
+        if (haStudentIds.length > 0) {
+          const { data: haProfiles } = await supabase
+            .from("profiles")
+            .select("id, gpa")
+            .in("id", haStudentIds);
+          if (haProfiles) {
+            (haProfiles as { id: string; gpa: number | null }[]).forEach((p) => {
+              haGpaMap[p.id] = p.gpa ?? null;
+            });
+          }
+        }
+
+        const statusMap: Record<string, Application["status"]> = {
+          submitted: "new",
+          in_review: "under_review",
+          accepted: "accepted",
+          rejected: "rejected",
+        };
+
+        hospApps.forEach((ha) => {
+          const h = ha as {
+            id: string;
+            applicant_name: string | null;
+            applicant_email: string | null;
+            opportunity_id: string | null;
+            status: string;
+            submitted_at: string;
+            student_id: string | null;
+          };
+          haApps.push({
+            id: h.id,
+            opportunity_id: h.opportunity_id ?? "",
+            student_name: h.applicant_name ?? "—",
+            student_email: h.applicant_email ?? "—",
+            student_phone: null,
+            student_id: h.student_id,
+            resume_url: "",
+            essay_responses: null,
+            status: (statusMap[h.status] ?? "new") as Application["status"],
+            created_at: h.submitted_at,
+            gpa: h.student_id ? haGpaMap[h.student_id] ?? null : null,
+            _source: "hospital" as const,
+          });
+        });
+      }
+
+      setApplications([...legacyApps, ...haApps]);
 
       const { data: qs } = await supabase
         .from("hospital_application_questions")
@@ -231,14 +359,6 @@ export default function HospitalDashboard() {
     });
     return list;
   }, [applications, statusFilter, search, sortKey, sortDir]);
-
-  function handleSort(key: SortKey) {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir(key === "gpa" ? "desc" : "asc");
-    }
-  }
 
   const newCount = applications.filter((a) => a.status === "new").length;
   const totalApplications = opportunities.reduce((sum, o) => sum + o.application_count, 0);
@@ -436,36 +556,80 @@ export default function HospitalDashboard() {
           {activeTab === "applications" && (
             <>
               <div className="bg-card border border-border rounded-xl p-4 mb-4">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name or email..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9"
-                    />
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between flex-wrap">
+                    <div className="flex flex-col sm:flex-row gap-3 flex-1 flex-wrap">
+                      <div className="relative flex-1 min-w-[200px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search by name or email..."
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1 flex-wrap">
+                        {(["all", "new", "under_review", "accepted", "rejected"] as StatusFilter[]).map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => setStatusFilter(s)}
+                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                              statusFilter === s ? "bg-card text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {s === "all" ? "All" : STATUS_LABELS[s as Application["status"]]}
+                            {s === "new" && newCount > 0 && (
+                              <span className="ml-1.5 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{newCount}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">Sort by</span>
+                        <Select
+                          value={sortKey}
+                          onValueChange={(v) => {
+                            const k = v as SortKey;
+                            setSortKey(k);
+                            setSortDir(k === "gpa" ? "desc" : "asc");
+                          }}
+                        >
+                          <SelectTrigger className="w-[140px] h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+                              <SelectItem key={k} value={k} className="text-xs">
+                                {SORT_LABELS[k]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <button
+                          onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-md border border-border bg-muted/30 hover:bg-muted/50 text-xs text-muted-foreground hover:text-foreground"
+                          title={sortDir === "asc" ? "Ascending (click for descending)" : "Descending (click for ascending)"}
+                        >
+                          {sortDir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                          {sortDir === "asc" ? "A→Z" : "Z→A"}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 border-l border-border pl-3">
+                      <Button size="sm" variant="outline" className="h-8 text-xs" disabled title="Coming soon">
+                        <Layers className="h-3 w-3 mr-1" />
+                        Bulk actions
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 text-xs" disabled title="Coming soon">
+                        <ArrowDownToLine className="h-3 w-3 mr-1" />
+                        Export
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1 flex-wrap">
-                    {(["all", "new", "under_review", "accepted", "rejected"] as StatusFilter[]).map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setStatusFilter(s)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                          statusFilter === s ? "bg-card text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {s === "all" ? "All" : STATUS_LABELS[s as Application["status"]]}
-                        {s === "new" && newCount > 0 && (
-                          <span className="ml-1.5 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{newCount}</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Sorted by {SORT_LABELS[sortKey]} {sortDir === "asc" ? "↑" : "↓"} · Showing {filtered.length} of {applications.length} applications
+                  </p>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Showing {filtered.length} of {applications.length} applications
-                </p>
               </div>
 
               {filtered.length === 0 ? (
@@ -482,27 +646,12 @@ export default function HospitalDashboard() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border bg-muted/20">
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">
-                            <button className="flex items-center hover:text-foreground" onClick={() => handleSort("student_name")}>
-                              Student <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
-                            </button>
-                          </th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Applicant</th>
                           <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden sm:table-cell">Email</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">
-                            <button className="flex items-center hover:text-foreground" onClick={() => handleSort("gpa")}>
-                              GPA {sortKey === "gpa" && (sortDir === "asc" ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />)}
-                            </button>
-                          </th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden md:table-cell">
-                            <button className="flex items-center hover:text-foreground" onClick={() => handleSort("created_at")}>
-                              Date Applied <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
-                            </button>
-                          </th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">
-                            <button className="flex items-center hover:text-foreground" onClick={() => handleSort("status")}>
-                              Status <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
-                            </button>
-                          </th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden lg:table-cell">Opportunity</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">GPA</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden md:table-cell">Date Applied</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Status</th>
                           <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Actions</th>
                         </tr>
                       </thead>
@@ -514,6 +663,9 @@ export default function HospitalDashboard() {
                               <p className="text-xs text-muted-foreground sm:hidden">{app.student_email}</p>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{app.student_email}</td>
+                            <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                              {opportunities.find((o) => o.id === app.opportunity_id)?.name ?? "—"}
+                            </td>
                             <td className="px-4 py-3">
                               {app.gpa != null ? app.gpa.toFixed(2) : <span className="text-muted-foreground">—</span>}
                             </td>
@@ -524,7 +676,16 @@ export default function HospitalDashboard() {
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
-                              {(() => {
+                              {app._source === "hospital" ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs h-7"
+                                  onClick={() => setSelectedHaApp(app)}
+                                >
+                                  View
+                                </Button>
+                              ) : (() => {
                                 const slug = opportunities.find((o) => o.id === app.opportunity_id)?.slug;
                                 return slug ? (
                                   <Link to={`/opportunities/${slug}/admin`}>
@@ -546,6 +707,75 @@ export default function HospitalDashboard() {
           )}
         </div>
       </main>
+
+      <Sheet open={!!selectedHaApp} onOpenChange={(open) => !open && setSelectedHaApp(null)}>
+        <SheetContent className="overflow-y-auto sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>Application Details</SheetTitle>
+            <SheetDescription>
+              {selectedHaApp && opportunities.find((o) => o.id === selectedHaApp.opportunity_id)?.name}
+            </SheetDescription>
+          </SheetHeader>
+          {selectedHaApp && (
+            <div className="mt-6 space-y-6">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Applicant</p>
+                <p className="font-medium">{selectedHaApp.student_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedHaApp.student_email}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Applied {format(new Date(selectedHaApp.created_at), "MMM d, yyyy")}
+                </p>
+              </div>
+              {haAnswersLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              ) : haAnswers.length > 0 ? (
+                <div className="space-y-4">
+                  <p className="text-sm font-medium text-muted-foreground">Answers</p>
+                  {haAnswers.map((a, i) => (
+                    <div key={i}>
+                      <p className="text-xs text-muted-foreground mb-1">{a.question_text}</p>
+                      <p className="text-sm">{a.answer_text ?? "—"}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Status</p>
+                <Select
+                  value={selectedHaApp.status}
+                  onValueChange={async (v) => {
+                    const newStatus = v as Application["status"];
+                    const dbStatus = { new: "submitted", under_review: "in_review", accepted: "accepted", rejected: "rejected" }[newStatus];
+                    setHaStatusUpdating(true);
+                    const { error } = await supabase
+                      .from("hospital_applications")
+                      .update({ status: dbStatus })
+                      .eq("id", selectedHaApp.id);
+                    setHaStatusUpdating(false);
+                    if (!error) {
+                      setSelectedHaApp((prev) => prev ? { ...prev, status: newStatus } : null);
+                      setApplications((prev) =>
+                        prev.map((a) => (a.id === selectedHaApp.id ? { ...a, status: newStatus } : a))
+                      );
+                    }
+                  }}
+                  disabled={haStatusUpdating}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(STATUS_LABELS) as Application["status"][]).map((s) => (
+                      <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
       <Footer />
     </>
   );

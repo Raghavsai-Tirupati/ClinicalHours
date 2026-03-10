@@ -29,6 +29,8 @@ const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const ApplicationForm = lazy(() => import("./pages/ApplicationForm"));
 const HospitalAdmin = lazy(() => import("./pages/HospitalAdmin"));
 const HospitalDashboardPage = lazy(() => import("./pages/HospitalDashboard"));
+const MyApplications = lazy(() => import("./pages/MyApplications"));
+const HospitalApplyPage = lazy(() => import("./pages/HospitalApplyPage"));
 const PendingApproval = lazy(() => import("./pages/PendingApproval"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -90,6 +92,7 @@ function AppContent() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/my-applications" element={<MyApplications />} />
               <Route path="/map" element={<MapView />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
@@ -99,6 +102,7 @@ function AppContent() {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/opportunities/:slug/application" element={<ApplicationForm />} />
+              <Route path="/opportunities/:slug/apply" element={<HospitalApplyPage />} />
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
               <Route path="/hospital-dashboard" element={<HospitalDashboardPage />} />
               <Route path="/hospital/admin" element={<HospitalDashboardPage />} />

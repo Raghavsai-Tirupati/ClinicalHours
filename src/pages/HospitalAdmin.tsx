@@ -17,6 +17,9 @@ import {
   RefreshCw,
   Building2,
   MapPin,
+  Calendar,
+  CalendarCheck,
+  Mail,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -36,6 +39,15 @@ interface Application {
   essay_responses: { question1: string; question2: string } | null;
   status: "new" | "under_review" | "accepted" | "rejected";
   created_at: string;
+  interview_requested_at?: string | null;
+  interview_confirmed_at?: string | null;
+}
+
+interface InterviewSlot {
+  id: string;
+  slot_start: string;
+  slot_end: string;
+  preference_rank: number;
 }
 
 type StatusFilter = "all" | Application["status"];
@@ -82,6 +94,8 @@ export default function HospitalAdmin() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState<Application["status"]>("new");
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [interviewSlots, setInterviewSlots] = useState<InterviewSlot[]>([]);
+  const [interviewLoading, setInterviewLoading] = useState(false);
 
   async function fetchData(showRefreshSpinner = false) {
     if (showRefreshSpinner) setRefreshing(true);
@@ -158,6 +172,51 @@ export default function HospitalAdmin() {
     setSelectedApp(app);
     setNewStatus(app.status);
     setSaveSuccess(false);
+    if (app.interview_requested_at) {
+      fetchInterviewSlots(app.id);
+    } else {
+      setInterviewSlots([]);
+    }
+  }
+
+  async function fetchInterviewSlots(applicationId: string) {
+    const { data } = await supabase
+      .from("application_interview_slots")
+      .select("*")
+      .eq("application_id", applicationId)
+      .order("preference_rank");
+    setInterviewSlots((data as InterviewSlot[]) || []);
+  }
+
+  async function requestInterview() {
+    if (!selectedApp) return;
+    setInterviewLoading(true);
+    const { error } = await supabase.rpc("hospital_request_interview", {
+      p_application_id: selectedApp.id,
+    });
+    if (!error) {
+      setSelectedApp((prev) =>
+        prev ? { ...prev, interview_requested_at: new Date().toISOString() } : null
+      );
+      fetchData();
+    }
+    setInterviewLoading(false);
+  }
+
+  async function confirmInterview(slotStart: string) {
+    if (!selectedApp) return;
+    setInterviewLoading(true);
+    const { error } = await supabase.rpc("hospital_confirm_interview", {
+      p_application_id: selectedApp.id,
+      p_confirmed_at: slotStart,
+    });
+    if (!error) {
+      setSelectedApp((prev) =>
+        prev ? { ...prev, interview_confirmed_at: slotStart } : null
+      );
+      fetchData();
+    }
+    setInterviewLoading(false);
   }
 
   async function saveStatus() {
@@ -355,6 +414,87 @@ export default function HospitalAdmin() {
                   </Button>
                   {saveSuccess && (
                     <p className="text-xs text-green-400 text-center">Status updated successfully!</p>
+                  )}
+                </div>
+              </section>
+
+              {/* Interview Scheduling */}
+              <section>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  Interview Scheduling
+                </h3>
+                <div className="bg-muted/30 rounded-xl p-4 space-y-3">
+                  {selectedApp.interview_confirmed_at ? (
+                    <div>
+                      <p className="text-sm text-green-500 flex items-center gap-2">
+                        <CalendarCheck className="h-4 w-4" />
+                        Interview scheduled: {format(new Date(selectedApp.interview_confirmed_at), "PPP 'at' p")}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        disabled
+                        title="Email integration coming soon"
+                      >
+                        <Mail className="h-4 w-4 mr-1" />
+                        Send confirmation email
+                      </Button>
+                    </div>
+                  ) : selectedApp.interview_requested_at ? (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Student&apos;s preferred times:
+                      </p>
+                      {interviewSlots.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No times submitted yet. The student can submit availability from My Applications when logged in.
+                        </p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {interviewSlots.map((s) => (
+                            <li
+                              key={s.id}
+                              className="flex items-center justify-between py-2 px-3 bg-card rounded-lg border border-border text-sm"
+                            >
+                              <span>
+                                {format(new Date(s.slot_start), "EEE, MMM d, h:mm a")} —{" "}
+                                {format(new Date(s.slot_end), "h:mm a")}
+                              </span>
+                              <Button
+                                size="sm"
+                                onClick={() => confirmInterview(s.slot_start)}
+                                disabled={interviewLoading}
+                              >
+                                {interviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Request interview times from this applicant. They can then submit their availability.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={requestInterview}
+                        disabled={
+                          interviewLoading ||
+                          (selectedApp.status !== "under_review" && selectedApp.status !== "accepted")
+                        }
+                      >
+                        {interviewLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Calendar className="h-4 w-4 mr-2" />
+                        )}
+                        Request interview times
+                      </Button>
+                    </div>
                   )}
                 </div>
               </section>

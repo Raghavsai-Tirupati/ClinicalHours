@@ -818,11 +818,7 @@ const Opportunities = () => {
                             <Button
                               variant="default"
                               size="sm"
-                              onClick={() =>
-                                navigate(
-                                  `/hospital/apply/${hospitalAccountMap.get(opportunity.hospital_id!)}`,
-                                )
-                              }
+                              onClick={() => navigate(`/opportunities/${opportunity.slug}/apply`)}
                               className="gap-1.5"
                             >
                               <ExternalLink className="h-4 w-4" />

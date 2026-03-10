@@ -49,7 +49,7 @@ const OpportunityDetail = () => {
   const [saving, setSaving] = useState(false);
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   const [guestGateOpen, setGuestGateOpen] = useState(false);
-  // If a hospital account is linked to this opportunity, store its id for Direct Apply
+  // If a hospital account is linked to this opportunity, store its id for Apply
   const [directApplyAccountId, setDirectApplyAccountId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -386,21 +386,21 @@ const OpportunityDetail = () => {
                 </Button>
               )}
 
-              {/* Direct Apply: shown when a hospital admin has set up this hospital */}
+              {/* Apply: shown when a hospital admin has set up this hospital */}
               {directApplyAccountId ? (
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => navigate(`/hospital/apply/${directApplyAccountId}`)}
+                  onClick={() => navigate(`/opportunities/${slug}/apply`)}
                   className="gap-1.5"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  Direct Apply
+                  Apply
                 </Button>
               ) : opportunity?.hospital_id ? (
                 <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-50">
                   <ExternalLink className="h-4 w-4" />
-                  Direct Apply (not enabled)
+                  Apply (not enabled)
                 </Button>
               ) : null}
 
