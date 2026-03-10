@@ -236,20 +236,55 @@ const Auth = () => {
           .eq("id", data.user.id);
 
         if (isHospitalSignup && hospitalName.trim()) {
-          const { error: hospitalError } = await supabase
-            .from("hospital_accounts")
-            .insert({
-              user_id: data.user.id,
-              hospital_name: hospitalName.trim(),
-              contact_email: validatedData.email,
-              contact_phone: validatedData.phone || null,
-              website: hospitalWebsite.trim() || null,
-              address: hospitalAddress.trim() || null,
-              description: hospitalDescription.trim() || null,
-              account_status: "pending",
-            });
+          try {
+            // 1) Create the hospital record
+            const { data: hospital, error: hospitalInsertError } = await supabase
+              .from("hospitals")
+              .insert({
+                name: hospitalName.trim(),
+                address: hospitalAddress.trim() || null,
+                website: hospitalWebsite.trim() || null,
+              })
+              .select("id")
+              .single();
 
-          if (hospitalError) {
+            if (hospitalInsertError || !hospital) {
+              console.error("Hospital insert failed:", hospitalInsertError);
+              toast.error("Account created but hospital profile failed to save. Please contact support@clinicalhours.org.");
+              return;
+            }
+
+            // 2) Create the hospital account linked to the hospital
+            const { data: account, error: accountError } = await supabase
+              .from("hospital_accounts")
+              .insert({
+                hospital_id: hospital.id,
+              })
+              .select("id")
+              .single();
+
+            if (accountError || !account) {
+              console.error("Hospital account insert failed:", accountError);
+              toast.error("Account created but hospital profile failed to save. Please contact support@clinicalhours.org.");
+              return;
+            }
+
+            // 3) Add the user as the owner of this hospital account
+            const { error: memberError } = await supabase
+              .from("hospital_members")
+              .insert({
+                account_id: account.id,
+                user_id: data.user.id,
+                role: "owner",
+              });
+
+            if (memberError) {
+              console.error("Hospital member insert failed:", memberError);
+              toast.error("Account created but hospital profile failed to save. Please contact support@clinicalhours.org.");
+              return;
+            }
+          } catch (hospitalFlowError) {
+            console.error("Hospital signup flow failed:", hospitalFlowError);
             toast.error("Account created but hospital profile failed to save. Please contact support@clinicalhours.org.");
             return;
           }
