@@ -25,12 +25,7 @@ export function OnboardingFlow({ open, onComplete, onSkip }: OnboardingFlowProps
 
   const stepIndex = STEPS.indexOf(step);
 
-  async function handleRoleSelect(selected: 'student' | 'hospital') {
-    if (selected === 'hospital') {
-      onComplete();
-      navigate('/auth?hospital=true');
-      return;
-    }
+  function handleContinue() {
     setStep('info');
   }
 
@@ -71,22 +66,17 @@ export function OnboardingFlow({ open, onComplete, onSkip }: OnboardingFlowProps
           <div className="space-y-4">
             <div>
               <h2 className="text-xl font-semibold">Welcome to ClinicalHours</h2>
-              <p className="text-muted-foreground text-sm mt-1">Let's get you set up. What best describes you?</p>
+              <p className="text-muted-foreground text-sm mt-1">
+                Let's get you set up with a few quick questions about your academic background.
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <button
-                onClick={() => handleRoleSelect('student')}
+                onClick={handleContinue}
                 className="border rounded-lg p-4 text-left hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer"
               >
-                <div className="font-medium">Student</div>
+                <div className="font-medium">I'm a student</div>
                 <div className="text-xs text-muted-foreground mt-1">Pre-med or clinical student seeking hours</div>
-              </button>
-              <button
-                onClick={() => handleRoleSelect('hospital')}
-                className="border rounded-lg p-4 text-left hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer"
-              >
-                <div className="font-medium">Clinical Site</div>
-                <div className="text-xs text-muted-foreground mt-1">Hospital or clinic posting opportunities</div>
               </button>
             </div>
             <Button variant="ghost" size="sm" onClick={onSkip} className="w-full">
