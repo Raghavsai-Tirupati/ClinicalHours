@@ -193,8 +193,8 @@ const handler = async (req: Request): Promise<Response> => {
     const allowedOrigins = [
       'https://clinicalhours.org',
       'https://www.clinicalhours.org',
-      'https://sysbtcikrbrrgafffody.lovableproject.com',
-      'https://lovable.dev',
+      'https://clinicalhours.org',
+      'https://www.clinicalhours.org',
       'http://localhost:5173',
       'http://localhost:5174',
       'http://localhost:8080',
@@ -204,8 +204,6 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate the origin is allowed (for security)
     const isAllowedOrigin = origin && (
       allowedOrigins.includes(origin) || 
-      origin.endsWith('.lovableproject.com') || 
-      origin.endsWith('.lovable.dev') ||
       origin.endsWith('.clinicalhours.org')
     );
     

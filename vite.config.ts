@@ -56,7 +56,7 @@ const generateCSPPolicy = (isDev: boolean, supabaseUrl: string): string => {
     "default-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
-    `img-src 'self' data: blob: ${supabaseWildcard} https://*.tiles.mapbox.com https://api.mapbox.com https://storage.googleapis.com https://lovable.dev https://*.r2.dev`,
+    `img-src 'self' data: blob: ${supabaseWildcard} https://*.tiles.mapbox.com https://api.mapbox.com https://storage.googleapis.com https://clinicalhours.org https://*.r2.dev`,
     "media-src 'self' blob:",
     "worker-src 'self' blob:",
     "child-src 'self' blob:",

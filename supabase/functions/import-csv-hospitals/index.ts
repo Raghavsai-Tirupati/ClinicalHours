@@ -4,8 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const ALLOWED_ORIGINS = [
   "https://clinicalhours.org",
   "https://www.clinicalhours.org",
-  "https://sysbtcikrbrrgafffody.lovableproject.com",
-  "https://lovable.dev",
+  "https://clinicalhours.org",
+  "https://www.clinicalhours.org",
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:8080",
@@ -14,8 +14,6 @@ const ALLOWED_ORIGINS = [
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const isAllowed = origin && ALLOWED_ORIGINS.some(allowed =>
     origin === allowed ||
-    origin.endsWith('.lovableproject.com') ||
-    origin.endsWith('.lovable.dev') ||
     origin.endsWith('.clinicalhours.org')
   );
 
