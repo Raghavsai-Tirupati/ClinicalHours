@@ -47,6 +47,7 @@ export type Database = {
           resume_url?: string | null
           status?: string
           student_email?: string
+          student_id?: string | null
           student_name?: string
           student_phone?: string | null
         }
@@ -198,19 +199,40 @@ export type Database = {
       }
       hospital_accounts: {
         Row: {
+          account_status: string
+          admin_note: string | null
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
+          description: string | null
           hospital_id: string
           id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
         }
         Insert: {
+          account_status?: string
+          admin_note?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
+          description?: string | null
           hospital_id: string
           id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
         }
         Update: {
+          account_status?: string
+          admin_note?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
+          description?: string | null
           hospital_id?: string
           id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
         }
         Relationships: [
           {
@@ -315,6 +337,7 @@ export type Database = {
           applicant_name: string | null
           id: string
           notes: string | null
+          opportunity_id: string | null
           status: string
           student_id: string | null
           submitted_at: string
@@ -326,6 +349,7 @@ export type Database = {
           applicant_name?: string | null
           id?: string
           notes?: string | null
+          opportunity_id?: string | null
           status?: string
           student_id?: string | null
           submitted_at?: string
@@ -337,6 +361,7 @@ export type Database = {
           applicant_name?: string | null
           id?: string
           notes?: string | null
+          opportunity_id?: string | null
           status?: string
           student_id?: string | null
           submitted_at?: string
@@ -348,6 +373,20 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "hospital_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hospital_applications_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hospital_applications_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities_with_ratings"
             referencedColumns: ["id"]
           },
         ]
@@ -705,7 +744,7 @@ export type Database = {
           gpa: number | null
           graduation_year: number | null
           id: string
-          is_premium: boolean | null
+          is_premium: boolean
           linkedin_url: string | null
           major: string | null
           onboarding_complete: boolean | null
@@ -731,7 +770,7 @@ export type Database = {
           gpa?: number | null
           graduation_year?: number | null
           id: string
-          is_premium?: boolean | null
+          is_premium?: boolean
           linkedin_url?: string | null
           major?: string | null
           onboarding_complete?: boolean | null
@@ -757,7 +796,7 @@ export type Database = {
           gpa?: number | null
           graduation_year?: number | null
           id?: string
-          is_premium?: boolean | null
+          is_premium?: boolean
           linkedin_url?: string | null
           major?: string | null
           onboarding_complete?: boolean | null
@@ -995,53 +1034,45 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string
+          current_period_start: string
           id: string
-          user_id: string
           plan_type: string
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
-          current_period_start: string
-          current_period_end: string
-          cancel_at_period_end: boolean
-          created_at: string
           updated_at: string
+          user_id: string
         }
         Insert: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
           id?: string
-          user_id: string
           plan_type?: string
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
-          current_period_start?: string
-          current_period_end?: string
-          cancel_at_period_end?: boolean
-          created_at?: string
           updated_at?: string
+          user_id: string
         }
         Update: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
           id?: string
-          user_id?: string
           plan_type?: string
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
-          current_period_start?: string
-          current_period_end?: string
-          cancel_at_period_end?: boolean
-          created_at?: string
           updated_at?: string
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tracking_events: {
         Row: {
@@ -1358,6 +1389,8 @@ export type Database = {
           p_answers: Json
           p_email: string
           p_name: string
+          p_opportunity_id?: string
+          p_student_id?: string
         }
         Returns: string
       }
