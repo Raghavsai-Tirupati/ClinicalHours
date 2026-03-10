@@ -41,7 +41,7 @@ const HeroBrowserCarousel = ({ activeIndex }: HeroBrowserCarouselProps) => {
   const [loadedVideos, setLoadedVideos] = useState<Set<number>>(new Set());
   const [internalIndex, setInternalIndex] = useState(activeIndex);
   const lastExternalIndex = useRef(activeIndex);
-  const fallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync with external index when it changes
   useEffect(() => {

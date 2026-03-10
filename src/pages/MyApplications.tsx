@@ -154,8 +154,8 @@ export default function MyApplications() {
           setNewSlotStart("09:00");
           setNewSlotEnd("10:00");
         }
-      })
-      .finally(() => setSubmitting(false));
+        setSubmitting(false);
+      });
   }
 
   function removeSlot(slotId: string) {
