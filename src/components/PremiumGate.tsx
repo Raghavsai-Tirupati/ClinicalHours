@@ -94,6 +94,15 @@ export function PremiumBadge() {
 
 export function UpgradeCTA({ message = "Unlock all premium features" }: { message?: string }) {
   const { user } = useAuth();
+  const { needsVerification } = useEmailVerified();
+  const [verificationGateOpen, setVerificationGateOpen] = useState(false);
+
+  const handleUpgradeClick = (e: React.MouseEvent) => {
+    if (user && needsVerification) {
+      e.preventDefault();
+      setVerificationGateOpen(true);
+    }
+  };
 
   return (
     <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-5">
@@ -107,12 +116,28 @@ export function UpgradeCTA({ message = "Unlock all premium features" }: { messag
             AI-powered tools, unlimited search, hour tracking, and more.
           </p>
         </div>
-        <Button size="sm" variant="outline" className="shrink-0 border-amber-500/30 text-amber-400 hover:bg-amber-500/10" asChild>
-          <Link to={user ? "/premium/purchase" : "/auth"}>
+        {user && needsVerification ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+            onClick={() => setVerificationGateOpen(true)}
+          >
             Upgrade
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" className="shrink-0 border-amber-500/30 text-amber-400 hover:bg-amber-500/10" asChild>
+            <Link to={user ? "/premium/purchase" : "/auth"}>
+              Upgrade
+            </Link>
+          </Button>
+        )}
       </div>
+      <VerificationGate
+        open={verificationGateOpen}
+        onOpenChange={setVerificationGateOpen}
+        action="purchase Premium"
+      />
     </div>
   );
 }
