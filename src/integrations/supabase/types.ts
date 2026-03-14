@@ -336,6 +336,8 @@ export type Database = {
           applicant_email: string | null
           applicant_name: string | null
           id: string
+          interview_confirmed_at: string | null
+          interview_requested_at: string | null
           notes: string | null
           opportunity_id: string | null
           status: string
@@ -348,6 +350,8 @@ export type Database = {
           applicant_email?: string | null
           applicant_name?: string | null
           id?: string
+          interview_confirmed_at?: string | null
+          interview_requested_at?: string | null
           notes?: string | null
           opportunity_id?: string | null
           status?: string
@@ -360,6 +364,8 @@ export type Database = {
           applicant_email?: string | null
           applicant_name?: string | null
           id?: string
+          interview_confirmed_at?: string | null
+          interview_requested_at?: string | null
           notes?: string | null
           opportunity_id?: string | null
           status?: string
@@ -1378,6 +1384,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      hospital_confirm_interview_ha: {
+        Args: { p_application_id: string; p_slot: string }
+        Returns: undefined
+      }
+      hospital_request_interview_ha: {
+        Args: { p_application_id: string }
+        Returns: undefined
       }
       link_opportunity_to_hospital: {
         Args: { p_hospital_id: string; p_opportunity_id: string }
