@@ -2,9 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, CheckCircle2, AlertCircle, Upload, FileText, MapPin, Building2 } from "lucide-react";
+import { VerificationGate } from "@/components/VerificationGate";
 
 interface Opportunity {
   id: string;
@@ -22,6 +24,8 @@ function countWords(text: string): number {
 export default function ApplicationForm() {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
+  const { needsVerification } = useEmailVerified();
+  const [verificationGateOpen, setVerificationGateOpen] = useState(false);
 
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,6 +83,10 @@ export default function ApplicationForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (user && needsVerification) {
+      setVerificationGateOpen(true);
+      return;
+    }
     setError(null);
     const errors = validate();
     setFieldErrors(errors);
@@ -422,6 +430,12 @@ export default function ApplicationForm() {
         <p className="text-center text-xs text-muted-foreground mt-6 pb-8">
           Your information is securely stored and will only be shared with {opportunity!.name}.
         </p>
+
+        <VerificationGate
+          open={verificationGateOpen}
+          onOpenChange={setVerificationGateOpen}
+          action="submit an application"
+        />
       </div>
     </div>
   );

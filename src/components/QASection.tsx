@@ -9,11 +9,13 @@ import { formatDistanceToNow } from "date-fns";
 import { useProfileComplete } from "@/hooks/useProfileComplete";
 import { ProfileGate } from "@/components/ProfileGate";
 import { GuestGate } from "@/components/GuestGate";
+import { VerificationGate } from "@/components/VerificationGate";
 import { UserProfileBadge } from "@/components/UserProfileBadge";
 import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { sanitizeErrorMessage } from "@/lib/errorUtils";
 import { useAuth } from "@/hooks/useAuth";
+import { useEmailVerified } from "@/hooks/useEmailVerified";
 import {
   Collapsible,
   CollapsibleContent,
@@ -69,6 +71,7 @@ const INITIAL_ANSWERS = 3;
 
 export function QASection({ opportunityId, opportunityName }: QASectionProps) {
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
+  const { needsVerification } = useEmailVerified();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAskForm, setShowAskForm] = useState(false);
@@ -84,6 +87,8 @@ export function QASection({ opportunityId, opportunityName }: QASectionProps) {
   const [answerDisplayCount, setAnswerDisplayCount] = useState<Record<string, number>>({});
   const [showProfileGate, setShowProfileGate] = useState(false);
   const [showGuestGate, setShowGuestGate] = useState(false);
+  const [showVerificationGate, setShowVerificationGate] = useState(false);
+  const [verificationGateAction, setVerificationGateAction] = useState("participate");
   const [guestGateAction, setGuestGateAction] = useState("participate");
   const [gateAction, setGateAction] = useState("participate");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -250,6 +255,11 @@ export function QASection({ opportunityId, opportunityName }: QASectionProps) {
       setShowGuestGate(true);
       return;
     }
+    if (needsVerification) {
+      setVerificationGateAction("ask a question");
+      setShowVerificationGate(true);
+      return;
+    }
 
     if (!userId) {
       toast({ title: "Please sign in to ask a question", variant: "destructive" });
@@ -398,6 +408,11 @@ export function QASection({ opportunityId, opportunityName }: QASectionProps) {
       setShowGuestGate(true);
       return;
     }
+    if (needsVerification) {
+      setVerificationGateAction("answer a question");
+      setShowVerificationGate(true);
+      return;
+    }
 
     const answerText = newAnswer[questionId]?.trim();
     if (!answerText) {
@@ -503,6 +518,11 @@ export function QASection({ opportunityId, opportunityName }: QASectionProps) {
     if (isGuest) {
       setGuestGateAction("vote on Q&A");
       setShowGuestGate(true);
+      return;
+    }
+    if (needsVerification) {
+      setVerificationGateAction("vote on Q&A");
+      setShowVerificationGate(true);
       return;
     }
 
@@ -666,6 +686,11 @@ export function QASection({ opportunityId, opportunityName }: QASectionProps) {
         open={showGuestGate}
         onOpenChange={setShowGuestGate}
         action={guestGateAction}
+      />
+      <VerificationGate
+        open={showVerificationGate}
+        onOpenChange={setShowVerificationGate}
+        action={verificationGateAction}
       />
 
       <div className="flex items-center justify-between">

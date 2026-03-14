@@ -4,6 +4,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEmailVerified } from '@/hooks/useEmailVerified';
 import { usePremiumStatus } from '@/hooks/usePremiumStatus';
 import { FindApplicationButton } from '@/components/FindApplicationButton';
 import { logger } from '@/lib/logger';
@@ -12,6 +13,7 @@ import { consumePrefetchedOpportunities } from '@/lib/opportunityPrefetch';
 import StarfieldBackground from './StarfieldBackground';
 import Navigation from './Navigation';
 import { useToast } from '@/hooks/use-toast';
+import { VerificationGate } from '@/components/VerificationGate';
 import {
   Map,
   MapPin,
@@ -90,6 +92,7 @@ const ImmersiveMap = () => {
   const isPinModeRef = useRef(false);
 
   const { user, isReady, isGuest } = useAuth();
+  const { needsVerification } = useEmailVerified();
   const { isPremium } = usePremiumStatus();
   const { toast } = useToast();
   const [mapLoading, setMapLoading] = useState(true);
@@ -112,6 +115,7 @@ const ImmersiveMap = () => {
   const [selectedFeature, setSelectedFeature] = useState<Record<string, string> | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [verificationGateOpen, setVerificationGateOpen] = useState(false);
 
   const loading = mapLoading || dataLoading;
   const activeCenter = customPin || userLocation;
@@ -441,6 +445,10 @@ const ImmersiveMap = () => {
   const handleSaveOpportunity = async (opportunityId: string) => {
     if (!user || isGuest) {
       toast({ title: 'Sign in required', description: 'Log in to save opportunities to your dashboard.' });
+      return;
+    }
+    if (needsVerification) {
+      setVerificationGateOpen(true);
       return;
     }
     setSavingId(opportunityId);
@@ -898,6 +906,12 @@ const ImmersiveMap = () => {
           </div>
         </div>
       )}
+
+      <VerificationGate
+        open={verificationGateOpen}
+        onOpenChange={setVerificationGateOpen}
+        action="save opportunities to your dashboard"
+      />
     </div>
   );
 };

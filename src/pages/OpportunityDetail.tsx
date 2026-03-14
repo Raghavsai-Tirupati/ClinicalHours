@@ -16,8 +16,10 @@ import ReviewForm from "@/components/ReviewForm";
 import ReviewsList from "@/components/ReviewsList";
 import { QASection } from "@/components/QASection";
 import { GuestGate } from "@/components/GuestGate";
+import { VerificationGate } from "@/components/VerificationGate";
 import { logger } from "@/lib/logger";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
 
 interface Opportunity {
@@ -43,6 +45,7 @@ const OpportunityDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
+  const { needsVerification } = useEmailVerified();
   const { isPremium } = usePremiumStatus();
   const { toast } = useToast();
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
@@ -52,6 +55,7 @@ const OpportunityDetail = () => {
   const [saving, setSaving] = useState(false);
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   const [guestGateOpen, setGuestGateOpen] = useState(false);
+  const [verificationGateOpen, setVerificationGateOpen] = useState(false);
   // If a hospital account is linked to this opportunity, store its id for Apply
   const [directApplyAccountId, setDirectApplyAccountId] = useState<string | null>(null);
 
@@ -170,6 +174,10 @@ const OpportunityDetail = () => {
   const handleAddToTracker = async () => {
     if (isGuest) {
       setGuestGateOpen(true);
+      return;
+    }
+    if (needsVerification) {
+      setVerificationGateOpen(true);
       return;
     }
     if (!user || !opportunity?.id) return;
@@ -462,11 +470,15 @@ const OpportunityDetail = () => {
       </div>
       <Footer />
 
-      {/* Guest Gate Dialog */}
       <GuestGate
         open={guestGateOpen}
         onOpenChange={setGuestGateOpen}
         action="save opportunities to your tracker"
+      />
+      <VerificationGate
+        open={verificationGateOpen}
+        onOpenChange={setVerificationGateOpen}
+        action="add opportunities to your tracker"
       />
     </div>
   );

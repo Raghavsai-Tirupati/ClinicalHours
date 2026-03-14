@@ -1,9 +1,11 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { useProfileComplete } from "@/hooks/useProfileComplete";
 import { ProfileGate } from "@/components/ProfileGate";
 import { GuestGate } from "@/components/GuestGate";
+import { VerificationGate } from "@/components/VerificationGate";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -36,10 +38,12 @@ interface RatingCategory {
 
 const ReviewForm = ({ opportunityId, opportunityName, onReviewSubmitted }: ReviewFormProps) => {
   const { user, isGuest } = useAuth();
+  const { needsVerification } = useEmailVerified();
   const { isComplete, isLoading: profileLoading, missingFields } = useProfileComplete();
   const [open, setOpen] = useState(false);
   const [showProfileGate, setShowProfileGate] = useState(false);
   const [showGuestGate, setShowGuestGate] = useState(false);
+  const [showVerificationGate, setShowVerificationGate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [comment, setComment] = useState("");
   const [ratings, setRatings] = useState<RatingCategory[]>([
@@ -63,6 +67,10 @@ const ReviewForm = ({ opportunityId, opportunityName, onReviewSubmitted }: Revie
   const handleOpenReviewDialog = () => {
     if (isGuest) {
       setShowGuestGate(true);
+      return;
+    }
+    if (needsVerification) {
+      setShowVerificationGate(true);
       return;
     }
 
@@ -276,6 +284,12 @@ const ReviewForm = ({ opportunityId, opportunityName, onReviewSubmitted }: Revie
       <GuestGate
         open={showGuestGate}
         onOpenChange={setShowGuestGate}
+        action="write a review"
+      />
+
+      <VerificationGate
+        open={showVerificationGate}
+        onOpenChange={setShowVerificationGate}
         action="write a review"
       />
 

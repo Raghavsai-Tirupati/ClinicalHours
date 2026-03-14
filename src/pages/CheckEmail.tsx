@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, RefreshCw, ArrowLeft, AlertTriangle } from "lucide-react";
@@ -9,12 +10,23 @@ import logo from "@/assets/logo.png";
 
 const CheckEmail = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const email = searchParams.get("email") || "";
-  const userId = searchParams.get("uid") || "";
-  const fullName = searchParams.get("name") || "User";
-  
+  const emailParam = searchParams.get("email") || "";
+  const userIdParam = searchParams.get("uid") || "";
+  const fullNameParam = searchParams.get("name") || "User";
+
+  const email = emailParam || user?.email || "";
+  const userId = userIdParam || user?.id || "";
+  const fullName = fullNameParam || (user?.user_metadata?.full_name as string) || "User";
+
   const [resendLoading, setResendLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user && !userIdParam && !emailParam) {
+      navigate("/auth");
+    }
+  }, [user, userIdParam, emailParam, navigate]);
 
   const handleResendVerification = async () => {
     if (!userId || !email) {
@@ -88,14 +100,6 @@ const CheckEmail = () => {
               </p>
             )}
 
-            {/* 24-hour warning */}
-            <div className="flex items-start gap-3 bg-destructive/10 border border-destructive/30 rounded-lg p-4 w-full">
-              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-              <p className="text-sm text-muted-foreground">
-                <strong className="text-foreground">Verify within 24 hours</strong> or your account will be automatically deleted.
-              </p>
-            </div>
-            
             <div className="bg-muted/50 rounded-lg p-4 text-left w-full">
               <p className="text-sm text-muted-foreground mb-3">
                 Click the link in the email to verify your account. If you don't see it, check your spam folder.
@@ -120,7 +124,6 @@ const CheckEmail = () => {
               </Button>
             </div>
 
-            {/* Continue to Dashboard button */}
             <Button
               onClick={() => navigate("/dashboard")}
               className="w-full"
@@ -128,22 +131,6 @@ const CheckEmail = () => {
             >
               Continue to Dashboard
             </Button>
-            
-            <Button
-              className="w-full mt-2"
-              onClick={() => navigate("/dashboard")}
-            >
-              Continue to Dashboard
-            </Button>
-            <p className="text-xs text-center text-muted-foreground mt-2">
-              Already verified?{" "}
-              <button 
-                onClick={() => navigate("/auth")}
-                className="text-primary hover:underline"
-              >
-                Sign in here
-              </button>
-            </p>
           </div>
         </CardContent>
       </Card>

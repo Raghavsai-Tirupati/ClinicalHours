@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useAuth } from "@/hooks/useAuth";
+import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { Button } from "@/components/ui/button";
 import { Lock, Sparkles } from "lucide-react";
+import { VerificationGate } from "@/components/VerificationGate";
 
 interface PremiumGateProps {
   children: React.ReactNode;
@@ -21,6 +24,8 @@ export function PremiumGate({
 }: PremiumGateProps) {
   const { isPremium, isLoading } = usePremiumStatus();
   const { user } = useAuth();
+  const { needsVerification } = useEmailVerified();
+  const [verificationGateOpen, setVerificationGateOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -52,12 +57,26 @@ export function PremiumGate({
           <p className="text-sm text-muted-foreground mb-6">
             {description}
           </p>
-          <Button asChild className="gap-2">
-            <Link to={user ? "/premium/purchase" : "/auth"}>
-              <Sparkles className="h-4 w-4" />
-              {user ? "Upgrade — $4.99/month" : "Sign Up to Get Started"}
-            </Link>
-          </Button>
+          {user && needsVerification ? (
+            <>
+              <Button className="gap-2" onClick={() => setVerificationGateOpen(true)}>
+                <Sparkles className="h-4 w-4" />
+                Upgrade — $4.99/month
+              </Button>
+            </>
+          ) : (
+            <Button asChild className="gap-2">
+              <Link to={user ? "/premium/purchase" : "/auth"}>
+                <Sparkles className="h-4 w-4" />
+                {user ? "Upgrade — $4.99/month" : "Sign Up to Get Started"}
+              </Link>
+            </Button>
+          )}
+          <VerificationGate
+            open={verificationGateOpen}
+            onOpenChange={setVerificationGateOpen}
+            action="purchase Premium"
+          />
         </div>
       </div>
     </div>

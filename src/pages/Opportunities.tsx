@@ -29,6 +29,8 @@ import { useOpportunities } from "@/hooks/useOpportunities";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { GuestGate } from "@/components/GuestGate";
+import { VerificationGate } from "@/components/VerificationGate";
+import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
 
@@ -42,7 +44,9 @@ const Opportunities = () => {
   // Maps hospital_id -> hospital_accounts.id for opportunities with a linked hospital
   const [hospitalAccountMap, setHospitalAccountMap] = useState<Map<string, string>>(new Map());
   const [guestGateOpen, setGuestGateOpen] = useState(false);
+  const [verificationGateOpen, setVerificationGateOpen] = useState(false);
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
+  const { needsVerification } = useEmailVerified();
   const { isPremium } = usePremiumStatus();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -143,6 +147,10 @@ const Opportunities = () => {
   const handleAddToTracker = async (opportunityId: string) => {
     if (isGuest) {
       setGuestGateOpen(true);
+      return;
+    }
+    if (needsVerification) {
+      setVerificationGateOpen(true);
       return;
     }
     if (!user) return;
@@ -461,11 +469,15 @@ const Opportunities = () => {
 
       <Footer />
 
-      {/* Guest Gate Dialog */}
       <GuestGate
         open={guestGateOpen}
         onOpenChange={setGuestGateOpen}
         action="save opportunities to your tracker"
+      />
+      <VerificationGate
+        open={verificationGateOpen}
+        onOpenChange={setVerificationGateOpen}
+        action="add opportunities to your tracker"
       />
     </div>
   );

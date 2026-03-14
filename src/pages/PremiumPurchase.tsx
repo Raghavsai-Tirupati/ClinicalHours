@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
+import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ function formatDate(isoString: string): string {
 
 export default function PremiumPurchase() {
   const { user } = useAuth();
+  const { needsVerification, loading: verificationLoading } = useEmailVerified();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const success = searchParams.get("success") === "true";
@@ -106,7 +108,11 @@ export default function PremiumPurchase() {
     }
   }, [isLoading, user, navigate]);
 
+  // Block checkout if unverified
+  const canPurchase = user && !needsVerification;
+
   async function handleSubscribe() {
+    if (needsVerification) return;
     setCheckoutLoading(true);
     setCheckoutError(null);
     try {
@@ -145,6 +151,37 @@ export default function PremiumPurchase() {
     } finally {
       setCancelLoading(false);
     }
+  }
+
+  // ─── Unverified: block purchase ────────────────────────────────────────────────
+  if (user && !verificationLoading && needsVerification) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navigation />
+        <main className="flex-1 flex items-center justify-center pt-20 pb-16 px-6">
+          <div className="max-w-md w-full text-center">
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-8">
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
+                <AlertTriangle className="h-8 w-8 text-amber-500" />
+              </div>
+              <h1 className="text-xl font-bold text-foreground font-heading mb-2">
+                Verify Your Email
+              </h1>
+              <p className="text-sm text-muted-foreground mb-6">
+                Please verify your email address before purchasing Premium. Check your inbox for the verification link.
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mb-6">
+                Verify within 24 hours or your account will be deleted.
+              </p>
+              <Button className="w-full" asChild>
+                <Link to="/check-email">Go to Verification</Link>
+              </Button>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   // ─── Loading ────────────────────────────────────────────────────────────────
