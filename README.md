@@ -8,8 +8,9 @@ A clinical hours tracking and management application.
 
 ### Prerequisites
 
-- Node.js 18+
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (`npm install -g supabase`)
+- **Node.js 18+**
+- **Docker Desktop** (required for local Supabase) — [Install Docker](https://docs.docker.com/desktop/)
+- Supabase CLI is used via `npx` (no global install required)
 
 ### 1. Clone & install dependencies
 
@@ -23,47 +24,55 @@ npm install
 cp .env.local.example .env.local
 ```
 
-Fill in the values printed by `supabase start` (see step 3).
+You will fill in the values from step 4 after starting Supabase.
 
-### 3. Start local Supabase
+### 3. Start Docker Desktop
+
+Ensure **Docker Desktop is running** before the next step. Local Supabase runs in Docker.
+
+### 4. Start local Supabase
 
 ```bash
-supabase start
+npm run supabase:start
 ```
 
-Copy the **API URL** and **anon key** printed at the end into `.env.local`:
+Copy the **API URL** and **anon key** from the output into `.env.local`:
 
 ```
 VITE_SUPABASE_URL=http://127.0.0.1:54321
-VITE_SUPABASE_PUBLISHABLE_KEY=<anon key>
+VITE_SUPABASE_PUBLISHABLE_KEY=<paste anon key here>
 ```
 
-### 4. Apply migrations
+### 5. Apply migrations
 
 ```bash
-supabase db reset
-# or, to apply only new migrations without resetting data:
-supabase migration up
+npm run supabase:reset
+```
+
+Or to apply only new migrations without resetting data:
+
+```bash
+npm run supabase:migrate
 ```
 
 This applies all SQL files in `supabase/migrations/` in order, including the
 hospital ecosystem tables (`20260219000001_hospital_ecosystem.sql`).
 
-### 5. (Optional) Seed sample hospital data
+### 6. (Optional) Seed sample hospital data
 
 ```bash
-psql $(supabase db url) -f supabase/seed_hospital.sql
+npm run supabase:seed
 ```
 
-This inserts three sample hospitals you can use during onboarding.
+Requires `psql` (PostgreSQL client). Inserts three sample hospitals for onboarding.
 
-### 6. Run the app
+### 7. Run the app
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173) (or the port Vite prints; the app may use port 8080 per config).
 
 ---
 
