@@ -3,6 +3,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 
 import { useAuth } from "@/hooks/useAuth";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -96,9 +97,10 @@ function StatCard({ icon: Icon, label, value, color }: {
   );
 }
 
-function LogForm({ onSubmit, onClose }: {
+function LogForm({ onSubmit, onClose, canReflect }: {
   onSubmit: (log: Partial<ActivityLog>, addReflection: boolean) => void;
   onClose: () => void;
+  canReflect?: boolean;
 }) {
   const [activityType, setActivityType] = useState<ActivityType>("shadowing");
   const [orgName, setOrgName] = useState("");
@@ -150,13 +152,15 @@ function LogForm({ onSubmit, onClose }: {
         <Label>Notes (optional)</Label>
         <Textarea className="mt-1.5" placeholder="Brief notes about this session..." rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
-      <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
-        <Switch checked={addReflection} onCheckedChange={setAddReflection} />
-        <div>
-          <p className="text-sm font-medium text-foreground">Add a reflection?</p>
-          <p className="text-xs text-muted-foreground">Capture what you learned while it's fresh (2-3 min)</p>
+      {canReflect && (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+          <Switch checked={addReflection} onCheckedChange={setAddReflection} />
+          <div>
+            <p className="text-sm font-medium text-foreground">Add a reflection?</p>
+            <p className="text-xs text-muted-foreground">Capture what you learned while it's fresh (2-3 min)</p>
+          </div>
         </div>
-      </div>
+      )}
       <div className="flex justify-end gap-3 pt-2">
         <Button variant="outline" onClick={onClose}>Cancel</Button>
         <Button onClick={() => onSubmit({ activity_type: activityType, custom_organization_name: orgName, session_date: sessionDate, hours: parseFloat(hours) || 0, supervisor_name: supervisorName || null, department: department || null, notes: notes || null }, addReflection)}>
@@ -209,6 +213,7 @@ function ReflectionForm({ onSubmit, onClose }: {
 
 const HourTrackerContent = () => {
   const { user } = useAuth();
+  const { isPremium } = usePremiumStatus();
   const { toast } = useToast();
   const [logs, setLogs] = useState<EnrichedLog[]>([]);
   const [showLogDialog, setShowLogDialog] = useState(false);
@@ -353,11 +358,11 @@ const HourTrackerContent = () => {
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard icon={Clock} label="Total Hours" value={Math.round(totalHours * 10) / 10} />
         <StatCard icon={Calendar} label="Sessions Logged" value={totalSessions} />
-        <StatCard icon={BookOpen} label="Reflections Written" value={totalReflections} />
-        <StatCard icon={TrendingUp} label="Meaningful Moments" value={meaningfulCount} />
+        {isPremium && <StatCard icon={BookOpen} label="Reflections Written" value={totalReflections} />}
+        {isPremium && <StatCard icon={TrendingUp} label="Meaningful Moments" value={meaningfulCount} />}
       </div>
 
-      {summaries.length > 0 && (
+      {isPremium && summaries.length > 0 && (
         <div className="mb-8">
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Activity Breakdown</h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -448,7 +453,7 @@ const HourTrackerContent = () => {
                       )}
                     </div>
                   )}
-                  {!log.reflection && (
+                  {!log.reflection && isPremium && (
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setPendingLogId(log.id); setShowReflectionDialog(true); }}>
                       <BookOpen className="h-3.5 w-3.5" /> Add Reflection
                     </Button>
@@ -463,7 +468,7 @@ const HourTrackerContent = () => {
       <Dialog open={showLogDialog} onOpenChange={setShowLogDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Log Hours</DialogTitle></DialogHeader>
-          <LogForm onSubmit={handleLogSubmit} onClose={() => setShowLogDialog(false)} />
+          <LogForm onSubmit={handleLogSubmit} onClose={() => setShowLogDialog(false)} canReflect={isPremium} />
         </DialogContent>
       </Dialog>
 
@@ -482,7 +487,7 @@ const HourTracker = () => (
     <Navigation />
     <main className="flex-1 container mx-auto px-4 pt-24 pb-16">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground font-heading">Hour Tracker & Reflections</h1>
+        <h1 className="text-2xl font-bold text-foreground font-heading">Clinical Hours Journal</h1>
         <p className="text-muted-foreground mt-1">Log clinical hours, write reflections, and track your progress.</p>
       </div>
       <HourTrackerContent />

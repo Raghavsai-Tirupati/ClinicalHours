@@ -269,10 +269,10 @@ const AMCASGenerator = () => (
     <Navigation />
     <main className="flex-1 container mx-auto px-4 pt-24 pb-16">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground font-heading">AMCAS Activity Description Generator</h1>
+        <h1 className="text-2xl font-bold text-foreground font-heading">AMCAS Activity Writer</h1>
         <p className="text-muted-foreground mt-1">AI-powered writing assistant for your Work & Activities descriptions.</p>
       </div>
-      <PremiumGate featureName="AMCAS Generator" description="Generate polished AMCAS activity descriptions with ClinicalHours Premium.">
+      <PremiumGate featureName="AMCAS Activity Writer" description="Generate polished AMCAS activity descriptions with ClinicalHours Premium.">
         <AMCASGeneratorContent />
       </PremiumGate>
     </main>

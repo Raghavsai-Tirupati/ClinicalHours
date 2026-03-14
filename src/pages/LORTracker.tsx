@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-
+import { PremiumGate } from "@/components/PremiumGate";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +104,7 @@ const LORTrackerContent = () => {
       letter_status: form.letter_status,
       schools_assigned: [],
       notes: form.notes || null,
-    } as any);
+    });
     setShowAdd(false);
     toast({ title: "Recommender added!" });
     loadContacts();
@@ -255,10 +255,12 @@ const LORTracker = () => (
     <Navigation />
     <main className="flex-1 container mx-auto px-4 pt-24 pb-16">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground font-heading">LOR Tracker</h1>
+        <h1 className="text-2xl font-bold text-foreground font-heading">Letter of Rec Manager</h1>
         <p className="text-muted-foreground mt-1">Track recommendation letters, manage relationships, and monitor submission status.</p>
       </div>
-      <LORTrackerContent />
+      <PremiumGate featureName="Letter of Rec Manager" description="Manage your recommendation letters with ClinicalHours Premium.">
+        <LORTrackerContent />
+      </PremiumGate>
     </main>
     <Footer />
   </div>

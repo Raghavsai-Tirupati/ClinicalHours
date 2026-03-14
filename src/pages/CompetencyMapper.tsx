@@ -203,10 +203,10 @@ const CompetencyMapper = () => (
     <Navigation />
     <main className="flex-1 container mx-auto px-4 pt-24 pb-16">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground font-heading">Competency Mapper</h1>
+        <h1 className="text-2xl font-bold text-foreground font-heading">AAMC Competency Tracker</h1>
         <p className="text-muted-foreground mt-1">Visualize your coverage across all 17 AAMC premed competencies.</p>
       </div>
-      <PremiumGate featureName="Competency Mapper" description="See your competency coverage and gap analysis with ClinicalHours Premium.">
+      <PremiumGate featureName="AAMC Competency Tracker" description="See your competency coverage and gap analysis with ClinicalHours Premium.">
         <CompetencyMapperContent />
       </PremiumGate>
     </main>

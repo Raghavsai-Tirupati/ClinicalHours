@@ -167,10 +167,10 @@ const OpportunityQuiz = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 rounded-full bg-violet-500/10 px-4 py-1.5 text-sm text-violet-400 mb-4">
             <Brain className="h-4 w-4" />
-            AI Opportunity Matcher
+            PathFinder — AI Opportunity Matcher
           </div>
           <h1 className="text-2xl font-bold text-foreground font-heading">
-            Find Your Perfect Match
+            PathFinder — Find Your Perfect Match
           </h1>
           <p className="text-muted-foreground mt-1">
             Answer a few questions and we'll match you with the best opportunities from our database.

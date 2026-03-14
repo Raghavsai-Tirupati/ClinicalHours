@@ -198,10 +198,10 @@ const SecondaryEngine = () => (
     <Navigation />
     <main className="flex-1 container mx-auto px-4 pt-24 pb-16">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground font-heading">Secondary Essay Reuse Engine</h1>
+        <h1 className="text-2xl font-bold text-foreground font-heading">Secondary Essay Coach</h1>
         <p className="text-muted-foreground mt-1">Classify prompts into archetypes and surface relevant stories from your reflections.</p>
       </div>
-      <PremiumGate featureName="Secondary Essay Engine" description="Reuse your best stories across secondary applications with ClinicalHours Premium.">
+      <PremiumGate featureName="Secondary Essay Coach" description="Reuse your best stories across secondary applications with ClinicalHours Premium.">
         <SecondaryEngineContent />
       </PremiumGate>
     </main>

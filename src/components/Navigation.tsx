@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Home, MapPin, Mail, LogIn, Sparkles, ChevronDown } from "lucide-react";
+import { Menu, X, Home, MapPin, Mail, LogIn, Sparkles, ChevronDown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -21,6 +22,22 @@ const dropdownIcons: Record<string, React.ComponentType<{ className?: string; st
   "/contact": Mail,
   "/auth": LogIn,
 };
+
+const freeToolsLinks = [
+  { name: "Clinical Hours Journal", path: "/hours" },
+  { name: "Application Cost Calculator", path: "/costs" },
+];
+
+const premiumToolsLinks = [
+  { name: "PathFinder — AI Matcher", path: "/quiz" },
+  { name: "AMCAS Activity Writer", path: "/amcas" },
+  { name: "AAMC Competency Tracker", path: "/competencies" },
+  { name: "Letter of Rec Manager", path: "/lor" },
+  { name: "Application Timeline", path: "/timeline" },
+  { name: "Secondary Essay Coach", path: "/secondaries" },
+  { name: "School List Builder", path: "/school-list" },
+  { name: "Direct Application Finder", path: "/apply-finder" },
+];
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -78,43 +95,19 @@ const Navigation = () => {
 
   const authenticatedLinks = [
     { name: "Dashboard", path: "/dashboard" },
-    { name: "My Applications", path: "/my-applications" },
     { name: "Opportunities", path: "/opportunities" },
     { name: "Map", path: "/map" },
+    ...(hospitalMember
+      ? [{ name: "Hospital Admin", path: "/hospital/admin" }]
+      : []),
   ];
 
-  // Hospital members see only one tab: Admin portal. No opportunities, map, or my-applications.
-  const isHospitalContext = !!hospitalMember;
-  const hospitalLinks = [{ name: "Admin", path: "/hospital-dashboard" }];
-
-  const toolsLinks = [
-    { name: "Hour Tracker", path: "/hours" },
-    { name: "AI Matcher Quiz", path: "/quiz" },
-    { name: "AMCAS Generator", path: "/amcas" },
-    { name: "Competency Map", path: "/competencies" },
-    { name: "LOR Tracker", path: "/lor" },
-    { name: "Timeline Planner", path: "/timeline" },
-    { name: "Secondary Essays", path: "/secondaries" },
-    { name: "Cost Calculator", path: "/costs" },
-    { name: "School List", path: "/school-list" },
-  ];
-
-  // Hospital context: no student features. Otherwise authenticated or public.
-  const links =
-    user || isGuest
-      ? isHospitalContext
-        ? hospitalLinks
-        : authenticatedLinks
-      : publicLinks;
-
-  // Hide Tools dropdown in hospital context
-  const showToolsDropdown = (user || isGuest) && !isHospitalContext;
+  // Guests see authenticated links (Dashboard, Opportunities, etc.) but with Sign Up instead of Profile
+  const links = (user || isGuest) ? authenticatedLinks : publicLinks;
 
   const isActive = (path: string) => location.pathname === path;
 
   // Determine nav styles based on scroll and page
-  // Home/Dashboard pages: transparent nav with white text, scrolled = black bg with white text
-  // Other pages: use theme colors
   const navBackground = hasTransparentNav
     ? (isScrolled ? "bg-black" : "bg-transparent")
     : "bg-background";
@@ -159,23 +152,39 @@ const Navigation = () => {
                     {link.name}
                   </Link>
                 ))}
-                {/* Tools dropdown for authenticated users (hidden in hospital context) */}
-                {showToolsDropdown && (
+                {/* Tools dropdown for authenticated users */}
+                {(user || isGuest) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor} outline-none`}>
                       Tools <ChevronDown className="h-3 w-3" />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      {toolsLinks.map((link) => (
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1.5">
+                        Free Tools
+                      </DropdownMenuLabel>
+                      {freeToolsLinks.map((link) => (
                         <DropdownMenuItem key={link.path} asChild>
                           <Link to={link.path} className="cursor-pointer">{link.name}</Link>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1.5 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 text-amber-400" />
+                        <span>Premium</span>
+                      </DropdownMenuLabel>
+                      {premiumToolsLinks.map((link) => (
+                        <DropdownMenuItem key={link.path} asChild>
+                          <Link to={link.path} className="cursor-pointer flex items-center gap-1.5">
+                            <Lock className="h-3 w-3 text-muted-foreground/50" />
+                            {link.name}
+                          </Link>
                         </DropdownMenuItem>
                       ))}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <Link to="/premium" className="cursor-pointer flex items-center gap-1.5">
                           <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                          <span className="text-amber-400">Premium</span>
+                          <span className="text-amber-400">Upgrade to Premium</span>
                         </Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -202,7 +211,7 @@ const Navigation = () => {
 
             {/* Desktop Navigation - Hover dropdown for homepage when not logged in */}
             {showHoverDropdown && (
-              <div 
+              <div
                 className="hidden md:flex items-center"
                 onMouseEnter={handleDropdownEnter}
                 onMouseLeave={handleDropdownLeave}
@@ -250,11 +259,24 @@ const Navigation = () => {
                   {link.name}
                 </Link>
               ))}
-              {/* Mobile tools section (hidden in hospital context) */}
-              {showToolsDropdown && (
+              {/* Mobile tools section */}
+              {(user || isGuest) && (
                 <div className={`pt-2 border-t ${hasTransparentNav ? "border-white/10" : "border-border"}`}>
-                  <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2 ${textColor} opacity-50`}>Tools</p>
-                  {toolsLinks.map((link) => (
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2 ${textColor} opacity-50`}>Free Tools</p>
+                  {freeToolsLinks.map((link) => (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      onClick={() => setIsOpen(false)}
+                      className={`block text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest mt-3 mb-2 ${textColor} opacity-50 flex items-center gap-1`}>
+                    <Sparkles className="h-3 w-3 text-amber-400" /> Premium Tools
+                  </p>
+                  {premiumToolsLinks.map((link) => (
                     <Link
                       key={link.path}
                       to={link.path}
@@ -269,7 +291,7 @@ const Navigation = () => {
                     onClick={() => setIsOpen(false)}
                     className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 text-amber-400 font-heading"
                   >
-                    <Sparkles className="h-3.5 w-3.5" /> Premium
+                    <Sparkles className="h-3.5 w-3.5" /> Upgrade to Premium
                   </Link>
                 </div>
               )}
@@ -305,8 +327,8 @@ const Navigation = () => {
       {showHoverDropdown && (
         <div
           className={`fixed top-0 right-0 h-screen w-1/3 bg-black z-40 transition-all duration-500 ease-out ${
-            isDropdownOpen 
-              ? 'translate-x-0 opacity-100' 
+            isDropdownOpen
+              ? 'translate-x-0 opacity-100'
               : 'translate-x-full opacity-0'
           }`}
           onMouseEnter={handleDropdownEnter}
@@ -327,7 +349,7 @@ const Navigation = () => {
                     className={`group flex items-center gap-4 py-6 px-4 -mx-4 text-2xl font-light text-white uppercase tracking-widest transition-all duration-300 hover:bg-white/5 ${
                       isActive(link.path) ? "opacity-100" : "opacity-80"
                     } ${index > 0 ? "border-t border-white/10" : ""}`}
-                    style={{ 
+                    style={{
                       transitionDelay: isDropdownOpen ? `${150 + index * 50}ms` : '0ms',
                     }}
                   >
@@ -345,7 +367,7 @@ const Navigation = () => {
                   <Link
                     to="/auth"
                     className="group flex items-center gap-4 py-6 px-4 -mx-4 text-2xl font-light text-white uppercase tracking-widest transition-all duration-300 hover:bg-white/5 opacity-80 border-t border-white/10"
-                    style={{ 
+                    style={{
                       transitionDelay: isDropdownOpen ? `${150 + publicLinks.length * 50}ms` : '0ms',
                     }}
                   >

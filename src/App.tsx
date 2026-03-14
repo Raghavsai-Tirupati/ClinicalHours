@@ -47,6 +47,7 @@ const TimelinePlanner = lazy(() => import("./pages/TimelinePlanner"));
 const SecondaryEngine = lazy(() => import("./pages/SecondaryEngine"));
 const CostSimulator = lazy(() => import("./pages/CostSimulator"));
 const SchoolListBuilder = lazy(() => import("./pages/SchoolListBuilder"));
+const DirectApplicationFinder = lazy(() => import("./pages/DirectApplicationFinder"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -121,6 +122,7 @@ function AppContent() {
               <Route path="/secondaries" element={<SecondaryEngine />} />
               <Route path="/costs" element={<CostSimulator />} />
               <Route path="/school-list" element={<SchoolListBuilder />} />
+              <Route path="/apply-finder" element={<DirectApplicationFinder />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>
