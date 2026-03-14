@@ -467,10 +467,11 @@ All colors MUST be HSL.
 
 /* Touch-friendly improvements for mobile */
 @media (max-width: 640px) {
-  /* Allow long words and labels to wrap inside their containers site-wide */
-  * {
-    overflow-wrap: anywhere;
-    word-break: break-word;
+  /* Smaller base font on mobile so text fits in boxes without breaking words */
+  html {
+    font-size: 14px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   /* Ensure minimum touch target sizes */
@@ -501,13 +502,7 @@ All colors MUST be HSL.
   body {
     overflow-x: hidden;
   }
-  
-  /* Improve text readability on mobile */
-  html {
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-  }
-  
+
   /* Smoother scrolling on iOS */
   .overflow-auto,
   .overflow-y-auto,
