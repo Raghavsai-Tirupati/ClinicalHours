@@ -319,14 +319,13 @@ const Auth = () => {
           toast.success("Account created! Your hospital account is pending admin approval.");
           await redirectByAccountType(data.user.id);
         } else {
-          // Student accounts: require email verification
-          await supabase.auth.signOut();
-          await sendVerificationEmail(
+          // Student accounts: send verification email but keep user logged in
+          sendVerificationEmail(
             data.user.id,
             validatedData.email,
             validatedData.fullName || "User"
           );
-          toast.success("Account created! Check your email to verify your account.");
+          toast.success("Account created! Please verify your email within 24 hours.");
           navigate(`/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(validatedData.fullName || "User")}`);
         }
       }
@@ -394,32 +393,7 @@ const Auth = () => {
       }
 
       if (data.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("email_verified, created_at")
-          .eq("id", data.user.id)
-          .single();
-
-        const verificationCutoffDate = new Date("2026-01-09T00:00:00Z");
-        const accountCreatedAt = profile?.created_at ? new Date(profile.created_at) : new Date(0);
-        const isNewAccount = accountCreatedAt >= verificationCutoffDate;
-
-        // For accounts created on/after the cutoff, require a one-time email verification
-        // (older accounts continue to work as before).
-        if (isNewAccount && !profile?.email_verified) {
-          await supabase.auth.signOut();
-
-          const userEmail = data.user.email || email;
-          const userName = data.user.user_metadata?.full_name || "User";
-
-          toast.error("Please verify your email before signing in. Check your inbox for the verification link.");
-          navigate(
-            `/check-email?email=${encodeURIComponent(userEmail)}&uid=${encodeURIComponent(
-              data.user.id
-            )}&name=${encodeURIComponent(userName)}`
-          );
-          return;
-        }
+        // No longer blocking login for unverified accounts
 
         logAuthEvent("login_success", { email: validatedData.email });
         trackLogin(data.user.id, "email");
