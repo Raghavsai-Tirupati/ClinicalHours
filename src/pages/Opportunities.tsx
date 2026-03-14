@@ -29,6 +29,8 @@ import { useOpportunities } from "@/hooks/useOpportunities";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { GuestGate } from "@/components/GuestGate";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { FindApplicationButton } from "@/components/FindApplicationButton";
 
 const Opportunities = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,6 +43,7 @@ const Opportunities = () => {
   const [hospitalAccountMap, setHospitalAccountMap] = useState<Map<string, string>>(new Map());
   const [guestGateOpen, setGuestGateOpen] = useState(false);
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
+  const { isPremium } = usePremiumStatus();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -413,6 +416,15 @@ const Opportunities = () => {
                           </Button>
                         )}
                       </div>
+                    </div>
+                    {/* Find Application link — premium AI search */}
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <FindApplicationButton
+                        opportunityId={opportunity.id}
+                        opportunityName={opportunity.name}
+                        websiteHint={opportunity.website}
+                        isPremium={isPremium}
+                      />
                     </div>
                   </CardContent>
                 </Card>

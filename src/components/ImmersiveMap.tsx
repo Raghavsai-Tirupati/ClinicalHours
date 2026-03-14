@@ -4,6 +4,8 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePremiumStatus } from '@/hooks/usePremiumStatus';
+import { FindApplicationButton } from '@/components/FindApplicationButton';
 import { logger } from '@/lib/logger';
 import { Opportunity } from '@/types';
 import { consumePrefetchedOpportunities } from '@/lib/opportunityPrefetch';
@@ -88,6 +90,7 @@ const ImmersiveMap = () => {
   const isPinModeRef = useRef(false);
 
   const { user, isReady, isGuest } = useAuth();
+  const { isPremium } = usePremiumStatus();
   const { toast } = useToast();
   const [mapLoading, setMapLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
@@ -866,6 +869,17 @@ const ImmersiveMap = () => {
                       Details
                     </Link>
                   )}
+                </div>
+
+                {/* Find Application button */}
+                <div className="mt-2">
+                  <FindApplicationButton
+                    opportunityId={selectedFeature.id}
+                    opportunityName={selectedFeature.name}
+                    websiteHint={selectedFeature.website}
+                    isPremium={isPremium}
+                    compact
+                  />
                 </div>
               </div>
             </div>
