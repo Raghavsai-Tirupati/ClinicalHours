@@ -110,6 +110,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log("ENV check:", { hasKey: !!GOOGLE_CSE_API_KEY, hasId: !!GOOGLE_CSE_ID });
+
     // Simple sequential queries — stop at first result
     const queries = [
       `${name} volunteer application`,
@@ -120,9 +122,16 @@ const handler = async (req: Request): Promise<Response> => {
     for (const q of queries) {
       try {
         const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_CSE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${encodeURIComponent(q)}&num=3`;
+        console.log("Searching:", q);
         const res = await fetch(searchUrl);
-        if (!res.ok) continue;
+        console.log("Google API status:", res.status);
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("Google API error:", errText);
+          continue;
+        }
         const data = await res.json();
+        console.log("Results count:", data.items?.length ?? 0);
 
         if (data.items && data.items.length > 0) {
           const item = data.items[0];
@@ -140,8 +149,8 @@ const handler = async (req: Request): Promise<Response> => {
             { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
           );
         }
-      } catch {
-        // Ignore per-query errors, try next
+      } catch (queryErr) {
+        console.error("Query error for:", q, queryErr);
       }
     }
 
