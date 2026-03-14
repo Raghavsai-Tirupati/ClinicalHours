@@ -121,7 +121,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const q of queries) {
       try {
-        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_CSE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${encodeURIComponent(q)}&num=3`;
+        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_CSE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${encodeURIComponent(q)}&num=3&siteSearchFilter=e`;
         console.log("Searching:", q);
         const res = await fetch(searchUrl);
         console.log("Google API status:", res.status);
