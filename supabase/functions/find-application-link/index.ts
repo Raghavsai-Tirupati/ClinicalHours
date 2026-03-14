@@ -110,68 +110,44 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Build queries — site-scoped first if we have a domain hint
-    const queries: string[] = [];
-    if (siteDomain) {
-      queries.push(`site:${siteDomain} volunteer OR shadow OR apply`);
-    }
-    queries.push(
-      `${name} volunteer application form`,
-      `${name} shadowing application`,
-      `${name} clinical volunteer apply`,
-    );
-
-    const seenUrls = new Set<string>();
-    const links: Array<{ url: string; confidence: "high" | "medium" | "low"; label: string; note?: string }> = [];
+    // Simple sequential queries — stop at first result
+    const queries = [
+      `${name} volunteer application`,
+      `${name} volunteering`,
+      `${name} shadowing`,
+    ];
 
     for (const q of queries) {
-      if (links.length >= 5) break;
-
       try {
         const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_CSE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${encodeURIComponent(q)}&num=3`;
         const res = await fetch(searchUrl);
         if (!res.ok) continue;
         const data = await res.json();
 
-        for (const item of data.items ?? []) {
-          if (links.length >= 5) break;
-          const url: string = item.link;
-          if (seenUrls.has(url)) continue;
-          seenUrls.add(url);
-
-          const urlLower = url.toLowerCase();
-          const titleLower = (item.title ?? "").toLowerCase();
-          const snippetLower = (item.snippet ?? "").toLowerCase();
-
-          let confidence: "high" | "medium" | "low" = "low";
-          const highSignals = ["apply", "application", "volunteer", "signup", "sign-up", "register", "form"];
-          const medSignals = ["volunteer", "opportunity", "join", "community", "program"];
-
-          const isHighUrl = highSignals.some((s) => urlLower.includes(s));
-          const isHighTitle = highSignals.some((s) => titleLower.includes(s) || snippetLower.includes(s));
-
-          if (isHighUrl && isHighTitle) confidence = "high";
-          else if (isHighUrl || isHighTitle) confidence = "medium";
-          else if (medSignals.some((s) => titleLower.includes(s) || urlLower.includes(s))) confidence = "medium";
-
-          links.push({
-            url,
-            confidence,
-            label: item.title ?? url,
-            note: item.snippet ? item.snippet.slice(0, 120) : undefined,
-          });
+        if (data.items && data.items.length > 0) {
+          const item = data.items[0];
+          return new Response(
+            JSON.stringify({
+              organizationName: name,
+              links: [{
+                url: item.link,
+                confidence: "high" as const,
+                label: item.title ?? item.link,
+                note: item.snippet ? item.snippet.slice(0, 120) : undefined,
+              }],
+              searchedAt: new Date().toISOString(),
+            }),
+            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
         }
       } catch {
-        // Ignore per-query errors, continue with next query
+        // Ignore per-query errors, try next
       }
     }
 
-    // Sort: high first, then medium, then low
-    const order = { high: 0, medium: 1, low: 2 };
-    links.sort((a, b) => order[a.confidence] - order[b.confidence]);
-
+    // No results from any query
     return new Response(
-      JSON.stringify({ organizationName: name, links, searchedAt: new Date().toISOString() }),
+      JSON.stringify({ organizationName: name, links: [], searchedAt: new Date().toISOString() }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
