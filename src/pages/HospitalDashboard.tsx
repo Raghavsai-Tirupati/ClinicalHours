@@ -47,7 +47,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface OpportunityWithApps {
   id: string;
@@ -145,7 +145,7 @@ export default function HospitalDashboard() {
   const [questionSaving, setQuestionSaving] = useState(false);
   const [haInterviewLoading, setHaInterviewLoading] = useState(false);
   const [haConfirmSlot, setHaConfirmSlot] = useState("");
-  const { toast } = useToast();
+  
 
   useEffect(() => {
     if (!authLoading && !user) {
