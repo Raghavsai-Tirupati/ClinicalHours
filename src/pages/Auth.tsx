@@ -404,14 +404,20 @@ const Auth = () => {
         const accountCreatedAt = profile?.created_at ? new Date(profile.created_at) : new Date(0);
         const isNewAccount = accountCreatedAt >= verificationCutoffDate;
 
+        // For accounts created on/after the cutoff, require a one-time email verification
+        // (older accounts continue to work as before).
         if (isNewAccount && !profile?.email_verified) {
           await supabase.auth.signOut();
-          
+
           const userEmail = data.user.email || email;
           const userName = data.user.user_metadata?.full_name || "User";
-          
+
           toast.error("Please verify your email before signing in. Check your inbox for the verification link.");
-          navigate(`/check-email?email=${encodeURIComponent(userEmail)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(userName)}`);
+          navigate(
+            `/check-email?email=${encodeURIComponent(userEmail)}&uid=${encodeURIComponent(
+              data.user.id
+            )}&name=${encodeURIComponent(userName)}`
+          );
           return;
         }
 
@@ -682,13 +688,14 @@ const Auth = () => {
                     disabled={loading || googleLoading}
                     className="h-11 pr-10"
                   />
-                  <div
-                    onMouseEnter={() => setShowPassword(true)}
-                    onMouseLeave={() => setShowPassword(false)}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     <Eye className="h-4 w-4" />
-                  </div>
+                  </button>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -832,13 +839,14 @@ const Auth = () => {
                     disabled={loading || googleLoading}
                     className="h-11 pr-10"
                   />
-                  <div
-                    onMouseEnter={() => setShowPassword(true)}
-                    onMouseLeave={() => setShowPassword(false)}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     <Eye className="h-4 w-4" />
-                  </div>
+                  </button>
                 </div>
                 {password.length > 0 && (
                   <div className="space-y-1 text-xs">

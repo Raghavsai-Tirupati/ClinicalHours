@@ -502,6 +502,13 @@ function UserJourneyCard({
         ))}
       </div>
 
+      {uniquePages.includes("Premium") && (
+        <div className="flex items-center gap-1.5 text-xs text-amber-300">
+          <BookmarkCheck className="h-3 w-3" />
+          <span>Viewed the Premium page (likely considering upgrade)</span>
+        </div>
+      )}
+
       {/* Saved Opportunities (for authenticated users) */}
       {!user.isGuest && (
         <Card>
@@ -804,8 +811,10 @@ export function AdminActivityTab() {
         </Card>
         <Card className="bg-muted/30">
           <CardContent className="py-2.5 px-3">
-            <p className="text-lg font-bold tabular-nums">{eventTypeCounts.get("login") ?? 0}</p>
-            <p className="text-[11px] text-muted-foreground">Logins</p>
+            <p className="text-lg font-bold tabular-nums">
+              {userSummaries.filter((u) => u.pages.includes("Premium")).length}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Viewed Premium</p>
           </CardContent>
         </Card>
       </div>
@@ -907,6 +916,14 @@ export function AdminActivityTab() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                        {user.pages.includes("Premium") && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] border-amber-500/30 text-amber-400"
+                          >
+                            Premium
+                          </Badge>
+                        )}
                         {user.isGuest && guestSessionsMap.get(user.sessionId)?.converted_to_user_id && (
                           <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-400">Converted</Badge>
                         )}

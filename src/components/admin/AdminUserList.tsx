@@ -269,6 +269,23 @@ export default function AdminUserList() {
                             Not subscribed
                           </Badge>
                         )}
+                        {user.email_verified ? (
+                          <Badge
+                            variant="outline"
+                            className="w-fit text-xs border-emerald-500/40 text-emerald-400"
+                          >
+                            <Mail className="h-3 w-3 mr-1" />
+                            Email verified
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="w-fit text-xs border-amber-500/40 text-amber-400"
+                          >
+                            <MailX className="h-3 w-3 mr-1" />
+                            Email unverified
+                          </Badge>
+                        )}
                         {user.clinical_hours && user.clinical_hours > 0 && (
                           <span className="text-xs text-muted-foreground">
                             {user.clinical_hours} clinical hrs

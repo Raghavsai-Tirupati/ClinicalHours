@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Home, MapPin, Mail, LogIn, Sparkles, ChevronDown, Lock } from "lucide-react";
+import { Menu, X, Home, MapPin, Mail, LogIn, Sparkles, ChevronDown, User, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +48,7 @@ const Navigation = () => {
   const location = useLocation();
   const { user, isGuest } = useAuth();
   const { member: hospitalMember } = useHospitalMember();
+  const { isPremium } = usePremiumStatus();
 
   // Check if we're on pages that should have transparent nav
   const isHomePage = location.pathname === "/";
@@ -102,10 +104,34 @@ const Navigation = () => {
       : []),
   ];
 
-  // Guests see authenticated links (Dashboard, Opportunities, etc.) but with Sign Up instead of Profile
-  const links = (user || isGuest) ? authenticatedLinks : publicLinks;
+  // Hospital members see only one tab: Admin portal. No opportunities, map, or my-applications.
+  const isHospitalContext = !!hospitalMember;
+  const hospitalLinks = [{ name: "Admin", path: "/hospital-dashboard" }];
+
+  // Hospital context: no student features. Otherwise authenticated or public.
+  const links =
+    user || isGuest
+      ? isHospitalContext
+        ? hospitalLinks
+        : authenticatedLinks
+      : publicLinks;
+
+  // Hide Tools dropdown in hospital context
+  const showToolsDropdown = (user || isGuest) && !isHospitalContext;
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Bottom tab bar is for student context only, not on public auth/home pages or hospital context
+  const isAuthOrHome = location.pathname === "/" || location.pathname.startsWith("/auth");
+  const isStudentContext = (user || isGuest) && !isHospitalContext;
+  const showBottomTabs = isStudentContext && !isAuthOrHome;
+
+  const bottomTabs = [
+    { name: "Dashboard", path: "/dashboard", icon: Home },
+    { name: "Opportunities", path: "/opportunities", icon: MapPin },
+    { name: "Tracker", path: "/my-applications", icon: Sparkles },
+    { name: "Profile", path: "/profile", icon: User },
+  ];
 
   // Determine nav styles based on scroll and page
   const navBackground = hasTransparentNav
@@ -152,41 +178,59 @@ const Navigation = () => {
                     {link.name}
                   </Link>
                 ))}
-                {/* Tools dropdown for authenticated users */}
-                {(user || isGuest) && (
+                {/* Tools dropdown for authenticated users (hidden in hospital context) */}
+                {showToolsDropdown && (
                   <DropdownMenu>
                     <DropdownMenuTrigger className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor} outline-none`}>
                       Tools <ChevronDown className="h-3 w-3" />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1.5">
+                    <DropdownMenuContent align="end" className="w-64">
+                      {/* Free tools */}
+                      <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                         Free Tools
-                      </DropdownMenuLabel>
+                      </div>
                       {freeToolsLinks.map((link) => (
                         <DropdownMenuItem key={link.path} asChild>
-                          <Link to={link.path} className="cursor-pointer">{link.name}</Link>
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase tracking-wider py-1.5 flex items-center gap-1">
-                        <Sparkles className="h-3 w-3 text-amber-400" />
-                        <span>Premium</span>
-                      </DropdownMenuLabel>
-                      {premiumToolsLinks.map((link) => (
-                        <DropdownMenuItem key={link.path} asChild>
-                          <Link to={link.path} className="cursor-pointer flex items-center gap-1.5">
-                            <Lock className="h-3 w-3 text-muted-foreground/50" />
+                          <Link to={link.path} className="cursor-pointer">
                             {link.name}
                           </Link>
                         </DropdownMenuItem>
                       ))}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/premium" className="cursor-pointer flex items-center gap-1.5">
-                          <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                          <span className="text-amber-400">Upgrade to Premium</span>
-                        </Link>
-                      </DropdownMenuItem>
+
+                      {/* Premium tools section always labeled as Premium; locks only for non-premium users */}
+                      {premiumToolsLinks.length > 0 && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <div className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-amber-400">
+                            Premium
+                          </div>
+                          {premiumToolsLinks.map((link) => (
+                            <DropdownMenuItem key={link.path} asChild>
+                              <Link
+                                to={link.path}
+                                className="cursor-pointer flex items-center justify-between gap-2"
+                              >
+                                <span>{link.name}</span>
+                                {!isPremium && (
+                                  <Lock className="h-3.5 w-3.5 text-amber-400" />
+                                )}
+                              </Link>
+                            </DropdownMenuItem>
+                          ))}
+                        </>
+                      )}
+
+                      {!isPremium && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link to="/premium" className="cursor-pointer flex items-center gap-1.5 text-amber-400">
+                              <Sparkles className="h-3.5 w-3.5" />
+                              <span>Upgrade to Premium</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -259,10 +303,11 @@ const Navigation = () => {
                   {link.name}
                 </Link>
               ))}
-              {/* Mobile tools section */}
-              {(user || isGuest) && (
+              {/* Mobile tools section (hidden in hospital context) */}
+              {showToolsDropdown && (
                 <div className={`pt-2 border-t ${hasTransparentNav ? "border-white/10" : "border-border"}`}>
-                  <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2 ${textColor} opacity-50`}>Free Tools</p>
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest mb-2 ${textColor} opacity-50`}>Tools</p>
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest mb-1 ${textColor} opacity-60`}>Free Tools</p>
                   {freeToolsLinks.map((link) => (
                     <Link
                       key={link.path}
@@ -273,26 +318,31 @@ const Navigation = () => {
                       {link.name}
                     </Link>
                   ))}
-                  <p className={`text-[10px] font-semibold uppercase tracking-widest mt-3 mb-2 ${textColor} opacity-50 flex items-center gap-1`}>
-                    <Sparkles className="h-3 w-3 text-amber-400" /> Premium Tools
-                  </p>
-                  {premiumToolsLinks.map((link) => (
+                  {premiumToolsLinks.length > 0 && (
+                    <>
+                      <p className={`mt-3 text-[10px] font-semibold uppercase tracking-widest mb-1 text-amber-400`}>Premium</p>
+                      {premiumToolsLinks.map((link) => (
+                        <Link
+                          key={link.path}
+                          to={link.path}
+                          onClick={() => setIsOpen(false)}
+                          className={`flex items-center justify-between text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
+                        >
+                          <span>{link.name}</span>
+                          {!isPremium && <Lock className="h-3.5 w-3.5 text-amber-400" />}
+                        </Link>
+                      ))}
+                    </>
+                  )}
+                  {!isPremium && (
                     <Link
-                      key={link.path}
-                      to={link.path}
+                      to="/premium"
                       onClick={() => setIsOpen(false)}
-                      className={`block text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
+                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 text-amber-400 font-heading"
                     >
-                      {link.name}
+                      <Sparkles className="h-3.5 w-3.5" /> Upgrade to Premium
                     </Link>
-                  ))}
-                  <Link
-                    to="/premium"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 text-amber-400 font-heading"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" /> Upgrade to Premium
-                  </Link>
+                  )}
                 </div>
               )}
               {user && !isGuest ? (
@@ -384,6 +434,41 @@ const Navigation = () => {
           {/* Subtle left border gradient */}
           <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
         </div>
+      )}
+
+      {showBottomTabs && (
+        <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 border-t border-border/80 backdrop-blur-sm">
+          <div className="flex items-center justify-around px-2 py-1.5">
+            {bottomTabs.map((tab) => {
+              const Icon = tab.icon;
+              const active = isActive(tab.path);
+              return (
+                <Link
+                  key={tab.path}
+                  to={tab.path}
+                  className="flex flex-col items-center justify-center flex-1 px-2"
+                >
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-xs transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <span
+                    className={`mt-0.5 text-[10px] font-medium ${
+                      active ? "text-primary" : "text-muted-foreground"
+                    }`}
+                  >
+                    {tab.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       )}
     </>
   );

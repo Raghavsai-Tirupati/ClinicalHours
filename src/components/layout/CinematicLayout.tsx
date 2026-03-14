@@ -29,13 +29,13 @@ export default function CinematicLayout({ title, subtitle, children }: Cinematic
 
       <Navigation />
 
-      <main className="flex-1 relative z-10 pt-24 pb-12">
-        <div className="container mx-auto px-4">
+      <main className="flex-1 relative z-10 pt-20 md:pt-24 pb-24 md:pb-12">
+        <div className="container mx-auto px-3 sm:px-4">
           {/* Stage panel */}
           <div className="max-w-6xl mx-auto">
             <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm shadow-lg overflow-hidden">
               {/* Stage header */}
-              <div className="border-b border-border/40 bg-card/80 px-6 py-5">
+              <div className="border-b border-border/40 bg-card/80 px-4 sm:px-6 py-4 sm:py-5">
                 <h1 className="text-2xl font-bold text-foreground font-heading">{title}</h1>
                 {subtitle && (
                   <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
@@ -43,7 +43,7 @@ export default function CinematicLayout({ title, subtitle, children }: Cinematic
               </div>
 
               {/* Stage content */}
-              <div className="p-6">{children}</div>
+              <div className="p-4 sm:p-6">{children}</div>
             </div>
           </div>
         </div>
