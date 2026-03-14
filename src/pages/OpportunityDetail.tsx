@@ -17,6 +17,8 @@ import ReviewsList from "@/components/ReviewsList";
 import { QASection } from "@/components/QASection";
 import { GuestGate } from "@/components/GuestGate";
 import { logger } from "@/lib/logger";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { FindApplicationButton } from "@/components/FindApplicationButton";
 
 interface Opportunity {
   id: string;
@@ -41,6 +43,7 @@ const OpportunityDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
+  const { isPremium } = usePremiumStatus();
   const { toast } = useToast();
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -403,6 +406,13 @@ const OpportunityDetail = () => {
                   Apply (not enabled)
                 </Button>
               ) : null}
+
+              <FindApplicationButton
+                opportunityId={opportunity.id}
+                opportunityName={opportunity.name}
+                websiteHint={opportunity.website}
+                isPremium={isPremium}
+              />
 
               <ReviewForm
                 opportunityId={opportunity.id}

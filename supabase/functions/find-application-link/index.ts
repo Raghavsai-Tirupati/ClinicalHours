@@ -75,7 +75,8 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { organizationName } = await req.json();
+  const body = await req.json();
+  const { organizationName, websiteHint } = body;
   if (!organizationName || typeof organizationName !== "string" || organizationName.trim().length < 2) {
     return new Response(JSON.stringify({ error: "organizationName is required" }), {
       status: 400,
@@ -84,6 +85,15 @@ Deno.serve(async (req) => {
   }
 
   const name = organizationName.trim().slice(0, 200);
+
+  // Extract domain from websiteHint (e.g. "https://www.foo.org" → "foo.org")
+  let siteDomain: string | null = null;
+  if (websiteHint && typeof websiteHint === "string") {
+    try {
+      const url = new URL(websiteHint);
+      siteDomain = url.hostname.replace(/^www\./, "");
+    } catch { /* ignore malformed URLs */ }
+  }
 
   const GOOGLE_CSE_API_KEY = Deno.env.get("GOOGLE_CSE_API_KEY");
   const GOOGLE_CSE_ID = Deno.env.get("GOOGLE_CSE_ID");
@@ -95,12 +105,16 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Search Google Custom Search Engine for application/volunteer pages
-  const queries = [
+  // Build queries — site-scoped first if we have a domain hint
+  const queries: string[] = [];
+  if (siteDomain) {
+    queries.push(`site:${siteDomain} volunteer OR shadow OR apply`);
+  }
+  queries.push(
     `${name} volunteer application form`,
     `${name} shadowing application`,
     `${name} clinical volunteer apply`,
-  ];
+  );
 
   const seenUrls = new Set<string>();
   const links: Array<{ url: string; confidence: "high" | "medium" | "low"; label: string; note?: string }> = [];
