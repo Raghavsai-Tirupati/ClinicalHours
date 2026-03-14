@@ -25,7 +25,7 @@ function setTable<T>(key: string, data: T[]): void {
 
 // ─── Generic CRUD ──────────────────────────────────────────────────────────
 
-export function localInsert<T extends { id?: string }>(table: string, row: T): T & { id: string } {
+export function localInsert<T extends Record<string, unknown> & { id?: string }>(table: string, row: T): T & { id: string } {
   const rows = getTable<T & { id: string }>(table);
   const newRow = { ...row, id: row.id || generateId(), created_at: new Date().toISOString() } as T & { id: string };
   rows.unshift(newRow);
