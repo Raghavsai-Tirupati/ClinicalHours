@@ -5,36 +5,165 @@ import { validateOrigin, getCorsHeaders } from "../_shared/auth.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-// Simple in-memory rate limit: max 10 requests per user per 5 minutes
+// Rate limit: max 10 requests per user per 5 minutes
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 10;
-const RATE_WINDOW_MS = 5 * 60 * 1000;
-
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
   const entry = rateLimitMap.get(userId);
   if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    rateLimitMap.set(userId, { count: 1, resetAt: now + 5 * 60 * 1000 });
     return true;
   }
-  if (entry.count >= RATE_LIMIT) return false;
+  if (entry.count >= 10) return false;
   entry.count++;
   return true;
 }
 
+interface LinkResult {
+  url: string;
+  confidence: "high" | "medium" | "low";
+  label: string;
+  note?: string;
+}
+
+// ── Approach 1: Probe common volunteer/application URL patterns ──────────────
+// Works immediately with zero API keys — uses the hospital's known website URL.
+const VOLUNTEER_PATHS = [
+  "/volunteer",
+  "/volunteers",
+  "/volunteer-services",
+  "/volunteer-opportunities",
+  "/volunteering",
+  "/volunteer-application",
+  "/community/volunteer",
+  "/community/volunteers",
+  "/community/volunteer-services",
+  "/giving/volunteer",
+  "/about/volunteer",
+  "/get-involved/volunteer",
+  "/get-involved",
+  "/shadow",
+  "/shadowing",
+  "/clinical-shadowing",
+  "/for-volunteers",
+  "/departments/volunteer-services",
+];
+
+// Higher confidence for paths that include "application" or "apply"
+function pathConfidence(path: string): "high" | "medium" {
+  const high = ["application", "apply", "shadow", "clinical"];
+  return high.some((s) => path.includes(s)) ? "high" : "medium";
+}
+
+async function probeVolunteerUrls(websiteHint: string): Promise<LinkResult[]> {
+  let origin: string;
+  try {
+    origin = new URL(websiteHint).origin;
+  } catch {
+    return [];
+  }
+
+  const results: LinkResult[] = [];
+  const TIMEOUT_MS = 4000;
+
+  // Run all probes in parallel
+  const probes = VOLUNTEER_PATHS.map(async (path): Promise<LinkResult | null> => {
+    const fullUrl = `${origin}${path}`;
+    try {
+      const res = await fetch(fullUrl, {
+        method: "HEAD",
+        redirect: "follow",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        headers: { "User-Agent": "ClinicalHours-Bot/1.0" },
+      });
+      if (res.ok) {
+        const finalUrl = res.url || fullUrl;
+        return {
+          url: finalUrl,
+          confidence: pathConfidence(path),
+          label: `Volunteer Page (${path})`,
+        };
+      }
+    } catch {
+      // Timeout or network error — skip
+    }
+    return null;
+  });
+
+  const settled = await Promise.allSettled(probes);
+  for (const r of settled) {
+    if (r.status === "fulfilled" && r.value) {
+      results.push(r.value);
+    }
+  }
+
+  return results;
+}
+
+// ── Approach 2: Serper.dev — real Google search results (optional) ───────────
+// Sign up free at serper.dev (2500 free queries). Set secret: SERPER_API_KEY
+async function serperSearch(query: string): Promise<LinkResult[]> {
+  const apiKey = Deno.env.get("SERPER_API_KEY");
+  if (!apiKey) return [];
+
+  try {
+    const res = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: {
+        "X-API-KEY": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ q: query, num: 5 }),
+      signal: AbortSignal.timeout(6000),
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    const results: LinkResult[] = [];
+    for (const item of data.organic ?? []) {
+      const url: string = item.link ?? "";
+      if (!url) continue;
+
+      const urlLower = url.toLowerCase();
+      const titleLower = (item.title ?? "").toLowerCase();
+      const snippetLower = (item.snippet ?? "").toLowerCase();
+
+      const highSignals = ["apply", "application", "volunteer", "signup", "sign-up", "register", "form", "shadow"];
+      const medSignals = ["volunteer", "opportunity", "join", "community", "program", "clinical"];
+
+      const isHighUrl = highSignals.some((s) => urlLower.includes(s));
+      const isHighTitle = highSignals.some((s) => titleLower.includes(s) || snippetLower.includes(s));
+
+      let confidence: "high" | "medium" | "low" = "low";
+      if (isHighUrl && isHighTitle) confidence = "high";
+      else if (isHighUrl || isHighTitle) confidence = "medium";
+      else if (medSignals.some((s) => titleLower.includes(s) || urlLower.includes(s))) confidence = "medium";
+
+      results.push({
+        url,
+        confidence,
+        label: item.title ?? url,
+        note: item.snippet ? (item.snippet as string).slice(0, 120) : undefined,
+      });
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+// ── Main handler ─────────────────────────────────────────────────────────────
 const handler = async (req: Request): Promise<Response> => {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Validate origin
   const originValidation = validateOrigin(req);
   if (!originValidation.valid) {
-    console.warn(`Origin validation failed: ${originValidation.error}`);
     return new Response(
       JSON.stringify({ error: "Invalid origin" }),
       { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -49,7 +178,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Authenticate via Bearer token (sent automatically by supabase.functions.invoke)
+    // Auth
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
@@ -71,7 +200,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Rate limit check
     if (!checkRateLimit(user.id)) {
       return new Response(
         JSON.stringify({ error: "Rate limit exceeded. Please wait before searching again." }),
@@ -91,72 +219,31 @@ const handler = async (req: Request): Promise<Response> => {
 
     const name = organizationName.trim().slice(0, 200);
 
-    // Extract domain from websiteHint (e.g. "https://www.foo.org" → "foo.org")
-    let siteDomain: string | null = null;
-    if (websiteHint && typeof websiteHint === "string") {
-      try {
-        const url = new URL(websiteHint);
-        siteDomain = url.hostname.replace(/^www\./, "");
-      } catch { /* ignore malformed URLs */ }
-    }
+    // Run both approaches concurrently
+    const [probeResults, serperResults] = await Promise.all([
+      websiteHint ? probeVolunteerUrls(websiteHint) : Promise.resolve([]),
+      serperSearch(`${name} volunteer application`),
+    ]);
 
-    const GOOGLE_CSE_API_KEY = Deno.env.get("GOOGLE_CSE_API_KEY");
-    const GOOGLE_CSE_ID = Deno.env.get("GOOGLE_CSE_ID");
+    // Merge, deduplicate by URL
+    const seenUrls = new Set<string>();
+    const links: LinkResult[] = [];
 
-    if (!GOOGLE_CSE_API_KEY || !GOOGLE_CSE_ID) {
-      return new Response(
-        JSON.stringify({ error: "Search service not configured. Set GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID secrets." }),
-        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    console.log("ENV check:", { hasKey: !!GOOGLE_CSE_API_KEY, hasId: !!GOOGLE_CSE_ID });
-
-    // Simple sequential queries — stop at first result
-    const queries = [
-      `${name} volunteer application`,
-      `${name} volunteering`,
-      `${name} shadowing`,
-    ];
-
-    for (const q of queries) {
-      try {
-        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_CSE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${encodeURIComponent(q)}&num=3&siteSearchFilter=e`;
-        console.log("Searching:", q);
-        const res = await fetch(searchUrl);
-        console.log("Google API status:", res.status);
-        if (!res.ok) {
-          const errText = await res.text();
-          console.error("Google API error:", errText);
-          continue;
-        }
-        const data = await res.json();
-        console.log("Results count:", data.items?.length ?? 0);
-
-        if (data.items && data.items.length > 0) {
-          const item = data.items[0];
-          return new Response(
-            JSON.stringify({
-              organizationName: name,
-              links: [{
-                url: item.link,
-                confidence: "high" as const,
-                label: item.title ?? item.link,
-                note: item.snippet ? item.snippet.slice(0, 120) : undefined,
-              }],
-              searchedAt: new Date().toISOString(),
-            }),
-            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-          );
-        }
-      } catch (queryErr) {
-        console.error("Query error for:", q, queryErr);
+    for (const r of [...probeResults, ...serperResults]) {
+      const normalized = r.url.replace(/\/$/, "").toLowerCase();
+      if (!seenUrls.has(normalized)) {
+        seenUrls.add(normalized);
+        links.push(r);
+        if (links.length >= 6) break;
       }
     }
 
-    // No results from any query
+    // Sort: high → medium → low
+    const order = { high: 0, medium: 1, low: 2 };
+    links.sort((a, b) => order[a.confidence] - order[b.confidence]);
+
     return new Response(
-      JSON.stringify({ organizationName: name, links: [], searchedAt: new Date().toISOString() }),
+      JSON.stringify({ organizationName: name, links, searchedAt: new Date().toISOString() }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
