@@ -393,11 +393,7 @@ const Auth = () => {
       }
 
       if (data.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("email_verified, created_at")
-          .eq("id", data.user.id)
-          .single();
+        // No longer blocking login for unverified accounts
 
         logAuthEvent("login_success", { email: validatedData.email });
         trackLogin(data.user.id, "email");

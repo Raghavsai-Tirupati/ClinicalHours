@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, RefreshCw, ArrowLeft } from "lucide-react";
+import { Mail, RefreshCw, ArrowLeft, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 
@@ -81,6 +81,14 @@ const CheckEmail = () => {
                 {email}
               </p>
             )}
+
+            {/* 24-hour warning */}
+            <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 w-full">
+              <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-yellow-200">
+                <strong>Verify within 24 hours</strong> or your account will be automatically deleted.
+              </p>
+            </div>
             
             <div className="bg-muted/50 rounded-lg p-4 text-left w-full">
               <p className="text-sm text-muted-foreground mb-3">
@@ -105,6 +113,15 @@ const CheckEmail = () => {
                 )}
               </Button>
             </div>
+
+            {/* Continue to Dashboard button */}
+            <Button
+              onClick={() => navigate("/dashboard")}
+              className="w-full"
+              size="lg"
+            >
+              Continue to Dashboard
+            </Button>
             
             <p className="text-xs text-center text-muted-foreground mt-2">
               Already verified?{" "}
