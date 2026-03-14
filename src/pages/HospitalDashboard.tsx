@@ -47,7 +47,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface OpportunityWithApps {
   id: string;
