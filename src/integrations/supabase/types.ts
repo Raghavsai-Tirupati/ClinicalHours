@@ -20,10 +20,10 @@ export type Database = {
           confidence: string | null
           created_at: string | null
           hospital_name: string
+          hospital_name_lower: string | null
           hospital_website: string | null
           id: string
           last_searched_at: string | null
-          opportunity_id: string | null
           search_query: string | null
           updated_at: string | null
           verified: boolean | null
@@ -33,10 +33,10 @@ export type Database = {
           confidence?: string | null
           created_at?: string | null
           hospital_name: string
+          hospital_name_lower?: string | null
           hospital_website?: string | null
           id?: string
           last_searched_at?: string | null
-          opportunity_id?: string | null
           search_query?: string | null
           updated_at?: string | null
           verified?: boolean | null
@@ -46,30 +46,15 @@ export type Database = {
           confidence?: string | null
           created_at?: string | null
           hospital_name?: string
+          hospital_name_lower?: string | null
           hospital_website?: string | null
           id?: string
           last_searched_at?: string | null
-          opportunity_id?: string | null
           search_query?: string | null
           updated_at?: string | null
           verified?: boolean | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "application_links_opportunity_id_fkey"
-            columns: ["opportunity_id"]
-            isOneToOne: false
-            referencedRelation: "opportunities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "application_links_opportunity_id_fkey"
-            columns: ["opportunity_id"]
-            isOneToOne: false
-            referencedRelation: "opportunities_with_ratings"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       applications: {
         Row: {
