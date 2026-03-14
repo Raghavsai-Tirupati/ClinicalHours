@@ -77,3 +77,12 @@ verify_jwt = false
 
 [functions.replace-opportunities]
 verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.create-checkout-session]
+verify_jwt = false
+
+[functions.cancel-subscription]
+verify_jwt = false
