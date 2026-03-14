@@ -580,6 +580,7 @@ export function AdminActivityTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
+  const [premiumOnly, setPremiumOnly] = useState(false);
 
   // AdminUserProfile dialog state
   const [profileDialogUser, setProfileDialogUser] = useState<{
@@ -669,6 +670,9 @@ export function AdminActivityTab() {
     if (userFilter === "authenticated") result = result.filter((e) => e.user_id);
     else if (userFilter === "guests") result = result.filter((e) => !e.user_id);
     if (eventTypeFilter.length > 0) result = result.filter((e) => eventTypeFilter.includes(e.event_type));
+    if (premiumOnly) {
+      result = result.filter((e) => getPageName(e.page_url) === "Premium");
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter((e) => {
@@ -840,6 +844,15 @@ export function AdminActivityTab() {
           </SelectContent>
         </Select>
         <Input placeholder="Search user, page, session..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-56 h-8 text-xs" />
+        <Button
+          variant={premiumOnly ? "secondary" : "ghost"}
+          size="sm"
+          className="h-8 text-xs px-3"
+          onClick={() => setPremiumOnly((prev) => !prev)}
+        >
+          <BookmarkCheck className="h-3 w-3 mr-1.5" />
+          Premium only
+        </Button>
         <div className="flex items-center gap-1 ml-auto">
           <Button variant={viewMode === "timeline" ? "secondary" : "ghost"} size="sm" className="h-8 text-xs px-3" onClick={() => setViewMode("timeline")}>Timeline</Button>
           <Button variant={viewMode === "by-user" ? "secondary" : "ghost"} size="sm" className="h-8 text-xs px-3" onClick={() => setViewMode("by-user")}>By User</Button>

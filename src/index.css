@@ -467,6 +467,12 @@ All colors MUST be HSL.
 
 /* Touch-friendly improvements for mobile */
 @media (max-width: 640px) {
+  /* Allow long words and labels to wrap inside their containers site-wide */
+  * {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
   /* Ensure minimum touch target sizes */
   button,
   [role="button"],
