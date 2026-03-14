@@ -145,7 +145,7 @@ export default function HospitalDashboard() {
   const [questionSaving, setQuestionSaving] = useState(false);
   const [haInterviewLoading, setHaInterviewLoading] = useState(false);
   const [haConfirmSlot, setHaConfirmSlot] = useState("");
-  const { toast } = useToast();
+  
 
   useEffect(() => {
     if (!authLoading && !user) {
