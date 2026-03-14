@@ -399,27 +399,6 @@ const Auth = () => {
           .eq("id", data.user.id)
           .single();
 
-        const verificationCutoffDate = new Date("2026-01-09T00:00:00Z");
-        const accountCreatedAt = profile?.created_at ? new Date(profile.created_at) : new Date(0);
-        const isNewAccount = accountCreatedAt >= verificationCutoffDate;
-
-        // For accounts created on/after the cutoff, require a one-time email verification
-        // (older accounts continue to work as before).
-        if (isNewAccount && !profile?.email_verified) {
-          await supabase.auth.signOut();
-
-          const userEmail = data.user.email || email;
-          const userName = data.user.user_metadata?.full_name || "User";
-
-          toast.error("Please verify your email before signing in. Check your inbox for the verification link.");
-          navigate(
-            `/check-email?email=${encodeURIComponent(userEmail)}&uid=${encodeURIComponent(
-              data.user.id
-            )}&name=${encodeURIComponent(userName)}`
-          );
-          return;
-        }
-
         logAuthEvent("login_success", { email: validatedData.email });
         trackLogin(data.user.id, "email");
         toast.success("Welcome back!");
