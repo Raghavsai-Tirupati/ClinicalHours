@@ -183,10 +183,10 @@ const TimelinePlanner = () => (
     <Navigation />
     <main className="flex-1 container mx-auto px-4 pt-24 pb-16">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground font-heading">Timeline & Deadline Planner</h1>
+        <h1 className="text-2xl font-bold text-foreground font-heading">Application Timeline</h1>
         <p className="text-muted-foreground mt-1">Your personalized application timeline with key milestones and deadlines.</p>
       </div>
-      <PremiumGate featureName="Timeline Planner" description="Get a personalized application timeline with ClinicalHours Premium.">
+      <PremiumGate featureName="Application Timeline" description="Get a personalized application timeline with ClinicalHours Premium.">
         <TimelinePlannerContent />
       </PremiumGate>
     </main>

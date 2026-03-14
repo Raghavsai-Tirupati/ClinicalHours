@@ -39,15 +39,17 @@ const PLANS = [
       { text: "Search within 25-mile radius", included: true },
       { text: "Up to 10 search results", included: true },
       { text: "Application cost calculator", included: true },
+      { text: "Clinical Hours Journal (basic logging)", included: true },
       { text: "Basic profile", included: true },
-      { text: "AI Opportunity Matcher", included: false },
-      { text: "Hour Tracker & Reflections", included: false },
-      { text: "AMCAS Description Generator", included: false },
-      { text: "Competency Mapper", included: false },
-      { text: "LOR Tracker", included: false },
-      { text: "Timeline Planner", included: false },
-      { text: "Secondary Essay Engine", included: false },
+      { text: "PathFinder — AI Opportunity Matcher", included: false },
+      { text: "Reflections & analytics (Hours Journal)", included: false },
+      { text: "AMCAS Activity Writer", included: false },
+      { text: "AAMC Competency Tracker", included: false },
+      { text: "Letter of Rec Manager", included: false },
+      { text: "Application Timeline", included: false },
+      { text: "Secondary Essay Coach", included: false },
       { text: "School List Builder", included: false },
+      { text: "Direct Application Finder", included: false },
     ],
   },
   {
@@ -61,15 +63,15 @@ const PLANS = [
     features: [
       { text: "Everything in Free", included: true },
       { text: "Unlimited search radius & results", included: true },
-      { text: "AI Opportunity Matcher (quiz)", included: true },
-      { text: "Hour Tracker & Reflection Journal", included: true },
-      { text: "AMCAS Activity Description Generator", included: true },
-      { text: "Most Meaningful Experience Drafter", included: true },
-      { text: "Competency Mapper (17 AAMC competencies)", included: true },
-      { text: "LOR Tracker & Relationship CRM", included: true },
-      { text: "Timeline & Deadline Planner", included: true },
-      { text: "Secondary Essay Reuse Engine", included: true },
+      { text: "PathFinder — AI Opportunity Matcher", included: true },
+      { text: "Reflections & analytics (Hours Journal)", included: true },
+      { text: "AMCAS Activity Writer + Most Meaningful Drafter", included: true },
+      { text: "AAMC Competency Tracker (17 competencies)", included: true },
+      { text: "Letter of Rec Manager (CRM pipeline)", included: true },
+      { text: "Application Timeline & milestone alerts", included: true },
+      { text: "Secondary Essay Coach", included: true },
       { text: "AI School List Builder", included: true },
+      { text: "Direct Application Finder", included: true },
       { text: "PDF export for all data", included: true },
       { text: "Priority support", included: true },
     ],
@@ -93,49 +95,49 @@ const PLANS = [
 const FEATURE_HIGHLIGHTS = [
   {
     icon: Brain,
-    title: "AI Opportunity Matcher",
+    title: "PathFinder — AI Matcher",
     description: "Take a quick quiz and get personalized matches from thousands of opportunities ranked by fit.",
     color: "text-violet-400",
     bg: "bg-violet-500/10",
   },
   {
     icon: Clock,
-    title: "Hour Tracker & Reflections",
+    title: "Clinical Hours Journal",
     description: "Log clinical hours, write structured reflections, and track progress across all activities.",
     color: "text-blue-400",
     bg: "bg-blue-500/10",
   },
   {
     icon: FileText,
-    title: "AMCAS Description Generator",
+    title: "AMCAS Activity Writer",
     description: "AI converts your logged hours and reflections into polished 700-character activity descriptions.",
     color: "text-emerald-400",
     bg: "bg-emerald-500/10",
   },
   {
     icon: Star,
-    title: "Competency Mapper",
+    title: "AAMC Competency Tracker",
     description: "Auto-tags reflections against all 17 AAMC premed competencies with gap analysis.",
     color: "text-amber-400",
     bg: "bg-amber-500/10",
   },
   {
     icon: Users,
-    title: "LOR Tracker",
+    title: "Letter of Rec Manager",
     description: "CRM-style tracker for recommendation letters with status pipeline and deadline alerts.",
     color: "text-pink-400",
     bg: "bg-pink-500/10",
   },
   {
     icon: Calendar,
-    title: "Timeline Planner",
+    title: "Application Timeline",
     description: "Personalized application timeline with month-by-month milestones for your target cycle.",
     color: "text-cyan-400",
     bg: "bg-cyan-500/10",
   },
   {
     icon: PenTool,
-    title: "Secondary Essay Engine",
+    title: "Secondary Essay Coach",
     description: "Classify prompts into archetypes and surface relevant story fragments from your reflections.",
     color: "text-orange-400",
     bg: "bg-orange-500/10",
@@ -151,7 +153,7 @@ const FEATURE_HIGHLIGHTS = [
 
 const Premium = () => {
   const { user } = useAuth();
-  const { isPremium, activatePremium, deactivatePremium } = usePremiumStatus();
+  const { isPremium } = usePremiumStatus();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
   const opportunityCount = useOpportunityCount();
   const countLabel = opportunityCount > 0 ? opportunityCount.toLocaleString() + "+" : "6,000+";
@@ -164,17 +166,11 @@ const Premium = () => {
         {/* Active Premium Banner */}
         {isPremium && (
           <div className="container mx-auto px-6 pt-4">
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 flex items-center justify-between">
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 flex items-center">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-emerald-400" />
                 <span className="text-sm font-medium text-emerald-300">Premium is active — all features are unlocked.</span>
               </div>
-              <button
-                onClick={() => deactivatePremium()}
-                className="text-xs text-emerald-400/70 hover:text-emerald-400 transition-colors underline"
-              >
-                Deactivate (for testing)
-              </button>
             </div>
           </div>
         )}
@@ -266,15 +262,7 @@ const Premium = () => {
                     <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
                   </div>
 
-                  {plan.name === "Free" && isPremium ? (
-                    <Button
-                      className="w-full mb-6"
-                      variant="outline"
-                      onClick={() => deactivatePremium()}
-                    >
-                      Switch to Free
-                    </Button>
-                  ) : isCurrentPlan ? (
+                  {isCurrentPlan ? (
                     <Button className="w-full mb-6" variant="outline" disabled>
                       Current Plan
                     </Button>
