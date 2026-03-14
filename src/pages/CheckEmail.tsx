@@ -83,10 +83,10 @@ const CheckEmail = () => {
             )}
 
             {/* 24-hour warning */}
-            <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 w-full">
-              <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
-              <p className="text-sm text-yellow-200">
-                <strong>Verify within 24 hours</strong> or your account will be automatically deleted.
+            <div className="flex items-start gap-3 bg-destructive/10 border border-destructive/30 rounded-lg p-4 w-full">
+              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-muted-foreground">
+                <strong className="text-foreground">Verify within 24 hours</strong> or your account will be automatically deleted.
               </p>
             </div>
             
