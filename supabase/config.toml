@@ -78,6 +78,9 @@ verify_jwt = false
 [functions.replace-opportunities]
 verify_jwt = false
 
+[functions.cleanup-unverified-users]
+verify_jwt = false
+
 [functions.stripe-webhook]
 verify_jwt = false
 

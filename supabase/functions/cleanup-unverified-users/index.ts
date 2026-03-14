@@ -1,13 +1,25 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// Cron: deletes unverified users (24h old). Use ?full=true for one-time delete of ALL unverified.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Content-Type": "application/json",
 };
 
-Deno.serve(async (req) => {
+const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: corsHeaders }
+    );
   }
 
   try {
@@ -17,36 +29,31 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Find profiles where email_verified is false/null and created more than 24 hours ago
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const url = new URL(req.url);
+    const fullCleanup = url.searchParams.get("full") === "true";
 
-    const { data: unverifiedProfiles, error: fetchError } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("profiles")
-      .select("id, full_name, created_at")
-      .or("email_verified.is.null,email_verified.eq.false")
-      .lt("created_at", cutoff);
+      .select("id, full_name")
+      .or("email_verified.is.null,email_verified.eq.false");
+
+    if (!fullCleanup) {
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      query = query.lt("created_at", cutoff);
+    }
+
+    const { data: unverifiedProfiles, error: fetchError } = await query;
 
     if (fetchError) {
       console.error("Error fetching unverified profiles:", fetchError);
-      return new Response(JSON.stringify({ error: fetchError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      throw fetchError;
     }
 
-    if (!unverifiedProfiles || unverifiedProfiles.length === 0) {
-      return new Response(JSON.stringify({ deleted: 0, message: "No unverified users to clean up" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    let deleted = 0;
+    let deletedCount = 0;
     const errors: string[] = [];
 
-    for (const profile of unverifiedProfiles) {
-      try {
-        // Skip users who might be hospital accounts (they get email_verified = true on signup)
-        // Double-check they aren't a hospital member
+    for (const profile of unverifiedProfiles ?? []) {
+      if (!fullCleanup) {
         const { data: memberCheck } = await supabaseAdmin
           .from("hospital_members")
           .select("id")
@@ -57,34 +64,35 @@ Deno.serve(async (req) => {
           console.log(`Skipping user ${profile.id} — hospital member`);
           continue;
         }
+      }
 
-        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
-        if (deleteError) {
-          console.error(`Failed to delete user ${profile.id}:`, deleteError);
-          errors.push(`${profile.id}: ${deleteError.message}`);
-        } else {
-          deleted++;
-          console.log(`Deleted unverified user ${profile.id} (${profile.full_name})`);
-        }
-      } catch (err) {
-        console.error(`Error processing user ${profile.id}:`, err);
-        errors.push(`${profile.id}: ${err instanceof Error ? err.message : "unknown error"}`);
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
+      if (deleteError) {
+        console.error(`Failed to delete user ${profile.id}:`, deleteError);
+        errors.push(`${profile.id}: ${deleteError.message}`);
+      } else {
+        deletedCount++;
+        console.log(`Deleted unverified user ${profile.id}`);
       }
     }
 
     return new Response(
       JSON.stringify({
-        deleted,
-        total_found: unverifiedProfiles.length,
+        success: true,
+        deleted: deletedCount,
+        fullCleanup,
+        total_found: unverifiedProfiles?.length ?? 0,
         errors: errors.length > 0 ? errors : undefined,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: corsHeaders }
     );
   } catch (err) {
-    console.error("Cleanup function error:", err);
+    console.error("cleanup-unverified-users error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: (err as Error).message || "Internal server error" }),
+      { status: 500, headers: corsHeaders }
     );
   }
-});
+};
+
+serve(handler);

@@ -319,13 +319,13 @@ const Auth = () => {
           toast.success("Account created! Your hospital account is pending admin approval.");
           await redirectByAccountType(data.user.id);
         } else {
-          // Student accounts: send verification email but keep user logged in
-          sendVerificationEmail(
+          // Student accounts: send verification email but allow immediate use
+          await sendVerificationEmail(
             data.user.id,
             validatedData.email,
             validatedData.fullName || "User"
           );
-          toast.success("Account created! Please verify your email within 24 hours.");
+          toast.success("Account created! You can start exploring. Verify your email within 24 hours.");
           navigate(`/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(validatedData.fullName || "User")}`);
         }
       }
@@ -393,8 +393,6 @@ const Auth = () => {
       }
 
       if (data.user) {
-        // No longer blocking login for unverified accounts
-
         logAuthEvent("login_success", { email: validatedData.email });
         trackLogin(data.user.id, "email");
         toast.success("Welcome back!");

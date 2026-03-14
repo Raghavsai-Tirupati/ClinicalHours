@@ -66,6 +66,12 @@ const CheckEmail = () => {
               We've sent a verification link to complete your registration.
             </CardDescription>
           </div>
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-left">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              <strong>Verify within 24 hours</strong> or your account will be deleted. You can use the site now—click below to continue.
+            </p>
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col items-center space-y-6">
           <div className="flex flex-col items-center gap-4 py-4">
@@ -123,6 +129,12 @@ const CheckEmail = () => {
               Continue to Dashboard
             </Button>
             
+            <Button
+              className="w-full mt-2"
+              onClick={() => navigate("/dashboard")}
+            >
+              Continue to Dashboard
+            </Button>
             <p className="text-xs text-center text-muted-foreground mt-2">
               Already verified?{" "}
               <button 
