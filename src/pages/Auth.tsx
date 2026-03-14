@@ -319,14 +319,13 @@ const Auth = () => {
           toast.success("Account created! Your hospital account is pending admin approval.");
           await redirectByAccountType(data.user.id);
         } else {
-          // Student accounts: require email verification
-          await supabase.auth.signOut();
-          await sendVerificationEmail(
+          // Student accounts: send verification email but keep user logged in
+          sendVerificationEmail(
             data.user.id,
             validatedData.email,
             validatedData.fullName || "User"
           );
-          toast.success("Account created! Check your email to verify your account.");
+          toast.success("Account created! Please verify your email within 24 hours.");
           navigate(`/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(validatedData.fullName || "User")}`);
         }
       }
