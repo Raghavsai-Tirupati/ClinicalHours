@@ -760,6 +760,8 @@ export type Database = {
           research_experience: string | null
           resume_url: string | null
           state: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           university: string | null
           updated_at: string
         }
@@ -786,6 +788,8 @@ export type Database = {
           research_experience?: string | null
           resume_url?: string | null
           state?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           university?: string | null
           updated_at?: string
         }
@@ -812,6 +816,8 @@ export type Database = {
           research_experience?: string | null
           resume_url?: string | null
           state?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           university?: string | null
           updated_at?: string
         }
