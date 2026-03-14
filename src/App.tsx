@@ -37,6 +37,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Premium feature pages
 const Premium = lazy(() => import("./pages/Premium"));
+const PremiumPurchase = lazy(() => import("./pages/PremiumPurchase"));
 const HourTracker = lazy(() => import("./pages/HourTracker"));
 const OpportunityQuiz = lazy(() => import("./pages/OpportunityQuiz"));
 const CompetencyMapper = lazy(() => import("./pages/CompetencyMapper"));
@@ -110,6 +111,7 @@ function AppContent() {
               <Route path="/pending-approval" element={<PendingApproval />} />
               {/* Premium features */}
               <Route path="/premium" element={<Premium />} />
+              <Route path="/premium/purchase" element={<PremiumPurchase />} />
               <Route path="/hours" element={<HourTracker />} />
               <Route path="/quiz" element={<OpportunityQuiz />} />
               <Route path="/competencies" element={<CompetencyMapper />} />

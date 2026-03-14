@@ -53,9 +53,9 @@ export function PremiumGate({
             {description}
           </p>
           <Button asChild className="gap-2">
-            <Link to={user ? "/premium" : "/auth"}>
+            <Link to={user ? "/premium/purchase" : "/auth"}>
               <Sparkles className="h-4 w-4" />
-              {user ? "Upgrade to Premium" : "Sign Up to Get Started"}
+              {user ? "Upgrade — $4.99/month" : "Sign Up to Get Started"}
             </Link>
           </Button>
         </div>
@@ -89,7 +89,7 @@ export function UpgradeCTA({ message = "Unlock all premium features" }: { messag
           </p>
         </div>
         <Button size="sm" variant="outline" className="shrink-0 border-amber-500/30 text-amber-400 hover:bg-amber-500/10" asChild>
-          <Link to={user ? "/premium" : "/auth"}>
+          <Link to={user ? "/premium/purchase" : "/auth"}>
             Upgrade
           </Link>
         </Button>

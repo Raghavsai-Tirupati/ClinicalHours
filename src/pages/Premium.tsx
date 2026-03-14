@@ -53,7 +53,7 @@ const PLANS = [
   },
   {
     name: "Premium",
-    price: "$9.99",
+    price: "$4.99",
     period: "/ month",
     description: "The complete pre-med toolkit. AI-powered tools to maximize your application.",
     cta: "Upgrade to Premium",
@@ -280,9 +280,9 @@ const Premium = () => {
                     <Button
                       className="w-full mb-6"
                       variant={plan.popular ? "default" : "outline"}
-                      onClick={handleUpgradeClick}
+                      asChild
                     >
-                      {plan.cta}
+                      <Link to="/premium/purchase">{plan.cta}</Link>
                     </Button>
                   )}
 
@@ -383,8 +383,10 @@ const Premium = () => {
             {isPremium ? (
               <p className="text-sm text-emerald-400 font-medium">You're already a Premium member. Enjoy all features!</p>
             ) : user ? (
-              <Button size="lg" className="gap-2" onClick={handleUpgradeClick}>
-                Get Started <ArrowRight className="h-4 w-4" />
+              <Button size="lg" className="gap-2" asChild>
+                <Link to="/premium/purchase">
+                  Get Started <ArrowRight className="h-4 w-4" />
+                </Link>
               </Button>
             ) : (
               <Button size="lg" className="gap-2" asChild>
