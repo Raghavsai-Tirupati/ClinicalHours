@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.fetch-logo]
 verify_jwt = false
+
+[functions.generate-amcas-description]
+verify_jwt = false
