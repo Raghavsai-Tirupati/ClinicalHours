@@ -90,7 +90,6 @@ export function HospitalDetail({
             opportunityName={opportunity.name}
             websiteHint={opportunity.website}
             isPremium={isPremium}
-            label="Volunteer Link"
           />
           {hospitalAccountId && (
             <Button
