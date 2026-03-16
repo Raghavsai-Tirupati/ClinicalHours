@@ -342,7 +342,8 @@ const Dashboard = () => {
               name,
               type,
               location,
-              website
+              website,
+              logo_url
             )
           `)
           .eq("user_id", user!.id)
