@@ -38,12 +38,13 @@ export default function AdminLogosTab() {
     const { count: withLogos } = await supabase
       .from('opportunities')
       .select('*', { count: 'exact', head: true })
-      .not('logo_url', 'is', null);
+      .not('logo_url', 'is', null)
+      .neq('logo_url', '');
 
     const { count: withoutLogos } = await supabase
       .from('opportunities')
       .select('*', { count: 'exact', head: true })
-      .is('logo_url', null);
+      .or('logo_url.is.null,logo_url.eq.');
 
     const { count: withWebsite } = await supabase
       .from('opportunities')
