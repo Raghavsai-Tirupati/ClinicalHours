@@ -1284,6 +1284,7 @@ export type Database = {
           id: string | null
           latitude: number | null
           location: string | null
+          logo_url: string | null
           longitude: number | null
           name: string | null
           phone: string | null
