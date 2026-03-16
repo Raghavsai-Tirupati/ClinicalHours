@@ -621,6 +621,7 @@ export type Database = {
           id: string
           latitude: number | null
           location: string
+          logo_url: string | null
           longitude: number | null
           name: string
           phone: string | null
@@ -645,6 +646,7 @@ export type Database = {
           id?: string
           latitude?: number | null
           location: string
+          logo_url?: string | null
           longitude?: number | null
           name: string
           phone?: string | null
@@ -669,6 +671,7 @@ export type Database = {
           id?: string
           latitude?: number | null
           location?: string
+          logo_url?: string | null
           longitude?: number | null
           name?: string
           phone?: string | null
