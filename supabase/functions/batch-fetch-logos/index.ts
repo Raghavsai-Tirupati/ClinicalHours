@@ -52,7 +52,7 @@ const handler = async (req: Request): Promise<Response> => {
       .select("id, website")
       .is("logo_url", null)
       .not("website", "is", null)
-      .limit(500);
+      .limit(100);
 
     if (fetchError) throw fetchError;
     if (!listings || listings.length === 0) {
