@@ -115,6 +115,8 @@ const OpportunityDetail = () => {
             website: data.website,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             hospital_id: (data as any).hospital_id ?? null,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            logo_url: (data as any).logo_url ?? null,
             avg_rating: data.avg_rating,
             review_count: data.review_count,
           });
