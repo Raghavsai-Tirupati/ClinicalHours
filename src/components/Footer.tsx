@@ -82,9 +82,14 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-12 sm:mt-16 md:mt-20 pt-6 sm:pt-8 border-t border-border text-center">
+        <div className="mt-12 sm:mt-16 md:mt-20 pt-6 sm:pt-8 border-t border-border text-center space-y-2">
           <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-[0.15em] sm:tracking-[0.2em]">
             &copy; {new Date().getFullYear()} <span>Clinical</span><span className="font-semibold">Hours</span>. All rights reserved.
+          </p>
+          <p className="text-[10px] text-muted-foreground/50">
+            <a href="https://logo.dev" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
+              Logos provided by Logo.dev
+            </a>
           </p>
         </div>
       </div>

@@ -302,12 +302,19 @@ const OpportunityDetail = () => {
         <Card className="mb-6">
           <CardHeader>
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-              <div className="flex-1">
-                <CardTitle className="text-3xl mb-2">{opportunity.name}</CardTitle>
-                <CardDescription className="flex items-center gap-2 text-base">
-                  <MapPin className="h-4 w-4" />
-                  {opportunity.location}
-                </CardDescription>
+              <div className="flex gap-4 flex-1">
+                <HospitalLogo
+                  logoUrl={opportunity.logo_url ?? null}
+                  hospitalName={opportunity.name}
+                  size="lg"
+                />
+                <div className="flex-1">
+                  <CardTitle className="text-3xl mb-2">{opportunity.name}</CardTitle>
+                  <CardDescription className="flex items-center gap-2 text-base">
+                    <MapPin className="h-4 w-4" />
+                    {opportunity.location}
+                  </CardDescription>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">{opportunity.type === 'emt' ? 'EMT' : opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}</Badge>
