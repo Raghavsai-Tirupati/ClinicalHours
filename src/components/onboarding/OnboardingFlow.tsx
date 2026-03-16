@@ -43,7 +43,7 @@ export function OnboardingFlow({ open, onComplete, onSkip }: OnboardingFlowProps
 
   function handleActionSelect(action: 'browse' | 'profile') {
     onComplete();
-    navigate(action === 'browse' ? '/opportunities' : '/profile');
+    navigate(action === 'browse' ? '/opportunities' : '/settings');
   }
 
   return (

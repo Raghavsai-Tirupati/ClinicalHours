@@ -63,7 +63,7 @@ const scenes: Scene[] = [
     title: "Personalize Your Experience",
     subtitle: "Keep your information updated. Get tailored recommendations and track your total hours automatically.",
     ctaText: "Edit Profile",
-    ctaHref: "/profile",
+    ctaHref: "/settings",
     // Deep purple to slate gradient
     bgGradient: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%)",
     imageSrc: "/screenshots/profile.png",
