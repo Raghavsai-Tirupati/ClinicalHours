@@ -178,6 +178,10 @@ export default function AdminDashboard() {
               <AdminToolsTab />
             </TabsContent>
 
+            <TabsContent value="logos">
+              <AdminLogosTab />
+            </TabsContent>
+
             <TabsContent value="activity">
               <AdminActivityTab />
             </TabsContent>
