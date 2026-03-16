@@ -19,6 +19,7 @@ import {
   BarChart3,
   Wrench,
   Radio,
+  ImageIcon,
 } from 'lucide-react';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
 import AdminUserList from '@/components/admin/AdminUserList';
