@@ -1,16 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders, validateOrigin } from "../_shared/auth.ts";
 
 interface RequestBody {
   activity_name: string;
   activity_type: string;
   role: string;
-  hours_per_week: number;
-  total_hours: number;
+  hours_per_week?: number | null;
+  total_hours?: number | null;
   is_most_meaningful: boolean;
   user_notes: string;
 }
@@ -53,8 +49,19 @@ async function callAnthropic(apiKey: string, userMessage: string): Promise<strin
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const originValidation = validateOrigin(req);
+  if (!originValidation.valid) {
+    return new Response(JSON.stringify({ error: "Invalid origin" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -66,15 +73,14 @@ serve(async (req) => {
     const userMessage = `Activity: ${body.activity_name}
 Type: ${body.activity_type}
 Role: ${body.role}
-Hours/week: ${body.hours_per_week}
-Total hours: ${body.total_hours}
+Hours/week: ${body.hours_per_week ?? "Not provided"}
+Total hours: ${body.total_hours ?? "Not provided"}
 Most Meaningful: ${body.is_most_meaningful ? "Yes" : "No"}
 Notes from student: ${body.user_notes || "None provided"}`;
 
     let description = await callAnthropic(apiKey, userMessage);
     let charCount = description.length;
 
-    // If over 700 chars, ask to shorten
     if (charCount > 700) {
       const shortenMessage = `The following AMCAS activity description is ${charCount} characters but MUST be under 700 characters. Shorten it while preserving the key content. Return ONLY the shortened text:\n\n${description}`;
       description = await callAnthropic(apiKey, shortenMessage);
