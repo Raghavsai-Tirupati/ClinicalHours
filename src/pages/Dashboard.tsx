@@ -38,6 +38,7 @@ import {
   ArrowRight,
   Loader2,
 } from "lucide-react";
+import HospitalLogo from "@/components/HospitalLogo";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
