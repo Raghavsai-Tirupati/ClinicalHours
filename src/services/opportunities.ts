@@ -88,6 +88,7 @@ export async function fetchOpportunities(
       website: opp.website,
       slug: opp.slug,
       hospital_id: opp.hospital_id,
+      logo_url: opp.logo_url,
       avg_rating: opp.avg_rating,
       review_count: opp.review_count,
     }));
