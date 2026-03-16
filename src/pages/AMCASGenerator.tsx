@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { PremiumGate } from "@/components/PremiumGate";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FileText, Plus, Sparkles, Loader2, Star, RotateCcw, Copy, Check } from "lucide-react";
+import { FileText, Plus, Sparkles, Loader2, Star, RotateCcw, Copy, Check, Save } from "lucide-react";
 import { AMCAS_CATEGORIES } from "@/lib/premium";
 import { localInsert, localSelect, localUpdate, TABLES } from "@/lib/localStore";
 
@@ -38,6 +39,7 @@ interface AMCASDraft {
   description_draft: string | null;
   is_most_meaningful: boolean;
   meaningful_draft: string | null;
+  user_notes: string | null;
   version: number;
   created_at: string;
 }
@@ -55,6 +57,7 @@ const AMCASGeneratorContent = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [editingDraft, setEditingDraft] = useState<AMCASDraft | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generatingMeaningful, setGeneratingMeaningful] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
   const [form, setForm] = useState({
@@ -85,6 +88,7 @@ const AMCASGeneratorContent = () => {
       is_most_meaningful: form.is_most_meaningful,
       description_draft: "",
       meaningful_draft: null,
+      user_notes: null,
       version: 1,
     });
 
@@ -99,19 +103,54 @@ const AMCASGeneratorContent = () => {
     localUpdate<AMCASDraft>(TABLES.AMCAS_DRAFTS, draft.id, {
       description_draft: draft.description_draft,
       meaningful_draft: draft.meaningful_draft,
+      user_notes: draft.user_notes,
     });
     toast({ title: "Draft saved!" });
     loadDrafts();
   }
 
-  function handleGenerate() {
+  async function handleGenerate(target: "description" | "meaningful" = "description") {
     if (!editingDraft) return;
-    setGenerating(true);
-    setTimeout(() => {
-      const generated = `As a ${editingDraft.position_title || "volunteer"} at ${editingDraft.organization_name || "this organization"}, I contributed ${editingDraft.total_hours || "numerous"} hours to patient care and clinical operations. Through direct interaction with patients and healthcare teams, I developed a deeper understanding of the complexities of medical practice. I observed the delicate balance between clinical efficiency and compassionate care, learning how effective communication between providers directly impacts patient outcomes. This experience reinforced my commitment to pursuing medicine and taught me the importance of approaching each patient as a whole person, not just a set of symptoms.`;
-      setEditingDraft({ ...editingDraft, description_draft: generated.slice(0, 700) });
-      setGenerating(false);
-    }, 2000);
+
+    const isDesc = target === "description";
+    if (isDesc) setGenerating(true);
+    else setGeneratingMeaningful(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-amcas-description", {
+        body: {
+          activity_name: editingDraft.organization_name || "",
+          activity_type: editingDraft.amcas_category || editingDraft.activity_type || "",
+          role: editingDraft.position_title || "",
+          hours_per_week: null,
+          total_hours: editingDraft.total_hours,
+          is_most_meaningful: isDesc ? false : editingDraft.is_most_meaningful,
+          user_notes: editingDraft.user_notes || "",
+          ...(target === "meaningful" && { max_chars: 1325, essay_type: "most_meaningful" }),
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.description) {
+        const maxChars = isDesc ? 700 : 1325;
+        const text = data.description.slice(0, maxChars);
+        if (isDesc) {
+          setEditingDraft({ ...editingDraft, description_draft: text });
+        } else {
+          setEditingDraft({ ...editingDraft, meaningful_draft: text });
+        }
+        toast({ title: `${isDesc ? "Description" : "Essay"} generated!` });
+      } else {
+        throw new Error("No description returned from AI");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Generation failed";
+      toast({ title: "Generation failed", description: message, variant: "destructive" });
+    } finally {
+      if (isDesc) setGenerating(false);
+      else setGeneratingMeaningful(false);
+    }
   }
 
   function handleCopy(text: string, id: string) {
@@ -189,6 +228,7 @@ const AMCASGeneratorContent = () => {
         </div>
       )}
 
+      {/* Add Activity Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Add AMCAS Activity</DialogTitle></DialogHeader>
@@ -221,6 +261,7 @@ const AMCASGeneratorContent = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Edit / Generate Dialog */}
       <Dialog open={!!editingDraft} onOpenChange={(open) => !open && setEditingDraft(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           {editingDraft && (
@@ -229,31 +270,127 @@ const AMCASGeneratorContent = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   {editingDraft.amcas_category && <span className="bg-muted px-2 py-0.5 rounded text-xs">{editingDraft.amcas_category}</span>}
+                  {editingDraft.position_title && <span className="bg-muted px-2 py-0.5 rounded text-xs">{editingDraft.position_title}</span>}
                   {editingDraft.total_hours && <span>{editingDraft.total_hours}h</span>}
-                  <span>v{editingDraft.version}</span>
                 </div>
+
+                {/* User Notes */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5"><Label>Activity Description (700 char max)</Label><CharCounter text={editingDraft.description_draft || ""} max={700} /></div>
-                  <Textarea rows={8} value={editingDraft.description_draft || ""} onChange={(e) => setEditingDraft({ ...editingDraft, description_draft: e.target.value })} placeholder="Describe your role, responsibilities, specific impact, and a brief reflective insight..." />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <Label>Your Notes / Bullet Points</Label>
+                    <span className="text-xs text-muted-foreground">Optional — helps the AI write a better description</span>
+                  </div>
+                  <Textarea
+                    rows={3}
+                    value={editingDraft.user_notes || ""}
+                    onChange={(e) => setEditingDraft({ ...editingDraft, user_notes: e.target.value })}
+                    placeholder="e.g., Assisted with patient intake, learned to take vitals, worked closely with Dr. Smith in cardiology..."
+                    className="text-sm"
+                  />
                 </div>
+
+                {/* Activity Description */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <Label>Activity Description (700 char max)</Label>
+                    <CharCounter text={editingDraft.description_draft || ""} max={700} />
+                  </div>
+                  {generating ? (
+                    <div className="flex flex-col items-center justify-center py-10 rounded-lg border border-border bg-muted/30">
+                      <Loader2 className="h-8 w-8 animate-spin text-violet-400 mb-3" />
+                      <p className="text-sm text-muted-foreground">Generating description...</p>
+                    </div>
+                  ) : (
+                    <Textarea
+                      rows={8}
+                      value={editingDraft.description_draft || ""}
+                      onChange={(e) => setEditingDraft({ ...editingDraft, description_draft: e.target.value })}
+                      placeholder="Describe your role, responsibilities, specific impact, and a brief reflective insight..."
+                    />
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => handleGenerate("description")}
+                      disabled={generating}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {editingDraft.description_draft ? "Regenerate" : "AI Generate"}
+                    </Button>
+                    {editingDraft.description_draft && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setEditingDraft({ ...editingDraft, description_draft: "" })}
+                        disabled={generating}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" /> Clear
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Most Meaningful Essay */}
                 {editingDraft.is_most_meaningful && (
                   <div>
-                    <div className="flex items-center justify-between mb-1.5"><Label>Most Meaningful Essay (1325 char max)</Label><CharCounter text={editingDraft.meaningful_draft || ""} max={1325} /></div>
-                    <Textarea rows={10} value={editingDraft.meaningful_draft || ""} onChange={(e) => setEditingDraft({ ...editingDraft, meaningful_draft: e.target.value })} placeholder="Describe the transformative moment, the impact you made, and your personal growth..." />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label>Most Meaningful Essay (1325 char max)</Label>
+                      <CharCounter text={editingDraft.meaningful_draft || ""} max={1325} />
+                    </div>
+                    {generatingMeaningful ? (
+                      <div className="flex flex-col items-center justify-center py-10 rounded-lg border border-border bg-muted/30">
+                        <Loader2 className="h-8 w-8 animate-spin text-violet-400 mb-3" />
+                        <p className="text-sm text-muted-foreground">Generating essay...</p>
+                      </div>
+                    ) : (
+                      <Textarea
+                        rows={10}
+                        value={editingDraft.meaningful_draft || ""}
+                        onChange={(e) => setEditingDraft({ ...editingDraft, meaningful_draft: e.target.value })}
+                        placeholder="Describe the transformative moment, the impact you made, and your personal growth..."
+                      />
+                    )}
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => handleGenerate("meaningful")}
+                        disabled={generatingMeaningful}
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        {editingDraft.meaningful_draft ? "Regenerate" : "AI Generate"}
+                      </Button>
+                      {editingDraft.meaningful_draft && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => setEditingDraft({ ...editingDraft, meaningful_draft: "" })}
+                          disabled={generatingMeaningful}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" /> Clear
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
-                <div className="flex items-center justify-between pt-2">
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={handleGenerate} disabled={generating}>
-                      {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                      {generating ? "Generating..." : "AI Generate"}
-                    </Button>
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditingDraft({ ...editingDraft, description_draft: "" })}><RotateCcw className="h-3.5 w-3.5" /> Clear</Button>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setEditingDraft(null)}>Cancel</Button>
-                    <Button onClick={() => { handleSaveDraft(editingDraft); setEditingDraft(null); }}>Save Draft</Button>
-                  </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <Button variant="outline" onClick={() => setEditingDraft(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    className="gap-1.5"
+                    onClick={() => { handleSaveDraft(editingDraft); setEditingDraft(null); }}
+                    disabled={generating || generatingMeaningful}
+                  >
+                    <Save className="h-3.5 w-3.5" /> Save Draft
+                  </Button>
                 </div>
               </div>
             </>
