@@ -121,7 +121,7 @@ export default function AdminDashboard() {
 
           {/* Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview</span>
@@ -146,6 +146,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="tools" className="flex items-center gap-2">
                 <Wrench className="h-4 w-4" />
                 <span className="hidden sm:inline">Tools</span>
+              </TabsTrigger>
+              <TabsTrigger value="logos" className="flex items-center gap-2">
+                <Image className="h-4 w-4" />
+                <span className="hidden sm:inline">Logos</span>
               </TabsTrigger>
               <TabsTrigger value="activity" className="flex items-center gap-2">
                 <Radio className="h-4 w-4" />
