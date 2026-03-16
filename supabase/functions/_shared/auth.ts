@@ -1,11 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Allowed origins for CORS - restrict to production and development
+// Allowed origins for CORS - restrict to production and trusted preview environments
 const ALLOWED_ORIGINS = [
   "https://clinicalhours.org",
   "https://www.clinicalhours.org",
-  "https://clinicalhours.org",
-  "https://www.clinicalhours.org",
+  "https://clinicalhours.lovable.app",
+  "https://id-preview--c5bbc95b-0f92-42a3-b816-bdce54759b81.lovable.app",
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:8080",
@@ -14,6 +14,12 @@ const ALLOWED_ORIGINS = [
   "http://127.0.0.1:8080",
   "http://127.0.0.1:8086",
 ];
+
+function isAllowedOrigin(origin: string | null): origin is string {
+  if (!origin) return false;
+
+  return ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.clinicalhours.org');
+}
 
 export interface AuthResult {
   success: boolean;
