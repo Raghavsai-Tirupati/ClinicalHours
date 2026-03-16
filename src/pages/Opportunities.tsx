@@ -385,6 +385,7 @@ const Opportunities = () => {
                           )}
                         </div>
                       </div>
+                      </div>
                       {/* Buttons: horizontal full-width on mobile, vertical on desktop */}
                       <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>
                         {savedLoading ? (
