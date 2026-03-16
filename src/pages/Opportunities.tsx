@@ -306,7 +306,7 @@ const Opportunities = () => {
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                       <div className="flex gap-3 flex-1 min-w-0">
                         <HospitalLogo
-                          logoUrl={(opportunity as any).logo_url ?? null}
+                          logoUrl={opportunity.logo_url ?? null}
                           hospitalName={opportunity.name}
                           size="md"
                           className="mt-0.5"
