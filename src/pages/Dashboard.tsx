@@ -38,6 +38,7 @@ import {
   ArrowRight,
   Loader2,
 } from "lucide-react";
+import HospitalLogo from "@/components/HospitalLogo";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ interface Opportunity {
   deadline: string | null;
   hoursLogged: number;
   reflectionCount: number;
+  logo_url: string | null;
 }
 
 interface Reflection {
@@ -145,13 +147,20 @@ function OpportunityCard({
       className="group rounded-lg border border-border bg-card p-5 transition-colors hover:border-border/80 cursor-pointer"
       onClick={() => onCardClick(opp)}
     >
-      {/* Top row: name + 3-dot menu */}
+      {/* Top row: logo + name + 3-dot menu */}
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-medium text-foreground">
-            {opp.name}
-          </h3>
-          <p className="mt-0.5 text-sm text-muted-foreground">{opp.location}</p>
+        <div className="flex gap-3 min-w-0 flex-1">
+          <HospitalLogo
+            logoUrl={opp.logo_url}
+            hospitalName={opp.name}
+            size="sm"
+          />
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-base font-medium text-foreground">
+              {opp.name}
+            </h3>
+            <p className="mt-0.5 text-sm text-muted-foreground">{opp.location}</p>
+          </div>
         </div>
 
         <DropdownMenu>
@@ -341,7 +350,8 @@ const Dashboard = () => {
               name,
               type,
               location,
-              website
+              website,
+              logo_url
             )
           `)
           .eq("user_id", user!.id)
@@ -379,6 +389,7 @@ const Dashboard = () => {
             type: string;
             location: string;
             website: string | null;
+            logo_url: string | null;
           } | null;
 
           const oppId = row.opportunity_id as string;
@@ -396,6 +407,7 @@ const Dashboard = () => {
             deadline: null,
             hoursLogged: Math.round((hoursMap[oppId] || 0) * 10) / 10,
             reflectionCount: reflCountMap[oppId] || 0,
+            logo_url: opp?.logo_url ?? null,
           };
         });
 

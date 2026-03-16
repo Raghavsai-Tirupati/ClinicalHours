@@ -33,6 +33,7 @@ import { VerificationGate } from "@/components/VerificationGate";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
+import HospitalLogo from "@/components/HospitalLogo";
 
 const Opportunities = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -303,8 +304,15 @@ const Opportunities = () => {
                 >
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <div className="flex gap-3 flex-1 min-w-0">
+                        <HospitalLogo
+                          logoUrl={opportunity.logo_url ?? null}
+                          hospitalName={opportunity.name}
+                          size="md"
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <h3 className="text-lg font-semibold text-foreground">{opportunity.name}</h3>
                           <Badge className={getTypeColor(opportunity.type)}>
                             {opportunity.type === 'emt' ? 'EMT' : opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
@@ -376,6 +384,7 @@ const Opportunities = () => {
                             </div>
                           )}
                         </div>
+                      </div>
                       </div>
                       {/* Buttons: horizontal full-width on mobile, vertical on desktop */}
                       <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>
