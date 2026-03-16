@@ -37,6 +37,7 @@ interface Opportunity {
   email: string | null;
   website: string | null;
   hospital_id?: string | null;
+  logo_url?: string | null;
   avg_rating?: number;
   review_count?: number;
 }
