@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Home, MapPin, Mail, LogIn, Sparkles, ChevronDown, User, Lock } from "lucide-react";
+import { Menu, X, Home, MapPin, Mail, LogIn, Sparkles, ChevronDown, User, Lock, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
@@ -130,7 +130,7 @@ const Navigation = () => {
     { name: "Dashboard", path: "/dashboard", icon: Home },
     { name: "Opportunities", path: "/opportunities", icon: MapPin },
     { name: "Tracker", path: "/my-applications", icon: Sparkles },
-    { name: "Profile", path: "/profile", icon: User },
+    { name: "Settings", path: "/settings", icon: SettingsIcon },
   ];
 
   // Determine nav styles based on scroll and page
@@ -236,10 +236,10 @@ const Navigation = () => {
                 )}
                 {user && !isGuest ? (
                   <Link
-                    to="/profile"
+                    to="/settings"
                     className={`text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
                   >
-                    Profile
+                    Settings
                   </Link>
                 ) : (
                   <Link
@@ -347,11 +347,11 @@ const Navigation = () => {
               )}
               {user && !isGuest ? (
                 <Link
-                  to="/profile"
+                  to="/settings"
                   onClick={() => setIsOpen(false)}
                   className={`block text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
                 >
-                  Profile
+                  Settings
                 </Link>
               ) : (
                 <Link

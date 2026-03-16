@@ -93,8 +93,8 @@ export function useAppKeyboardShortcuts() {
     {
       key: "p",
       ctrlKey: true,
-      action: () => navigate("/profile"),
-      description: "Go to profile",
+      action: () => navigate("/settings"),
+      description: "Go to settings",
     },
   ]);
 }

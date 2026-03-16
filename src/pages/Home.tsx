@@ -9,7 +9,6 @@ import { useAuth } from "@/hooks/useAuth";
 import HeroVideoCarousel from "@/components/HeroVideoCarousel";
 import HeroBrowserCarousel from "@/components/HeroBrowserCarousel";
 import FeatureShowcase from "@/components/FeatureShowcase";
-import FeatureShowcaseRail from "@/components/FeatureShowcaseRail";
 import HowItWorksTimeline from "@/components/HowItWorksTimeline";
 import carouselBg from "@/assets/carousel-bg.png";
 import { useOpportunityCount } from "@/hooks/useOpportunityCount";
@@ -183,8 +182,6 @@ const Home = () => {
         
         <div className="absolute inset-x-0 bottom-0 h-32 sm:h-48 bg-gradient-to-t from-black to-transparent z-[5] pointer-events-none" />
       </section>
-
-      <FeatureShowcaseRail />
 
       <HowItWorksTimeline />
 

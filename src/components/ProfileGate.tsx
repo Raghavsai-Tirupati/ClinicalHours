@@ -27,7 +27,7 @@ export function ProfileGate({
 
   const handleCompleteProfile = () => {
     onOpenChange(false);
-    navigate("/profile");
+    navigate("/settings");
   };
 
   return (

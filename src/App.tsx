@@ -18,7 +18,7 @@ const OpportunityDetail = lazy(() => import("./pages/OpportunityDetail"));
 const Projects = lazy(() => import("./pages/Projects"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Auth = lazy(() => import("./pages/Auth"));
-const Profile = lazy(() => import("./pages/Profile"));
+const Settings = lazy(() => import("./pages/Settings"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MapView = lazy(() => import("./pages/MapView"));
 const Terms = lazy(() => import("./pages/Terms"));
@@ -93,7 +93,8 @@ function AppContent() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<Settings />} />
               <Route path="/dashboard" element={<StudentOnlyRoute><Dashboard /></StudentOnlyRoute>} />
               <Route path="/my-applications" element={<StudentOnlyRoute><MyApplications /></StudentOnlyRoute>} />
               <Route path="/map" element={<StudentOnlyRoute><MapView /></StudentOnlyRoute>} />

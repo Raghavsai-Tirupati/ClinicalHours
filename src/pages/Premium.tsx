@@ -226,7 +226,7 @@ const Premium = () => {
 
         {/* Pricing Cards */}
         <section className="container mx-auto px-6 pb-20">
-          <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
+          <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
             {PLANS.map((plan) => {
               const isCurrentPlan = (isPremium && plan.name !== "Free") || (!isPremium && plan.name === "Free");
               const showPlan =
@@ -239,7 +239,7 @@ const Premium = () => {
               return (
                 <div
                   key={plan.name}
-                  className={`relative rounded-lg border p-6 ${
+                  className={`relative rounded-lg border p-6 flex flex-col ${
                     plan.popular
                       ? "border-amber-500/40 bg-amber-500/5"
                       : "border-border bg-card"
@@ -253,7 +253,7 @@ const Premium = () => {
                     </div>
                   )}
 
-                  <div className="mb-6">
+                  <div className="min-h-[140px] mb-6">
                     <h3 className="text-lg font-semibold text-foreground">{plan.name}</h3>
                     <div className="mt-2 flex items-baseline gap-1">
                       <span className="text-4xl font-bold text-foreground">{plan.price}</span>
@@ -262,25 +262,7 @@ const Premium = () => {
                     <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
                   </div>
 
-                  {isCurrentPlan ? (
-                    <Button className="w-full mb-6" variant="outline" disabled>
-                      Current Plan
-                    </Button>
-                  ) : !user ? (
-                    <Button className="w-full mb-6" variant={plan.popular ? "default" : "outline"} asChild>
-                      <Link to="/auth">Sign Up First</Link>
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full mb-6"
-                      variant={plan.popular ? "default" : "outline"}
-                      asChild
-                    >
-                      <Link to="/premium/purchase">{plan.cta}</Link>
-                    </Button>
-                  )}
-
-                  <ul className="space-y-3">
+                  <ul className="space-y-3 flex-1">
                     {plan.features.map((feature) => (
                       <li key={feature.text} className="flex items-start gap-2.5">
                         {feature.included ? (
@@ -298,6 +280,26 @@ const Premium = () => {
                       </li>
                     ))}
                   </ul>
+
+                  <div className="mt-auto pt-6">
+                    {isCurrentPlan ? (
+                      <Button className="w-full" variant="outline" disabled>
+                        Current Plan
+                      </Button>
+                    ) : !user ? (
+                      <Button className="w-full" variant={plan.popular ? "default" : "outline"} asChild>
+                        <Link to="/auth">Sign Up First</Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        variant={plan.popular ? "default" : "outline"}
+                        asChild
+                      >
+                        <Link to="/premium/purchase">{plan.cta}</Link>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               );
             })}
