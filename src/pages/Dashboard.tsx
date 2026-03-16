@@ -380,6 +380,7 @@ const Dashboard = () => {
             type: string;
             location: string;
             website: string | null;
+            logo_url: string | null;
           } | null;
 
           const oppId = row.opportunity_id as string;
@@ -397,6 +398,7 @@ const Dashboard = () => {
             deadline: null,
             hoursLogged: Math.round((hoursMap[oppId] || 0) * 10) / 10,
             reflectionCount: reflCountMap[oppId] || 0,
+            logo_url: opp?.logo_url ?? null,
           };
         });
 
