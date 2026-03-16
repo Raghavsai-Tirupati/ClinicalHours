@@ -33,6 +33,7 @@ import { VerificationGate } from "@/components/VerificationGate";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
+import HospitalLogo from "@/components/HospitalLogo";
 
 const Opportunities = () => {
   const [searchTerm, setSearchTerm] = useState("");
