@@ -163,6 +163,7 @@ async function fetchOpportunitiesWithDistance(
       website?: string;
       slug?: string;
       hospital_id?: string;
+      logo_url?: string;
       avg_rating?: number;
       review_count?: number;
       distance_miles?: number;
@@ -182,6 +183,7 @@ async function fetchOpportunitiesWithDistance(
       website: opp.website,
       slug: opp.slug,
       hospital_id: opp.hospital_id,
+      logo_url: opp.logo_url,
       avg_rating: opp.avg_rating,
       review_count: opp.review_count,
       distance: opp.distance_miles,
