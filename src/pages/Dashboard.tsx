@@ -54,6 +54,7 @@ interface Opportunity {
   deadline: string | null;
   hoursLogged: number;
   reflectionCount: number;
+  logo_url: string | null;
 }
 
 interface Reflection {
