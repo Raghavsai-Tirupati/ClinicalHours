@@ -67,16 +67,25 @@ export default function AdminLogosTab() {
 
   const invokeBatch = async (): Promise<BatchResult | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke('batch-fetch-logos', {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'sysbtcikrbrrgafffody';
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const url = `https://${projectId}.supabase.co/functions/v1/batch-fetch-logos`;
+      
+      const res = await fetch(url, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': anonKey,
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || anonKey}`,
+        },
       });
 
-      if (error) {
-        console.error('Batch fetch error:', error);
+      if (!res.ok) {
+        console.error('Batch fetch error:', res.status, await res.text());
         return null;
       }
 
-      return data as BatchResult;
+      return (await res.json()) as BatchResult;
     } catch (err) {
       console.error('Batch fetch exception:', err);
       return null;
