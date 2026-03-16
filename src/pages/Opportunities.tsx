@@ -1,28 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search,
-  MapPin,
-  Clock,
-  Star,
   Loader2,
-  Plus,
-  Check,
   AlertCircle,
   ChevronDown,
-  Phone,
   Mail,
-  Globe,
-  ExternalLink,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useOpportunities } from "@/hooks/useOpportunities";
@@ -32,17 +22,19 @@ import { GuestGate } from "@/components/GuestGate";
 import { VerificationGate } from "@/components/VerificationGate";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
-import { FindApplicationButton } from "@/components/FindApplicationButton";
-import HospitalLogo from "@/components/HospitalLogo";
+import { HospitalCard } from "@/components/HospitalCard";
+import { HospitalDetail } from "@/components/HospitalDetail";
+import { cn } from "@/lib/utils";
+import type { Opportunity } from "@/types";
 
 const Opportunities = () => {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [savedOpportunityIds, setSavedOpportunityIds] = useState<Set<string>>(new Set());
   const [savedLoading, setSavedLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
-  // Maps hospital_id -> hospital_accounts.id for opportunities with a linked hospital
   const [hospitalAccountMap, setHospitalAccountMap] = useState<Map<string, string>>(new Map());
   const [guestGateOpen, setGuestGateOpen] = useState(false);
   const [verificationGateOpen, setVerificationGateOpen] = useState(false);
@@ -52,13 +44,9 @@ const Opportunities = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Use debounced search
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-    }, 300);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
@@ -69,20 +57,34 @@ const Opportunities = () => {
     pageSize: 20,
   });
 
-  // Fetch saved opportunities on mount - wait for auth to be ready
+  // Keep last-selected opportunity so the detail panel content stays visible
+  // during the CSS exit transition (after selectedId goes null).
+  const lastSelectedRef = useRef<Opportunity | null>(null);
+  const selectedOpportunity = opportunities.find((o) => o.id === selectedId) ?? null;
+  if (selectedOpportunity) lastSelectedRef.current = selectedOpportunity;
+  const displayedOpportunity = selectedOpportunity ?? lastSelectedRef.current;
+
+  const detailPanelRef = useRef<HTMLDivElement>(null);
+
+  // Scroll detail panel to top when selection changes
+  useEffect(() => {
+    if (selectedId && detailPanelRef.current) {
+      detailPanelRef.current.scrollTop = 0;
+    }
+  }, [selectedId]);
+
+  // Fetch saved opportunities
   useEffect(() => {
     const fetchSavedOpportunities = async () => {
       if (!isReady || !user) {
         setSavedLoading(false);
         return;
       }
-
       try {
         const { data, error } = await supabase
           .from("saved_opportunities")
           .select("opportunity_id")
           .eq("user_id", user.id);
-
         if (!error && data) {
           setSavedOpportunityIds(new Set(data.map((item) => item.opportunity_id)));
         }
@@ -90,21 +92,18 @@ const Opportunities = () => {
         setSavedLoading(false);
       }
     };
-
     fetchSavedOpportunities();
   }, [user, isReady]);
 
-  // Batch-fetch hospital accounts for opportunities that have a hospital_id
+  // Batch-fetch hospital accounts
   useEffect(() => {
     const hospitalIds = opportunities
       .map((o) => o.hospital_id)
       .filter((id): id is string => !!id);
-
     if (hospitalIds.length === 0) {
       setHospitalAccountMap(new Map());
       return;
     }
-
     supabase
       .from("hospital_accounts")
       .select("id, hospital_id")
@@ -146,116 +145,112 @@ const Opportunities = () => {
   }, [toast]);
 
   const handleAddToTracker = async (opportunityId: string) => {
-    if (isGuest) {
-      setGuestGateOpen(true);
-      return;
-    }
-    if (needsVerification) {
-      setVerificationGateOpen(true);
-      return;
-    }
+    if (isGuest) { setGuestGateOpen(true); return; }
+    if (needsVerification) { setVerificationGateOpen(true); return; }
     if (!user) return;
-    
+
     setSavingIds((prev) => new Set(prev).add(opportunityId));
-    
     const { error } = await supabase
       .from("saved_opportunities")
-      .insert({
-        user_id: user.id,
-        opportunity_id: opportunityId,
-      });
-    
+      .insert({ user_id: user.id, opportunity_id: opportunityId });
     setSavingIds((prev) => {
       const next = new Set(prev);
       next.delete(opportunityId);
       return next;
     });
-    
+
     if (error) {
       if (error.code === "23505") {
-        toast({
-          title: "Already in tracker",
-          description: "This opportunity is already in your tracker.",
-        });
+        toast({ title: "Already in tracker", description: "This opportunity is already in your tracker." });
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to add to tracker. Please try again.",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to add to tracker. Please try again.", variant: "destructive" });
       }
       return;
     }
-    
+
     setSavedOpportunityIds((prev) => new Set(prev).add(opportunityId));
-    toast({
-      title: "Added to tracker!",
-      description: "View it in your Dashboard to track your progress.",
-    });
+    toast({ title: "Added to tracker!", description: "View it in your Dashboard to track your progress." });
+  };
+
+  const handleSelect = (id: string) => {
+    setSelectedId((prev) => (prev === id ? null : id));
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "hospital":
-        return "bg-red-500/20 text-red-300 border-red-500/30";
-      case "clinic":
-        return "bg-blue-500/20 text-blue-300 border-blue-500/30";
-      case "hospice":
-        return "bg-purple-500/20 text-purple-300 border-purple-500/30";
-      case "emt":
-        return "bg-orange-500/20 text-orange-300 border-orange-500/30";
-      default:
-        return "bg-gray-500/20 text-gray-300 border-gray-500/30";
+      case "hospital": return "bg-red-500/20 text-red-300 border-red-500/30";
+      case "clinic":   return "bg-blue-500/20 text-blue-300 border-blue-500/30";
+      case "hospice":  return "bg-purple-500/20 text-purple-300 border-purple-500/30";
+      case "emt":      return "bg-orange-500/20 text-orange-300 border-orange-500/30";
+      default:         return "bg-gray-500/20 text-gray-300 border-gray-500/30";
     }
   };
-
 
   if (authLoading || !isReady || (!user && !isGuest)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
   }
 
+  const hasResults = opportunities.length > 0;
+  const isDetailOpen = selectedId !== null;
+
+  // Shared detail panel props
+  const detailProps = displayedOpportunity
+    ? {
+        opportunity: displayedOpportunity,
+        hospitalAccountId: displayedOpportunity.hospital_id
+          ? hospitalAccountMap.get(displayedOpportunity.hospital_id)
+          : undefined,
+        isPremium,
+        isSaved: savedOpportunityIds.has(displayedOpportunity.id),
+        isSavedLoading: savedLoading,
+        isSaving: savingIds.has(displayedOpportunity.id),
+        onClose: () => setSelectedId(null),
+        onAddToTracker: handleAddToTracker,
+        getTypeColor,
+      }
+    : null;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navigation />
 
-      <div className="container mx-auto px-4 pt-28 pb-12">
+      {/* ── Header + Search / Filter ─────────────────────────────────── */}
+      <div className="container mx-auto px-4 pt-28 pb-4">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-4 scroll-mt-28">Clinical Opportunities Near You</h1>
+          <div className="mb-6">
+            <h1 className="text-4xl font-bold mb-4 scroll-mt-28">
+              Clinical Opportunities Near You
+            </h1>
             <p className="text-lg text-muted-foreground">
               Discover clinical opportunities sorted by distance from your location.
             </p>
           </div>
 
-          {/* Contact notice for broken links */}
-          <div className="mb-8 flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
             <Mail className="h-4 w-4 flex-shrink-0" />
             <span>
               Found a broken link or outdated info?{" "}
               <Link to="/contact" className="text-primary hover:underline">
                 Let us know
-              </Link>
-              {" "}and we'll fix it.
+              </Link>{" "}
+              and we&rsquo;ll fix it.
             </span>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search by name or location..."
                 value={searchTerm}
-                onChange={(e) => {
-                  const value = e.target.value.slice(0, 100); // Limit to 100 chars
-                  setSearchTerm(value);
-                }}
+                onChange={(e) => setSearchTerm(e.target.value.slice(0, 100))}
                 className="pl-10"
                 maxLength={100}
                 aria-label="Search opportunities by name or location"
@@ -275,12 +270,26 @@ const Opportunities = () => {
             </Select>
           </div>
 
-          {loading && opportunities.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading opportunities...</p>
-            </div>
-          ) : opportunities.length === 0 ? (
+          {!loading && hasResults && (
+            <p className="text-sm text-muted-foreground">
+              Showing {opportunities.length} of {totalCount} opportunities
+              {userLocation && " sorted by distance"}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Main Content Area ────────────────────────────────────────── */}
+      {loading && opportunities.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading opportunities...</p>
+          </div>
+        </div>
+      ) : !hasResults ? (
+        <div className="flex-1 container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
             <Card>
               <CardContent className="py-12 text-center">
                 <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -288,192 +297,91 @@ const Opportunities = () => {
                 <p className="text-muted-foreground">Try adjusting your search or filters</p>
               </CardContent>
             </Card>
-          ) : (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <p className="text-sm text-muted-foreground">
-                  Showing {opportunities.length} of {totalCount} opportunities
-                  {userLocation && " sorted by distance"}
-                </p>
-              </div>
-
-              {opportunities.map((opportunity) => (
-                <Card 
-                  key={opportunity.id} 
-                  className="bg-card/50 border-border"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                      <div className="flex gap-3 flex-1 min-w-0">
-                        <HospitalLogo
-                          logoUrl={opportunity.logo_url ?? null}
-                          hospitalName={opportunity.name}
-                          size="md"
-                          className="mt-0.5"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <h3 className="text-lg font-semibold text-foreground">{opportunity.name}</h3>
-                          <Badge className={getTypeColor(opportunity.type)}>
-                            {opportunity.type === 'emt' ? 'EMT' : opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
-                          </Badge>
-                        </div>
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                            <span className="break-words">
-                              {opportunity.location}
-                              {opportunity.distance && (
-                                <span className="text-primary ml-1">({opportunity.distance.toFixed(1)} mi)</span>
-                              )}
-                            </span>
-                          </div>
-                          {opportunity.description && (
-                            <p className="text-muted-foreground mt-2 line-clamp-2 sm:line-clamp-none">{opportunity.description}</p>
-                          )}
-                          {opportunity.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 flex-shrink-0" />
-                              <a
-                                href={`tel:${opportunity.phone}`}
-                                className="text-primary hover:underline min-h-[44px] flex items-center sm:min-h-0"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {opportunity.phone}
-                              </a>
-                            </div>
-                          )}
-                          {opportunity.email && (
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-4 w-4 flex-shrink-0" />
-                              <a
-                                href={`mailto:${opportunity.email}`}
-                                className="text-primary hover:underline truncate min-h-[44px] flex items-center sm:min-h-0"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {opportunity.email}
-                              </a>
-                            </div>
-                          )}
-                          {opportunity.website && (
-                            <div className="flex items-center gap-2">
-                              <Globe className="h-4 w-4 flex-shrink-0" />
-                              <a
-                                href={opportunity.website}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline min-h-[44px] flex items-center sm:min-h-0"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                Visit Website
-                              </a>
-                            </div>
-                          )}
-                          {opportunity.review_count != null && opportunity.review_count > 0 && (
-                            <div className="flex items-center gap-2">
-                              <Star className="h-4 w-4 text-primary fill-primary flex-shrink-0" />
-                              <span>
-                                {opportunity.avg_rating?.toFixed(1) ?? '0.0'} ({opportunity.review_count} review{opportunity.review_count !== 1 ? 's' : ''})
-                              </span>
-                            </div>
-                          )}
-                          {opportunity.hours_required && (
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 flex-shrink-0" />
-                              <span>{opportunity.hours_required}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      </div>
-                      {/* Buttons: horizontal full-width on mobile, vertical on desktop */}
-                      <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>
-                        {savedLoading ? (
-                          <Skeleton className="h-11 sm:h-9 w-full sm:w-28 rounded-md flex-1 sm:flex-none" />
-                        ) : savedOpportunityIds.has(opportunity.id) ? (
-                          <Button variant="secondary" size="sm" disabled className="flex-1 sm:flex-none h-11 sm:h-9">
-                            <Check className="h-4 w-4 mr-2" />
-                            In Tracker
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={() => handleAddToTracker(opportunity.id)}
-                            size="sm"
-                            disabled={savingIds.has(opportunity.id)}
-                            className="flex-1 sm:flex-none h-11 sm:h-9"
-                          >
-                            {savingIds.has(opportunity.id) ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Plus className="h-4 w-4 mr-2" />
-                            )}
-                            Add to Tracker
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/opportunities/${opportunity.slug ?? opportunity.id}`)}
-                          className="flex-1 sm:flex-none h-11 sm:h-9"
-                        >
-                          View Details
-                        </Button>
-                        {/* Direct Apply: show when this opportunity is linked to a hospital account */}
-                        {opportunity.hospital_id && hospitalAccountMap.has(opportunity.hospital_id) && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() =>
-                              navigate(`/hospital/apply/${hospitalAccountMap.get(opportunity.hospital_id!)}`)
-                            }
-                            className="flex-1 sm:flex-none h-11 sm:h-9 gap-1.5"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Direct Apply
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    {/* Find Application link — premium AI search */}
-                    <div className="mt-3 pt-3 border-t border-border/50">
-                      <FindApplicationButton
-                        opportunityId={opportunity.id}
-                        opportunityName={opportunity.name}
-                        websiteHint={opportunity.website}
-                        isPremium={isPremium}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {/* Load More Button */}
-              {hasMore && (
-                <div className="flex justify-center pt-4">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={loadMore}
-                    disabled={loading}
-                    className="min-w-[200px]"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="mr-2 h-4 w-4" />
-                        Load More Opportunities
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+          </div>
         </div>
+      ) : (
+        /* ── Split Layout ──────────────────────────────────────────── */
+        <div className="flex-1 min-h-0 container mx-auto px-4">
+          <div
+            className="flex max-w-6xl mx-auto overflow-hidden"
+            style={{ height: "calc(100vh - 310px)", minHeight: "420px" }}
+          >
+            {/* ── Left: Hospital list ─────────────────────────────── */}
+            <div
+              className={cn(
+                "overflow-y-auto transition-all duration-300 ease-in-out w-full",
+                isDetailOpen && "md:w-[45%] lg:w-[40%]",
+              )}
+            >
+              <div
+                className={cn(
+                  "space-y-3 pb-4 transition-all duration-300 ease-in-out",
+                  isDetailOpen ? "md:pr-3" : "max-w-3xl mx-auto",
+                )}
+              >
+                {opportunities.map((opp) => (
+                  <HospitalCard
+                    key={opp.id}
+                    opportunity={opp}
+                    isSelected={selectedId === opp.id}
+                    isSaved={savedOpportunityIds.has(opp.id)}
+                    isSavedLoading={savedLoading}
+                    isSaving={savingIds.has(opp.id)}
+                    onSelect={handleSelect}
+                    onAddToTracker={handleAddToTracker}
+                    getTypeColor={getTypeColor}
+                  />
+                ))}
+
+                {hasMore && (
+                  <div className="flex justify-center py-4">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={loadMore}
+                      disabled={loading}
+                      className="min-w-[200px]"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="mr-2 h-4 w-4" />
+                          Load More
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Right: Detail panel (tablet + desktop) ──────────── */}
+            <div
+              ref={detailPanelRef}
+              className={cn(
+                "hidden md:block transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden",
+                isDetailOpen ? "md:w-[55%] lg:w-[60%]" : "w-0",
+              )}
+            >
+              {detailProps && <HospitalDetail {...detailProps} />}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Detail Overlay (<md) ──────────────────────────────── */}
+      <div
+        className={cn(
+          "md:hidden fixed inset-0 z-50 bg-background overflow-y-auto",
+          "transition-transform duration-300 ease-in-out",
+          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none",
+        )}
+      >
+        {detailProps && <HospitalDetail {...detailProps} />}
       </div>
 
       <Footer />

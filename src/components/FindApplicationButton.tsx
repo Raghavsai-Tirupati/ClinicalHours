@@ -39,6 +39,7 @@ export function FindApplicationButton({
   websiteHint,
   isPremium,
   compact = false,
+  label = "Find Application",
 }: {
   opportunityId: string;
   opportunityName: string;
@@ -46,6 +47,8 @@ export function FindApplicationButton({
   isPremium: boolean;
   /** Compact dark variant for the map popup */
   compact?: boolean;
+  /** Button label shown in idle state */
+  label?: string;
 }) {
   const [status, setStatus] = useState<Status>(() =>
     getCached(opportunityId) !== null ? "done" : "idle"
@@ -157,7 +160,7 @@ export function FindApplicationButton({
     return (
       <Button variant="outline" size="sm" onClick={handleSearch} className="gap-1.5">
         <Search className="h-3.5 w-3.5" />
-        Find Application →
+        {label} →
       </Button>
     );
   }

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Opportunity } from "@/types";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
+import HospitalLogo from "@/components/HospitalLogo";
 
 interface HospitalDetailProps {
   opportunity: Opportunity;
@@ -47,16 +48,24 @@ export function HospitalDetail({
     <div className="flex flex-col bg-card border-l border-border h-full overflow-y-auto">
       {/* Sticky header */}
       <div className="flex items-start justify-between p-5 pb-4 border-b border-border sticky top-0 bg-card z-10">
-        <div className="flex-1 min-w-0 pr-4">
-          <h2 className="text-lg font-bold text-foreground leading-snug">
-            {opportunity.name}
-          </h2>
-          <div className="mt-1.5">
-            <Badge className={getTypeColor(opportunity.type)}>
-              {opportunity.type === "emt"
-                ? "EMT"
-                : opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
-            </Badge>
+        <div className="flex items-start gap-3 flex-1 min-w-0 pr-4">
+          <HospitalLogo
+            logoUrl={opportunity.logo_url ?? null}
+            hospitalName={opportunity.name}
+            size="lg"
+            className="mt-0.5"
+          />
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-foreground leading-snug">
+              {opportunity.name}
+            </h2>
+            <div className="mt-1.5">
+              <Badge className={getTypeColor(opportunity.type)}>
+                {opportunity.type === "emt"
+                  ? "EMT"
+                  : opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
+              </Badge>
+            </div>
           </div>
         </div>
         <button
