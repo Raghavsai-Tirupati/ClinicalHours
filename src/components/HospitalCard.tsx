@@ -107,6 +107,13 @@ export function HospitalCard({
               )}
             </div>
 
+            {/* Description / notes */}
+            {opportunity.description && (
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {opportunity.description}
+              </p>
+            )}
+
             {/* Actions row */}
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               {isSavedLoading ? (
