@@ -81,8 +81,6 @@ const dynamicStorageAdapter = {
 const customFetch = async (url: RequestInfo | URL, options: RequestInit = {}): Promise<Response> => {
   const urlString = typeof url === 'string' ? url : url.toString();
   
-  // Only add credentials for our edge functions, not Supabase auth endpoints
-  // Supabase auth endpoints don't support credentials mode with CORS
   const isEdgeFunction = urlString.includes('/functions/v1/');
   const isSupabaseAuth = urlString.includes('/auth/v1/');
   
@@ -90,18 +88,24 @@ const customFetch = async (url: RequestInfo | URL, options: RequestInit = {}): P
     ...options,
   };
   
-  // Only include credentials for edge functions (not Supabase auth)
-  if (isEdgeFunction && !isSupabaseAuth) {
+  // Only include credentials for edge functions that need cookie-based auth.
+  // Most functions use JWT via Authorization header and don't need cookies.
+  // Adding credentials: 'include' globally breaks CORS for functions that
+  // return Access-Control-Allow-Origin: * (e.g. Lovable-managed functions).
+  const COOKIE_AUTH_FUNCTIONS = ['auth-cookie'];
+  const functionName = urlString.split('/functions/v1/')[1]?.split(/[?#]/)[0] || '';
+  if (isEdgeFunction && !isSupabaseAuth && COOKIE_AUTH_FUNCTIONS.includes(functionName)) {
     enhancedOptions.credentials = 'include' as RequestCredentials;
   }
   
-  // Add CSRF token for state-changing requests to edge functions
+  // Add CSRF token only for cookie-auth edge functions (double-submit pattern).
+  // JWT-authenticated functions don't need CSRF protection.
   const method = options.method?.toUpperCase();
   const stateChangingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+  const needsCSRF = COOKIE_AUTH_FUNCTIONS.includes(functionName);
   
-  if (method && stateChangingMethods.includes(method) && isEdgeFunction) {
+  if (method && stateChangingMethods.includes(method) && isEdgeFunction && needsCSRF) {
     try {
-      // Import dynamically to avoid circular dependency
       const { getCSRFToken } = await import('@/lib/csrf');
       const csrfToken = await getCSRFToken();
       
@@ -109,10 +113,6 @@ const customFetch = async (url: RequestInfo | URL, options: RequestInit = {}): P
         const headers = new Headers(options.headers);
         headers.set('X-CSRF-Token', csrfToken);
         enhancedOptions.headers = headers;
-        // Debug logging (remove in production if needed)
-        console.log('[CSRF] Added X-CSRF-Token header to', urlString);
-      } else {
-        console.warn('[CSRF] No CSRF token available for', urlString);
       }
     } catch (error) {
       console.error('Error adding CSRF token:', error);
