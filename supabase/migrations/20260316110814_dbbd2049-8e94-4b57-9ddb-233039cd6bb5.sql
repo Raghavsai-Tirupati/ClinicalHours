@@ -1,0 +1,1 @@
+ALTER TABLE public.experience_entries ADD COLUMN IF NOT EXISTS amcas_description text DEFAULT NULL;

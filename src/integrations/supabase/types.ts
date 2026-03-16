@@ -169,6 +169,7 @@ export type Database = {
       }
       experience_entries: {
         Row: {
+          amcas_description: string | null
           created_at: string
           entry_date: string
           hours: number | null
@@ -179,6 +180,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          amcas_description?: string | null
           created_at?: string
           entry_date?: string
           hours?: number | null
@@ -189,6 +191,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          amcas_description?: string | null
           created_at?: string
           entry_date?: string
           hours?: number | null
