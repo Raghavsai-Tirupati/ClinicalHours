@@ -1416,6 +1416,7 @@ export type Database = {
           id: string
           latitude: number
           location: string
+          logo_url: string
           longitude: number
           name: string
           phone: string
