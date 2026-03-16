@@ -20,6 +20,30 @@ function extractDomain(url: string): string | null {
   }
 }
 
+async function checkImageUrl(url: string, timeoutMs = 3000): Promise<boolean> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    // Use GET with a range header to only fetch the first few bytes
+    const res = await fetch(url, { 
+      method: "GET", 
+      redirect: "follow", 
+      signal: controller.signal,
+      headers: { "Range": "bytes=0-63" },
+    });
+    const ct = res.headers.get("content-type") || "";
+    // Accept 200 or 206 (partial content)
+    const isImage = (res.status === 200 || res.status === 206) && ct.startsWith("image/");
+    // Consume body to avoid leak
+    await res.arrayBuffer();
+    return isImage;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -40,10 +64,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Starting batch-fetch-logos...");
 
-    // Fetch listings that have a website but no logo_url yet (null only, not empty string)
     const { data: listings, error: fetchError } = await supabaseAdmin
       .from("opportunities")
-      .select("id, website")
+      .select("id, website, name")
       .is("logo_url", null)
       .not("website", "is", null)
       .limit(5);
@@ -65,8 +88,7 @@ const handler = async (req: Request): Promise<Response> => {
     for (const listing of listings) {
       const domain = extractDomain(listing.website);
       if (!domain) {
-        console.log(`Invalid domain for listing ${listing.id}: ${listing.website}`);
-        // Mark as checked
+        console.log(`Invalid domain for ${listing.name}: ${listing.website}`);
         await supabaseAdmin.from("opportunities").update({ logo_url: "" }).eq("id", listing.id);
         failed++;
         continue;
@@ -74,76 +96,42 @@ const handler = async (req: Request): Promise<Response> => {
 
       let logoUrl: string | null = null;
 
-      try {
-        // Try logo.dev - just build the URL and do a quick HEAD check
-        const logoDevUrl = `https://img.logo.dev/${domain}?token=${token}&size=128&format=png`;
-        console.log(`Checking logo.dev for ${domain}...`);
-        
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
-        
-        try {
-          const res = await fetch(logoDevUrl, { 
-            method: "HEAD", 
-            redirect: "follow", 
-            signal: controller.signal 
-          });
-          const ct = res.headers.get("content-type") || "";
-          console.log(`logo.dev response for ${domain}: status=${res.status}, content-type=${ct}`);
-          if (res.ok && ct.startsWith("image/")) {
-            logoUrl = logoDevUrl;
-          }
-        } catch (e) {
-          console.log(`logo.dev timeout/error for ${domain}: ${e}`);
-        } finally {
-          clearTimeout(timeout);
-        }
+      // 1) Try logo.dev
+      const logoDevUrl = `https://img.logo.dev/${domain}?token=${token}&size=128&format=png`;
+      console.log(`[${listing.name}] Trying logo.dev: ${domain}`);
+      
+      if (await checkImageUrl(logoDevUrl)) {
+        logoUrl = logoDevUrl;
+        console.log(`[${listing.name}] ✅ logo.dev hit`);
+      } else {
+        console.log(`[${listing.name}] logo.dev miss`);
+      }
 
-        // Google favicon fallback
-        if (!logoUrl) {
-          const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-          const controller2 = new AbortController();
-          const timeout2 = setTimeout(() => controller2.abort(), 3000);
-          
-          try {
-            const res = await fetch(googleUrl, { 
-              method: "HEAD", 
-              redirect: "follow", 
-              signal: controller2.signal 
-            });
-            const ct = res.headers.get("content-type") || "";
-            console.log(`Google favicon response for ${domain}: status=${res.status}, content-type=${ct}`);
-            if (res.ok && ct.startsWith("image/")) {
-              logoUrl = googleUrl;
-            }
-          } catch (e) {
-            console.log(`Google favicon timeout/error for ${domain}: ${e}`);
-          } finally {
-            clearTimeout(timeout2);
-          }
+      // 2) Google favicon fallback  
+      if (!logoUrl) {
+        const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+        if (await checkImageUrl(googleUrl)) {
+          logoUrl = googleUrl;
+          console.log(`[${listing.name}] ✅ Google favicon hit`);
+        } else {
+          console.log(`[${listing.name}] Google favicon miss`);
         }
-      } catch (e) {
-        console.error(`Unexpected error for ${domain}: ${e}`);
       }
 
       if (logoUrl) {
-        console.log(`✅ Found logo for ${domain}: ${logoUrl}`);
         const { error: updateError } = await supabaseAdmin
           .from("opportunities")
           .update({ logo_url: logoUrl })
           .eq("id", listing.id);
         if (updateError) {
-          console.error(`DB update error for ${listing.id}: ${updateError.message}`);
+          console.error(`DB update error: ${updateError.message}`);
           failed++;
         } else {
           success++;
         }
       } else {
-        console.log(`❌ No logo found for ${domain}, marking as checked`);
-        await supabaseAdmin
-          .from("opportunities")
-          .update({ logo_url: "" })
-          .eq("id", listing.id);
+        console.log(`[${listing.name}] ❌ No logo, marking checked`);
+        await supabaseAdmin.from("opportunities").update({ logo_url: "" }).eq("id", listing.id);
         failed++;
       }
     }
