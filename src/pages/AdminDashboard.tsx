@@ -149,7 +149,7 @@ export default function AdminDashboard() {
                 <span className="hidden sm:inline">Tools</span>
               </TabsTrigger>
               <TabsTrigger value="logos" className="flex items-center gap-2">
-                <Image className="h-4 w-4" />
+                <ImageIcon className="h-4 w-4" />
                 <span className="hidden sm:inline">Logos</span>
               </TabsTrigger>
               <TabsTrigger value="activity" className="flex items-center gap-2">
