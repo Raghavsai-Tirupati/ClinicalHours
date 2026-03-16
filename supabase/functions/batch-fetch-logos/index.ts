@@ -24,6 +24,18 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+async function checkLogoExists(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: "GET", redirect: "follow" });
+    const ct = res.headers.get("content-type") || "";
+    // Consume body to prevent resource leak
+    await res.arrayBuffer();
+    return res.ok && ct.startsWith("image/");
+  } catch {
+    return false;
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -46,13 +58,12 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(JSON.stringify({ error: "LOGO_DEV_TOKEN not configured" }), { status: 500, headers: corsHeaders });
     }
 
-    // Fetch listings missing logos but having websites
     const { data: listings, error: fetchError } = await supabaseAdmin
       .from("opportunities")
       .select("id, website")
       .is("logo_url", null)
       .not("website", "is", null)
-      .limit(500);
+      .limit(30);
 
     if (fetchError) throw fetchError;
     if (!listings || listings.length === 0) {
@@ -73,25 +84,15 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Try logo.dev first
       const logoDevUrl = `https://img.logo.dev/${domain}?token=${token}&size=128&format=png`;
-      try {
-        const res = await fetch(logoDevUrl, { method: "HEAD" });
-        if (res.ok) {
-          logoUrl = logoDevUrl;
-        }
-      } catch {
-        // logo.dev failed, try fallback
+      if (await checkLogoExists(logoDevUrl)) {
+        logoUrl = logoDevUrl;
       }
 
       // Google favicon fallback
       if (!logoUrl) {
         const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-        try {
-          const res = await fetch(googleUrl, { method: "HEAD" });
-          if (res.ok) {
-            logoUrl = googleUrl;
-          }
-        } catch {
-          // both failed
+        if (await checkLogoExists(googleUrl)) {
+          logoUrl = googleUrl;
         }
       }
 
@@ -106,9 +107,11 @@ const handler = async (req: Request): Promise<Response> => {
           failed++;
         } else {
           success++;
+          console.log(`Logo set for ${listing.id}: ${domain}`);
         }
       } else {
         failed++;
+        console.log(`No logo found for ${domain}`);
       }
 
       await delay(200);
