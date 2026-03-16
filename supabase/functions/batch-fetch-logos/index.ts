@@ -20,16 +20,10 @@ function extractDomain(url: string): string | null {
   }
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-async function checkLogoExists(url: string): Promise<boolean> {
+async function checkUrl(url: string, signal: AbortSignal): Promise<boolean> {
   try {
-    const res = await fetch(url, { method: "GET", redirect: "follow" });
+    const res = await fetch(url, { method: "HEAD", redirect: "follow", signal });
     const ct = res.headers.get("content-type") || "";
-    // Consume body to prevent resource leak
-    await res.arrayBuffer();
     return res.ok && ct.startsWith("image/");
   } catch {
     return false;
@@ -58,12 +52,13 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(JSON.stringify({ error: "LOGO_DEV_TOKEN not configured" }), { status: 500, headers: corsHeaders });
     }
 
+    // Smaller batch to avoid CPU timeout
     const { data: listings, error: fetchError } = await supabaseAdmin
       .from("opportunities")
       .select("id, website")
       .is("logo_url", null)
       .not("website", "is", null)
-      .limit(30);
+      .limit(10);
 
     if (fetchError) throw fetchError;
     if (!listings || listings.length === 0) {
@@ -75,25 +70,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const listing of listings) {
       const domain = extractDomain(listing.website);
-      if (!domain) {
-        failed++;
-        continue;
-      }
+      if (!domain) { failed++; continue; }
 
       let logoUrl: string | null = null;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
 
-      // Try logo.dev first
-      const logoDevUrl = `https://img.logo.dev/${domain}?token=${token}&size=128&format=png`;
-      if (await checkLogoExists(logoDevUrl)) {
-        logoUrl = logoDevUrl;
-      }
-
-      // Google favicon fallback
-      if (!logoUrl) {
-        const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-        if (await checkLogoExists(googleUrl)) {
-          logoUrl = googleUrl;
+      try {
+        // Try logo.dev
+        const logoDevUrl = `https://img.logo.dev/${domain}?token=${token}&size=128&format=png`;
+        if (await checkUrl(logoDevUrl, controller.signal)) {
+          logoUrl = logoDevUrl;
         }
+
+        // Google favicon fallback
+        if (!logoUrl) {
+          const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+          if (await checkUrl(googleUrl, controller.signal)) {
+            logoUrl = googleUrl;
+          }
+        }
+      } catch {
+        // timeout or network error
+      } finally {
+        clearTimeout(timeout);
       }
 
       if (logoUrl) {
@@ -101,20 +101,15 @@ const handler = async (req: Request): Promise<Response> => {
           .from("opportunities")
           .update({ logo_url: logoUrl })
           .eq("id", listing.id);
-
-        if (updateError) {
-          console.error(`Failed to update ${listing.id}:`, updateError);
-          failed++;
-        } else {
-          success++;
-          console.log(`Logo set for ${listing.id}: ${domain}`);
-        }
+        if (updateError) { failed++; } else { success++; }
       } else {
+        // Mark as checked so we don't retry endlessly — set logo_url to empty string
+        await supabaseAdmin
+          .from("opportunities")
+          .update({ logo_url: "" })
+          .eq("id", listing.id);
         failed++;
-        console.log(`No logo found for ${domain}`);
       }
-
-      await delay(200);
     }
 
     return new Response(
