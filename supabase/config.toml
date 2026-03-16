@@ -89,3 +89,9 @@ verify_jwt = false
 
 [functions.cancel-subscription]
 verify_jwt = false
+
+[functions.batch-fetch-logos]
+verify_jwt = false
+
+[functions.fetch-logo]
+verify_jwt = false

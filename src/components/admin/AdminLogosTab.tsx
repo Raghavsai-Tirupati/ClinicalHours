@@ -66,29 +66,21 @@ export default function AdminLogosTab() {
   }, [fetchStats]);
 
   const invokeBatch = async (): Promise<BatchResult | null> => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
-    if (!token) return null;
-
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/batch-fetch-logos`,
-      {
+    try {
+      const { data, error } = await supabase.functions.invoke('batch-fetch-logos', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+      });
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('Batch fetch error:', err);
+      if (error) {
+        console.error('Batch fetch error:', error);
+        return null;
+      }
+
+      return data as BatchResult;
+    } catch (err) {
+      console.error('Batch fetch exception:', err);
       return null;
     }
-
-    return res.json();
   };
 
   const runSingleBatch = async () => {
