@@ -26,6 +26,7 @@ import AdminHospitalsTab from '@/components/admin/AdminHospitalsTab';
 import AdminPendingApprovalsTab from '@/components/admin/AdminPendingApprovalsTab';
 import AdminToolsTab from '@/components/admin/AdminToolsTab';
 import { AdminActivityTab } from '@/components/admin/AdminActivityTab';
+import AdminLogosTab from '@/components/admin/AdminLogosTab';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
