@@ -147,13 +147,20 @@ function OpportunityCard({
       className="group rounded-lg border border-border bg-card p-5 transition-colors hover:border-border/80 cursor-pointer"
       onClick={() => onCardClick(opp)}
     >
-      {/* Top row: name + 3-dot menu */}
+      {/* Top row: logo + name + 3-dot menu */}
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-medium text-foreground">
-            {opp.name}
-          </h3>
-          <p className="mt-0.5 text-sm text-muted-foreground">{opp.location}</p>
+        <div className="flex gap-3 min-w-0 flex-1">
+          <HospitalLogo
+            logoUrl={opp.logo_url}
+            hospitalName={opp.name}
+            size="sm"
+          />
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-base font-medium text-foreground">
+              {opp.name}
+            </h3>
+            <p className="mt-0.5 text-sm text-muted-foreground">{opp.location}</p>
+          </div>
         </div>
 
         <DropdownMenu>
