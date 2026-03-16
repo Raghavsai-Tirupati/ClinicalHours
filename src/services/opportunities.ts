@@ -233,6 +233,8 @@ export async function fetchOpportunityById(
       phone: data.phone,
       email: data.email,
       website: data.website,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      logo_url: (data as any).logo_url,
       avg_rating: data.avg_rating,
       review_count: data.review_count,
     };
