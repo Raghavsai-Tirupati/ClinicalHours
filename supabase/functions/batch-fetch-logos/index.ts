@@ -20,24 +20,9 @@ function extractDomain(url: string): string | null {
   }
 }
 
-async function checkUrl(url: string, signal: AbortSignal): Promise<boolean> {
-  try {
-    const res = await fetch(url, { method: "HEAD", redirect: "follow", signal });
-    const ct = res.headers.get("content-type") || "";
-    return res.ok && ct.startsWith("image/");
-  } catch {
-    return false;
-  }
-}
-
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
-  }
-
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
   }
 
   try {
@@ -49,18 +34,27 @@ const handler = async (req: Request): Promise<Response> => {
 
     const token = Deno.env.get("LOGO_DEV_TOKEN");
     if (!token) {
+      console.error("LOGO_DEV_TOKEN not configured");
       return new Response(JSON.stringify({ error: "LOGO_DEV_TOKEN not configured" }), { status: 500, headers: corsHeaders });
     }
 
-    // Smaller batch to avoid CPU timeout
+    console.log("Starting batch-fetch-logos...");
+
+    // Fetch listings that have a website but no logo_url yet (null only, not empty string)
     const { data: listings, error: fetchError } = await supabaseAdmin
       .from("opportunities")
       .select("id, website")
       .is("logo_url", null)
       .not("website", "is", null)
-      .limit(10);
+      .limit(5);
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error("Fetch error:", fetchError.message);
+      throw fetchError;
+    }
+
+    console.log(`Found ${listings?.length ?? 0} listings to process`);
+
     if (!listings || listings.length === 0) {
       return new Response(JSON.stringify({ processed: 0, success: 0, failed: 0 }), { headers: corsHeaders });
     }
@@ -70,40 +64,82 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const listing of listings) {
       const domain = extractDomain(listing.website);
-      if (!domain) { failed++; continue; }
+      if (!domain) {
+        console.log(`Invalid domain for listing ${listing.id}: ${listing.website}`);
+        // Mark as checked
+        await supabaseAdmin.from("opportunities").update({ logo_url: "" }).eq("id", listing.id);
+        failed++;
+        continue;
+      }
 
       let logoUrl: string | null = null;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
 
       try {
-        // Try logo.dev
+        // Try logo.dev - just build the URL and do a quick HEAD check
         const logoDevUrl = `https://img.logo.dev/${domain}?token=${token}&size=128&format=png`;
-        if (await checkUrl(logoDevUrl, controller.signal)) {
-          logoUrl = logoDevUrl;
+        console.log(`Checking logo.dev for ${domain}...`);
+        
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        
+        try {
+          const res = await fetch(logoDevUrl, { 
+            method: "HEAD", 
+            redirect: "follow", 
+            signal: controller.signal 
+          });
+          const ct = res.headers.get("content-type") || "";
+          console.log(`logo.dev response for ${domain}: status=${res.status}, content-type=${ct}`);
+          if (res.ok && ct.startsWith("image/")) {
+            logoUrl = logoDevUrl;
+          }
+        } catch (e) {
+          console.log(`logo.dev timeout/error for ${domain}: ${e}`);
+        } finally {
+          clearTimeout(timeout);
         }
 
         // Google favicon fallback
         if (!logoUrl) {
           const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-          if (await checkUrl(googleUrl, controller.signal)) {
-            logoUrl = googleUrl;
+          const controller2 = new AbortController();
+          const timeout2 = setTimeout(() => controller2.abort(), 3000);
+          
+          try {
+            const res = await fetch(googleUrl, { 
+              method: "HEAD", 
+              redirect: "follow", 
+              signal: controller2.signal 
+            });
+            const ct = res.headers.get("content-type") || "";
+            console.log(`Google favicon response for ${domain}: status=${res.status}, content-type=${ct}`);
+            if (res.ok && ct.startsWith("image/")) {
+              logoUrl = googleUrl;
+            }
+          } catch (e) {
+            console.log(`Google favicon timeout/error for ${domain}: ${e}`);
+          } finally {
+            clearTimeout(timeout2);
           }
         }
-      } catch {
-        // timeout or network error
-      } finally {
-        clearTimeout(timeout);
+      } catch (e) {
+        console.error(`Unexpected error for ${domain}: ${e}`);
       }
 
       if (logoUrl) {
+        console.log(`✅ Found logo for ${domain}: ${logoUrl}`);
         const { error: updateError } = await supabaseAdmin
           .from("opportunities")
           .update({ logo_url: logoUrl })
           .eq("id", listing.id);
-        if (updateError) { failed++; } else { success++; }
+        if (updateError) {
+          console.error(`DB update error for ${listing.id}: ${updateError.message}`);
+          failed++;
+        } else {
+          success++;
+        }
       } else {
-        // Mark as checked so we don't retry endlessly — set logo_url to empty string
+        console.log(`❌ No logo found for ${domain}, marking as checked`);
         await supabaseAdmin
           .from("opportunities")
           .update({ logo_url: "" })
@@ -112,10 +148,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ processed: listings.length, success, failed }),
-      { headers: corsHeaders }
-    );
+    const result = { processed: listings.length, success, failed };
+    console.log("Batch result:", JSON.stringify(result));
+    return new Response(JSON.stringify(result), { headers: corsHeaders });
   } catch (err) {
     console.error("batch-fetch-logos error:", err);
     return new Response(
