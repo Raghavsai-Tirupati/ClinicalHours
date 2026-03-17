@@ -13,7 +13,7 @@ export async function fetchAdminActivityFeed(
 ): Promise<{ events: ActivityEvent[] }> {
   const { data: eventsData, error: eventsError } = await supabase
     .from("tracking_events")
-    .select("id, created_at, event_type, page_url, metadata, user_id")
+    .select("id, created_at, event_type, page_url, metadata, user_id, session_id")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -49,6 +49,30 @@ export async function fetchAdminActivityFeed(
     }
   }
 
+  // Helper to generate stable, per-day guest labels based on session_id
+  const guestCountByDate = new Map<string, number>();
+  const guestLabelBySessionAndDate = new Map<string, string>();
+
+  const getGuestLabelForRow = (row: {
+    created_at: string;
+    session_id: string | null;
+  }): string => {
+    const dateKey = row.created_at.slice(0, 10); // yyyy-mm-dd
+    const sessionId = row.session_id ?? "unknown";
+    const compositeKey = `${dateKey}:${sessionId}`;
+
+    const existing = guestLabelBySessionAndDate.get(compositeKey);
+    if (existing) return existing;
+
+    const currentCount = guestCountByDate.get(dateKey) ?? 0;
+    const nextCount = currentCount + 1;
+    guestCountByDate.set(dateKey, nextCount);
+
+    const label = `Guest #${nextCount}`;
+    guestLabelBySessionAndDate.set(compositeKey, label);
+    return label;
+  };
+
   const events: ActivityEvent[] = rows.map((row) => {
     const metadata = row.metadata as Record<string, unknown> | null;
     const targetFromMeta =
@@ -62,10 +86,10 @@ export async function fetchAdminActivityFeed(
     return {
       id: row.id,
       timestamp: row.created_at,
-      // If we have a user_id but no name in the map, fall back to an abbreviated ID
       userEmail: userId
-        ? nameMap[userId] ?? `User ${userId.slice(0, 6)}`
-        : null,
+        ? // If we have a user_id but no name in the map, fall back to an abbreviated ID
+          nameMap[userId] ?? `User ${userId.slice(0, 6)}`
+        : getGuestLabelForRow(row),
       action: row.event_type ?? "",
       target,
     };
