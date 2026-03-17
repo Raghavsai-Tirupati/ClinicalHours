@@ -31,7 +31,7 @@ export async function fetchAdminActivityFeed(
     ),
   ];
 
-  let emailMap: Record<string, string> = {};
+  let nameMap: Record<string, string> = {};
 
   if (userIds.length > 0) {
     const { data: profilesData } = await supabase
@@ -41,9 +41,10 @@ export async function fetchAdminActivityFeed(
 
     if (profilesData) {
       for (const p of profilesData) {
-        if (p.full_name) {
-          emailMap[p.id] = p.full_name;
-        }
+        // Prefer full_name when available, but always provide a stable fallback
+        nameMap[p.id] = p.full_name && typeof p.full_name === "string" && p.full_name.trim().length > 0
+          ? p.full_name
+          : `User ${String(p.id).slice(0, 6)}`;
       }
     }
   }
@@ -56,10 +57,15 @@ export async function fetchAdminActivityFeed(
         : null;
     const target = targetFromMeta ?? row.page_url ?? "";
 
+    const userId = row.user_id as string | null;
+
     return {
       id: row.id,
       timestamp: row.created_at,
-      userEmail: row.user_id ? emailMap[row.user_id] ?? null : null,
+      // If we have a user_id but no name in the map, fall back to an abbreviated ID
+      userEmail: userId
+        ? nameMap[userId] ?? `User ${userId.slice(0, 6)}`
+        : null,
       action: row.event_type ?? "",
       target,
     };

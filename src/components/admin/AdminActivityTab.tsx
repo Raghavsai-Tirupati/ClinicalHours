@@ -213,10 +213,12 @@ function EventRow({
   event,
   userName,
   showUser = true,
+  onUserClick,
 }: {
   event: TrackingEvent;
   userName: string;
   showUser?: boolean;
+  onUserClick?: (userId: string) => void;
 }) {
   const description = getEventDescription(event);
   const config = EVENT_CONFIG[event.event_type];
@@ -230,14 +232,27 @@ function EventRow({
         <EventIcon eventType={event.event_type} />
       </div>
       {showUser && (
-        <Badge
-          variant="outline"
-          className={`text-[11px] shrink-0 font-medium ${
-            event.user_id ? "border-blue-500/30 text-blue-400" : "border-orange-500/30 text-orange-400"
-          }`}
-        >
-          {event.user_id ? userName : "Guest"}
-        </Badge>
+        event.user_id ? (
+          <button
+            type="button"
+            onClick={() => onUserClick?.(event.user_id as string)}
+            className="shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary rounded-full"
+          >
+            <Badge
+              variant="outline"
+              className="text-[11px] font-medium border-blue-500/30 text-blue-400"
+            >
+              {userName}
+            </Badge>
+          </button>
+        ) : (
+          <Badge
+            variant="outline"
+            className="text-[11px] shrink-0 font-medium border-orange-500/30 text-orange-400"
+          >
+            Guest
+          </Badge>
+        )
       )}
       <span className="text-xs text-foreground/90 flex-1 min-w-0 truncate">{description}</span>
       <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 tabular-nums">
@@ -554,7 +569,12 @@ function UserJourneyCard({
         <ScrollArea className="h-[360px]">
           <div className="p-2">
             {userEvents.map((event) => (
-              <EventRow key={event.id} event={event} userName={user.name} showUser={false} />
+              <EventRow
+                key={event.id}
+                event={event}
+                userName={user.name}
+                showUser={false}
+              />
             ))}
           </div>
         </ScrollArea>
@@ -898,8 +918,15 @@ export function AdminActivityTab() {
             <ScrollArea className="h-[520px]">
               <div className="p-2">
                 {filteredEvents.map((event) => (
-                  <EventRow key={event.id} event={event}
-                    userName={event.user_id ? userMap.get(event.user_id) ?? `User ${event.user_id.slice(0, 6)}` : `Guest ${event.session_id.slice(0, 8)}`}
+                  <EventRow
+                    key={event.id}
+                    event={event}
+                    userName={
+                      event.user_id
+                        ? userMap.get(event.user_id) ?? `User ${event.user_id.slice(0, 6)}`
+                        : `Guest ${event.session_id.slice(0, 8)}`
+                    }
+                    onUserClick={handleViewProfile}
                   />
                 ))}
               </div>
