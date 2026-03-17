@@ -195,7 +195,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Normalize to the expected shape.
       const h = rowWithJoin.hospitals;
       const hospitalObj = Array.isArray(h) ? h[0] ?? null : h;
-      row = { ...rowWithJoin, hospitals: hospitalObj } as typeof row;
+      row = { ...rowWithJoin, hospitals: hospitalObj } as unknown as typeof row;
     } else {
       // Fallback: no hospitals FK (20260223 schema) - select hospital_name if it exists
       const { data: rowDirect, error: errDirect } = await supabaseAdmin

@@ -1395,6 +1395,7 @@ export type Database = {
         Args: { filter_type?: string; search_term?: string }
         Returns: number
       }
+      delete_user_account: { Args: never; Returns: undefined }
       deploy_hospital_opportunity: {
         Args: { p_hospital_id: string }
         Returns: string

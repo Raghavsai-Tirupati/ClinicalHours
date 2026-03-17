@@ -32,7 +32,8 @@ interface LinkResult {
 const CACHE_TTL_DAYS = 30;      // fresh result — reuse for 30 days
 const NO_RESULT_TTL_DAYS = 7;   // negative cache — retry after 7 days
 
-type DbClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type DbClient = any;
 
 interface CacheRow {
   application_url: string | null;
