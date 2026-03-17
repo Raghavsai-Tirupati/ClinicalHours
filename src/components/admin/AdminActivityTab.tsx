@@ -685,6 +685,35 @@ export function AdminActivityTab() {
     return () => clearInterval(interval);
   }, [fetchEvents]);
 
+  // Stable per-day guest labels (Guest #1, #2, ...) based on first
+  // time we see a session on that calendar day, in chronological order.
+  const guestLabelBySessionAndDate = useMemo(() => {
+    const byDateCount = new Map<string, number>();
+    const map = new Map<string, string>();
+    const sorted = [...events].sort((a, b) =>
+      a.created_at.localeCompare(b.created_at)
+    );
+    sorted.forEach((e) => {
+      if (e.user_id) return;
+      const dateKey = e.created_at.slice(0, 10); // yyyy-mm-dd
+      const compositeKey = `${dateKey}:${e.session_id}`;
+      if (map.has(compositeKey)) return;
+      const next = (byDateCount.get(dateKey) ?? 0) + 1;
+      byDateCount.set(dateKey, next);
+      map.set(compositeKey, `Guest #${next}`);
+    });
+    return map;
+  }, [events]);
+
+  const getGuestLabelForEvent = useCallback(
+    (e: TrackingEvent): string => {
+      const dateKey = e.created_at.slice(0, 10);
+      const compositeKey = `${dateKey}:${e.session_id}`;
+      return guestLabelBySessionAndDate.get(compositeKey) ?? "Guest";
+    },
+    [guestLabelBySessionAndDate]
+  );
+
   const filteredEvents = useMemo(() => {
     let result = events;
     if (userFilter === "authenticated") result = result.filter((e) => e.user_id);
@@ -707,7 +736,7 @@ export function AdminActivityTab() {
       });
     }
     return result;
-  }, [events, userFilter, eventTypeFilter, searchQuery, userMap]);
+  }, [events, userFilter, eventTypeFilter, searchQuery, userMap, premiumOnly]);
 
   const userSummaries = useMemo(() => {
     const map = new Map<string, UserSummary>();
@@ -723,7 +752,9 @@ export function AdminActivityTab() {
         map.set(key, {
           id: e.user_id,
           sessionId: e.session_id,
-          name: e.user_id ? userMap.get(e.user_id) ?? `User ${e.user_id.slice(0, 6)}` : `Guest ${e.session_id.slice(0, 8)}`,
+          name: e.user_id
+            ? userMap.get(e.user_id) ?? `User ${e.user_id.slice(0, 6)}`
+            : getGuestLabelForEvent(e),
           eventCount: 1,
           lastSeen: e.created_at,
           isGuest: !e.user_id,
@@ -732,7 +763,7 @@ export function AdminActivityTab() {
       }
     });
     return [...map.values()].sort((a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime());
-  }, [filteredEvents, userMap]);
+  }, [filteredEvents, userMap, getGuestLabelForEvent]);
 
   const eventTypeCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -924,7 +955,7 @@ export function AdminActivityTab() {
                     userName={
                       event.user_id
                         ? userMap.get(event.user_id) ?? `User ${event.user_id.slice(0, 6)}`
-                        : `Guest ${event.session_id.slice(0, 8)}`
+                        : getGuestLabelForEvent(event)
                     }
                     onUserClick={handleViewProfile}
                   />

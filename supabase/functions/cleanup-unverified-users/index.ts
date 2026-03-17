@@ -15,10 +15,20 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  const cronSecret = Deno.env.get("CRON_SECRET");
+
+  if (!cronSecret) {
+    console.error("CRON_SECRET is not configured");
+    return new Response(
+      JSON.stringify({ error: "Server misconfiguration" }),
+      { status: 500, headers: corsHeaders },
+    );
+  }
+
+  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
     return new Response(
       JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: corsHeaders }
+      { status: 401, headers: corsHeaders },
     );
   }
 

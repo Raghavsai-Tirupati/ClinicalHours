@@ -49,28 +49,37 @@ export async function fetchAdminActivityFeed(
     }
   }
 
-  // Helper to generate stable, per-day guest labels based on session_id
+  // Generate stable, per-day guest labels based on session_id,
+  // using chronological order so the earliest guest of the day is #1.
   const guestCountByDate = new Map<string, number>();
   const guestLabelBySessionAndDate = new Map<string, string>();
+
+  const rowsSortedChronologically = [...rows].sort((a, b) =>
+    (a.created_at ?? "").localeCompare(b.created_at ?? "")
+  );
+
+  for (const row of rowsSortedChronologically) {
+    if (row.user_id) continue;
+    const dateKey = row.created_at.slice(0, 10); // yyyy-mm-dd
+    const sessionId = (row.session_id as string | null) ?? "unknown";
+    const compositeKey = `${dateKey}:${sessionId}`;
+
+    if (guestLabelBySessionAndDate.has(compositeKey)) continue;
+
+    const currentCount = guestCountByDate.get(dateKey) ?? 0;
+    const nextCount = currentCount + 1;
+    guestCountByDate.set(dateKey, nextCount);
+    guestLabelBySessionAndDate.set(compositeKey, `Guest #${nextCount}`);
+  }
 
   const getGuestLabelForRow = (row: {
     created_at: string;
     session_id: string | null;
   }): string => {
-    const dateKey = row.created_at.slice(0, 10); // yyyy-mm-dd
+    const dateKey = row.created_at.slice(0, 10);
     const sessionId = row.session_id ?? "unknown";
     const compositeKey = `${dateKey}:${sessionId}`;
-
-    const existing = guestLabelBySessionAndDate.get(compositeKey);
-    if (existing) return existing;
-
-    const currentCount = guestCountByDate.get(dateKey) ?? 0;
-    const nextCount = currentCount + 1;
-    guestCountByDate.set(dateKey, nextCount);
-
-    const label = `Guest #${nextCount}`;
-    guestLabelBySessionAndDate.set(compositeKey, label);
-    return label;
+    return guestLabelBySessionAndDate.get(compositeKey) ?? "Guest";
   };
 
   const events: ActivityEvent[] = rows.map((row) => {

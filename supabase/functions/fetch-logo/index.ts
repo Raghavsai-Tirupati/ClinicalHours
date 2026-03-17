@@ -1,11 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Content-Type": "application/json",
-};
+import { validateOrigin, getCorsHeaders, checkAdminRole } from "../_shared/auth.ts";
 
 function extractDomain(url: string): string | null {
   try {
@@ -21,8 +16,19 @@ function extractDomain(url: string): string | null {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const originValidation = validateOrigin(req);
+  if (!originValidation.valid) {
+    return new Response(
+      JSON.stringify({ error: "Invalid origin" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   if (req.method !== "POST") {
@@ -30,6 +36,42 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Authentication required" }),
+        { status: 401, headers: corsHeaders },
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAdmin.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: corsHeaders },
+      );
+    }
+
+    const { isAdmin } = await checkAdminRole(user.id);
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Admin access required" }),
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
     const { website, listing_id } = await req.json();
 
     if (!website || !listing_id) {

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { validateOrigin, getCorsHeaders } from "../_shared/auth.ts";
+import { validateOrigin, getCorsHeaders, checkAdminRole } from "../_shared/auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -257,11 +257,43 @@ const handler = async (req: Request): Promise<Response> => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: { user }, error: authError } = await db.auth.getUser(token);
+    const {
+      data: { user },
+      error: authError,
+    } = await db.auth.getUser(token);
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    // Enforce premium subscription (admins bypass)
+    const { isAdmin } = await checkAdminRole(user.id);
+
+    const { data: profile, error: profileError } = await db
+      .from("profiles")
+      .select("is_premium, premium_expires_at")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("Error loading profile for find-application-link:", profileError);
+      return new Response(
+        JSON.stringify({ error: "Failed to load profile" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const now = new Date();
+    const expiresAt = profile?.premium_expires_at ? new Date(profile.premium_expires_at as string) : null;
+    const isPremiumActive =
+      !!profile?.is_premium && (!expiresAt || expiresAt.getTime() > now.getTime());
+
+    if (!isAdmin && !isPremiumActive) {
+      return new Response(
+        JSON.stringify({ error: "Premium subscription required for this feature." }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
