@@ -36,6 +36,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Auth: require JWT and admin role
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
@@ -44,7 +45,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const token = authHeader.replace("Bearer ", "");
+    const jwt = authHeader.replace("Bearer ", "");
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -55,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
     const {
       data: { user },
       error: authError,
-    } = await supabaseAdmin.auth.getUser(token);
+    } = await supabaseAdmin.auth.getUser(jwt);
 
     if (authError || !user) {
       return new Response(
@@ -81,14 +82,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-
-    const token = Deno.env.get("LOGO_DEV_TOKEN");
-    if (!token) {
+    const logoDevToken = Deno.env.get("LOGO_DEV_TOKEN");
+    if (!logoDevToken) {
       return new Response(JSON.stringify({ success: false, error: "LOGO_DEV_TOKEN not configured" }), { status: 500, headers: corsHeaders });
     }
 
@@ -103,7 +98,7 @@ const handler = async (req: Request): Promise<Response> => {
     let logoUrl: string | null = null;
 
     // Try logo.dev
-    const logoDevUrl = `https://img.logo.dev/${domain}?token=${token}&size=128&format=png`;
+    const logoDevUrl = `https://img.logo.dev/${domain}?token=${logoDevToken}&size=128&format=png`;
     try {
       const res = await fetch(logoDevUrl, { method: "HEAD" });
       if (res.ok) {
