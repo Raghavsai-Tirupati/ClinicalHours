@@ -16,7 +16,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
   const cronSecret = Deno.env.get("CRON_SECRET");
-  console.log("CRON_SECRET set:", !!cronSecret, "Auth header present:", !!authHeader);
+  console.log("Auth header starts with:", authHeader?.substring(0, 30), "Expected starts with: Bearer", cronSecret?.substring(0, 5));
 
   if (!cronSecret) {
     console.error("CRON_SECRET is not configured");
