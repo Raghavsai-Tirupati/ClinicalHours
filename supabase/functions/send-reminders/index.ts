@@ -18,9 +18,18 @@ const responseHeaders = {
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  // This function should only be called by cron jobs, reject browser preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 405 });
+  }
+
+  // Cron-only: require CRON_SECRET bearer token
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  if (!cronSecret) {
+    return new Response(JSON.stringify({ error: "Server misconfiguration" }), { status: 500, headers: responseHeaders });
+  }
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: responseHeaders });
   }
 
   try {
