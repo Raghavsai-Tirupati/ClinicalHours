@@ -1,6 +1,6 @@
 # Cleanup Unverified Users
 
-**Cron** (default): Deletes profiles with `email_verified = false` and `created_at` older than 24 hours.
+**Cron** (default): Deletes profiles with `email_verified = false` and `created_at` older than 24 hours, then removes their verification tokens and auth user records.
 
 **One-time purge** (`?full=true`): Deletes ALL unverified accounts.
 
@@ -17,3 +17,5 @@ Replace `YOUR_PROJECT_REF` (from Supabase project URL) and `YOUR_SERVICE_ROLE_KE
 ## Schedule cron (hourly)
 
 Supabase Dashboard → Cron Jobs, or external cron calling the same URL without `?full=true`.
+
+The cleanup endpoint is idempotent and safe to run repeatedly. It should run at least hourly so unverified accounts never linger past the retention window.

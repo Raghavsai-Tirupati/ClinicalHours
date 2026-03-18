@@ -12,6 +12,9 @@ begin
     raise exception 'Not authenticated';
   end if;
 
+  -- Remove verification tokens tied to the account before deleting the user
+  delete from email_verification_tokens where user_id = v_user_id;
+
   -- Delete dependent data that references the user
   delete from saved_opportunities where user_id = v_user_id;
   delete from experience_entries where user_id = v_user_id;

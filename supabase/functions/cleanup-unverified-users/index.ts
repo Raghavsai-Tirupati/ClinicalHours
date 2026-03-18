@@ -76,6 +76,16 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
+      // Remove verification tokens first so no stale links remain after cleanup.
+      const { error: tokenDeleteError } = await supabaseAdmin
+        .from("email_verification_tokens")
+        .delete()
+        .eq("user_id", profile.id);
+
+      if (tokenDeleteError) {
+        console.error(`Failed to delete verification tokens for ${profile.id}:`, tokenDeleteError);
+      }
+
       const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
       if (deleteError) {
         console.error(`Failed to delete user ${profile.id}:`, deleteError);
