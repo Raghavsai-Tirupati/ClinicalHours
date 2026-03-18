@@ -2,7 +2,19 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Users, Building2, Briefcase, FileText, Clock, Activity, RefreshCw } from 'lucide-react';
+import {
+  Loader2,
+  Users,
+  Building2,
+  Briefcase,
+  FileText,
+  Clock,
+  Activity,
+  RefreshCw,
+  Globe,
+  Ghost,
+  UserPlus,
+} from 'lucide-react';
 import GuestSessionStats from './GuestSessionStats';
 import ActivityFeed from './ActivityFeed';
 
@@ -18,15 +30,28 @@ interface OverviewStats {
   activeUsers30d: number;
 }
 
+interface FunnelStats {
+  landingVisitorsToday: number;
+  guestSessionsToday: number;
+  newSignupsToday: number;
+}
+
 export default function AdminOverviewTab() {
   const [stats, setStats] = useState<OverviewStats | null>(null);
+  const [funnel, setFunnel] = useState<FunnelStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   async function fetchStats() {
     setLoading(true);
     try {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const startOfTodayIso = startOfToday.toISOString();
+
       const [
         { count: totalStudents },
         { count: approvedHospitals },
@@ -37,6 +62,9 @@ export default function AdminOverviewTab() {
         { data: hoursData },
         { count: activeUsers7d },
         { count: activeUsers30d },
+        { data: landingEvents },
+        { data: signupEvents },
+        { data: guestSessionsTodayData },
       ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('hospital_accounts').select('*', { count: 'exact', head: true }).eq('account_status', 'approved'),
@@ -55,6 +83,21 @@ export default function AdminOverviewTab() {
           .select('*', { count: 'exact', head: true })
           .not('user_id', 'is', null)
           .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        supabase
+          .from('tracking_events')
+          .select('session_id, created_at, page_url, event_type')
+          .eq('event_type', 'page_view')
+          .eq('page_url', '/')
+          .gte('created_at', startOfTodayIso),
+        supabase
+          .from('tracking_events')
+          .select('user_id, created_at, event_type')
+          .eq('event_type', 'signup')
+          .gte('created_at', startOfTodayIso),
+        supabase
+          .from('guest_sessions')
+          .select('session_id, created_at')
+          .gte('created_at', startOfTodayIso),
       ]);
 
       const totalHoursLogged = (hoursData || []).reduce((sum, e) => sum + (e.hours ?? 0), 0);
@@ -70,8 +113,37 @@ export default function AdminOverviewTab() {
         activeUsers7d: activeUsers7d ?? 0,
         activeUsers30d: activeUsers30d ?? 0,
       });
+
+      const landingSessionIds = new Set<string>();
+      (landingEvents || []).forEach((row: { session_id: string | null }) => {
+        if (row.session_id) {
+          landingSessionIds.add(row.session_id);
+        }
+      });
+
+      const signupUserIds = new Set<string>();
+      (signupEvents || []).forEach((row: { user_id: string | null }) => {
+        if (row.user_id) {
+          signupUserIds.add(row.user_id);
+        }
+      });
+
+      const guestSessionIdsToday = new Set<string>();
+      (guestSessionsTodayData || []).forEach((row: { session_id: string | null }) => {
+        if (row.session_id) {
+          guestSessionIdsToday.add(row.session_id);
+        }
+      });
+
+      setFunnel({
+        landingVisitorsToday: landingSessionIds.size,
+        guestSessionsToday: guestSessionIdsToday.size,
+        newSignupsToday: signupUserIds.size,
+      });
     } catch (err) {
       console.error('Error fetching overview stats:', err);
+      // Keep any existing stats but ensure funnel snapshot falls back to zeroed values
+      setFunnel((prev) => prev ?? { landingVisitorsToday: 0, guestSessionsToday: 0, newSignupsToday: 0 });
     } finally {
       setLoading(false);
     }
@@ -146,6 +218,49 @@ export default function AdminOverviewTab() {
           {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
           Refresh
         </Button>
+      </div>
+
+      {/* Funnel snapshot (today) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="bg-card border-border">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Globe className="h-4 w-4 text-primary" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-foreground">
+              {(funnel?.landingVisitorsToday ?? 0).toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Landing visitors (today)</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Ghost className="h-4 w-4 text-primary" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-foreground">
+              {(funnel?.guestSessionsToday ?? 0).toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Guest sessions started (today)</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="pt-5 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <UserPlus className="h-4 w-4 text-primary" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-foreground">
+              {(funnel?.newSignupsToday ?? 0).toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">New signups (today)</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Stats grid */}

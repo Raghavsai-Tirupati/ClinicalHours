@@ -21,6 +21,7 @@ import {
   Radio,
   ImageIcon,
   Ghost,
+  Trash2,
 } from 'lucide-react';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
 import AdminUserList from '@/components/admin/AdminUserList';
@@ -30,6 +31,7 @@ import AdminToolsTab from '@/components/admin/AdminToolsTab';
 import { AdminActivityTab } from '@/components/admin/AdminActivityTab';
 import AdminLogosTab from '@/components/admin/AdminLogosTab';
 import GuestSessionsTab from '@/components/admin/GuestSessionsTab';
+import AdminDeletionEventsTab from '@/components/admin/AdminDeletionEventsTab';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -124,7 +126,7 @@ export default function AdminDashboard() {
 
           {/* Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-8">
+            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-9">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview</span>
@@ -162,6 +164,10 @@ export default function AdminDashboard() {
                 <Radio className="h-4 w-4" />
                 <span className="hidden sm:inline">Activity</span>
               </TabsTrigger>
+              <TabsTrigger value="deletions" className="flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Deletions</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
@@ -194,6 +200,10 @@ export default function AdminDashboard() {
 
             <TabsContent value="activity">
               <AdminActivityTab />
+            </TabsContent>
+
+            <TabsContent value="deletions">
+              <AdminDeletionEventsTab />
             </TabsContent>
           </Tabs>
         </div>
