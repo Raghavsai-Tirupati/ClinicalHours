@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { logAuthEvent } from "@/lib/auditLogger";
 import { exchangeTokenForCookie, logout as logoutCookie, restoreSessionFromCookie } from "@/lib/authCookie";
+import { markGuestTutorialPending } from "@/lib/dashboardTutorial";
 
 // Session timeout: 30 minutes of inactivity
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
@@ -33,7 +34,7 @@ function generateUUID(): string {
 /**
  * Get the guest session ID from localStorage
  */
-function getGuestSessionId(): string | null {
+export function getGuestSessionId(): string | null {
   try {
     return localStorage.getItem(GUEST_SESSION_ID_KEY);
   } catch {
@@ -138,6 +139,7 @@ export const useAuth = () => {
     if (!sessionId) {
       sessionId = generateUUID();
       setGuestSessionId(sessionId);
+      markGuestTutorialPending(sessionId);
 
       // Fire and forget - don't block on this
       supabase

@@ -795,6 +795,7 @@ export type Database = {
           email_opt_in: boolean | null
           email_verified: boolean | null
           full_name: string
+          dashboard_tutorial_complete: boolean | null
           gpa: number | null
           graduation_year: number | null
           id: string
@@ -823,6 +824,7 @@ export type Database = {
           email_opt_in?: boolean | null
           email_verified?: boolean | null
           full_name: string
+          dashboard_tutorial_complete?: boolean | null
           gpa?: number | null
           graduation_year?: number | null
           id: string
@@ -851,6 +853,7 @@ export type Database = {
           email_opt_in?: boolean | null
           email_verified?: boolean | null
           full_name?: string
+          dashboard_tutorial_complete?: boolean | null
           gpa?: number | null
           graduation_year?: number | null
           id?: string

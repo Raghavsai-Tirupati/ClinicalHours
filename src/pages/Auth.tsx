@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { logAuthEvent } from "@/lib/auditLogger";
 import { trackLogin, trackSignup, trackEvent } from "@/lib/tracking";
 import { setRememberMePreference, getRememberMePreference, useAuth } from "@/hooks/useAuth";
+import { migrateGuestDataToUser } from "@/lib/guestMigration";
 import { z } from "zod";
 import { ArrowLeft, Mail, Loader2, Eye, UserCircle, Building2, Check, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -64,7 +65,7 @@ const signupSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { enterGuestMode } = useAuth();
+  const { enterGuestMode, isGuest } = useAuth();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -88,7 +89,7 @@ const Auth = () => {
   const handleGuestMode = () => {
     trackEvent("page_view", { action: "guest_mode_entered" });
     enterGuestMode();
-    navigate("/dashboard?showTutorial=true");
+    navigate("/dashboard");
   };
 
   // Check hospital account status and redirect accordingly
@@ -135,8 +136,11 @@ const Auth = () => {
 
         if (data.session && !error) {
           window.history.replaceState(null, '', window.location.pathname);
-          trackLogin(data.session.user.id, "google");
-          await redirectByAccountType(data.session.user.id);
+          const userId = data.session.user.id;
+          const convertedFromGuest = isGuest;
+          trackLogin(userId, "google");
+          await migrateGuestDataToUser(userId, { convertedFromGuest });
+          await redirectByAccountType(userId);
           return;
         }
       }
@@ -144,7 +148,10 @@ const Auth = () => {
       // Check for existing session
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        await redirectByAccountType(session.user.id);
+        const userId = session.user.id;
+        const convertedFromGuest = isGuest;
+        await migrateGuestDataToUser(userId, { convertedFromGuest });
+        await redirectByAccountType(userId);
       }
     };
 
@@ -311,22 +318,29 @@ const Auth = () => {
       }
 
       if (data.user) {
+        const userId = data.user.id;
+        const convertedFromGuest = isGuest;
         logAuthEvent("signup", { email: validatedData.email });
-        trackSignup(data.user.id, isHospitalSignup ? "hospital" : "email");
+        trackSignup(userId, isHospitalSignup ? "hospital" : "email");
+        await migrateGuestDataToUser(userId, { convertedFromGuest });
 
         if (isHospitalSignup) {
           // Hospital accounts: skip email verification, go straight to pending approval
           toast.success("Account created! Your hospital account is pending admin approval.");
-          await redirectByAccountType(data.user.id);
+          await redirectByAccountType(userId);
         } else {
+          await supabase
+            .from("profiles")
+            .update({ dashboard_tutorial_complete: convertedFromGuest })
+            .eq("id", userId);
           // Student accounts: send verification email but allow immediate use
           await sendVerificationEmail(
-            data.user.id,
+            userId,
             validatedData.email,
             validatedData.fullName || "User"
           );
           toast.success("Account created! You can start exploring. Verify your email within 24 hours.");
-          navigate(`/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(data.user.id)}&name=${encodeURIComponent(validatedData.fullName || "User")}`);
+          navigate(`/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(userId)}&name=${encodeURIComponent(validatedData.fullName || "User")}`);
         }
       }
     } catch (error: unknown) {
@@ -393,17 +407,23 @@ const Auth = () => {
       }
 
       if (data.user) {
+        const userId = data.user.id;
+        const convertedFromGuest = isGuest;
         logAuthEvent("login_success", { email: validatedData.email });
-        trackLogin(data.user.id, "email");
+        trackLogin(userId, "email");
         toast.success("Welcome back!");
-        await redirectByAccountType(data.user.id);
+        await migrateGuestDataToUser(userId, { convertedFromGuest });
+        await redirectByAccountType(userId);
         return;
       }
 
       logAuthEvent("login_success", { email: validatedData.email });
       toast.success("Welcome back!");
       if (data.user) {
-        await redirectByAccountType(data.user.id);
+        const userId = data.user.id;
+        const convertedFromGuest = isGuest;
+        await migrateGuestDataToUser(userId, { convertedFromGuest });
+        await redirectByAccountType(userId);
       } else {
         navigate("/dashboard");
       }
@@ -605,7 +625,7 @@ const Auth = () => {
             disabled={loading || googleLoading}
           >
             <UserCircle className="mr-2 h-5 w-5" />
-            Continue as Guest
+            Try the hour tracker first (no signup)
           </Button>
         </div>
 

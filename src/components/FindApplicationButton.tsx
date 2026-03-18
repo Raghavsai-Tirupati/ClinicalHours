@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Search, ExternalLink, Lock, Loader2, CheckCircle, AlertCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { canUseDirectLinkToday, recordDirectLinkUse } from "@/lib/directLinkQuota";
 
 interface LinkResult {
   url: string;
@@ -55,8 +56,10 @@ export function FindApplicationButton({
   );
   const [links, setLinks] = useState<LinkResult[]>(() => getCached(opportunityId) ?? []);
 
-  // ── Non-premium ──────────────────────────────────────────────────────────────
-  if (!isPremium) {
+  const canUseToday = canUseDirectLinkToday(isPremium);
+
+  // ── Non-premium when quota exhausted ────────────────────────────────────────
+  if (!isPremium && !canUseToday) {
     if (compact) {
       return (
         <Link
@@ -81,6 +84,11 @@ export function FindApplicationButton({
   // ── Search handler ────────────────────────────────────────────────────────────
   const handleSearch = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Guard against race conditions on quota
+    if (!canUseDirectLinkToday(isPremium)) {
+      setStatus("idle");
+      return;
+    }
     setStatus("loading");
     try {
       const { data, error } = await supabase.functions.invoke("find-application-link", {
@@ -94,6 +102,9 @@ export function FindApplicationButton({
       cache.set(opportunityId, { links: result.links, timestamp: Date.now() });
       setLinks(result.links);
       setStatus(result.links.length > 0 ? "done" : "empty");
+      if (result.links.length > 0) {
+        recordDirectLinkUse(isPremium);
+      }
     } catch {
       setStatus("error");
     }

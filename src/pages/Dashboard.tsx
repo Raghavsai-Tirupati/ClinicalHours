@@ -8,6 +8,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { localSelect, TABLES } from "@/lib/localStore";
+import { DashboardTutorial } from "@/components/DashboardTutorial";
+import { getGuestSessionId } from "@/hooks/useAuth";
+import { shouldShowGuestTutorial } from "@/lib/dashboardTutorial";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -312,6 +315,7 @@ const Dashboard = () => {
   const [reflections, setReflections] = useState<Reflection[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dashboardTutorialComplete, setDashboardTutorialComplete] = useState(true);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -337,6 +341,14 @@ const Dashboard = () => {
     async function fetchDashboardData() {
       setLoadingData(true);
       try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("dashboard_tutorial_complete")
+          .eq("id", user!.id)
+          .single();
+
+        setDashboardTutorialComplete(Boolean(profile?.dashboard_tutorial_complete));
+
         // 1. Fetch saved opportunities joined with the opportunity details
         const { data: savedRows, error: savedErr } = await supabase
           .from("saved_opportunities")
@@ -500,6 +512,10 @@ const Dashboard = () => {
   const localTrackerLogs = localSelect<{ id: string; hours: number }>(TABLES.ACTIVITY_LOGS);
   const localTrackerHours = localTrackerLogs.reduce((s, l) => s + (l.hours || 0), 0);
   const totalHours = opportunities.reduce((s, o) => s + o.hoursLogged, 0) + localTrackerHours;
+  const hasExperience = totalHours > 0;
+  const hasTrackedOpportunities = opportunities.length > 0;
+  const guestTutorialVisible = isGuest && shouldShowGuestTutorial(getGuestSessionId());
+  const accountTutorialVisible = Boolean(user && !isGuest && !dashboardTutorialComplete);
   const activeCount = opportunities.filter(
     (o) => o.status !== "Completed"
   ).length;
@@ -584,6 +600,23 @@ const Dashboard = () => {
 
         {/* ─── Dashboard content ─────────────────────────── */}
         <div className="mt-8">
+          {(guestTutorialVisible || accountTutorialVisible) && (
+            <DashboardTutorial
+              mode={guestTutorialVisible ? "guest" : "account"}
+              tutorialKey={guestTutorialVisible ? (getGuestSessionId() || user?.id || "guest") : (user?.id || "account")}
+              hasExperience={hasExperience}
+              hasTrackedOpportunities={hasTrackedOpportunities}
+              onComplete={async () => {
+                if (user && !isGuest) {
+                  setDashboardTutorialComplete(true);
+                  await supabase
+                    .from("profiles")
+                    .update({ dashboard_tutorial_complete: true })
+                    .eq("id", user.id);
+                }
+              }}
+            />
+          )}
           {/* Toolbar */}
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-medium text-foreground">Your Dashboard</h2>
