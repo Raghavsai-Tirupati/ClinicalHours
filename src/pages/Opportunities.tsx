@@ -232,7 +232,6 @@ const Opportunities = () => {
         hospitalAccountId: displayedOpportunity.hospital_id
           ? hospitalAccountMap.get(displayedOpportunity.hospital_id)
           : undefined,
-        isPremium,
         isSaved: savedOpportunityIds.has(displayedOpportunity.id),
         isSavedLoading: savedLoading,
         isSaving: savingIds.has(displayedOpportunity.id),
