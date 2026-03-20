@@ -150,7 +150,7 @@ function AppContent() {
               <Route path="/secondaries" element={<SecondaryEngine />} />
               <Route path="/costs" element={<CostSimulator />} />
               <Route path="/school-list" element={<SchoolListBuilder />} />
-              <Route path="/apply-finder" element={<DirectApplicationFinder />} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>
