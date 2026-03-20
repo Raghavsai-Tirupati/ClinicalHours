@@ -35,6 +35,14 @@ const HospitalApplyPage = lazy(() => import("./pages/HospitalApplyPage"));
 const PendingApproval = lazy(() => import("./pages/PendingApproval"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// Hospital admin dashboard (position system)
+const HospitalDashboardLayout = lazy(() => import("./layouts/HospitalDashboardLayout"));
+const HospitalOverview = lazy(() => import("./components/hospital/HospitalOverview"));
+const PositionForm = lazy(() => import("./components/hospital/PositionForm"));
+const PositionDetail = lazy(() => import("./components/hospital/PositionDetail"));
+const HospitalSettingsPage = lazy(() => import("./components/hospital/HospitalSettings"));
+const PositionApplyPage = lazy(() => import("./pages/PositionApplyPage"));
+
 // Premium feature pages
 const Premium = lazy(() => import("./pages/Premium"));
 const PremiumPurchase = lazy(() => import("./pages/PremiumPurchase"));
@@ -111,6 +119,16 @@ function AppContent() {
               <Route path="/hospital-dashboard" element={<HospitalDashboardPage />} />
               <Route path="/hospital/admin" element={<HospitalDashboardPage />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
+              {/* Hospital admin dashboard with sidebar layout */}
+              <Route path="/hospital/:id" element={<HospitalDashboardLayout />}>
+                <Route index element={<HospitalOverview />} />
+                <Route path="positions/new" element={<PositionForm />} />
+                <Route path="positions/:positionId" element={<PositionDetail />} />
+                <Route path="positions/:positionId/edit" element={<PositionForm />} />
+                <Route path="settings" element={<HospitalSettingsPage />} />
+              </Route>
+              {/* Student application form for a position */}
+              <Route path="/apply/:positionId" element={<PositionApplyPage />} />
               {/* Premium features */}
               <Route path="/premium" element={<Premium />} />
               <Route path="/premium/purchase" element={<PremiumPurchase />} />

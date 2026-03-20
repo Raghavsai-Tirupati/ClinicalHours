@@ -36,6 +36,7 @@ const Opportunities = () => {
   const [savedLoading, setSavedLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [hospitalAccountMap, setHospitalAccountMap] = useState<Map<string, string>>(new Map());
+  const [directApplyIds, setDirectApplyIds] = useState<Set<string>>(new Set());
   const [guestGateOpen, setGuestGateOpen] = useState(false);
   const [verificationGateOpen, setVerificationGateOpen] = useState(false);
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
@@ -114,6 +115,30 @@ const Opportunities = () => {
           if (acc.hospital_id) map.set(acc.hospital_id, acc.id);
         });
         setHospitalAccountMap(map);
+      });
+  }, [opportunities]);
+
+  // Batch-fetch which hospitals have active positions (for Direct Apply badge)
+  useEffect(() => {
+    const hospitalIds = opportunities
+      .map((o) => o.hospital_id)
+      .filter((id): id is string => !!id);
+    if (hospitalIds.length === 0) {
+      setDirectApplyIds(new Set());
+      return;
+    }
+    // Get hospital_pages for these hospital_ids, then check for active positions
+    supabase
+      .from("hospital_pages")
+      .select("hospital_id, hospital_positions!inner(id)")
+      .in("hospital_id", hospitalIds)
+      .eq("hospital_positions.status", "active")
+      .then(({ data }) => {
+        const ids = new Set<string>();
+        (data || []).forEach((page: { hospital_id: string }) => {
+          if (page.hospital_id) ids.add(page.hospital_id);
+        });
+        setDirectApplyIds(ids);
       });
   }, [opportunities]);
 
@@ -327,6 +352,7 @@ const Opportunities = () => {
                     isSaved={savedOpportunityIds.has(opp.id)}
                     isSavedLoading={savedLoading}
                     isSaving={savingIds.has(opp.id)}
+                    hasDirectApply={opp.hospital_id ? directApplyIds.has(opp.hospital_id) : false}
                     onSelect={handleSelect}
                     onAddToTracker={handleAddToTracker}
                     getTypeColor={getTypeColor}

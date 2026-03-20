@@ -313,6 +313,230 @@ export type Database = {
           },
         ]
       }
+      hospital_pages: {
+        Row: {
+          id: string
+          hospital_id: string
+          admin_email: string
+          is_claimed: boolean
+          claimed_at: string | null
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          hospital_id: string
+          admin_email: string
+          is_claimed?: boolean
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          hospital_id?: string
+          admin_email?: string
+          is_claimed?: boolean
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_pages_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: true
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hospital_positions: {
+        Row: {
+          id: string
+          hospital_page_id: string
+          title: string
+          description: string | null
+          requirements: string | null
+          location: string | null
+          position_type: string
+          hours_per_week: number | null
+          duration: string | null
+          start_date: string | null
+          application_deadline: string | null
+          spots_available: number | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          hospital_page_id: string
+          title: string
+          description?: string | null
+          requirements?: string | null
+          location?: string | null
+          position_type?: string
+          hours_per_week?: number | null
+          duration?: string | null
+          start_date?: string | null
+          application_deadline?: string | null
+          spots_available?: number | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          hospital_page_id?: string
+          title?: string
+          description?: string | null
+          requirements?: string | null
+          location?: string | null
+          position_type?: string
+          hours_per_week?: number | null
+          duration?: string | null
+          start_date?: string | null
+          application_deadline?: string | null
+          spots_available?: number | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_positions_hospital_page_id_fkey"
+            columns: ["hospital_page_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      position_questions: {
+        Row: {
+          id: string
+          position_id: string
+          question_text: string
+          question_type: string
+          is_required: boolean
+          options: Json | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          position_id: string
+          question_text: string
+          question_type?: string
+          is_required?: boolean
+          options?: Json | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          position_id?: string
+          question_text?: string
+          question_type?: string
+          is_required?: boolean
+          options?: Json | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "position_questions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_applications: {
+        Row: {
+          id: string
+          position_id: string
+          student_id: string
+          status: string
+          submitted_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          notes: string | null
+        }
+        Insert: {
+          id?: string
+          position_id: string
+          student_id: string
+          status?: string
+          submitted_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          notes?: string | null
+        }
+        Update: {
+          id?: string
+          position_id?: string
+          student_id?: string
+          status?: string
+          submitted_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_applications_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_answers: {
+        Row: {
+          id: string
+          application_id: string
+          question_id: string
+          answer_text: string | null
+          answer_file_url: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          application_id: string
+          question_id: string
+          answer_text?: string | null
+          answer_file_url?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          application_id?: string
+          question_id?: string
+          answer_text?: string | null
+          answer_file_url?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_answers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "student_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "position_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hospital_application_answers: {
         Row: {
           answer_options: Json | null

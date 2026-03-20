@@ -11,6 +11,7 @@ interface HospitalCardProps {
   isSaved: boolean;
   isSavedLoading: boolean;
   isSaving: boolean;
+  hasDirectApply?: boolean;
   onSelect: (id: string) => void;
   onAddToTracker: (id: string) => void;
   getTypeColor: (type: string) => string;
@@ -22,6 +23,7 @@ export function HospitalCard({
   isSaved,
   isSavedLoading,
   isSaving,
+  hasDirectApply,
   onSelect,
   onAddToTracker,
   getTypeColor,
@@ -103,6 +105,14 @@ export function HospitalCard({
                   className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 text-xs"
                 >
                   Accepting Volunteers
+                </Badge>
+              )}
+              {hasDirectApply && (
+                <Badge
+                  variant="outline"
+                  className="text-blue-400 border-blue-500/30 bg-blue-500/10 text-xs"
+                >
+                  Direct Apply
                 </Badge>
               )}
             </div>
