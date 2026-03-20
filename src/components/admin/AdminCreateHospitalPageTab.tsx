@@ -22,12 +22,11 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface HospitalResult {
+interface OpportunityResult {
   id: string;
   name: string;
-  city: string | null;
-  state: string | null;
-  address: string | null;
+  location: string;
+  type: string;
   website: string | null;
 }
 
@@ -37,7 +36,7 @@ interface HospitalPage {
   admin_email: string;
   is_claimed: boolean;
   created_at: string;
-  hospitals: { name: string } | null;
+  opportunities: { name: string; location: string } | null;
 }
 
 export default function AdminCreateHospitalPageTab() {
@@ -45,9 +44,9 @@ export default function AdminCreateHospitalPageTab() {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<HospitalResult[]>([]);
+  const [searchResults, setSearchResults] = useState<OpportunityResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedHospital, setSelectedHospital] = useState<HospitalResult | null>(null);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityResult | null>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Form state
@@ -58,33 +57,34 @@ export default function AdminCreateHospitalPageTab() {
   const [pages, setPages] = useState<HospitalPage[]>([]);
   const [pagesLoading, setPagesLoading] = useState(false);
 
-  // Search hospitals on debounced input
+  // Search opportunities on debounced input (same source as opportunities page)
   useEffect(() => {
-    if (!debouncedSearch.trim() || selectedHospital) return;
+    if (!debouncedSearch.trim() || selectedOpportunity) return;
 
-    async function searchHospitals() {
+    async function searchOpportunities() {
       setSearchLoading(true);
       try {
-        const term = debouncedSearch.trim().replace(/[%_]/g, '\\$&');
+        const term = debouncedSearch.trim().replace(/[%_\\]/g, '\\$&');
+        const searchPattern = `%${term}%`;
         const { data, error } = await supabase
-          .from('hospitals')
-          .select('id, name, city, state, address, website')
-          .ilike('name', `%${term}%`)
+          .from('opportunities')
+          .select('id, name, location, type, website')
+          .or(`name.ilike.${searchPattern.replace(/,/g, '\\,')},location.ilike.${searchPattern.replace(/,/g, '\\,')}`)
           .order('name')
-          .limit(10);
+          .limit(15);
 
         if (error) throw error;
         setSearchResults(data ?? []);
       } catch (err) {
-        console.error('Error searching hospitals:', err);
-        toast.error('Failed to search hospitals');
+        console.error('Error searching opportunities:', err);
+        toast.error('Failed to search opportunities');
       } finally {
         setSearchLoading(false);
       }
     }
 
-    searchHospitals();
-  }, [debouncedSearch, selectedHospital]);
+    searchOpportunities();
+  }, [debouncedSearch, selectedOpportunity]);
 
   // Clear results when search is empty
   useEffect(() => {
@@ -103,14 +103,14 @@ export default function AdminCreateHospitalPageTab() {
     try {
       const { data, error } = await supabase
         .from('hospital_pages')
-        .select('id, hospital_id, admin_email, is_claimed, created_at, hospitals(name)')
+        .select('id, hospital_id, admin_email, is_claimed, created_at, opportunities:hospital_id(name, location)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       const normalized = (data ?? []).map((row) => ({
         ...row,
-        hospitals: Array.isArray(row.hospitals) ? row.hospitals[0] ?? null : row.hospitals,
+        opportunities: Array.isArray(row.opportunities) ? row.opportunities[0] ?? null : row.opportunities,
       })) as HospitalPage[];
 
       setPages(normalized);
@@ -121,20 +121,20 @@ export default function AdminCreateHospitalPageTab() {
     }
   }
 
-  function selectHospital(hospital: HospitalResult) {
-    setSelectedHospital(hospital);
-    setSearchQuery(hospital.name);
+  function selectOpportunity(opportunity: OpportunityResult) {
+    setSelectedOpportunity(opportunity);
+    setSearchQuery(opportunity.name);
     setSearchResults([]);
   }
 
   function clearSelection() {
-    setSelectedHospital(null);
+    setSelectedOpportunity(null);
     setSearchQuery('');
     setSearchResults([]);
   }
 
   async function handleSubmit() {
-    if (!selectedHospital || !adminEmail.trim()) return;
+    if (!selectedOpportunity || !adminEmail.trim()) return;
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(adminEmail.trim())) {
@@ -153,7 +153,7 @@ export default function AdminCreateHospitalPageTab() {
 
       const response = await supabase.functions.invoke('create-hospital-page', {
         body: {
-          hospital_id: selectedHospital.id,
+          hospital_id: selectedOpportunity.id,
           admin_email: adminEmail.trim().toLowerCase(),
         },
       });
@@ -170,7 +170,7 @@ export default function AdminCreateHospitalPageTab() {
         return;
       }
 
-      toast.success(`Hospital page created for ${result.hospital_name}`);
+      toast.success(`Hospital page created for ${result.opportunity_name}`);
       clearSelection();
       setAdminEmail('');
       fetchPages();
@@ -196,25 +196,25 @@ export default function AdminCreateHospitalPageTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Hospital Search */}
+          {/* Hospital/Opportunity Search */}
           <div className="space-y-2">
-            <Label htmlFor="hospital-search">Hospital</Label>
+            <Label htmlFor="hospital-search">Hospital / Clinic</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="hospital-search"
-                placeholder="Search hospitals by name..."
+                placeholder="Search by name or location..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  if (selectedHospital) {
-                    setSelectedHospital(null);
+                  if (selectedOpportunity) {
+                    setSelectedOpportunity(null);
                   }
                 }}
                 className="pl-10"
                 disabled={submitting}
               />
-              {selectedHospital && (
+              {selectedOpportunity && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -227,21 +227,24 @@ export default function AdminCreateHospitalPageTab() {
             </div>
 
             {/* Search Results Dropdown */}
-            {searchResults.length > 0 && !selectedHospital && (
-              <div className="border rounded-lg overflow-hidden bg-card shadow-md">
-                {searchResults.map((hospital) => (
+            {searchResults.length > 0 && !selectedOpportunity && (
+              <div className="border rounded-lg overflow-hidden bg-card shadow-md max-h-80 overflow-y-auto">
+                {searchResults.map((opp) => (
                   <button
-                    key={hospital.id}
+                    key={opp.id}
                     className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0"
-                    onClick={() => selectHospital(hospital)}
+                    onClick={() => selectOpportunity(opp)}
                   >
-                    <p className="font-medium text-sm">{hospital.name}</p>
-                    {(hospital.city || hospital.state) && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <p className="font-medium text-sm">{opp.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {[hospital.city, hospital.state].filter(Boolean).join(', ')}
+                        {opp.location}
                       </p>
-                    )}
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {opp.type}
+                      </Badge>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -254,30 +257,27 @@ export default function AdminCreateHospitalPageTab() {
               </div>
             )}
 
-            {debouncedSearch.trim() && !searchLoading && searchResults.length === 0 && !selectedHospital && (
-              <p className="text-sm text-muted-foreground">No hospitals found</p>
+            {debouncedSearch.trim() && !searchLoading && searchResults.length === 0 && !selectedOpportunity && (
+              <p className="text-sm text-muted-foreground">No results found</p>
             )}
           </div>
 
-          {/* Selected Hospital Info */}
-          {selectedHospital && (
+          {/* Selected Opportunity Info */}
+          {selectedOpportunity && (
             <div className="bg-muted/30 rounded-xl p-4 space-y-1">
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-primary" />
-                <p className="font-medium">{selectedHospital.name}</p>
+                <p className="font-medium">{selectedOpportunity.name}</p>
               </div>
-              {selectedHospital.address && (
+              <div className="flex items-center gap-2">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  {selectedHospital.address}
+                  {selectedOpportunity.location}
                 </p>
-              )}
-              {(selectedHospital.city || selectedHospital.state) && !selectedHospital.address && (
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {[selectedHospital.city, selectedHospital.state].filter(Boolean).join(', ')}
-                </p>
-              )}
+                <Badge variant="outline" className="text-xs capitalize">
+                  {selectedOpportunity.type}
+                </Badge>
+              </div>
             </div>
           )}
 
@@ -304,7 +304,7 @@ export default function AdminCreateHospitalPageTab() {
           {/* Submit */}
           <Button
             onClick={handleSubmit}
-            disabled={!selectedHospital || !adminEmail.trim() || submitting}
+            disabled={!selectedOpportunity || !adminEmail.trim() || submitting}
             className="w-full sm:w-auto"
           >
             {submitting ? (
@@ -369,8 +369,13 @@ export default function AdminCreateHospitalPageTab() {
                 ) : (
                   pages.map((page) => (
                     <TableRow key={page.id}>
-                      <TableCell className="font-medium">
-                        {page.hospitals?.name ?? 'Unknown'}
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{page.opportunities?.name ?? 'Unknown'}</p>
+                          {page.opportunities?.location && (
+                            <p className="text-xs text-muted-foreground">{page.opportunities.location}</p>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm">

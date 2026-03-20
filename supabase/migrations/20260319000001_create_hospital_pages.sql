@@ -1,11 +1,12 @@
 -- Hospital Pages table
--- Tracks hospitals that have been set up by admins for self-service claiming.
+-- Tracks opportunities/hospitals that have been set up by admins for self-service claiming.
 -- When a hospital admin clicks the invite link or signs up with the matching email,
 -- they can claim the page and manage their hospital profile.
+-- References the opportunities table (same data source as the main listings page).
 
 CREATE TABLE IF NOT EXISTS hospital_pages (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  hospital_id UUID NOT NULL REFERENCES opportunities(id) ON DELETE CASCADE,
   admin_email TEXT NOT NULL,
   is_claimed BOOLEAN DEFAULT FALSE,
   claimed_at TIMESTAMPTZ,
