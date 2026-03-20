@@ -33,7 +33,6 @@ interface ActivePosition {
 interface HospitalDetailProps {
   opportunity: Opportunity;
   hospitalAccountId?: string;
-  isPremium: boolean;
   isSaved: boolean;
   isSavedLoading: boolean;
   isSaving: boolean;
@@ -45,7 +44,6 @@ interface HospitalDetailProps {
 export function HospitalDetail({
   opportunity,
   hospitalAccountId,
-  isPremium,
   isSaved,
   isSavedLoading,
   isSaving,
