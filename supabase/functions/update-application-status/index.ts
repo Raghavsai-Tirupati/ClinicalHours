@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Get application → position → hospital_page to verify admin access
+    // Get application → position → hospital_page to verify access
     const { data: app, error: appErr } = await supabaseAdmin
       .from("student_applications")
       .select("id, position_id")
@@ -82,7 +82,16 @@ Deno.serve(async (req) => {
       .eq("id", pos.hospital_page_id)
       .single();
 
-    if (!page || page.admin_email !== auth.user.email) {
+    const { data: adminRole } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", auth.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    const isPageOwner = page?.admin_email?.toLowerCase() === auth.user.email?.toLowerCase();
+
+    if (!adminRole && !isPageOwner) {
       return new Response(JSON.stringify({ error: "Not authorized" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -97,19 +106,22 @@ Deno.serve(async (req) => {
     };
     if (notes !== undefined) updateData.notes = notes;
 
-    const { error: upErr } = await supabaseAdmin
+    const { data: updated, error: upErr } = await supabaseAdmin
       .from("student_applications")
       .update(updateData)
-      .eq("id", application_id);
+      .eq("id", application_id)
+      .select("*")
+      .single();
 
     if (upErr) throw upErr;
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify(updated), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error updating application status:", error);
-    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    console.error("Error updating application status:", err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
