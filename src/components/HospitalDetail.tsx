@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Opportunity } from "@/types";
-import { FindApplicationButton } from "@/components/FindApplicationButton";
 import HospitalLogo from "@/components/HospitalLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { POSITION_TYPE_LABELS } from "@/types/positions";
@@ -34,7 +33,6 @@ interface ActivePosition {
 interface HospitalDetailProps {
   opportunity: Opportunity;
   hospitalAccountId?: string;
-  isPremium: boolean;
   isSaved: boolean;
   isSavedLoading: boolean;
   isSaving: boolean;
@@ -46,7 +44,6 @@ interface HospitalDetailProps {
 export function HospitalDetail({
   opportunity,
   hospitalAccountId,
-  isPremium,
   isSaved,
   isSavedLoading,
   isSaving,
@@ -136,15 +133,17 @@ export function HospitalDetail({
         </div>
 
         {/* Primary CTAs */}
-        <div className="flex flex-col gap-2">
-          <FindApplicationButton
-            opportunityId={opportunity.id}
-            opportunityName={opportunity.name}
-            websiteHint={opportunity.website}
-            isPremium={isPremium}
-            label="Volunteer Link"
-          />
-        </div>
+        {hospitalAccountId && (
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => navigate(`/hospital/apply/${hospitalAccountId}`)}
+              className="gap-1.5"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Apply Now
+            </Button>
+          </div>
+        )}
 
         {/* Active Positions — Direct Apply */}
         {activePositions.length > 0 && (
