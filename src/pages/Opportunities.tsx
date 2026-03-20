@@ -41,7 +41,7 @@ const Opportunities = () => {
   const [verificationGateOpen, setVerificationGateOpen] = useState(false);
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
   const { needsVerification } = useEmailVerified();
-  const { isPremium } = usePremiumStatus();
+  
   const navigate = useNavigate();
   const { toast } = useToast();
 
