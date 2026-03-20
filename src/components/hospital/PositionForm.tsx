@@ -88,6 +88,12 @@ export default function PositionForm() {
       return;
     }
 
+    if (!pageId || pageId.startsWith('virtual-')) {
+      toast.error('Hospital page not set up yet. Please refresh the page and try again.');
+      console.error('Invalid pageId for position save:', pageId);
+      return;
+    }
+
     setSaving(true);
     try {
       const positionData = {
@@ -172,8 +178,11 @@ export default function PositionForm() {
             : 'Position saved as draft'
       );
       navigate(`${basePath}/positions/${savedPositionId}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save position');
+    } catch (err: unknown) {
+      console.error('Position save error:', err);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const msg = (err as any)?.message || (err as any)?.details || 'Failed to save position';
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
