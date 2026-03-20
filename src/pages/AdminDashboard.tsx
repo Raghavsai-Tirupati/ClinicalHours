@@ -22,6 +22,7 @@ import {
   ImageIcon,
   Ghost,
   Trash2,
+  FilePlus,
 } from 'lucide-react';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
 import AdminUserList from '@/components/admin/AdminUserList';
@@ -32,6 +33,7 @@ import { AdminActivityTab } from '@/components/admin/AdminActivityTab';
 import AdminLogosTab from '@/components/admin/AdminLogosTab';
 import GuestSessionsTab from '@/components/admin/GuestSessionsTab';
 import AdminDeletionEventsTab from '@/components/admin/AdminDeletionEventsTab';
+import AdminCreateHospitalPageTab from '@/components/admin/AdminCreateHospitalPageTab';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -126,7 +128,7 @@ export default function AdminDashboard() {
 
           {/* Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-9">
+            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-5 lg:grid-cols-10">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview</span>
@@ -155,6 +157,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="logos" className="flex items-center gap-2">
                 <ImageIcon className="h-4 w-4" />
                 <span className="hidden sm:inline">Logos</span>
+              </TabsTrigger>
+              <TabsTrigger value="pages" className="flex items-center gap-2">
+                <FilePlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Pages</span>
               </TabsTrigger>
               <TabsTrigger value="guest-sessions" className="flex items-center gap-2">
                 <Ghost className="h-4 w-4" />
@@ -192,6 +198,10 @@ export default function AdminDashboard() {
 
             <TabsContent value="logos">
               <AdminLogosTab />
+            </TabsContent>
+
+            <TabsContent value="pages">
+              <AdminCreateHospitalPageTab />
             </TabsContent>
 
             <TabsContent value="guest-sessions">
