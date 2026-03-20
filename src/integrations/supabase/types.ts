@@ -38,6 +38,48 @@ export type Database = {
         }
         Relationships: []
       }
+      application_answers: {
+        Row: {
+          answer_file_url: string | null
+          answer_text: string | null
+          application_id: string
+          created_at: string | null
+          id: string
+          question_id: string
+        }
+        Insert: {
+          answer_file_url?: string | null
+          answer_text?: string | null
+          application_id: string
+          created_at?: string | null
+          id?: string
+          question_id: string
+        }
+        Update: {
+          answer_file_url?: string | null
+          answer_text?: string | null
+          application_id?: string
+          created_at?: string | null
+          id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_answers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "student_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "position_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_links: {
         Row: {
           application_url: string | null
@@ -573,6 +615,68 @@ export type Database = {
           },
         ]
       }
+      hospital_positions: {
+        Row: {
+          application_deadline: string | null
+          created_at: string | null
+          description: string | null
+          duration: string | null
+          hospital_page_id: string
+          hours_per_week: number | null
+          id: string
+          location: string | null
+          position_type: string | null
+          requirements: string | null
+          spots_available: number | null
+          start_date: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          application_deadline?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration?: string | null
+          hospital_page_id: string
+          hours_per_week?: number | null
+          id?: string
+          location?: string | null
+          position_type?: string | null
+          requirements?: string | null
+          spots_available?: number | null
+          start_date?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          application_deadline?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration?: string | null
+          hospital_page_id?: string
+          hours_per_week?: number | null
+          id?: string
+          location?: string | null
+          position_type?: string | null
+          requirements?: string | null
+          spots_available?: number | null
+          start_date?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_positions_hospital_page_id_fkey"
+            columns: ["hospital_page_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hospitals: {
         Row: {
           address: string | null
@@ -852,6 +956,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      position_questions: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_required: boolean | null
+          options: Json | null
+          position_id: string
+          question_text: string
+          question_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          options?: Json | null
+          position_id: string
+          question_text: string
+          question_type: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          options?: Json | null
+          position_id?: string
+          question_text?: string
+          question_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "position_questions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_positions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1157,6 +1302,47 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities_with_ratings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_applications: {
+        Row: {
+          id: string
+          notes: string | null
+          position_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          student_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          position_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          student_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          position_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          student_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_applications_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_positions"
             referencedColumns: ["id"]
           },
         ]
