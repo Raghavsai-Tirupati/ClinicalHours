@@ -94,9 +94,10 @@ export function useHospitalPageByUser() {
             .limit(1)
             .maybeSingle();
 
-          // Check if a hospital_pages record exists for this opportunity
+          // Check if a hospital_pages record exists, or auto-create one
           const opportunityId = opp?.id;
-          let existingPageId: string | null = null;
+          let realPageId: string | null = null;
+
           if (opportunityId) {
             const { data: existingPage } = await supabase
               .from('hospital_pages')
@@ -104,14 +105,30 @@ export function useHospitalPageByUser() {
               .eq('hospital_id', opportunityId)
               .limit(1)
               .maybeSingle();
-            existingPageId = existingPage?.id || null;
+
+            if (existingPage) {
+              realPageId = existingPage.id;
+            } else {
+              // Auto-create hospital_pages record so positions can reference it
+              const { data: newPage } = await supabase
+                .from('hospital_pages')
+                .insert({
+                  hospital_id: opportunityId,
+                  admin_email: user.email!,
+                  is_claimed: true,
+                  created_by: user.id,
+                })
+                .select('id')
+                .single();
+              realPageId = newPage?.id || null;
+            }
           }
 
-          const virtualPageId = existingPageId || `virtual-${hospitalId}`;
-          setPageId(existingPageId);
+          const pageIdToUse = realPageId || `virtual-${hospitalId}`;
+          setPageId(realPageId);
 
           setHospitalPage({
-            id: virtualPageId,
+            id: pageIdToUse,
             hospital_id: opportunityId || hospitalId,
             admin_email: user.email!,
             is_claimed: true,
