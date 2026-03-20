@@ -56,7 +56,7 @@ const TimelinePlanner = lazy(() => import("./pages/TimelinePlanner"));
 const SecondaryEngine = lazy(() => import("./pages/SecondaryEngine"));
 const CostSimulator = lazy(() => import("./pages/CostSimulator"));
 const SchoolListBuilder = lazy(() => import("./pages/SchoolListBuilder"));
-const DirectApplicationFinder = lazy(() => import("./pages/DirectApplicationFinder"));
+
 
 // Loading fallback component
 const PageLoader = () => (

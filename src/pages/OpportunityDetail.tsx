@@ -412,25 +412,13 @@ const OpportunityDetail = () => {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => navigate(`/opportunities/${slug}/apply`)}
+                  onClick={() => navigate(`/hospital/apply/${directApplyAccountId}`)}
                   className="gap-1.5"
                 >
                   <ExternalLink className="h-4 w-4" />
                   Apply
                 </Button>
-              ) : opportunity?.hospital_id ? (
-                <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-50">
-                  <ExternalLink className="h-4 w-4" />
-                  Apply (not enabled)
-                </Button>
               ) : null}
-
-              <FindApplicationButton
-                opportunityId={opportunity.id}
-                opportunityName={opportunity.name}
-                websiteHint={opportunity.website}
-                isPremium={isPremium}
-              />
 
               <ReviewForm
                 opportunityId={opportunity.id}

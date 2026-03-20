@@ -135,15 +135,17 @@ export function HospitalDetail({
         </div>
 
         {/* Primary CTAs */}
-        <div className="flex flex-col gap-2">
-          <FindApplicationButton
-            opportunityId={opportunity.id}
-            opportunityName={opportunity.name}
-            websiteHint={opportunity.website}
-            isPremium={isPremium}
-            label="Volunteer Link"
-          />
-        </div>
+        {hospitalAccountId && (
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => navigate(`/hospital/apply/${hospitalAccountId}`)}
+              className="gap-1.5"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Apply Now
+            </Button>
+          </div>
+        )}
 
         {/* Active Positions — Direct Apply */}
         {activePositions.length > 0 && (

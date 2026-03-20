@@ -879,16 +879,6 @@ const ImmersiveMap = () => {
                   )}
                 </div>
 
-                {/* Find Application button */}
-                <div className="mt-2">
-                  <FindApplicationButton
-                    opportunityId={selectedFeature.id}
-                    opportunityName={selectedFeature.name}
-                    websiteHint={selectedFeature.website}
-                    isPremium={isPremium}
-                    compact
-                  />
-                </div>
               </div>
             </div>
           </div>
