@@ -93,7 +93,7 @@ const ImmersiveMap = () => {
 
   const { user, isReady, isGuest } = useAuth();
   const { needsVerification } = useEmailVerified();
-  const { isPremium } = usePremiumStatus();
+  
   const { toast } = useToast();
   const [mapLoading, setMapLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
