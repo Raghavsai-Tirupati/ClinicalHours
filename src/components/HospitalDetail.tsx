@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   X,
   MapPin,
@@ -18,6 +19,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Opportunity } from "@/types";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
 import HospitalLogo from "@/components/HospitalLogo";
+import { supabase } from "@/integrations/supabase/client";
+import { POSITION_TYPE_LABELS } from "@/types/positions";
+import type { PositionType } from "@/types/positions";
+
+interface ActivePosition {
+  id: string;
+  title: string;
+  position_type: PositionType;
+  hours_per_week: number | null;
+  application_deadline: string | null;
+}
 
 interface HospitalDetailProps {
   opportunity: Opportunity;
@@ -43,6 +55,37 @@ export function HospitalDetail({
   getTypeColor,
 }: HospitalDetailProps) {
   const navigate = useNavigate();
+  const [activePositions, setActivePositions] = useState<ActivePosition[]>([]);
+
+  useEffect(() => {
+    if (!opportunity.hospital_id) {
+      setActivePositions([]);
+      return;
+    }
+    const fetchPositions = async () => {
+      // Get hospital_page for this opportunity, then its active positions
+      const { data: pages } = await supabase
+        .from("hospital_pages")
+        .select("id")
+        .eq("hospital_id", opportunity.hospital_id!)
+        .limit(1);
+
+      if (!pages || pages.length === 0) {
+        setActivePositions([]);
+        return;
+      }
+
+      const { data: positions } = await supabase
+        .from("hospital_positions")
+        .select("id, title, position_type, hours_per_week, application_deadline")
+        .eq("hospital_page_id", pages[0].id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      setActivePositions((positions as ActivePosition[]) || []);
+    };
+    fetchPositions();
+  }, [opportunity.hospital_id]);
 
   return (
     <div className="flex flex-col bg-card border-l border-border h-full overflow-y-auto">
@@ -101,18 +144,44 @@ export function HospitalDetail({
             isPremium={isPremium}
             label="Volunteer Link"
           />
-          {hospitalAccountId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/hospital/apply/${hospitalAccountId}`)}
-              className="gap-1.5 self-start"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Direct Apply
-            </Button>
-          )}
         </div>
+
+        {/* Active Positions — Direct Apply */}
+        {activePositions.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
+              Open Positions — Apply Directly
+            </p>
+            <div className="space-y-2">
+              {activePositions.map((pos) => (
+                <div
+                  key={pos.id}
+                  className="flex items-center justify-between gap-2 p-3 border border-border rounded-md bg-muted/30"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{pos.title}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                      <span>{POSITION_TYPE_LABELS[pos.position_type]}</span>
+                      {pos.hours_per_week && (
+                        <span>· {pos.hours_per_week} hrs/wk</span>
+                      )}
+                      {pos.application_deadline && (
+                        <span>· Due {new Date(pos.application_deadline).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => navigate(`/apply/${pos.id}`)}
+                    className="shrink-0 h-8"
+                  >
+                    Apply
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Contact Information */}
         {(opportunity.website || opportunity.email || opportunity.phone) && (

@@ -1,0 +1,130 @@
+// Position system types
+
+export type PositionType = 'volunteer' | 'internship' | 'shadowing' | 'paid' | 'research' | 'other';
+export type PositionStatus = 'draft' | 'active' | 'paused' | 'closed';
+export type QuestionType = 'short_answer' | 'long_answer' | 'multiple_choice' | 'yes_no' | 'file_upload';
+export type ApplicationStatus = 'new' | 'under_review' | 'accepted' | 'rejected' | 'waitlisted';
+
+export interface HospitalPosition {
+  id: string;
+  hospital_page_id: string;
+  title: string;
+  description: string | null;
+  requirements: string | null;
+  location: string | null;
+  position_type: PositionType;
+  hours_per_week: number | null;
+  duration: string | null;
+  start_date: string | null;
+  application_deadline: string | null;
+  spots_available: number | null;
+  status: PositionStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PositionQuestion {
+  id: string;
+  position_id: string;
+  question_text: string;
+  question_type: QuestionType;
+  is_required: boolean;
+  options: string[] | null;
+  display_order: number;
+  created_at: string;
+}
+
+export interface StudentApplication {
+  id: string;
+  position_id: string;
+  student_id: string;
+  status: ApplicationStatus;
+  submitted_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  notes: string | null;
+  // Joined data
+  position?: HospitalPosition;
+  student_profile?: {
+    full_name: string | null;
+    email: string;
+    university: string | null;
+    major: string | null;
+    graduation_year: number | null;
+    phone: string | null;
+    resume_url: string | null;
+  };
+  answers?: ApplicationAnswer[];
+}
+
+export interface ApplicationAnswer {
+  id: string;
+  application_id: string;
+  question_id: string;
+  answer_text: string | null;
+  answer_file_url: string | null;
+  created_at: string;
+  // Joined
+  question?: PositionQuestion;
+}
+
+export interface HospitalPageWithOpportunity {
+  id: string;
+  hospital_id: string;
+  admin_email: string;
+  is_claimed: boolean;
+  claimed_at: string | null;
+  created_at: string;
+  created_by: string | null;
+  opportunity: {
+    id: string;
+    name: string;
+    location: string;
+    type: string;
+    website: string | null;
+    logo_url: string | null;
+    description: string | null;
+  };
+}
+
+// Form types for creating/editing positions
+export interface PositionFormData {
+  title: string;
+  description: string;
+  requirements: string;
+  location: string;
+  position_type: PositionType;
+  hours_per_week: number | null;
+  duration: string;
+  start_date: string;
+  application_deadline: string;
+  spots_available: number | null;
+  status: PositionStatus;
+}
+
+export interface QuestionFormData {
+  id?: string;
+  question_text: string;
+  question_type: QuestionType;
+  is_required: boolean;
+  options: string[];
+  display_order: number;
+}
+
+// Position type display labels
+export const POSITION_TYPE_LABELS: Record<PositionType, string> = {
+  volunteer: 'Volunteer',
+  internship: 'Internship',
+  shadowing: 'Shadowing',
+  paid: 'Paid',
+  research: 'Research',
+  other: 'Other',
+};
+
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  new: 'New',
+  under_review: 'Under Review',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  waitlisted: 'Waitlisted',
+};
