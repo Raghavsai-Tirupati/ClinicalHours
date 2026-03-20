@@ -528,6 +528,51 @@ export type Database = {
           },
         ]
       }
+      hospital_pages: {
+        Row: {
+          admin_email: string
+          claimed_at: string | null
+          created_at: string
+          created_by: string | null
+          hospital_id: string
+          id: string
+          is_claimed: boolean
+        }
+        Insert: {
+          admin_email: string
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          hospital_id: string
+          id?: string
+          is_claimed?: boolean
+        }
+        Update: {
+          admin_email?: string
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          hospital_id?: string
+          id?: string
+          is_claimed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_pages_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: true
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hospital_pages_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: true
+            referencedRelation: "opportunities_with_ratings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hospitals: {
         Row: {
           address: string | null
