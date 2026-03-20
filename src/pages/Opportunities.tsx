@@ -21,7 +21,7 @@ import { logger } from "@/lib/logger";
 import { GuestGate } from "@/components/GuestGate";
 import { VerificationGate } from "@/components/VerificationGate";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
-import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+
 import { HospitalCard } from "@/components/HospitalCard";
 import { HospitalDetail } from "@/components/HospitalDetail";
 import { cn } from "@/lib/utils";
