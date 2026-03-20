@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_events: {
+        Row: {
+          deleted_at: string
+          email: string | null
+          id: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          deleted_at?: string
+          email?: string | null
+          id?: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          deleted_at?: string
+          email?: string | null
+          id?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       application_links: {
         Row: {
           application_url: string | null
@@ -289,44 +313,6 @@ export type Database = {
           },
         ]
       }
-      hospital_pages: {
-        Row: {
-          id: string
-          hospital_id: string
-          admin_email: string
-          is_claimed: boolean
-          claimed_at: string | null
-          created_at: string
-          created_by: string | null
-        }
-        Insert: {
-          id?: string
-          hospital_id: string
-          admin_email: string
-          is_claimed?: boolean
-          claimed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Update: {
-          id?: string
-          hospital_id?: string
-          admin_email?: string
-          is_claimed?: boolean
-          claimed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hospital_pages_hospital_id_fkey"
-            columns: ["hospital_id"]
-            isOneToOne: true
-            referencedRelation: "opportunities"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       hospital_application_answers: {
         Row: {
           answer_options: Json | null
@@ -538,6 +524,51 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "hospital_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hospital_pages: {
+        Row: {
+          admin_email: string
+          claimed_at: string | null
+          created_at: string
+          created_by: string | null
+          hospital_id: string
+          id: string
+          is_claimed: boolean
+        }
+        Insert: {
+          admin_email: string
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          hospital_id: string
+          id?: string
+          is_claimed?: boolean
+        }
+        Update: {
+          admin_email?: string
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          hospital_id?: string
+          id?: string
+          is_claimed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_pages_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: true
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hospital_pages_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: true
+            referencedRelation: "opportunities_with_ratings"
             referencedColumns: ["id"]
           },
         ]
@@ -833,7 +864,6 @@ export type Database = {
           email_opt_in: boolean | null
           email_verified: boolean | null
           full_name: string
-          dashboard_tutorial_complete: boolean | null
           gpa: number | null
           graduation_year: number | null
           id: string
@@ -862,7 +892,6 @@ export type Database = {
           email_opt_in?: boolean | null
           email_verified?: boolean | null
           full_name: string
-          dashboard_tutorial_complete?: boolean | null
           gpa?: number | null
           graduation_year?: number | null
           id: string
@@ -891,7 +920,6 @@ export type Database = {
           email_opt_in?: boolean | null
           email_verified?: boolean | null
           full_name?: string
-          dashboard_tutorial_complete?: boolean | null
           gpa?: number | null
           graduation_year?: number | null
           id?: string
@@ -1432,6 +1460,7 @@ export type Database = {
         Args: { lat1: number; lat2: number; lon1: number; lon2: number }
         Returns: number
       }
+      cleanup_unverified_accounts: { Args: never; Returns: undefined }
       count_opportunities: {
         Args: { filter_type?: string; search_term?: string }
         Returns: number
