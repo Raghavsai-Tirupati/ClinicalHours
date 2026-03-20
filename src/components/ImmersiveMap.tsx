@@ -5,7 +5,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailVerified } from '@/hooks/useEmailVerified';
-import { usePremiumStatus } from '@/hooks/usePremiumStatus';
+
 
 import { logger } from '@/lib/logger';
 import { Opportunity } from '@/types';
