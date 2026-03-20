@@ -6,6 +6,8 @@ interface HospitalPageContextValue {
   loading: boolean;
   error: string | null;
   refetch: () => void;
+  /** Base URL path for all dashboard links (e.g. "/hospital-dashboard" or "/hospital/abc-123") */
+  basePath: string;
 }
 
 const HospitalPageContext = createContext<HospitalPageContextValue | null>(null);

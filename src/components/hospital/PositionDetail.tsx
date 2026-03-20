@@ -20,8 +20,7 @@ const STATUS_COLORS: Record<PositionStatus, string> = {
 
 export default function PositionDetail() {
   const { positionId } = useParams<{ positionId: string }>();
-  const { hospitalPage } = useHospitalPageContext();
-  const pageId = hospitalPage?.id || '';
+  const { basePath } = useHospitalPageContext();
   const { position, questions, loading, error } = usePositionDetail(positionId);
 
   if (loading) {
@@ -78,7 +77,7 @@ export default function PositionDetail() {
           </div>
         </div>
         <Button asChild variant="outline" size="sm">
-          <Link to={`/hospital/${pageId}/positions/${position.id}/edit`}>
+          <Link to={`${basePath}/positions/${position.id}/edit`}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit
           </Link>

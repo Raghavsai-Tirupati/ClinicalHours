@@ -27,12 +27,11 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function HospitalSidebar() {
   const location = useLocation();
-  const { hospitalPage } = useHospitalPageContext();
-  const pageId = hospitalPage?.id || '';
+  const { hospitalPage, basePath } = useHospitalPageContext();
   const { positions } = usePositions(hospitalPage?.id);
 
-  const isOverview = location.pathname === `/hospital/${pageId}`;
-  const isSettings = location.pathname === `/hospital/${pageId}/settings`;
+  const isOverview = location.pathname === basePath || location.pathname === `${basePath}/`;
+  const isSettings = location.pathname === `${basePath}/settings`;
 
   return (
     <Sidebar collapsible="icon">
@@ -40,7 +39,7 @@ export default function HospitalSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isOverview} tooltip="Overview">
-              <Link to={`/hospital/${pageId}`}>
+              <Link to={`${basePath}`}>
                 <LayoutDashboard className="h-4 w-4" />
                 <span>Overview</span>
               </Link>
@@ -69,7 +68,7 @@ export default function HospitalSidebar() {
                     return (
                       <SidebarMenuItem key={pos.id}>
                         <SidebarMenuButton asChild isActive={isActive} tooltip={pos.title}>
-                          <Link to={`/hospital/${pageId}/positions/${pos.id}`}>
+                          <Link to={`${basePath}/positions/${pos.id}`}>
                             <span className="truncate">{pos.title}</span>
                             <Badge
                               variant="secondary"
@@ -85,7 +84,7 @@ export default function HospitalSidebar() {
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="New Position">
                       <Link
-                        to={`/hospital/${pageId}/positions/new`}
+                        to={`${basePath}/positions/new`}
                         className="text-primary"
                       >
                         <Plus className="h-4 w-4" />
@@ -104,7 +103,7 @@ export default function HospitalSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isSettings} tooltip="Settings">
-              <Link to={`/hospital/${pageId}/settings`}>
+              <Link to={`${basePath}/settings`}>
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
               </Link>
