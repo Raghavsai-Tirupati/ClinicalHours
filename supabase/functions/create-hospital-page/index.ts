@@ -89,16 +89,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verify hospital exists
-    const { data: hospital, error: hospitalError } = await supabaseAdmin
-      .from("hospitals")
+    // Verify opportunity exists in the opportunities table
+    const { data: opportunity, error: opportunityError } = await supabaseAdmin
+      .from("opportunities")
       .select("id, name")
       .eq("id", hospital_id)
       .single();
 
-    if (hospitalError || !hospital) {
+    if (opportunityError || !opportunity) {
       return new Response(
-        JSON.stringify({ success: false, error: "Hospital not found" }),
+        JSON.stringify({ success: false, error: "Opportunity not found" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
@@ -134,13 +134,13 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // TODO: Send invite email to admin_email via Resend when configured
-    // e.g. "You've been invited to manage {hospital.name} on ClinicalHours"
+    // e.g. "You've been invited to manage {opportunity.name} on ClinicalHours"
 
     return new Response(
       JSON.stringify({
         success: true,
         page,
-        hospital_name: hospital.name,
+        opportunity_name: opportunity.name,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );

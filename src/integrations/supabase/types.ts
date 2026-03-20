@@ -322,7 +322,7 @@ export type Database = {
             foreignKeyName: "hospital_pages_hospital_id_fkey"
             columns: ["hospital_id"]
             isOneToOne: true
-            referencedRelation: "hospitals"
+            referencedRelation: "opportunities"
             referencedColumns: ["id"]
           },
         ]
