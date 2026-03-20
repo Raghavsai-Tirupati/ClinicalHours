@@ -62,7 +62,8 @@ export function useHospitalPageByUser() {
         return;
       }
 
-      // 2. Fall back to hospital_members → build virtual page
+      // 2. Fall back to hospital_members → hospital_accounts → hospitals
+      //    Then look up the opportunity by hospitals.id
       const { data: member } = await supabase
         .from('hospital_members')
         .select(`
@@ -70,7 +71,7 @@ export function useHospitalPageByUser() {
           account_id,
           hospital_accounts (
             hospital_id,
-            opportunities:hospital_id (id, name, location, type, website, logo_url, description)
+            hospitals:hospital_id (id, name, website)
           )
         `)
         .eq('user_id', user.id)
@@ -82,36 +83,49 @@ export function useHospitalPageByUser() {
         const account = member.hospital_accounts as any;
         const hospitalId = account?.hospital_id;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const opp = account?.opportunities as any;
+        const hospital = account?.hospitals as any;
 
-        if (hospitalId && opp) {
-          // Check if a hospital_pages record exists for this hospital (any admin)
-          const { data: existingPage } = await supabase
-            .from('hospital_pages')
-            .select('id')
+        if (hospitalId) {
+          // Find the opportunity linked to this hospital
+          const { data: opp } = await supabase
+            .from('opportunities')
+            .select('id, name, location, type, website, logo_url, description')
             .eq('hospital_id', hospitalId)
             .limit(1)
             .maybeSingle();
 
-          const virtualPageId = existingPage?.id || `virtual-${hospitalId}`;
-          setPageId(existingPage?.id || null);
+          // Check if a hospital_pages record exists for this opportunity
+          const opportunityId = opp?.id;
+          let existingPageId: string | null = null;
+          if (opportunityId) {
+            const { data: existingPage } = await supabase
+              .from('hospital_pages')
+              .select('id')
+              .eq('hospital_id', opportunityId)
+              .limit(1)
+              .maybeSingle();
+            existingPageId = existingPage?.id || null;
+          }
+
+          const virtualPageId = existingPageId || `virtual-${hospitalId}`;
+          setPageId(existingPageId);
 
           setHospitalPage({
             id: virtualPageId,
-            hospital_id: hospitalId,
+            hospital_id: opportunityId || hospitalId,
             admin_email: user.email!,
             is_claimed: true,
             claimed_at: null,
             created_at: new Date().toISOString(),
             created_by: user.id,
             opportunity: {
-              id: opp.id || hospitalId,
-              name: opp.name || 'Unknown Hospital',
-              location: opp.location || '',
-              type: opp.type || '',
-              website: opp.website || null,
-              logo_url: opp.logo_url || null,
-              description: opp.description || null,
+              id: opportunityId || hospitalId,
+              name: opp?.name || hospital?.name || 'Unknown Hospital',
+              location: opp?.location || '',
+              type: opp?.type || '',
+              website: opp?.website || hospital?.website || null,
+              logo_url: opp?.logo_url || null,
+              description: opp?.description || null,
             },
           });
           return;
