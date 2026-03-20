@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailVerified } from '@/hooks/useEmailVerified';
 import { usePremiumStatus } from '@/hooks/usePremiumStatus';
-import { FindApplicationButton } from '@/components/FindApplicationButton';
+
 import { logger } from '@/lib/logger';
 import { Opportunity } from '@/types';
 import { consumePrefetchedOpportunities } from '@/lib/opportunityPrefetch';
