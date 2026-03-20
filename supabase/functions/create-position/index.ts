@@ -9,7 +9,6 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Validate origin
   const originCheck = validateOrigin(req);
   if (!originCheck.valid) {
     return new Response(JSON.stringify({ error: originCheck.error }), {
@@ -19,7 +18,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate
     const auth = await authenticateFromCookie(req);
     if (!auth.success || !auth.user) {
       return new Response(JSON.stringify({ error: auth.error }), {
@@ -43,7 +41,7 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Verify user is admin for this hospital page
+    // Verify user is admin OR hospital page owner
     const { data: page, error: pageError } = await supabaseAdmin
       .from("hospital_pages")
       .select("admin_email")
@@ -57,7 +55,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (page.admin_email !== auth.user.email) {
+    // Check platform admin or hospital page owner
+    const { data: adminRole } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", auth.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    const isPageOwner = page.admin_email?.toLowerCase() === auth.user.email?.toLowerCase();
+
+    if (!adminRole && !isPageOwner) {
       return new Response(JSON.stringify({ error: "Not authorized for this hospital" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -81,36 +89,40 @@ Deno.serve(async (req) => {
         spots_available: spots_available || null,
         status: status || "draft",
       })
-      .select("id")
+      .select("*")
       .single();
 
     if (posError) throw posError;
 
     // Insert questions if provided
+    let createdQuestions: unknown[] = [];
     if (questions && Array.isArray(questions) && questions.length > 0) {
       const questionRows = questions.map((q: { question_text: string; question_type: string; is_required: boolean; options?: string[]; display_order: number }, i: number) => ({
         position_id: position.id,
         question_text: q.question_text,
         question_type: q.question_type || "short_answer",
-        is_required: q.is_required ?? false,
-        options: q.options || null,
+        is_required: q.is_required ?? true,
+        options: q.options || [],
         display_order: q.display_order ?? i,
       }));
 
-      const { error: qError } = await supabaseAdmin
+      const { data: qData, error: qError } = await supabaseAdmin
         .from("position_questions")
-        .insert(questionRows);
+        .insert(questionRows)
+        .select("*");
 
       if (qError) throw qError;
+      createdQuestions = qData || [];
     }
 
-    return new Response(JSON.stringify({ id: position.id }), {
+    return new Response(JSON.stringify({ ...position, questions: createdQuestions }), {
       status: 201,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error creating position:", error);
-    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    console.error("Error creating position:", err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

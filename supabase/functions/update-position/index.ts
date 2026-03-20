@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Get position and verify admin access
+    // Get position and verify access
     const { data: pos, error: posErr } = await supabaseAdmin
       .from("hospital_positions")
       .select("hospital_page_id")
@@ -61,7 +61,16 @@ Deno.serve(async (req) => {
       .eq("id", pos.hospital_page_id)
       .single();
 
-    if (!page || page.admin_email !== auth.user.email) {
+    const { data: adminRole } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", auth.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    const isPageOwner = page?.admin_email?.toLowerCase() === auth.user.email?.toLowerCase();
+
+    if (!adminRole && !isPageOwner) {
       return new Response(JSON.stringify({ error: "Not authorized" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -82,46 +91,60 @@ Deno.serve(async (req) => {
     if (spots_available !== undefined) updateFields.spots_available = spots_available || null;
     if (status !== undefined) updateFields.status = status;
 
+    let updatedPosition = null;
     if (Object.keys(updateFields).length > 0) {
-      const { error: upErr } = await supabaseAdmin
+      updateFields.updated_at = new Date().toISOString();
+      const { data, error: upErr } = await supabaseAdmin
         .from("hospital_positions")
         .update(updateFields)
-        .eq("id", position_id);
+        .eq("id", position_id)
+        .select("*")
+        .single();
       if (upErr) throw upErr;
+      updatedPosition = data;
+    } else {
+      const { data } = await supabaseAdmin
+        .from("hospital_positions")
+        .select("*")
+        .eq("id", position_id)
+        .single();
+      updatedPosition = data;
     }
 
     // Update questions if provided
+    let updatedQuestions: unknown[] = [];
     if (questions && Array.isArray(questions)) {
-      // Delete existing questions
       await supabaseAdmin
         .from("position_questions")
         .delete()
         .eq("position_id", position_id);
 
-      // Insert new questions
       if (questions.length > 0) {
         const questionRows = questions.map((q: { question_text: string; question_type: string; is_required: boolean; options?: string[]; display_order: number }, i: number) => ({
           position_id,
           question_text: q.question_text,
           question_type: q.question_type || "short_answer",
-          is_required: q.is_required ?? false,
-          options: q.options || null,
+          is_required: q.is_required ?? true,
+          options: q.options || [],
           display_order: q.display_order ?? i,
         }));
 
-        const { error: qErr } = await supabaseAdmin
+        const { data: qData, error: qErr } = await supabaseAdmin
           .from("position_questions")
-          .insert(questionRows);
+          .insert(questionRows)
+          .select("*");
         if (qErr) throw qErr;
+        updatedQuestions = qData || [];
       }
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ ...updatedPosition, questions: updatedQuestions }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error updating position:", error);
-    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    console.error("Error updating position:", err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

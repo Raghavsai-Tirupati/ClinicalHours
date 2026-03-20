@@ -41,10 +41,10 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Verify position is active and deadline hasn't passed
+    // Verify position is active
     const { data: position, error: posErr } = await supabaseAdmin
       .from("hospital_positions")
-      .select("id, status, application_deadline")
+      .select("id, status, application_deadline, spots_available")
       .eq("id", position_id)
       .single();
 
@@ -69,13 +69,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check spots available
+    if (position.spots_available != null) {
+      const { count } = await supabaseAdmin
+        .from("student_applications")
+        .select("id", { count: "exact", head: true })
+        .eq("position_id", position_id)
+        .eq("status", "accepted");
+
+      if (count != null && count >= position.spots_available) {
+        return new Response(JSON.stringify({ error: "All spots for this position have been filled" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Check for duplicate application
     const { data: existing } = await supabaseAdmin
       .from("student_applications")
       .select("id")
       .eq("position_id", position_id)
       .eq("student_id", auth.user.id)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return new Response(JSON.stringify({ error: "You have already applied to this position" }), {
@@ -91,12 +107,13 @@ Deno.serve(async (req) => {
         position_id,
         student_id: auth.user.id,
       })
-      .select("id")
+      .select("*")
       .single();
 
     if (appErr) throw appErr;
 
     // Insert answers if provided
+    let createdAnswers: unknown[] = [];
     if (answers && Array.isArray(answers) && answers.length > 0) {
       const answerRows = answers.map((a: { question_id: string; answer_text?: string; answer_file_url?: string }) => ({
         application_id: app.id,
@@ -105,19 +122,22 @@ Deno.serve(async (req) => {
         answer_file_url: a.answer_file_url || null,
       }));
 
-      const { error: ansErr } = await supabaseAdmin
+      const { data: ansData, error: ansErr } = await supabaseAdmin
         .from("application_answers")
-        .insert(answerRows);
+        .insert(answerRows)
+        .select("*");
       if (ansErr) throw ansErr;
+      createdAnswers = ansData || [];
     }
 
-    return new Response(JSON.stringify({ id: app.id }), {
+    return new Response(JSON.stringify({ ...app, answers: createdAnswers }), {
       status: 201,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("Error submitting application:", error);
-    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    console.error("Error submitting application:", err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
