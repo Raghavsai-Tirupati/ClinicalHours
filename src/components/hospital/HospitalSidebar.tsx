@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Plus, Settings, Briefcase, ChevronRight } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Plus, Settings, Briefcase, ChevronRight, LogOut } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { usePositions } from '@/hooks/usePositions';
+import { supabase } from '@/integrations/supabase/client';
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-green-500/15 text-green-600',
@@ -27,11 +28,17 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function HospitalSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { hospitalPage, basePath } = useHospitalPageContext();
   const { positions } = usePositions(hospitalPage?.id);
 
   const isOverview = location.pathname === basePath || location.pathname === `${basePath}/`;
   const isSettings = location.pathname === `${basePath}/settings`;
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -107,6 +114,12 @@ export default function HospitalSidebar() {
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Log Out" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+              <span>Log Out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
