@@ -94,38 +94,23 @@ export function useHospitalPageByUser() {
             .limit(1)
             .maybeSingle();
 
-          // Check if a hospital_pages record exists, or auto-create one
-          const opportunityId = opp?.id;
+          // Auto-provision hospital_pages via edge function (bypasses RLS)
           let realPageId: string | null = null;
+          const opportunityId = opp?.id;
 
-          if (opportunityId) {
-            const { data: existingPage } = await supabase
-              .from('hospital_pages')
-              .select('id')
-              .eq('hospital_id', opportunityId)
-              .limit(1)
-              .maybeSingle();
+          try {
+            const { data: ensureData, error: ensureError } = await supabase.functions.invoke(
+              'ensure-hospital-page',
+              { method: 'POST' }
+            );
 
-            if (existingPage) {
-              realPageId = existingPage.id;
-            } else {
-              // Auto-create hospital_pages record so positions can reference it
-              const { data: newPage, error: insertError } = await supabase
-                .from('hospital_pages')
-                .insert({
-                  hospital_id: opportunityId,
-                  admin_email: user.email!,
-                  is_claimed: true,
-                  created_by: user.id,
-                })
-                .select('id')
-                .single();
-
-              if (insertError) {
-                console.error('Failed to auto-create hospital_pages:', insertError.message);
-              }
-              realPageId = newPage?.id || null;
+            if (ensureError) {
+              console.error('ensure-hospital-page error:', ensureError.message);
+            } else if (ensureData?.success) {
+              realPageId = ensureData.page_id;
             }
+          } catch (e) {
+            console.error('Failed to call ensure-hospital-page:', e);
           }
 
           const pageIdToUse = realPageId || `virtual-${hospitalId}`;
