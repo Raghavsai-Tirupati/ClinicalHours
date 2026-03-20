@@ -16,8 +16,7 @@ const STATUS_VARIANT: Record<PositionStatus, 'default' | 'secondary' | 'outline'
 };
 
 export default function HospitalOverview() {
-  const { hospitalPage } = useHospitalPageContext();
-  const pageId = hospitalPage?.id || '';
+  const { hospitalPage, basePath } = useHospitalPageContext();
   const { positions, loading } = usePositions(hospitalPage?.id);
 
   const activeCount = positions.filter((p) => p.status === 'active').length;
@@ -33,7 +32,7 @@ export default function HospitalOverview() {
           </p>
         </div>
         <Button asChild>
-          <Link to={`/hospital/${pageId}/positions/new`}>
+          <Link to={`${basePath}/positions/new`}>
             <Plus className="h-4 w-4 mr-2" />
             New Position
           </Link>
@@ -92,7 +91,7 @@ export default function HospitalOverview() {
               <Briefcase className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground mb-4">No positions yet</p>
               <Button asChild size="sm">
-                <Link to={`/hospital/${pageId}/positions/new`}>
+                <Link to={`${basePath}/positions/new`}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Your First Position
                 </Link>
@@ -103,7 +102,7 @@ export default function HospitalOverview() {
               {positions.map((pos) => (
                 <Link
                   key={pos.id}
-                  to={`/hospital/${pageId}/positions/${pos.id}`}
+                  to={`${basePath}/positions/${pos.id}`}
                   className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                 >
                   <div className="min-w-0 flex-1">

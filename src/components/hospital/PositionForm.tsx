@@ -19,7 +19,7 @@ import { POSITION_TYPE_LABELS } from '@/types/positions';
 export default function PositionForm() {
   const navigate = useNavigate();
   const { positionId } = useParams<{ positionId: string }>();
-  const { hospitalPage } = useHospitalPageContext();
+  const { hospitalPage, basePath } = useHospitalPageContext();
   const pageId = hospitalPage?.id || '';
   const isEdit = !!positionId;
 
@@ -171,7 +171,7 @@ export default function PositionForm() {
             ? 'Position published!'
             : 'Position saved as draft'
       );
-      navigate(`/hospital/${pageId}/positions/${savedPositionId}`);
+      navigate(`${basePath}/positions/${savedPositionId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save position');
     } finally {
@@ -193,7 +193,7 @@ export default function PositionForm() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate(`/hospital/${pageId}`)}
+          onClick={() => navigate(basePath)}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>

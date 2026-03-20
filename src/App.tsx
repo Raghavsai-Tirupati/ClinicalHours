@@ -117,8 +117,16 @@ function AppContent() {
               <Route path="/opportunities/:slug/application" element={<StudentOnlyRoute><ApplicationForm /></StudentOnlyRoute>} />
               <Route path="/opportunities/:slug/apply" element={<StudentOnlyRoute><HospitalApplyPage /></StudentOnlyRoute>} />
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
-              <Route path="/hospital-dashboard" element={<HospitalDashboardRedirect />} />
-              <Route path="/hospital/admin" element={<HospitalDashboardRedirect />} />
+              <Route path="/hospital-dashboard" element={<HospitalDashboardRedirect />}>
+                <Route index element={<HospitalOverview />} />
+                <Route path="positions/new" element={<PositionForm />} />
+                <Route path="positions/:positionId" element={<PositionDetail />} />
+                <Route path="positions/:positionId/edit" element={<PositionForm />} />
+                <Route path="settings" element={<HospitalSettingsPage />} />
+              </Route>
+              <Route path="/hospital/admin" element={<HospitalDashboardRedirect />}>
+                <Route index element={<HospitalOverview />} />
+              </Route>
               <Route path="/pending-approval" element={<PendingApproval />} />
               {/* Hospital admin dashboard with sidebar layout */}
               <Route path="/hospital/:id" element={<HospitalDashboardLayout />}>

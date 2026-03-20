@@ -8,10 +8,9 @@ import HospitalLogo from '@/components/HospitalLogo';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 
 export default function HospitalTopBar() {
-  const { hospitalPage } = useHospitalPageContext();
+  const { hospitalPage, basePath } = useHospitalPageContext();
   const name = hospitalPage?.opportunity.name || 'Loading...';
   const logoUrl = hospitalPage?.opportunity.logo_url || null;
-  const pageId = hospitalPage?.id || '';
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background px-4">
@@ -29,7 +28,7 @@ export default function HospitalTopBar() {
           Admin
         </Badge>
         <Button variant="ghost" size="icon" asChild>
-          <Link to={`/hospital/${pageId}/settings`}>
+          <Link to={`${basePath}/settings`}>
             <Settings className="h-4 w-4" />
           </Link>
         </Button>

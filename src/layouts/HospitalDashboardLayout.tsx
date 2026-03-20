@@ -99,7 +99,7 @@ export default function HospitalDashboardLayout() {
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
-      <HospitalPageContext.Provider value={{ hospitalPage, loading, error, refetch }}>
+      <HospitalPageContext.Provider value={{ hospitalPage, loading, error, refetch, basePath: `/hospital/${id}` }}>
         <SidebarProvider>
           <div className="flex min-h-screen w-full">
             <HospitalSidebar />
