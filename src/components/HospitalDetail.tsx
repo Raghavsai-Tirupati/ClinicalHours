@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Opportunity } from "@/types";
-import { FindApplicationButton } from "@/components/FindApplicationButton";
 import HospitalLogo from "@/components/HospitalLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { POSITION_TYPE_LABELS } from "@/types/positions";
