@@ -12,8 +12,10 @@ import { trackLogin, trackSignup, trackEvent } from "@/lib/tracking";
 import { setRememberMePreference, getRememberMePreference, useAuth } from "@/hooks/useAuth";
 import { migrateGuestDataToUser } from "@/lib/guestMigration";
 import { z } from "zod";
-import { ArrowLeft, Mail, Loader2, Eye, UserCircle, Building2, Check, X } from "lucide-react";
+import { ArrowLeft, Mail, Loader2, Eye, UserCircle, Building2, Check, X, Search, MapPin } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { useDebounce } from "@/hooks/useDebounce";
 import logo from "@/assets/logo.png";
 import authBackground from "@/assets/auth-background.png";
 
@@ -86,6 +88,15 @@ const Auth = () => {
   const [hospitalAddress, setHospitalAddress] = useState("");
   const [hospitalDescription, setHospitalDescription] = useState("");
 
+  // Opportunity search state
+  const [hospitalSearchQuery, setHospitalSearchQuery] = useState("");
+  const [hospitalSearchResults, setHospitalSearchResults] = useState<Array<{ id: string; name: string; location: string; type: string; website?: string }>>([]);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<{ id: string; name: string; location: string; type: string; website?: string } | null>(null);
+  const [hospitalSearchLoading, setHospitalSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [emailPreFilled, setEmailPreFilled] = useState(false);
+  const debouncedHospitalSearch = useDebounce(hospitalSearchQuery, 300);
+
   const handleGuestMode = () => {
     trackEvent("page_view", { action: "guest_mode_entered" });
     enterGuestMode();
@@ -157,6 +168,59 @@ const Auth = () => {
 
     handleAuthCallback();
   }, [navigate]);
+
+  // Search opportunities when debounced query changes
+  useEffect(() => {
+    if (!isHospitalSignup || !debouncedHospitalSearch.trim() || selectedOpportunity) return;
+
+    const searchOpportunities = async () => {
+      setHospitalSearchLoading(true);
+      try {
+        const escaped = debouncedHospitalSearch.trim().replace(/[%_\\]/g, "\\$&");
+        const pattern = `%${escaped}%`;
+        const { data, error } = await supabase
+          .from("opportunities")
+          .select("id, name, location, type, website")
+          .or(`name.ilike.${pattern.replace(/,/g, "\\,")},location.ilike.${pattern.replace(/,/g, "\\,")}`)
+          .order("name")
+          .limit(15);
+
+        if (error) throw error;
+        setHospitalSearchResults(data || []);
+        setShowSearchResults(true);
+      } catch {
+        setHospitalSearchResults([]);
+      } finally {
+        setHospitalSearchLoading(false);
+      }
+    };
+
+    searchOpportunities();
+  }, [debouncedHospitalSearch, isHospitalSignup, selectedOpportunity]);
+
+  // Auto-fill email from hospital_pages when an opportunity is selected
+  useEffect(() => {
+    if (!selectedOpportunity) return;
+
+    const fetchAdminEmail = async () => {
+      try {
+        const { data } = await supabase
+          .from("hospital_pages")
+          .select("admin_email")
+          .eq("hospital_id", selectedOpportunity.id)
+          .single();
+
+        if (data?.admin_email) {
+          setEmail(data.admin_email);
+          setEmailPreFilled(true);
+        }
+      } catch {
+        // No hospital page exists — that's fine
+      }
+    };
+
+    fetchAdminEmail();
+  }, [selectedOpportunity]);
 
   const handleGoogleSignIn = async () => {
     if (googleLoading) return;
@@ -729,49 +793,95 @@ const Auth = () => {
                 </Label>
               </div>
 
-              {/* Hospital-specific fields */}
+              {/* Hospital search — select from opportunities */}
               {isHospitalSignup && (
                 <div className="space-y-3 p-3 bg-muted/20 rounded-lg border border-border/30">
                   <div className="space-y-2">
-                    <Label htmlFor="hospital-name">Hospital / Facility Name</Label>
-                    <Input
-                      id="hospital-name"
-                      type="text"
-                      placeholder="City General Hospital"
-                      value={hospitalName}
-                      onChange={(e) => setHospitalName(e.target.value)}
-                      required={isHospitalSignup}
-                      disabled={loading || googleLoading}
-                      className="h-10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hospital-website">
-                      Website <span className="text-muted-foreground text-xs">(optional)</span>
-                    </Label>
-                    <Input
-                      id="hospital-website"
-                      type="url"
-                      placeholder="https://www.hospital.org"
-                      value={hospitalWebsite}
-                      onChange={(e) => setHospitalWebsite(e.target.value)}
-                      disabled={loading || googleLoading}
-                      className="h-10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hospital-address">
-                      Address <span className="text-muted-foreground text-xs">(optional)</span>
-                    </Label>
-                    <Input
-                      id="hospital-address"
-                      type="text"
-                      placeholder="123 Medical Center Dr, City, State"
-                      value={hospitalAddress}
-                      onChange={(e) => setHospitalAddress(e.target.value)}
-                      disabled={loading || googleLoading}
-                      className="h-10"
-                    />
+                    <Label htmlFor="hospital-search">Hospital / Facility Name</Label>
+                    {selectedOpportunity ? (
+                      <div className="flex items-center gap-2 p-2.5 bg-background rounded-md border border-border">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{selectedOpportunity.name}</p>
+                          <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            {selectedOpportunity.location}
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="text-xs shrink-0">{selectedOpportunity.type}</Badge>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedOpportunity(null);
+                            setHospitalName("");
+                            setHospitalWebsite("");
+                            setHospitalAddress("");
+                            setHospitalSearchQuery("");
+                            setHospitalSearchResults([]);
+                            setEmailPreFilled(false);
+                          }}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="hospital-search"
+                          type="text"
+                          placeholder="Search for your hospital or clinic..."
+                          value={hospitalSearchQuery}
+                          onChange={(e) => {
+                            setHospitalSearchQuery(e.target.value);
+                            setShowSearchResults(true);
+                          }}
+                          onFocus={() => {
+                            if (hospitalSearchResults.length > 0) setShowSearchResults(true);
+                          }}
+                          disabled={loading || googleLoading}
+                          className="h-10 pl-9"
+                          autoComplete="off"
+                        />
+                        {hospitalSearchLoading && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                        {/* Search results dropdown */}
+                        {showSearchResults && hospitalSearchResults.length > 0 && (
+                          <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                            {hospitalSearchResults.map((opp) => (
+                              <button
+                                key={opp.id}
+                                type="button"
+                                className="w-full text-left px-3 py-2 hover:bg-muted transition-colors border-b border-border/30 last:border-0"
+                                onClick={() => {
+                                  setSelectedOpportunity(opp);
+                                  setHospitalName(opp.name);
+                                  setHospitalWebsite(opp.website || "");
+                                  setHospitalAddress(opp.location || "");
+                                  setShowSearchResults(false);
+                                  setHospitalSearchQuery("");
+                                }}
+                              >
+                                <p className="text-sm font-medium truncate">{opp.name}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                    <MapPin className="h-3 w-3 shrink-0" />
+                                    {opp.location}
+                                  </span>
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">{opp.type}</Badge>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {showSearchResults && debouncedHospitalSearch.trim() && !hospitalSearchLoading && hospitalSearchResults.length === 0 && (
+                          <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg p-3">
+                            <p className="text-sm text-muted-foreground text-center">No results found</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -798,11 +908,17 @@ const Auth = () => {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailPreFilled) setEmailPreFilled(false);
+                  }}
                   required
                   disabled={loading || googleLoading}
                   className="h-11"
                 />
+                {emailPreFilled && (
+                  <p className="text-xs text-green-600">Email pre-filled from your hospital page</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-phone">
@@ -863,7 +979,7 @@ const Auth = () => {
                   Send me updates about new clinical opportunities
                 </Label>
               </div>
-              <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading}>
+              <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading || (isHospitalSignup && !selectedOpportunity)}>
                 {loading ? "Creating account..." : isHospitalSignup ? "Register Hospital" : "Sign Up"}
               </Button>
 
