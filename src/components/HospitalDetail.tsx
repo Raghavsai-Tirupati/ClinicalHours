@@ -59,16 +59,17 @@ export function HospitalDetail({
   const [activePositions, setActivePositions] = useState<ActivePosition[]>([]);
 
   useEffect(() => {
-    if (!opportunity.hospital_id) {
+    if (!opportunity.id) {
       setActivePositions([]);
       return;
     }
+
     const fetchPositions = async () => {
-      // Get hospital_page for this opportunity, then its active positions
+      // hospital_pages.hospital_id references the public opportunity record id
       const { data: pages } = await supabase
         .from("hospital_pages")
         .select("id")
-        .eq("hospital_id", opportunity.hospital_id!)
+        .eq("hospital_id", opportunity.id)
         .limit(1);
 
       if (!pages || pages.length === 0) {
@@ -85,8 +86,9 @@ export function HospitalDetail({
 
       setActivePositions((positions as ActivePosition[]) || []);
     };
+
     fetchPositions();
-  }, [opportunity.hospital_id]);
+  }, [opportunity.id]);
 
   return (
     <div className="flex flex-col bg-card border-l border-border h-full overflow-y-auto">
