@@ -110,7 +110,7 @@ export function useHospitalPageByUser() {
               realPageId = existingPage.id;
             } else {
               // Auto-create hospital_pages record so positions can reference it
-              const { data: newPage } = await supabase
+              const { data: newPage, error: insertError } = await supabase
                 .from('hospital_pages')
                 .insert({
                   hospital_id: opportunityId,
@@ -120,6 +120,10 @@ export function useHospitalPageByUser() {
                 })
                 .select('id')
                 .single();
+
+              if (insertError) {
+                console.error('Failed to auto-create hospital_pages:', insertError.message);
+              }
               realPageId = newPage?.id || null;
             }
           }
