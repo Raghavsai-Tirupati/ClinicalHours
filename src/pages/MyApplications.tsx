@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Calendar,
   Clock,
@@ -16,8 +17,11 @@ import {
   CalendarPlus,
   CheckCircle2,
   AlertCircle,
+  Building2,
 } from "lucide-react";
-import { format, addDays, setHours, setMinutes } from "date-fns";
+import { format, addDays } from "date-fns";
+import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from "@/types/positions";
+import type { PositionType, ApplicationStatus } from "@/types/positions";
 
 interface ApplicationWithOpp {
   id: string;
@@ -39,6 +43,17 @@ interface InterviewSlot {
   preference_rank: number;
 }
 
+interface PositionApplication {
+  id: string;
+  position_id: string;
+  status: ApplicationStatus;
+  submitted_at: string;
+  notes: string | null;
+  position_title: string;
+  position_type: PositionType;
+  hospital_name: string;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   new: "New",
   under_review: "Under Review",
@@ -46,10 +61,19 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Rejected",
 };
 
+const STATUS_COLORS: Record<string, string> = {
+  new: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+  under_review: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+  accepted: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+  rejected: "bg-red-500/10 text-red-400 border-red-500/30",
+  waitlisted: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+};
+
 export default function MyApplications() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [applications, setApplications] = useState<ApplicationWithOpp[]>([]);
+  const [positionApps, setPositionApps] = useState<PositionApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<ApplicationWithOpp | null>(null);
   const [slots, setSlots] = useState<InterviewSlot[]>([]);
@@ -70,7 +94,10 @@ export default function MyApplications() {
   }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (user) fetchApplications();
+    if (user) {
+      fetchApplications();
+      fetchPositionApplications();
+    }
   }, [user]);
 
   useEffect(() => {
@@ -102,6 +129,48 @@ export default function MyApplications() {
       setApplications([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchPositionApplications() {
+    if (!user) return;
+    try {
+      const { data, error: err } = await supabase
+        .from("student_applications")
+        .select(`
+          id, position_id, status, submitted_at, notes,
+          hospital_positions (
+            title, position_type, hospital_page_id,
+            hospital_pages:hospital_page_id (
+              hospital_id,
+              opportunities:hospital_id (name)
+            )
+          )
+        `)
+        .eq("student_id", user.id)
+        .order("submitted_at", { ascending: false });
+
+      if (err) throw err;
+
+      const mapped: PositionApplication[] = (data || []).map((row: Record<string, unknown>) => {
+        const pos = row.hospital_positions as Record<string, unknown> | null;
+        const page = pos?.hospital_pages as Record<string, unknown> | null;
+        const opp = page?.opportunities as Record<string, unknown> | null;
+        return {
+          id: row.id as string,
+          position_id: row.position_id as string,
+          status: (row.status || "new") as ApplicationStatus,
+          submitted_at: (row.submitted_at || row.id) as string,
+          notes: row.notes as string | null,
+          position_title: (pos?.title || "Unknown Position") as string,
+          position_type: (pos?.position_type || "volunteer") as PositionType,
+          hospital_name: (opp?.name || "Unknown Hospital") as string,
+        };
+      });
+      setPositionApps(mapped);
+    } catch (e) {
+      console.error("Error fetching position applications:", e);
+      setPositionApps([]);
     }
   }
 
@@ -189,7 +258,54 @@ export default function MyApplications() {
             Track your applications and submit interview times when requested.
           </p>
 
-          {applications.length === 0 ? (
+          {/* Position-based applications (new system) */}
+          {positionApps.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold text-foreground mb-3">Position Applications</h2>
+              <div className="space-y-3">
+                {positionApps.map((app) => (
+                  <div
+                    key={app.id}
+                    className="bg-card border border-border rounded-xl p-4"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-sm text-muted-foreground truncate">
+                            {app.hospital_name}
+                          </span>
+                        </div>
+                        <p className="font-medium text-foreground">{app.position_title}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <Badge variant="outline" className="text-xs">
+                            {POSITION_TYPE_LABELS[app.position_type]}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${STATUS_COLORS[app.status] || ""}`}
+                          >
+                            {APPLICATION_STATUS_LABELS[app.status] || app.status}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            Applied {format(new Date(app.submitted_at), "MMM d, yyyy")}
+                          </span>
+                        </div>
+                        {app.notes && (
+                          <p className="text-sm text-muted-foreground mt-2 italic">
+                            Note: {app.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Legacy opportunity-based applications */}
+          {applications.length === 0 && positionApps.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-12 text-center">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-foreground font-medium mb-1">No applications yet</p>
@@ -200,8 +316,11 @@ export default function MyApplications() {
                 <Link to="/opportunities">Browse Opportunities</Link>
               </Button>
             </div>
-          ) : (
+          ) : applications.length > 0 ? (
             <div className="space-y-4">
+              {applications.length > 0 && positionApps.length > 0 && (
+                <h2 className="text-lg font-semibold text-foreground mb-1">Other Applications</h2>
+              )}
               {applications.map((app) => (
                 <div
                   key={app.id}
@@ -239,7 +358,7 @@ export default function MyApplications() {
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
 
           {/* Schedule modal / panel */}
           {selectedApp && (

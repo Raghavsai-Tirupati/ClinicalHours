@@ -22,6 +22,17 @@ import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
 import HospitalLogo from "@/components/HospitalLogo";
+import { POSITION_TYPE_LABELS } from "@/types/positions";
+import type { PositionType } from "@/types/positions";
+
+interface ActivePosition {
+  id: string;
+  title: string;
+  position_type: PositionType;
+  hours_per_week: number | null;
+  application_deadline: string | null;
+  spots_available: number | null;
+}
 
 interface Opportunity {
   id: string;
@@ -60,6 +71,7 @@ const OpportunityDetail = () => {
   const [verificationGateOpen, setVerificationGateOpen] = useState(false);
   // If a hospital account is linked to this opportunity, store its id for Apply
   const [directApplyAccountId, setDirectApplyAccountId] = useState<string | null>(null);
+  const [activePositions, setActivePositions] = useState<ActivePosition[]>([]);
 
   useEffect(() => {
     if (isReady && !user && !isGuest) {
@@ -174,6 +186,32 @@ const OpportunityDetail = () => {
         if (data?.id) setDirectApplyAccountId(data.id);
       });
   }, [opportunity?.hospital_id]);
+
+  // Fetch active positions for this opportunity (if hospital has a page)
+  useEffect(() => {
+    setActivePositions([]);
+    if (!opportunity?.id) return;
+
+    const fetchPositions = async () => {
+      const { data: pages } = await supabase
+        .from("hospital_pages")
+        .select("id")
+        .eq("hospital_id", opportunity.id)
+        .limit(1);
+
+      if (!pages || pages.length === 0) return;
+
+      const { data: positions } = await supabase
+        .from("hospital_positions")
+        .select("id, title, position_type, hours_per_week, application_deadline, spots_available")
+        .eq("hospital_page_id", pages[0].id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      setActivePositions((positions as ActivePosition[]) || []);
+    };
+    fetchPositions();
+  }, [opportunity?.id]);
 
   const handleAddToTracker = async () => {
     if (isGuest) {
@@ -408,30 +446,15 @@ const OpportunityDetail = () => {
                 </Button>
               )}
 
-              {/* Apply: shown when a hospital admin has set up this hospital */}
-              {directApplyAccountId ? (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => navigate(`/opportunities/${slug}/apply`)}
-                  className="gap-1.5"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Apply
-                </Button>
-              ) : opportunity?.hospital_id ? (
-                <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-50">
-                  <ExternalLink className="h-4 w-4" />
-                  Apply (not enabled)
-                </Button>
-              ) : null}
-
-              <FindApplicationButton
-                opportunityId={opportunity.id}
-                opportunityName={opportunity.name}
-                websiteHint={opportunity.website}
-                isPremium={isPremium}
-              />
+              {/* Serper link: only shown when NO active positions on our platform */}
+              {activePositions.length === 0 && (
+                <FindApplicationButton
+                  opportunityId={opportunity.id}
+                  opportunityName={opportunity.name}
+                  websiteHint={opportunity.website}
+                  isPremium={isPremium}
+                />
+              )}
 
               <ReviewForm
                 opportunityId={opportunity.id}
@@ -449,6 +472,57 @@ const OpportunityDetail = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Active Positions — Apply on ClinicalHours */}
+        {activePositions.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Open Positions — Apply on ClinicalHours</CardTitle>
+              <CardDescription>
+                Apply directly to this hospital&apos;s open positions
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {activePositions.map((pos) => (
+                <div
+                  key={pos.id}
+                  className="flex items-center justify-between gap-3 p-4 border border-border rounded-lg bg-muted/30"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{pos.title}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1 flex-wrap">
+                      <Badge variant="outline" className="text-xs">
+                        {POSITION_TYPE_LABELS[pos.position_type]}
+                      </Badge>
+                      {pos.hours_per_week != null && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {pos.hours_per_week} hrs/wk
+                        </span>
+                      )}
+                      {pos.application_deadline && (
+                        <span>
+                          Deadline: {new Date(pos.application_deadline).toLocaleDateString()}
+                        </span>
+                      )}
+                      {pos.spots_available != null && (
+                        <span>
+                          {pos.spots_available} spot{pos.spots_available !== 1 ? "s" : ""} available
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => navigate(`/apply/${pos.id}`)}
+                    className="shrink-0"
+                  >
+                    Apply Now
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

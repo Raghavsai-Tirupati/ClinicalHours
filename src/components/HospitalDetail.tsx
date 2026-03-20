@@ -29,6 +29,7 @@ interface ActivePosition {
   position_type: PositionType;
   hours_per_week: number | null;
   application_deadline: string | null;
+  spots_available: number | null;
 }
 
 interface HospitalDetailProps {
@@ -77,7 +78,7 @@ export function HospitalDetail({
 
       const { data: positions } = await supabase
         .from("hospital_positions")
-        .select("id, title, position_type, hours_per_week, application_deadline")
+        .select("id, title, position_type, hours_per_week, application_deadline, spots_available")
         .eq("hospital_page_id", pages[0].id)
         .eq("status", "active")
         .order("created_at", { ascending: false });
@@ -135,22 +136,11 @@ export function HospitalDetail({
           </div>
         </div>
 
-        {/* Primary CTAs */}
-        <div className="flex flex-col gap-2">
-          <FindApplicationButton
-            opportunityId={opportunity.id}
-            opportunityName={opportunity.name}
-            websiteHint={opportunity.website}
-            isPremium={isPremium}
-            label="Volunteer Link"
-          />
-        </div>
-
-        {/* Active Positions — Direct Apply */}
-        {activePositions.length > 0 && (
+        {/* Active Positions — Apply on ClinicalHours (replaces Serper link) */}
+        {activePositions.length > 0 ? (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
-              Open Positions — Apply Directly
+              Open Positions — Apply on ClinicalHours
             </p>
             <div className="space-y-2">
               {activePositions.map((pos) => (
@@ -160,13 +150,16 @@ export function HospitalDetail({
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{pos.title}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
                       <span>{POSITION_TYPE_LABELS[pos.position_type]}</span>
-                      {pos.hours_per_week && (
+                      {pos.hours_per_week != null && (
                         <span>· {pos.hours_per_week} hrs/wk</span>
                       )}
                       {pos.application_deadline && (
                         <span>· Due {new Date(pos.application_deadline).toLocaleDateString()}</span>
+                      )}
+                      {pos.spots_available != null && (
+                        <span>· {pos.spots_available} spot{pos.spots_available !== 1 ? 's' : ''} left</span>
                       )}
                     </div>
                   </div>
@@ -175,11 +168,22 @@ export function HospitalDetail({
                     onClick={() => navigate(`/apply/${pos.id}`)}
                     className="shrink-0 h-8"
                   >
-                    Apply
+                    Apply Now
                   </Button>
                 </div>
               ))}
             </div>
+          </div>
+        ) : (
+          /* Serper link — only shown when no active positions on our platform */
+          <div className="flex flex-col gap-2">
+            <FindApplicationButton
+              opportunityId={opportunity.id}
+              opportunityName={opportunity.name}
+              websiteHint={opportunity.website}
+              isPremium={isPremium}
+              label="Volunteer Link"
+            />
           </div>
         )}
 

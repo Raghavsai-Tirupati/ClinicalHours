@@ -112,7 +112,7 @@ export function HospitalCard({
                   variant="outline"
                   className="text-blue-400 border-blue-500/30 bg-blue-500/10 text-xs"
                 >
-                  Direct Apply
+                  Apply on ClinicalHours
                 </Badge>
               )}
             </div>
