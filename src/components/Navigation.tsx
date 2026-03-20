@@ -37,7 +37,7 @@ const premiumToolsLinks = [
   { name: "Application Timeline", path: "/timeline" },
   { name: "Secondary Essay Coach", path: "/secondaries" },
   { name: "School List Builder", path: "/school-list" },
-  
+  { name: "Direct Application Finder", path: "/apply-finder" },
 ];
 
 const Navigation = () => {

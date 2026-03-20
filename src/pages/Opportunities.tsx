@@ -21,7 +21,7 @@ import { logger } from "@/lib/logger";
 import { GuestGate } from "@/components/GuestGate";
 import { VerificationGate } from "@/components/VerificationGate";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
-
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { HospitalCard } from "@/components/HospitalCard";
 import { HospitalDetail } from "@/components/HospitalDetail";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ const Opportunities = () => {
   const [verificationGateOpen, setVerificationGateOpen] = useState(false);
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
   const { needsVerification } = useEmailVerified();
-  
+  const { isPremium } = usePremiumStatus();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -232,6 +232,7 @@ const Opportunities = () => {
         hospitalAccountId: displayedOpportunity.hospital_id
           ? hospitalAccountMap.get(displayedOpportunity.hospital_id)
           : undefined,
+        isPremium,
         isSaved: savedOpportunityIds.has(displayedOpportunity.id),
         isSavedLoading: savedLoading,
         isSaving: savingIds.has(displayedOpportunity.id),
