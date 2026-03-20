@@ -289,6 +289,44 @@ export type Database = {
           },
         ]
       }
+      hospital_pages: {
+        Row: {
+          id: string
+          hospital_id: string
+          admin_email: string
+          is_claimed: boolean
+          claimed_at: string | null
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          hospital_id: string
+          admin_email: string
+          is_claimed?: boolean
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          hospital_id?: string
+          admin_email?: string
+          is_claimed?: boolean
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_pages_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: true
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hospital_application_answers: {
         Row: {
           answer_options: Json | null

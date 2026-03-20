@@ -20,6 +20,7 @@ import {
   Wrench,
   Radio,
   ImageIcon,
+  FilePlus,
 } from 'lucide-react';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
 import AdminUserList from '@/components/admin/AdminUserList';
@@ -28,6 +29,7 @@ import AdminPendingApprovalsTab from '@/components/admin/AdminPendingApprovalsTa
 import AdminToolsTab from '@/components/admin/AdminToolsTab';
 import { AdminActivityTab } from '@/components/admin/AdminActivityTab';
 import AdminLogosTab from '@/components/admin/AdminLogosTab';
+import AdminCreateHospitalPageTab from '@/components/admin/AdminCreateHospitalPageTab';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -122,7 +124,7 @@ export default function AdminDashboard() {
 
           {/* Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview</span>
@@ -152,6 +154,10 @@ export default function AdminDashboard() {
                 <ImageIcon className="h-4 w-4" />
                 <span className="hidden sm:inline">Logos</span>
               </TabsTrigger>
+              <TabsTrigger value="pages" className="flex items-center gap-2">
+                <FilePlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Pages</span>
+              </TabsTrigger>
               <TabsTrigger value="activity" className="flex items-center gap-2">
                 <Radio className="h-4 w-4" />
                 <span className="hidden sm:inline">Activity</span>
@@ -180,6 +186,10 @@ export default function AdminDashboard() {
 
             <TabsContent value="logos">
               <AdminLogosTab />
+            </TabsContent>
+
+            <TabsContent value="pages">
+              <AdminCreateHospitalPageTab />
             </TabsContent>
 
             <TabsContent value="activity">
