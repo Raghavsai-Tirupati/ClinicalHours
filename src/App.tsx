@@ -42,6 +42,7 @@ const PositionForm = lazy(() => import("./components/hospital/PositionForm"));
 const PositionDetail = lazy(() => import("./components/hospital/PositionDetail"));
 const HospitalSettingsPage = lazy(() => import("./components/hospital/HospitalSettings"));
 const PositionApplyPage = lazy(() => import("./pages/PositionApplyPage"));
+const HospitalDashboardRedirect = lazy(() => import("./components/HospitalDashboardRedirect"));
 
 // Premium feature pages
 const Premium = lazy(() => import("./pages/Premium"));
@@ -116,8 +117,8 @@ function AppContent() {
               <Route path="/opportunities/:slug/application" element={<StudentOnlyRoute><ApplicationForm /></StudentOnlyRoute>} />
               <Route path="/opportunities/:slug/apply" element={<StudentOnlyRoute><HospitalApplyPage /></StudentOnlyRoute>} />
               <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
-              <Route path="/hospital-dashboard" element={<HospitalDashboardPage />} />
-              <Route path="/hospital/admin" element={<HospitalDashboardPage />} />
+              <Route path="/hospital-dashboard" element={<HospitalDashboardRedirect />} />
+              <Route path="/hospital/admin" element={<HospitalDashboardRedirect />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
               {/* Hospital admin dashboard with sidebar layout */}
               <Route path="/hospital/:id" element={<HospitalDashboardLayout />}>
