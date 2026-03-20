@@ -20,7 +20,6 @@ import { VerificationGate } from "@/components/VerificationGate";
 import { logger } from "@/lib/logger";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
-import { FindApplicationButton } from "@/components/FindApplicationButton";
 import HospitalLogo from "@/components/HospitalLogo";
 
 interface Opportunity {
