@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import mapboxgl from 'mapbox-gl';
+import type * as mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -110,6 +110,7 @@ const ImmersiveMap = () => {
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [showAll, setShowAll] = useState(true);
+  const mapboxLibRef = useRef<typeof import('mapbox-gl').default | null>(null);
 
   // Info card state
   const [selectedFeature, setSelectedFeature] = useState<Record<string, string> | null>(null);
@@ -232,159 +233,162 @@ const ImmersiveMap = () => {
     if (!mapContainer.current || map.current) return;
     if (!MAPBOX_TOKEN) { setMapError('Mapbox token not configured'); setMapLoading(false); return; }
 
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    let cancelled = false;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-98.5795, 39.8283],
-      zoom: 3.5,
-      pitch: 0,
-      attributionControl: false,
-    });
+    const initMap = async () => {
+      const mapboxModule = await import('mapbox-gl');
+      if (cancelled || !mapContainer.current) return;
 
-    map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
-    map.current.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+      const mapbox = mapboxModule.default;
+      mapboxLibRef.current = mapbox;
+      mapbox.accessToken = MAPBOX_TOKEN;
 
-    map.current.on('load', () => {
-      if (!map.current) return;
-
-      // Atmosphere
-      map.current.setFog({
-        color: 'rgb(10, 15, 30)',
-        'high-color': 'rgb(20, 30, 60)',
-        'horizon-blend': 0.05,
-        'star-intensity': 0.08,
-        'space-color': 'rgb(5, 8, 20)',
+      map.current = new mapbox.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [-98.5795, 39.8283],
+        zoom: 3.5,
+        pitch: 0,
+        attributionControl: false,
       });
 
-      // Cluster source
-      map.current.addSource('opportunities', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-        cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 50,
-      });
+      map.current.addControl(new mapbox.NavigationControl({ visualizePitch: true }), 'top-right');
+      map.current.addControl(new mapbox.AttributionControl({ compact: true }), 'bottom-right');
 
-      // Cluster circles
-      map.current.addLayer({
-        id: 'clusters',
-        type: 'circle',
-        source: 'opportunities',
-        filter: ['has', 'point_count'],
-        paint: {
-          'circle-color': ['step', ['get', 'point_count'], '#22d3ee', 100, '#a78bfa', 500, '#f472b6'],
-          'circle-radius': ['step', ['get', 'point_count'], 18, 100, 26, 500, 36],
-          'circle-stroke-width': 2,
-          'circle-stroke-color': 'rgba(255,255,255,0.3)',
-          'circle-opacity': 0.85,
-        },
-      });
-
-      // Cluster labels
-      map.current.addLayer({
-        id: 'cluster-count',
-        type: 'symbol',
-        source: 'opportunities',
-        filter: ['has', 'point_count'],
-        layout: {
-          'text-field': ['get', 'point_count_abbreviated'],
-          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-          'text-size': 12,
-        },
-        paint: { 'text-color': '#ffffff' },
-      });
-
-      // Individual points
-      map.current.addLayer({
-        id: 'unclustered-point',
-        type: 'circle',
-        source: 'opportunities',
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-color': [
-            'match', ['get', 'type'],
-            'hospital', TYPE_COLORS.hospital,
-            'clinic', TYPE_COLORS.clinic,
-            'hospice', TYPE_COLORS.hospice,
-            'emt', TYPE_COLORS.emt,
-            '#94a3b8',
-          ],
-          'circle-radius': 7,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': 'rgba(255,255,255,0.5)',
-          'circle-opacity': 0.9,
-        },
-      });
-
-      // Glow ring around individual points
-      map.current.addLayer({
-        id: 'unclustered-glow',
-        type: 'circle',
-        source: 'opportunities',
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-color': [
-            'match', ['get', 'type'],
-            'hospital', TYPE_COLORS.hospital,
-            'clinic', TYPE_COLORS.clinic,
-            'hospice', TYPE_COLORS.hospice,
-            'emt', TYPE_COLORS.emt,
-            '#94a3b8',
-          ],
-          'circle-radius': 14,
-          'circle-opacity': 0.15,
-          'circle-blur': 1,
-        },
-      });
-
-      // Click cluster → zoom
-      map.current.on('click', 'clusters', (e) => {
+      map.current.on('load', () => {
         if (!map.current) return;
-        const features = map.current.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-        if (!features.length) return;
-        const clusterId = features[0].properties?.cluster_id;
-        const source = map.current.getSource('opportunities') as mapboxgl.GeoJSONSource;
-        source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err || !map.current) return;
-          const geom = features[0].geometry;
-          if (geom.type !== 'Point') return;
-          map.current.easeTo({ center: geom.coordinates as [number, number], zoom: zoom ?? 10 });
+
+        map.current.setFog({
+          color: 'rgb(10, 15, 30)',
+          'high-color': 'rgb(20, 30, 60)',
+          'horizon-blend': 0.05,
+          'star-intensity': 0.08,
+          'space-color': 'rgb(5, 8, 20)',
         });
+
+        map.current.addSource('opportunities', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] },
+          cluster: true,
+          clusterMaxZoom: 14,
+          clusterRadius: 50,
+        });
+
+        map.current.addLayer({
+          id: 'clusters',
+          type: 'circle',
+          source: 'opportunities',
+          filter: ['has', 'point_count'],
+          paint: {
+            'circle-color': ['step', ['get', 'point_count'], '#22d3ee', 100, '#a78bfa', 500, '#f472b6'],
+            'circle-radius': ['step', ['get', 'point_count'], 18, 100, 26, 500, 36],
+            'circle-stroke-width': 2,
+            'circle-stroke-color': 'rgba(255,255,255,0.3)',
+            'circle-opacity': 0.85,
+          },
+        });
+
+        map.current.addLayer({
+          id: 'cluster-count',
+          type: 'symbol',
+          source: 'opportunities',
+          filter: ['has', 'point_count'],
+          layout: {
+            'text-field': ['get', 'point_count_abbreviated'],
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-size': 12,
+          },
+          paint: { 'text-color': '#ffffff' },
+        });
+
+        map.current.addLayer({
+          id: 'unclustered-point',
+          type: 'circle',
+          source: 'opportunities',
+          filter: ['!', ['has', 'point_count']],
+          paint: {
+            'circle-color': [
+              'match', ['get', 'type'],
+              'hospital', TYPE_COLORS.hospital,
+              'clinic', TYPE_COLORS.clinic,
+              'hospice', TYPE_COLORS.hospice,
+              'emt', TYPE_COLORS.emt,
+              '#94a3b8',
+            ],
+            'circle-radius': 7,
+            'circle-stroke-width': 2,
+            'circle-stroke-color': 'rgba(255,255,255,0.5)',
+            'circle-opacity': 0.9,
+          },
+        });
+
+        map.current.addLayer({
+          id: 'unclustered-glow',
+          type: 'circle',
+          source: 'opportunities',
+          filter: ['!', ['has', 'point_count']],
+          paint: {
+            'circle-color': [
+              'match', ['get', 'type'],
+              'hospital', TYPE_COLORS.hospital,
+              'clinic', TYPE_COLORS.clinic,
+              'hospice', TYPE_COLORS.hospice,
+              'emt', TYPE_COLORS.emt,
+              '#94a3b8',
+            ],
+            'circle-radius': 14,
+            'circle-opacity': 0.15,
+            'circle-blur': 1,
+          },
+        });
+
+        map.current.on('click', 'clusters', (e) => {
+          if (!map.current) return;
+          const features = map.current.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+          if (!features.length) return;
+          const clusterId = features[0].properties?.cluster_id;
+          const source = map.current.getSource('opportunities') as mapboxgl.GeoJSONSource;
+          source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err || !map.current) return;
+            const geom = features[0].geometry;
+            if (geom.type !== 'Point') return;
+            map.current.easeTo({ center: geom.coordinates as [number, number], zoom: zoom ?? 10 });
+          });
+        });
+
+        map.current.on('click', 'unclustered-point', (e) => {
+          if (!map.current || !e.features?.length) return;
+          const props = e.features[0].properties;
+          if (props) setSelectedFeature(props as Record<string, string>);
+        });
+
+        map.current.on('mouseenter', 'clusters', () => { if (map.current) map.current.getCanvas().style.cursor = 'pointer'; });
+        map.current.on('mouseleave', 'clusters', () => { if (map.current && !isPinModeRef.current) map.current.getCanvas().style.cursor = ''; });
+        map.current.on('mouseenter', 'unclustered-point', () => { if (map.current) map.current.getCanvas().style.cursor = 'pointer'; });
+        map.current.on('mouseleave', 'unclustered-point', () => { if (map.current && !isPinModeRef.current) map.current.getCanvas().style.cursor = ''; });
+
+        setMapReady(true);
+        setMapLoading(false);
       });
 
-      // Click point → show info card
-      map.current.on('click', 'unclustered-point', (e) => {
-        if (!map.current || !e.features?.length) return;
-        const props = e.features[0].properties;
-        if (props) {
-          setSelectedFeature(props as Record<string, string>);
-        }
+      map.current.on('error', () => { setMapError('Error loading map'); setMapLoading(false); });
+
+      map.current.on('click', (e) => {
+        if (!isPinModeRef.current || !map.current) return;
+        const features = map.current.queryRenderedFeatures(e.point, { layers: ['clusters', 'unclustered-point'] });
+        if (features.length > 0) return;
+        setCustomPin({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+        setIsPinMode(false);
       });
+    };
 
-      // Cursors
-      map.current.on('mouseenter', 'clusters', () => { if (map.current) map.current.getCanvas().style.cursor = 'pointer'; });
-      map.current.on('mouseleave', 'clusters', () => { if (map.current && !isPinModeRef.current) map.current.getCanvas().style.cursor = ''; });
-      map.current.on('mouseenter', 'unclustered-point', () => { if (map.current) map.current.getCanvas().style.cursor = 'pointer'; });
-      map.current.on('mouseleave', 'unclustered-point', () => { if (map.current && !isPinModeRef.current) map.current.getCanvas().style.cursor = ''; });
+    void initMap();
 
-      setMapReady(true);
-      setMapLoading(false);
-    });
-
-    map.current.on('error', () => { setMapError('Error loading map'); setMapLoading(false); });
-
-    // Pin mode click
-    map.current.on('click', (e) => {
-      if (!isPinModeRef.current || !map.current) return;
-      const features = map.current.queryRenderedFeatures(e.point, { layers: ['clusters', 'unclustered-point'] });
-      if (features.length > 0) return;
-      setCustomPin({ lat: e.lngLat.lat, lng: e.lngLat.lng });
-      setIsPinMode(false);
-    });
-
-    return () => { map.current?.remove(); map.current = null; };
+    return () => {
+      cancelled = true;
+      map.current?.remove();
+      map.current = null;
+    };
   }, []);
 
   // Update cursor in pin mode
@@ -412,21 +416,25 @@ const ImmersiveMap = () => {
   // User location marker
   useEffect(() => {
     if (!map.current || !userLocation || !mapReady) return;
+    const mapbox = mapboxLibRef.current;
+    if (!mapbox) return;
     if (userMarkerRef.current) userMarkerRef.current.remove();
     const el = document.createElement('div');
     el.style.cssText = 'width:16px;height:16px;background:#38bdf8;border:2px solid white;border-radius:50%;box-shadow:0 0 0 6px rgba(56,189,248,0.25)';
-    userMarkerRef.current = new mapboxgl.Marker(el).setLngLat([userLocation.lng, userLocation.lat]).addTo(map.current);
+    userMarkerRef.current = new mapbox.Marker(el).setLngLat([userLocation.lng, userLocation.lat]).addTo(map.current);
   }, [userLocation, mapReady]);
 
   // Custom pin marker
   useEffect(() => {
     if (!map.current || !mapReady) return;
+    const mapbox = mapboxLibRef.current;
+    if (!mapbox) return;
     if (customPinMarkerRef.current) { customPinMarkerRef.current.remove(); customPinMarkerRef.current = null; }
     if (!customPin) return;
     const el = document.createElement('div');
     el.style.cssText = 'width:24px;height:24px;background:#f472b6;border:2px solid white;border-radius:50%;box-shadow:0 0 0 6px rgba(244,114,182,0.3);display:flex;align-items:center;justify-content:center;font-size:12px';
     el.textContent = '📌';
-    customPinMarkerRef.current = new mapboxgl.Marker(el).setLngLat([customPin.lng, customPin.lat]).addTo(map.current);
+    customPinMarkerRef.current = new mapbox.Marker(el).setLngLat([customPin.lng, customPin.lat]).addTo(map.current);
   }, [customPin, mapReady]);
 
   const handleReset = () => {

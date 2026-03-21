@@ -123,9 +123,14 @@ const Home = () => {
       <section 
         className="relative overflow-hidden"
       >
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${carouselBg})` }}
+        <img
+          src={carouselBg}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
         
         <div 

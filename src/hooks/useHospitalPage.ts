@@ -20,7 +20,7 @@ export function useHospitalPage(pageId: string | undefined) {
       const { data, error: fetchError } = await supabase
         .from('hospital_pages')
         .select(`
-          id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by,
+          id, hospital_id, admin_email, interview_booking_url, is_claimed, claimed_at, created_at, created_by,
           opportunities:hospital_id (id, name, location, type, website, logo_url, description)
         `)
         .eq('id', pageId)
@@ -35,6 +35,7 @@ export function useHospitalPage(pageId: string | undefined) {
           id: data.id,
           hospital_id: data.hospital_id,
           admin_email: data.admin_email,
+          interview_booking_url: data.interview_booking_url,
           is_claimed: data.is_claimed,
           claimed_at: data.claimed_at,
           created_at: data.created_at,

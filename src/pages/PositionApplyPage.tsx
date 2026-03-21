@@ -94,6 +94,8 @@ export default function PositionApplyPage() {
         .insert({
           position_id: positionId,
           student_id: user.id,
+          applicant_name: profile?.full_name?.trim() || null,
+          applicant_email: (user.email || '').trim().toLowerCase() || null,
         })
         .select('id')
         .single();

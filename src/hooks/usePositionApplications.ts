@@ -24,8 +24,8 @@ export function usePositionApplications(positionId: string | undefined) {
 
       if (error) throw error;
 
-      // Fetch profile info for each application
       const apps = (data || []) as StudentApplication[];
+      const appIds = apps.map((a) => a.id);
 
       if (apps.length > 0) {
         const studentIds = apps.map((a) => a.student_id);
@@ -34,12 +34,6 @@ export function usePositionApplications(positionId: string | undefined) {
           .select('id, full_name, university, major, graduation_year, phone, resume_url')
           .in('id', studentIds);
 
-        const { data: users } = await supabase
-          .from('auth_user_emails' in {} ? 'auth_user_emails' : 'profiles')
-          .select('id')
-          .in('id', studentIds);
-
-        // Map profiles to applications
         const profileMap = new Map(
           (profiles || []).map((p) => [p.id, p])
         );
@@ -58,6 +52,45 @@ export function usePositionApplications(positionId: string | undefined) {
             };
           }
         }
+
+        const { data: answerRows } = await supabase
+          .from('application_answers')
+          .select(`
+            id,
+            application_id,
+            question_id,
+            answer_text,
+            answer_file_url,
+            created_at,
+            question:position_questions(
+              id,
+              question_text,
+              question_type,
+              is_required,
+              display_order
+            )
+          `)
+          .in('application_id', appIds);
+
+        const answersByAppId = new Map<string, StudentApplication['answers']>();
+        (answerRows || []).forEach((row) => {
+          const appId = row.application_id as string;
+          const existing = answersByAppId.get(appId) || [];
+          existing.push({
+            id: row.id as string,
+            application_id: row.application_id as string,
+            question_id: row.question_id as string,
+            answer_text: (row.answer_text as string | null) ?? null,
+            answer_file_url: (row.answer_file_url as string | null) ?? null,
+            created_at: row.created_at as string,
+            question: Array.isArray(row.question) ? row.question[0] : row.question,
+          });
+          answersByAppId.set(appId, existing);
+        });
+
+        apps.forEach((app) => {
+          app.answers = answersByAppId.get(app.id) || [];
+        });
       }
 
       setApplications(apps);

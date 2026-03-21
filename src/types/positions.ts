@@ -38,6 +38,8 @@ export interface StudentApplication {
   id: string;
   position_id: string;
   student_id: string;
+  applicant_name?: string | null;
+  applicant_email?: string | null;
   status: ApplicationStatus;
   submitted_at: string;
   reviewed_at: string | null;
@@ -65,13 +67,14 @@ export interface ApplicationAnswer {
   answer_file_url: string | null;
   created_at: string;
   // Joined
-  question?: PositionQuestion;
+  question?: Pick<PositionQuestion, 'id' | 'question_text' | 'question_type' | 'is_required' | 'display_order'>;
 }
 
 export interface HospitalPageWithOpportunity {
   id: string;
   hospital_id: string;
   admin_email: string;
+  interview_booking_url: string | null;
   is_claimed: boolean;
   claimed_at: string | null;
   created_at: string;
