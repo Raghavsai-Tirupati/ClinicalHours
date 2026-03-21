@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Loader2, CheckCircle, ArrowLeft, MapPin, Clock, Building2 } from 'lucide-react';
+import { Loader2, CheckCircle, ArrowLeft, MapPin, Clock, Building2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,12 +15,14 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { usePositionDetail } from '@/hooks/usePositionDetail';
+import { useProfileComplete } from '@/hooks/useProfileComplete';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
 
 export default function PositionApplyPage() {
   const { positionId } = useParams<{ positionId: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { isComplete: isProfileComplete, isLoading: profileLoading, missingFields } = useProfileComplete();
   const { position, questions, loading, error } = usePositionDetail(positionId);
 
   const [profile, setProfile] = useState<{
@@ -32,9 +34,11 @@ export default function PositionApplyPage() {
   } | null>(null);
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [fileAnswers, setFileAnswers] = useState<Record<string, File>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [hospitalName, setHospitalName] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Fetch profile
   useEffect(() => {
@@ -77,9 +81,28 @@ export default function PositionApplyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !positionId) return;
+    setSubmitError(null);
+
+    if (profileLoading) {
+      setSubmitError('Checking your profile requirements. Please wait a moment and try again.');
+      return;
+    }
+
+    if (!isProfileComplete) {
+      setSubmitError('Please complete all required profile fields before submitting this application.');
+      return;
+    }
 
     // Validate required questions
     for (const q of questions) {
+      if (q.question_type === 'file_upload') {
+        if (q.is_required && !fileAnswers[q.id]) {
+          toast.error(`Please upload: "${q.question_text}"`);
+          return;
+        }
+        continue;
+      }
+
       if (q.is_required && !answers[q.id]?.trim()) {
         toast.error(`Please answer: "${q.question_text}"`);
         return;
@@ -88,41 +111,74 @@ export default function PositionApplyPage() {
 
     setSubmitting(true);
     try {
-      // Create application
-      const { data: app, error: appError } = await supabase
-        .from('student_applications')
-        .insert({
-          position_id: positionId,
-          student_id: user.id,
-          applicant_name: profile?.full_name?.trim() || null,
-          applicant_email: (user.email || '').trim().toLowerCase() || null,
-        })
-        .select('id')
-        .single();
+      const uploadedFiles: Record<string, { fileName: string; publicUrl: string }> = {};
 
-      if (appError) {
-        throw appError;
+      for (const q of questions) {
+        if (q.question_type !== 'file_upload') continue;
+        const file = fileAnswers[q.id];
+        if (!file) continue;
+
+        const extension = file.name.split('.').pop() || 'dat';
+        const storageFileName = `position-applications/${user.id}/${positionId}/${Date.now()}-${q.id}.${extension}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('resumes')
+          .upload(storageFileName, file, { upsert: false });
+
+        if (uploadError) {
+          throw new Error(uploadError.message || `Failed to upload ${file.name}`);
+        }
+
+        const { data: publicUrlData } = supabase.storage.from('resumes').getPublicUrl(storageFileName);
+        uploadedFiles[q.id] = {
+          fileName: file.name,
+          publicUrl: publicUrlData.publicUrl,
+        };
       }
 
-      // Insert answers
-      const answerRows = questions
-        .filter((q) => answers[q.id])
-        .map((q) => ({
-          application_id: app.id,
-          question_id: q.id,
-          answer_text: answers[q.id],
-        }));
+      const payloadAnswers = questions
+        .map((q) => {
+          if (q.question_type === 'file_upload') {
+            const uploaded = uploadedFiles[q.id];
+            if (!uploaded) return null;
+            return {
+              question_id: q.id,
+              answer_text: uploaded.fileName,
+              answer_file_url: uploaded.publicUrl,
+            };
+          }
 
-      if (answerRows.length > 0) {
-        const { error: ansError } = await supabase
-          .from('application_answers')
-          .insert(answerRows);
-        if (ansError) throw ansError;
+          const value = answers[q.id]?.trim();
+          if (!value) return null;
+          return {
+            question_id: q.id,
+            answer_text: value,
+          };
+        })
+        .filter(Boolean);
+
+      const { data, error } = await supabase.functions.invoke('submit-position-application', {
+        body: {
+          position_id: positionId,
+          answers: payloadAnswers,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to submit application');
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       setSubmitted(true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to submit application');
+      if (err && typeof err === 'object' && 'message' in err) {
+        toast.error(String((err as { message: unknown }).message));
+      } else {
+        toast.error('Failed to submit application');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -339,10 +395,9 @@ export default function PositionApplyPage() {
                         <Input
                           type="file"
                           onChange={(e) => {
-                            // For now, just store filename — actual upload would use Supabase storage
                             const file = e.target.files?.[0];
                             if (file) {
-                              setAnswers((prev) => ({ ...prev, [q.id]: file.name }));
+                              setFileAnswers((prev) => ({ ...prev, [q.id]: file }));
                             }
                           }}
                         />
@@ -353,7 +408,37 @@ export default function PositionApplyPage() {
               </Card>
             )}
 
-            <Button type="submit" className="w-full h-11" disabled={submitting}>
+            {!profileLoading && !isProfileComplete && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+                <p className="text-sm font-medium text-amber-300">
+                  Complete your profile before applying
+                </p>
+                <p className="text-xs text-amber-200/90 mt-1">
+                  Required fields: {missingFields.join(', ')}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() => navigate('/settings')}
+                >
+                  Go to Settings
+                </Button>
+              </div>
+            )}
+
+            {submitError && (
+              <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3">
+                <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive">{submitError}</p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full h-11"
+              disabled={submitting || profileLoading || !isProfileComplete}
+            >
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

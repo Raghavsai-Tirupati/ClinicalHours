@@ -85,19 +85,35 @@ Deno.serve(async (req) => {
       }
     }
 
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", auth.user.id)
+      .maybeSingle();
+
+    const profileName = profile?.full_name?.trim() || null;
+    const metaName = typeof auth.user.user_metadata?.full_name === "string"
+      ? auth.user.user_metadata.full_name.trim()
+      : null;
+    const applicantName = profileName || metaName || null;
+    const applicantEmail = auth.user.email?.trim().toLowerCase() || null;
+
     // Create application
     const { data: app, error: appErr } = await supabaseAdmin
       .from("student_applications")
       .insert({
         position_id,
         student_id: auth.user.id,
+        applicant_name: applicantName,
+        applicant_email: applicantEmail,
       })
       .select("*")
       .single();
 
     if (appErr) throw appErr;
 
-    // Insert answers if provided
+    // Insert answers if provided. If this fails, remove the created application
+    // so users do not end up with partial submissions.
     let createdAnswers: unknown[] = [];
     if (answers && Array.isArray(answers) && answers.length > 0) {
       const answerRows = answers.map((a: { question_id: string; answer_text?: string; answer_file_url?: string }) => ({
@@ -111,7 +127,11 @@ Deno.serve(async (req) => {
         .from("application_answers")
         .insert(answerRows)
         .select("*");
-      if (ansErr) throw ansErr;
+
+      if (ansErr) {
+        await supabaseAdmin.from("student_applications").delete().eq("id", app.id);
+        throw ansErr;
+      }
       createdAnswers = ansData || [];
     }
 
