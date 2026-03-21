@@ -13,6 +13,7 @@ import { getGuestSessionId } from "@/hooks/useAuth";
 import { shouldShowGuestTutorial } from "@/lib/dashboardTutorial";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,8 +41,11 @@ import {
   Quote,
   ArrowRight,
   Loader2,
+  Building2,
 } from "lucide-react";
 import HospitalLogo from "@/components/HospitalLogo";
+import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from "@/types/positions";
+import type { ApplicationStatus, PositionType } from "@/types/positions";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -91,6 +95,15 @@ interface ExperienceEntryRow {
   entry_date: string;
 }
 
+interface BcsClinicApplication {
+  id: string;
+  status: ApplicationStatus;
+  submitted_at: string;
+  position_title: string;
+  position_type: PositionType;
+  hospital_name: string;
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function daysUntil(dateStr: string): number {
@@ -114,6 +127,14 @@ const statusColors: Record<OpportunityStatus, string> = {
   Applied: "bg-blue-900/50 text-blue-300",
   Interviewing: "bg-amber-900/50 text-amber-300",
   Completed: "bg-emerald-900/50 text-emerald-300",
+};
+
+const applicationStatusColors: Record<ApplicationStatus, string> = {
+  new: "bg-blue-500/10 text-blue-300 border-blue-500/30",
+  under_review: "bg-amber-500/10 text-amber-300 border-amber-500/30",
+  accepted: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+  rejected: "bg-red-500/10 text-red-300 border-red-500/30",
+  waitlisted: "bg-purple-500/10 text-purple-300 border-purple-500/30",
 };
 
 const typeColors: Record<string, string> = {
@@ -338,6 +359,7 @@ const Dashboard = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dashboardTutorialComplete, setDashboardTutorialComplete] = useState(true);
+  const [bcsClinicApplications, setBcsClinicApplications] = useState<BcsClinicApplication[]>([]);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -388,7 +410,7 @@ const Dashboard = () => {
       const fetchStart = performance.now();
       setLoadingData(true);
       try {
-        const [profileRes, savedRes, entriesRes] = await Promise.all([
+        const [profileRes, savedRes, entriesRes, clinicAppsRes] = await Promise.all([
           supabase
             .from("profiles")
             .select("dashboard_tutorial_complete")
@@ -417,12 +439,26 @@ const Dashboard = () => {
             .select("id, opportunity_id, hours, moment, entry_date")
             .eq("user_id", user!.id)
             .order("entry_date", { ascending: false }),
+          supabase
+            .from("student_applications")
+            .select(`
+              id, status, submitted_at,
+              hospital_positions (
+                title, position_type, hospital_page_id,
+                hospital_pages:hospital_page_id (
+                  opportunities:hospital_id (name)
+                )
+              )
+            `)
+            .eq("student_id", user!.id)
+            .order("submitted_at", { ascending: false }),
         ]);
 
         setDashboardTutorialComplete(Boolean(profileRes.data?.dashboard_tutorial_complete));
 
         if (savedRes.error) throw savedRes.error;
         if (entriesRes.error) throw entriesRes.error;
+        if (clinicAppsRes.error) throw clinicAppsRes.error;
 
         const savedRows = ((savedRes.data || []) as unknown as Array<{
           id: string;
@@ -437,6 +473,31 @@ const Dashboard = () => {
           opportunities: Array.isArray(row.opportunities) ? row.opportunities[0] ?? null : row.opportunities,
         })) as SavedOpportunityRow[];
         const entries = (entriesRes.data || []) as ExperienceEntryRow[];
+        const clinicApplications = ((clinicAppsRes.data || []) as Record<string, unknown>[]).map((row) => {
+          const position = row.hospital_positions as Record<string, unknown> | null;
+          const page = position?.hospital_pages as Record<string, unknown> | null;
+          const opportunity = page?.opportunities as Record<string, unknown> | null;
+          return {
+            id: row.id as string,
+            status: (row.status || "new") as ApplicationStatus,
+            submitted_at: row.submitted_at as string,
+            position_title: (position?.title || "Unknown Position") as string,
+            position_type: (position?.position_type || "volunteer") as PositionType,
+            hospital_name: (opportunity?.name || "Unknown Hospital") as string,
+          };
+        });
+
+        const clinicNameMatches = (hospitalName: string) => {
+          const normalized = hospitalName.toLowerCase();
+          return (
+            normalized.includes("bcs free health clinic") ||
+            (normalized.includes("bcs") && normalized.includes("clinic"))
+          );
+        };
+
+        setBcsClinicApplications(
+          clinicApplications.filter((app) => clinicNameMatches(app.hospital_name))
+        );
 
         // Build aggregation maps keyed by opportunity_id
         const hoursMap: Record<string, number> = {};
@@ -700,6 +761,50 @@ const Dashboard = () => {
                 <StatCard icon={FileText} label="Experiences Recorded" value={reflectionCount} />
                 <StatCard icon={CalendarClock} label="Next Deadline" value={nextDeadline} />
               </div>
+
+              {/* Tracked Opportunities */}
+              <section className="mb-10">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-medium text-foreground">BCS Free Health Clinic Applications</h2>
+                  <Button asChild variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
+                    <Link to="/my-applications">
+                      View all applications <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+
+                {bcsClinicApplications.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-5 text-sm text-muted-foreground">
+                    No BCS Free Health Clinic applications yet.
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {bcsClinicApplications.map((app) => (
+                      <div key={app.id} className="rounded-lg border border-border bg-card p-4">
+                        <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+                          <Building2 className="h-3.5 w-3.5" />
+                          <span className="truncate">{app.hospital_name}</span>
+                        </div>
+                        <p className="font-medium text-foreground">{app.position_title}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {POSITION_TYPE_LABELS[app.position_type]}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${applicationStatusColors[app.status]}`}
+                          >
+                            {APPLICATION_STATUS_LABELS[app.status]}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            Applied {new Date(app.submitted_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
 
               {/* Tracked Opportunities */}
               <section className="mb-10">

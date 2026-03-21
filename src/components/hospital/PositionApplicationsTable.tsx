@@ -17,6 +17,15 @@ import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
 import { format } from 'date-fns';
 
+const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
+
+const normalizeDisplayName = (value: string | null | undefined): string | null => {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (PLACEHOLDER_NAME_REGEX.test(trimmed)) return null;
+  return trimmed;
+};
+
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   new: 'bg-blue-500/15 text-blue-700',
   under_review: 'bg-yellow-500/15 text-yellow-700',
@@ -39,6 +48,8 @@ export default function PositionApplicationsTable({ positionId }: Props) {
     setStatusFilter,
     searchTerm,
     setSearchTerm,
+    sortBy,
+    setSortBy,
     refetch,
   } = usePositionApplications(positionId);
 
@@ -76,6 +87,14 @@ export default function PositionApplicationsTable({ positionId }: Props) {
   }, [applications, selectedApplicationIds]);
 
   const selectedAllVisible = applications.length > 0 && applications.every((app) => selectedApplicationIds.includes(app.id));
+  const resumeFallbackUrl = useMemo(() => {
+    if (!selectedApp?.answers?.length) return null;
+    const resumeAnswer = selectedApp.answers.find((answer) => {
+      const label = answer.question?.question_text?.toLowerCase() || '';
+      return label.includes('resume') || label.includes('cv');
+    });
+    return resumeAnswer?.answer_file_url || null;
+  }, [selectedApp]);
 
   const isValidHttpsUrl = (value: string): boolean => {
     try {
@@ -146,7 +165,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
       const failed = data?.failed ?? 0;
       if (sent > 0) {
         toast.success(`Interview invites sent to ${sent} applicant${sent === 1 ? '' : 's'}`);
-      } else {
+      } else if (failed === 0) {
         toast.info('No invites were sent');
       }
       if (failed > 0) {
@@ -194,7 +213,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
       const failed = data?.failed ?? 0;
       if (sent > 0) {
         toast.success(`Email sent to ${sent} applicant${sent === 1 ? '' : 's'}`);
-      } else {
+      } else if (failed === 0) {
         toast.info('No emails were sent');
       }
       if (failed > 0) {
@@ -212,8 +231,8 @@ export default function PositionApplicationsTable({ positionId }: Props) {
     }
   };
   const getApplicantName = (app: StudentApplication) =>
-    app.applicant_name?.trim() ||
-    app.student_profile?.full_name?.trim() ||
+    normalizeDisplayName(app.applicant_name) ||
+    normalizeDisplayName(app.student_profile?.full_name) ||
     app.student_profile?.email?.split('@')[0] ||
     app.applicant_email?.split('@')[0] ||
     `Student ${app.student_id.slice(0, 8)}`;
@@ -295,7 +314,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
         </div>
 
         {/* Filters */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -319,7 +338,29 @@ export default function PositionApplicationsTable({ positionId }: Props) {
               ))}
             </SelectContent>
           </Select>
+          <Select
+            value={sortBy}
+            onValueChange={(value) => setSortBy(value as typeof sortBy)}
+          >
+            <SelectTrigger className="w-[220px] h-9">
+              <SelectValue placeholder="Sort applications" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="submitted_desc">Newest first</SelectItem>
+              <SelectItem value="submitted_asc">Oldest first</SelectItem>
+              <SelectItem value="gpa_desc">Highest GPA</SelectItem>
+              <SelectItem value="clinical_hours_desc">Most clinical hours</SelectItem>
+              <SelectItem value="experience_desc">Most relevant experience</SelectItem>
+              <SelectItem value="resume_readiness_desc">Strongest resume profile</SelectItem>
+              <SelectItem value="name_asc">Applicant name (A-Z)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+        {sortBy === 'resume_readiness_desc' && (
+          <p className="text-xs text-muted-foreground">
+            Resume profile ranking considers uploaded resumes, GPA, clinical hours, and experience depth from application responses.
+          </p>
+        )}
 
         {/* Table */}
         {loading ? (
@@ -375,6 +416,23 @@ export default function PositionApplicationsTable({ positionId }: Props) {
                             {app.student_profile.university}
                           </p>
                         )}
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {typeof app.student_profile?.gpa === 'number' && (
+                            <Badge variant="outline" className="text-[10px] py-0">
+                              GPA {app.student_profile.gpa.toFixed(2)}
+                            </Badge>
+                          )}
+                          {typeof app.student_profile?.clinical_hours === 'number' && (
+                            <Badge variant="outline" className="text-[10px] py-0">
+                              {app.student_profile.clinical_hours} clinical hrs
+                            </Badge>
+                          )}
+                          {app.student_profile?.resume_url && (
+                            <Badge variant="outline" className="text-[10px] py-0">
+                              Resume uploaded
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -538,9 +596,9 @@ export default function PositionApplicationsTable({ positionId }: Props) {
                         </>
                       )}
                     </div>
-                    {selectedApp.student_profile.resume_url && (
+                    {(selectedApp.student_profile.resume_url || resumeFallbackUrl) && (
                       <Button variant="outline" size="sm" asChild>
-                        <a href={selectedApp.student_profile.resume_url} target="_blank" rel="noopener noreferrer">
+                        <a href={selectedApp.student_profile.resume_url || resumeFallbackUrl || '#'} target="_blank" rel="noopener noreferrer">
                           View Resume
                         </a>
                       </Button>

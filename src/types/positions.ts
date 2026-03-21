@@ -55,6 +55,9 @@ export interface StudentApplication {
     graduation_year: number | null;
     phone: string | null;
     resume_url: string | null;
+    gpa?: number | null;
+    clinical_hours?: number | null;
+    research_experience?: string | null;
   };
   answers?: ApplicationAnswer[];
 }
@@ -64,6 +67,7 @@ export interface ApplicationAnswer {
   application_id: string;
   question_id: string;
   answer_text: string | null;
+  answer_options?: string[] | null;
   answer_file_url: string | null;
   created_at: string;
   // Joined
