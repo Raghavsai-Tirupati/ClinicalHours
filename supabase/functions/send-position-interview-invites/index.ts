@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, validateOrigin } from "../_shared/auth.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "ClinicalHours <help@clinicalhours.org>";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -215,7 +216,7 @@ const handler = async (req: Request): Promise<Response> => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "ClinicalHours <updates@clinicalhours.org>",
+            from: RESEND_FROM_EMAIL,
             to: [recipient.email],
             subject: selectedEmailType === "general"
               ? (subject as string).trim()
@@ -257,12 +258,14 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           failed++;
           const errorData = await emailResponse.json().catch(() => ({}));
+            console.error("Resend API error for", recipient.email, JSON.stringify(errorData));
           if (errors.length < 5) {
-            errors.push(`${recipient.email}: ${errorData?.message ?? "Unknown error"}`);
+              errors.push(`${recipient.email}: ${errorData?.message ?? errorData?.error ?? JSON.stringify(errorData)}`);
           }
         }
       } catch {
         failed++;
+          console.error("Network error sending to", recipient.email);
         if (errors.length < 5) {
           errors.push(`${recipient.email}: Failed to send`);
         }
