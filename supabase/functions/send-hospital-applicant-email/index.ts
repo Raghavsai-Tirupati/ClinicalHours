@@ -8,9 +8,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 
 interface SendHospitalApplicantEmailRequest {
   accountId: string;
-  subject: string;
-  body: string;
+  subject?: string;
+  body?: string;
   applicationIds?: string[];
+  emailType?: "general" | "interview_invite";
+  customMessage?: string;
 }
 
 interface Recipient {
@@ -80,14 +82,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { accountId, subject, body, applicationIds } = payload;
+    const { accountId, subject, body, applicationIds, emailType = "general", customMessage } = payload;
     if (!accountId) {
       return new Response(
         JSON.stringify({ success: false, error: "accountId is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
-    if (!subject?.trim() || !body?.trim()) {
+    if (emailType === "general" && (!subject?.trim() || !body?.trim())) {
       return new Response(
         JSON.stringify({ success: false, error: "subject and body are required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
@@ -159,9 +161,36 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: accountData, error: accountError } = await supabaseAdmin
       .from("hospital_accounts")
-      .select("hospital_id")
+      .select("hospital_id, interview_booking_url")
       .eq("id", accountId)
       .maybeSingle();
+    const interviewBookingUrl = accountData.interview_booking_url?.trim() ?? "";
+    if (emailType === "interview_invite" && !interviewBookingUrl) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Interview booking link is not configured" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+    if (emailType === "interview_invite") {
+      const { data: hospitalData, error: hospitalError } = await supabaseAdmin
+        .from("hospitals")
+        .select("name")
+        .eq("id", accountData.hospital_id)
+        .maybeSingle();
+      if (hospitalError || !hospitalData?.name) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Unable to validate hospital for interview invites" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+        );
+      }
+      if (!hospitalData.name.toLowerCase().includes("bcs free health clinic")) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Interview invite flow is currently enabled only for BCS Free Health Clinic" }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
+        );
+      }
+    }
+
     if (accountError || !accountData?.hospital_id) {
       throw new Error("Failed to resolve hospital account");
     }
@@ -224,23 +253,60 @@ const handler = async (req: Request): Promise<Response> => {
               Authorization: `Bearer ${RESEND_API_KEY}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              from: "ClinicalHours <updates@clinicalhours.org>",
-              to: [recipient.email],
-              subject,
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
-                  <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
-                  <div style="line-height: 1.6; color: #333;">
-                    ${formatBodyHtml(body)}
-                  </div>
-                  <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
-                  <p style="font-size: 12px; color: #666;">
-                    Sent from ClinicalHours on behalf of your hospital application team.
-                  </p>
-                </div>
-              `,
-            }),
+            body: JSON.stringify(
+              emailType === "interview_invite"
+                ? {
+                    from: "ClinicalHours <updates@clinicalhours.org>",
+                    to: [recipient.email],
+                    subject: "Interview invitation - schedule your slot",
+                    html: `
+                      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+                        <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
+                        <p style="line-height: 1.6; color: #333;">
+                          You have been invited to schedule an interview with our clinic team.
+                        </p>
+                        ${
+                          customMessage?.trim()
+                            ? `<p style="line-height: 1.6; color: #333;">${formatBodyHtml(customMessage.trim())}</p>`
+                            : ""
+                        }
+                        <p style="line-height: 1.6; color: #333;">
+                          Please use the scheduling link below:
+                        </p>
+                        <p style="margin: 16px 0;">
+                          <a href="${escapeHtml(interviewBookingUrl)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;">
+                            Schedule Interview
+                          </a>
+                        </p>
+                        <p style="line-height: 1.6; color: #333;">
+                          If the button does not work, copy this URL into your browser:<br/>
+                          <span style="font-size: 12px; color: #555;">${escapeHtml(interviewBookingUrl)}</span>
+                        </p>
+                        <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
+                        <p style="font-size: 12px; color: #666;">
+                          Sent from ClinicalHours on behalf of your hospital application team.
+                        </p>
+                      </div>
+                    `,
+                  }
+                : {
+                    from: "ClinicalHours <updates@clinicalhours.org>",
+                    to: [recipient.email],
+                    subject: subject,
+                    html: `
+                      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+                        <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
+                        <div style="line-height: 1.6; color: #333;">
+                          ${formatBodyHtml(body ?? "")}
+                        </div>
+                        <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
+                        <p style="font-size: 12px; color: #666;">
+                          Sent from ClinicalHours on behalf of your hospital application team.
+                        </p>
+                      </div>
+                    `,
+                  },
+            ),
           });
 
           if (emailResponse.ok) {

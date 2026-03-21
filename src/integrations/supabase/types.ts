@@ -318,6 +318,7 @@ export type Database = {
           description: string | null
           hospital_id: string
           id: string
+          interview_booking_url: string | null
           reviewed_at: string | null
           reviewed_by: string | null
         }
@@ -330,6 +331,7 @@ export type Database = {
           description?: string | null
           hospital_id: string
           id?: string
+          interview_booking_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
         }
@@ -342,6 +344,7 @@ export type Database = {
           description?: string | null
           hospital_id?: string
           id?: string
+          interview_booking_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
         }

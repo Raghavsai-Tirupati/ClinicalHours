@@ -99,6 +99,25 @@ const Auth = () => {
   const [emailPreFilled, setEmailPreFilled] = useState(false);
   const debouncedHospitalSearch = useDebounce(hospitalSearchQuery, 300);
 
+  useEffect(() => {
+    // Warm likely post-auth routes to reduce redirect flicker.
+    const preload = () => {
+      void import("./Dashboard");
+      void import("./HospitalDashboard");
+      void import("./PendingApproval");
+      void import("./CheckEmail");
+    };
+
+    const idleCallback = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    if (idleCallback) {
+      idleCallback(preload);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(preload, 150);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
   const handleGuestMode = () => {
     trackEvent("page_view", { action: "guest_mode_entered" });
     enterGuestMode();

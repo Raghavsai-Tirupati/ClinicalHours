@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { logAuthEvent } from "@/lib/auditLogger";
@@ -109,7 +109,20 @@ export function setRememberMePreference(remember: boolean): void {
   }
 }
 
-export const useAuth = () => {
+interface AuthContextValue {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  isReady: boolean;
+  signOut: () => Promise<void>;
+  isGuest: boolean;
+  enterGuestMode: () => Promise<void>;
+  exitGuestMode: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function useProvideAuth(): AuthContextValue {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -425,6 +438,19 @@ export const useAuth = () => {
   };
 
   return { user, session, loading, isReady, signOut, isGuest, enterGuestMode, exitGuestMode };
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const value = useProvideAuth();
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export const useAuth = (): AuthContextValue => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
 };
 
 // Export function to get CSRF token (for use in API requests)

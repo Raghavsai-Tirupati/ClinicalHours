@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
@@ -132,8 +131,6 @@ const SORT_LABELS: Record<SortKey, string> = {
 type Tab = "overview" | "requirements" | "applications";
 
 export default function HospitalDashboard() {
-  const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
   const { member, loading: memberLoading } = useHospitalMember();
 
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -167,23 +164,18 @@ export default function HospitalDashboard() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [emailSending, setEmailSending] = useState(false);
+  const [interviewBookingUrl, setInterviewBookingUrl] = useState("");
+  const [interviewBookingInput, setInterviewBookingInput] = useState("");
+  const [bookingSaving, setBookingSaving] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/auth");
-      return;
-    }
-    if (!memberLoading && !member) {
-      navigate("/dashboard");
-      return;
-    }
-  }, [authLoading, user, memberLoading, member, navigate]);
-
-  useEffect(() => {
-    if (user && member) {
+    if (member) {
       fetchData();
     }
-  }, [user, member]);
+  }, [member]);
 
   useEffect(() => {
     if (!selectedHaApp || selectedHaApp._source !== "hospital") {
@@ -224,103 +216,93 @@ export default function HospitalDashboard() {
         .eq("hospital_id", member.hospitalId)
         .order("created_at", { ascending: false });
 
-      if (oppsError) {
+      if (oppsError || !opps) {
         console.error("Error fetching opportunities:", oppsError);
         setOpportunities([]);
-      } else if (opps && opps.length > 0) {
-        const oppIds = opps.map((o) => o.id);
-        const { data: apps } = await supabase
-          .from("applications")
-          .select("opportunity_id, status")
-          .in("opportunity_id", oppIds);
+        setApplications([]);
+        setQuestions([]);
+        return;
+      }
 
-        const appCounts: Record<string, { total: number; new: number }> = {};
-        (apps || []).forEach((app: { opportunity_id: string; status: string }) => {
-          if (!appCounts[app.opportunity_id]) appCounts[app.opportunity_id] = { total: 0, new: 0 };
-          appCounts[app.opportunity_id].total++;
-          if (app.status === "new") appCounts[app.opportunity_id].new++;
-        });
-        const { data: haCounts } = await supabase
-          .from("hospital_applications")
-          .select("opportunity_id, status")
-          .eq("account_id", member.accountId)
-          .not("opportunity_id", "is", null);
-        (haCounts || []).forEach((ha: { opportunity_id: string; status: string }) => {
-          if (!appCounts[ha.opportunity_id]) appCounts[ha.opportunity_id] = { total: 0, new: 0 };
-          appCounts[ha.opportunity_id].total++;
-          if (ha.status === "submitted") appCounts[ha.opportunity_id].new++;
-        });
-
-        setOpportunities(
-          opps.map((opp) => ({
-            ...opp,
-            type: opp.type || "hospital",
-            slug: opp.slug,
-            application_count: appCounts[opp.id]?.total || 0,
-            new_application_count: appCounts[opp.id]?.new || 0,
-          }))
-        );
-      } else {
+      if (opps.length === 0) {
         setOpportunities([]);
+        setApplications([]);
+        setQuestions([]);
+        return;
       }
 
       const legacyApps: ApplicationWithGpa[] = [];
       const haApps: ApplicationWithGpa[] = [];
+      const oppIds = opps.map((o) => o.id);
 
-      if (opps && opps.length > 0) {
-        const oppIds = opps.map((o) => o.id);
-        const { data: allApps } = await supabase
+      const [appsRes, hospAppsRes, questionsRes, accountRes] = await Promise.all([
+        supabase
           .from("applications")
           .select("*")
           .in("opportunity_id", oppIds)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("hospital_applications")
+          .select("id, account_id, applicant_name, applicant_email, opportunity_id, status, submitted_at, student_id, interview_requested_at, interview_confirmed_at")
+          .eq("account_id", member.accountId)
+          .not("opportunity_id", "is", null)
+          .order("submitted_at", { ascending: false }),
+        supabase
+          .from("hospital_application_questions")
+          .select("id, question_text, type, required, order_index")
+          .eq("account_id", member.accountId)
+          .order("order_index"),
+        supabase
+          .from("hospital_accounts")
+          .select("interview_booking_url")
+          .eq("id", member.accountId)
+          .maybeSingle(),
+      ]);
 
-        const appsList = (allApps || []) as Application[];
-        const studentIds = [...new Set(appsList.map((a) => a.student_id).filter(Boolean))] as string[];
+      const appsList = (appsRes.data || []) as Application[];
+      const hospApps = hospAppsRes.data || [];
+      const questions = (questionsRes.data || []) as AppQuestion[];
+      const bookingUrl = accountRes.data?.interview_booking_url?.trim() ?? "";
 
-        const gpaMap: Record<string, number | null> = {};
-        if (studentIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, gpa")
-            .in("id", studentIds);
-          if (profiles) {
-            profiles.forEach((p: { id: string; gpa: number | null }) => {
-              gpaMap[p.id] = p.gpa ?? null;
-            });
-          }
-        }
+      const allStudentIds = [
+        ...new Set(
+          [
+            ...appsList.map((a) => a.student_id).filter(Boolean),
+            ...(hospApps as { student_id: string | null }[]).map((a) => a.student_id).filter(Boolean),
+          ]
+        ),
+      ] as string[];
 
-        appsList.forEach((a) => {
-          legacyApps.push({
-            ...a,
-            gpa: a.student_id ? gpaMap[a.student_id] ?? null : null,
-            _source: "legacy" as const,
+      const profileMap: Record<string, ProfileSnapshot> = {};
+      if (allStudentIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, gpa, full_name")
+          .in("id", allStudentIds);
+        if (profiles) {
+          (profiles as ProfileSnapshot[]).forEach((p) => {
+            profileMap[p.id] = p;
           });
-        });
+        }
       }
 
-      const { data: hospApps } = await supabase
-        .from("hospital_applications")
-        .select("id, account_id, applicant_name, applicant_email, opportunity_id, status, submitted_at, student_id, interview_requested_at, interview_confirmed_at")
-        .eq("account_id", member.accountId)
-        .order("submitted_at", { ascending: false });
+      const appCounts: Record<string, { total: number; new: number }> = {};
+      const bumpCount = (opportunityId: string, isNew: boolean) => {
+        if (!appCounts[opportunityId]) appCounts[opportunityId] = { total: 0, new: 0 };
+        appCounts[opportunityId].total++;
+        if (isNew) appCounts[opportunityId].new++;
+      };
+
+      appsList.forEach((app) => {
+        bumpCount(app.opportunity_id, app.status === "new");
+        legacyApps.push({
+          ...app,
+          gpa: app.student_id ? profileMap[app.student_id]?.gpa ?? null : null,
+          _source: "legacy" as const,
+        });
+      });
 
       if (hospApps && hospApps.length > 0) {
-        const haStudentIds = [...new Set((hospApps as { student_id: string | null }[]).map((a) => a.student_id).filter(Boolean))] as string[];
-        const haProfileMap: Record<string, ProfileSnapshot> = {};
-        if (haStudentIds.length > 0) {
-          const { data: haProfiles } = await supabase
-            .from("profiles")
-            .select("id, gpa, full_name")
-            .in("id", haStudentIds);
-          if (haProfiles) {
-            (haProfiles as ProfileSnapshot[]).forEach((p) => {
-              haProfileMap[p.id] = p;
-            });
-          }
-        }
-
         const statusMap: Record<string, Application["status"]> = {
           submitted: "new",
           in_review: "under_review",
@@ -340,7 +322,10 @@ export default function HospitalDashboard() {
             interview_requested_at?: string | null;
             interview_confirmed_at?: string | null;
           };
-          const profile = h.student_id ? haProfileMap[h.student_id] : undefined;
+          if (h.opportunity_id) {
+            bumpCount(h.opportunity_id, h.status === "submitted");
+          }
+          const profile = h.student_id ? profileMap[h.student_id] : undefined;
           const resolvedName =
             h.applicant_name?.trim() ||
             profile?.full_name?.trim() ||
@@ -365,15 +350,19 @@ export default function HospitalDashboard() {
         });
       }
 
+      setOpportunities(
+        opps.map((opp) => ({
+          ...opp,
+          type: opp.type || "hospital",
+          slug: opp.slug,
+          application_count: appCounts[opp.id]?.total || 0,
+          new_application_count: appCounts[opp.id]?.new || 0,
+        }))
+      );
       setApplications([...legacyApps, ...haApps]);
-
-      const { data: qs } = await supabase
-        .from("hospital_application_questions")
-        .select("id, question_text, type, required, order_index")
-        .eq("account_id", member.accountId)
-        .order("order_index");
-
-      setQuestions((qs as AppQuestion[]) || []);
+      setQuestions(questions);
+      setInterviewBookingUrl(bookingUrl);
+      setInterviewBookingInput(bookingUrl);
     } catch (err) {
       console.error("Error:", err);
     } finally {
@@ -550,6 +539,7 @@ export default function HospitalDashboard() {
 
   const newCount = applications.filter((a) => a.status === "new").length;
   const totalApplications = opportunities.reduce((sum, o) => sum + o.application_count, 0);
+  const isBcsFreeHealthClinic = (member?.hospitalName ?? "").toLowerCase().includes("bcs free health clinic");
 
   const selectableAppIds = useMemo(
     () => applications.filter((a) => a.student_email && a.student_email !== "—").map((a) => a.id),
@@ -661,13 +651,79 @@ export default function HospitalDashboard() {
     }
   }
 
+  function isValidHttpsUrl(value: string) {
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  async function handleSaveInterviewBookingUrl() {
+    if (!member) return;
+    const trimmed = interviewBookingInput.trim();
+    if (trimmed.length > 0 && !isValidHttpsUrl(trimmed)) {
+      toast.error("Please enter a valid HTTPS booking URL");
+      return;
+    }
+    setBookingSaving(true);
+    try {
+      const { error } = await supabase
+        .from("hospital_accounts")
+        .update({ interview_booking_url: trimmed || null })
+        .eq("id", member.accountId);
+      if (error) throw error;
+      setInterviewBookingUrl(trimmed);
+      toast.success(trimmed ? "Interview booking link saved" : "Interview booking link cleared");
+    } catch (err) {
+      console.error("Save interview booking URL error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to save booking link");
+    } finally {
+      setBookingSaving(false);
+    }
+  }
+
+  async function handleSendInterviewInvites() {
+    if (!member) return;
+    if (!interviewBookingUrl) {
+      toast.error("Add your booking link before sending invites");
+      return;
+    }
+    if (selectedApplicationIds.length === 0) {
+      toast.error("Select at least one applicant");
+      return;
+    }
+    setInviteSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-hospital-applicant-email", {
+        body: {
+          accountId: member.accountId,
+          applicationIds: selectedApplicationIds,
+          emailType: "interview_invite",
+          customMessage: inviteMessage.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error ?? "Failed to send interview invites");
+      toast.success(`Interview invites sent to ${data.sent} applicant${data.sent === 1 ? "" : "s"}`);
+      setInviteDialogOpen(false);
+      setInviteMessage("");
+    } catch (err) {
+      console.error("Send interview invites error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to send interview invites");
+    } finally {
+      setInviteSending(false);
+    }
+  }
+
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "overview", label: "Overview", icon: Briefcase },
     { id: "requirements", label: "Application Requirements", icon: Settings },
     { id: "applications", label: "Student Applications", icon: ListChecks },
   ];
 
-  if (authLoading || memberLoading || loading) {
+  if (memberLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -923,6 +979,36 @@ export default function HospitalDashboard() {
           {/* Student Applications */}
           {activeTab === "applications" && (
             <>
+              {isBcsFreeHealthClinic && (
+                <div className="bg-card border border-border rounded-xl p-4 mb-4">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Interview Settings (BCS pilot)</h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Add your clinic's Calendly (or similar) booking URL. Selected applicants can receive interview invite emails with this link.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      value={interviewBookingInput}
+                      onChange={(e) => setInterviewBookingInput(e.target.value)}
+                      placeholder="https://calendly.com/your-clinic/interview"
+                      className="flex-1"
+                    />
+                    <Button onClick={handleSaveInterviewBookingUrl} disabled={bookingSaving}>
+                      {bookingSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Save booking link
+                    </Button>
+                  </div>
+                  {!interviewBookingUrl ? (
+                    <p className="text-xs text-amber-600 mt-2">
+                      Add your scheduling link first to enable interview invites.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Current link: <span className="font-mono">{interviewBookingUrl}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="bg-card border border-border rounded-xl p-4 mb-4">
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between flex-wrap">
@@ -984,6 +1070,17 @@ export default function HospitalDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 border-l border-border pl-3">
+                      {isBcsFreeHealthClinic && (
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs gap-1.5"
+                          onClick={() => setInviteDialogOpen(true)}
+                          disabled={selectedApplicationIds.length === 0 || !interviewBookingUrl}
+                        >
+                          <CalendarCheck className="h-3.5 w-3.5" />
+                          Send interview invite
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         className="h-8 text-xs gap-1.5"
@@ -1283,6 +1380,43 @@ export default function HospitalDashboard() {
             <Button onClick={handleSendApplicantsEmail} disabled={emailSending || recipientCount === 0}>
               {emailSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
               Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={inviteDialogOpen && isBcsFreeHealthClinic} onOpenChange={setInviteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Interview Invites</DialogTitle>
+            <DialogDescription>
+              Invite selected applicants to schedule using your saved booking link.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Selected applicants: <span className="font-semibold text-foreground">{selectedApplicationIds.length}</span>
+            </p>
+            <p className="text-xs text-muted-foreground break-all">
+              Booking link: {interviewBookingUrl || "Not configured"}
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Optional note to applicants</label>
+              <Textarea
+                value={inviteMessage}
+                onChange={(e) => setInviteMessage(e.target.value)}
+                rows={5}
+                placeholder="Add any instructions before they schedule..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteDialogOpen(false)} disabled={inviteSending}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendInterviewInvites} disabled={inviteSending || !interviewBookingUrl || selectedApplicationIds.length === 0}>
+              {inviteSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CalendarCheck className="h-4 w-4 mr-2" />}
+              Send Invites
             </Button>
           </DialogFooter>
         </DialogContent>

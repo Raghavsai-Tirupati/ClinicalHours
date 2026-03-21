@@ -104,6 +104,13 @@ export default function HospitalAdmin() {
   async function fetchData(showRefreshSpinner = false) {
     if (showRefreshSpinner) setRefreshing(true);
 
+    if (!member?.hospitalId) {
+      setAccessDenied(true);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     const { data: opp, error: oppError } = await supabase
       .from("opportunities")
       .select("id, name, location")
@@ -118,13 +125,6 @@ export default function HospitalAdmin() {
       return;
     }
     setOpportunity(opp as Opportunity);
-
-    if (!member?.hospitalId) {
-      setAccessDenied(true);
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
 
     const { data: apps, error: appsError } = await supabase.rpc("hospital_list_applications", {
       p_hospital_id: member.hospitalId,
@@ -158,7 +158,7 @@ export default function HospitalAdmin() {
     if (memberLoading) return;
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, memberLoading, member?.hospitalId, sortKey, sortDir]);
+  }, [slug, memberLoading, member?.hospitalId]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
