@@ -1077,7 +1077,7 @@ export default function HospitalDashboard() {
                           Send interview invite
                         </Button>
                       )}
-                        size="sm"
+                      <Button
                         className="h-8 text-xs gap-1.5"
                         onClick={() => {
                           setEmailTarget(selectedApplicationIds.length > 0 ? "selected" : "filtered");
