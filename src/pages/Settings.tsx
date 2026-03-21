@@ -206,7 +206,7 @@ const Settings = () => {
       if (error) throw error;
 
       if (data) {
-        setProfile({
+        const loaded = {
           full_name: data.full_name || "",
           city: data.city || "",
           state: data.state || "",
@@ -223,14 +223,15 @@ const Settings = () => {
           linkedin_url: data.linkedin_url || "",
           resume_url: data.resume_url || "",
           email_opt_in: data.email_opt_in || false,
-        });
+        };
+        setProfile(loaded);
+        // Sync auto-save baseline to this snapshot (avoid stale markAsSaved() closure from setTimeout).
+        markAsSaved(loaded);
 
         if (data.resume_url) {
           const signedUrl = await getSignedResumeUrl(data.resume_url);
           setResumeSignedUrl(signedUrl);
         }
-
-        setTimeout(() => markAsSaved(), 100);
       }
     } catch (error: unknown) {
       logger.error("Error loading profile", error);
@@ -361,7 +362,7 @@ const Settings = () => {
       );
       logProfileUpdate(updatedFields);
       clearSavedData();
-      markAsSaved();
+      markAsSaved(profile);
       toast.success("Profile updated successfully!");
     } catch (error: unknown) {
       logger.error("Error updating profile", error);

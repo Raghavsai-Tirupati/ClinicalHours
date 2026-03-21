@@ -49,10 +49,19 @@ export function useAutoSaveProfile(
   const lastSavedDataRef = useRef<string>("");
   const isInitialMount = useRef(true);
   const isSavingRef = useRef(false);
+  const profileRef = useRef(profile);
+  const skippedWhileSavingRef = useRef(false);
+
+  profileRef.current = profile;
 
   const saveToDatabase = useCallback(async (data: ProfileData) => {
-    if (!userId || isSavingRef.current) return;
-    
+    if (!userId) return;
+
+    if (isSavingRef.current) {
+      skippedWhileSavingRef.current = true;
+      return;
+    }
+
     isSavingRef.current = true;
     setStatus("saving");
 
@@ -108,6 +117,15 @@ export function useAutoSaveProfile(
     } finally {
       isSavingRef.current = false;
     }
+
+    // A debounced save may have been skipped while the previous upsert was in flight.
+    if (skippedWhileSavingRef.current && userId) {
+      skippedWhileSavingRef.current = false;
+      const latest = profileRef.current;
+      if (JSON.stringify(latest) !== lastSavedDataRef.current) {
+        void saveToDatabase(latest);
+      }
+    }
   }, [userId]);
 
   useEffect(() => {
@@ -156,9 +174,13 @@ export function useAutoSaveProfile(
     await saveToDatabase(profile);
   }, [profile, saveToDatabase]);
 
-  // Mark current data as "saved" (useful after loading from DB)
-  const markAsSaved = useCallback(() => {
-    lastSavedDataRef.current = JSON.stringify(profile);
+  /**
+   * Mark data as synced with the server. Pass `snapshot` after loading from DB so
+   * this is not tied to a stale React closure (e.g. async load finishing before state commits).
+   */
+  const markAsSaved = useCallback((snapshot?: ProfileData) => {
+    const source = snapshot ?? profile;
+    lastSavedDataRef.current = JSON.stringify(source);
     isInitialMount.current = false;
     setStatus("idle");
   }, [profile]);
