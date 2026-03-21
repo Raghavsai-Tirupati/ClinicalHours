@@ -130,7 +130,7 @@ const Settings = () => {
   const isProfileComplete = completeness.percentage === 100;
 
   const { loadSavedData, clearSavedData } = useAutoSave(profile, "profile-form-draft", true);
-  const { status: autoSaveStatus, saveNow, markAsSaved } = useAutoSaveProfile(profile, {
+  const { status: autoSaveStatus, markAsSaved } = useAutoSaveProfile(profile, {
     userId: user?.id,
     enabled: !!user?.id,
     debounceMs: 2000,
@@ -290,45 +290,37 @@ const Settings = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const saveProfile = useCallback(async (): Promise<boolean> => {
+    if (!user?.id) {
+      toast.error("You must be signed in to update your profile");
+      return false;
+    }
+
+    const phoneValidation = validatePhoneNumber(profile.phone);
+    if (!phoneValidation.valid) {
+      toast.error(phoneValidation.error || "Invalid phone number");
+      return false;
+    }
+
+    const gpaValidation = validateGPA(profile.gpa);
+    if (!gpaValidation.valid) {
+      toast.error(gpaValidation.error || "Invalid GPA");
+      return false;
+    }
+
+    const yearValidation = validateGraduationYear(profile.graduation_year);
+    if (!yearValidation.valid) {
+      toast.error(yearValidation.error || "Invalid graduation year");
+      return false;
+    }
+
+    const linkedInValidation = validateLinkedInURL(profile.linkedin_url);
+    if (!linkedInValidation.valid) {
+      toast.error(linkedInValidation.error || "Invalid LinkedIn URL");
+      return false;
+    }
 
     try {
-      if (!user?.id) {
-        toast.error("You must be signed in to update your profile");
-        setLoading(false);
-        return;
-      }
-
-      const phoneValidation = validatePhoneNumber(profile.phone);
-      if (!phoneValidation.valid) {
-        toast.error(phoneValidation.error || "Invalid phone number");
-        setLoading(false);
-        return;
-      }
-
-      const gpaValidation = validateGPA(profile.gpa);
-      if (!gpaValidation.valid) {
-        toast.error(gpaValidation.error || "Invalid GPA");
-        setLoading(false);
-        return;
-      }
-
-      const yearValidation = validateGraduationYear(profile.graduation_year);
-      if (!yearValidation.valid) {
-        toast.error(yearValidation.error || "Invalid graduation year");
-        setLoading(false);
-        return;
-      }
-
-      const linkedInValidation = validateLinkedInURL(profile.linkedin_url);
-      if (!linkedInValidation.valid) {
-        toast.error(linkedInValidation.error || "Invalid LinkedIn URL");
-        setLoading(false);
-        return;
-      }
-
       const sanitizedData = sanitizeProfileData(profile);
 
       const { error } = await supabase.from("profiles").upsert({
@@ -363,10 +355,32 @@ const Settings = () => {
       logProfileUpdate(updatedFields);
       clearSavedData();
       markAsSaved(profile);
-      toast.success("Profile updated successfully!");
+      return true;
     } catch (error: unknown) {
       logger.error("Error updating profile", error);
       toast.error(sanitizeErrorMessage(error) || "Failed to update profile. Please try again.");
+      return false;
+    }
+  }, [user?.id, profile, markAsSaved, clearSavedData]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (await saveProfile()) {
+        toast.success("Profile saved successfully.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfileClick = async () => {
+    setLoading(true);
+    try {
+      if (await saveProfile()) {
+        toast.success("Profile saved successfully.");
+      }
     } finally {
       setLoading(false);
     }
@@ -662,8 +676,18 @@ const Settings = () => {
                   />
                 </div>
 
-                {/* Auto-save status */}
-                <div className="flex items-center justify-end gap-2 text-sm">
+                {/* Manual save + auto-save status */}
+                <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSaveProfileClick}
+                    disabled={loading || !user?.id}
+                    className="gap-1.5"
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                    Save profile
+                  </Button>
                   {autoSaveStatus === "saving" && (
                     <span className="flex items-center gap-1.5 text-muted-foreground animate-pulse">
                       <Cloud className="h-4 w-4" />
@@ -702,7 +726,8 @@ const Settings = () => {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Basic Information</h3>
                     <p className="text-xs text-muted-foreground -mt-2">
-                      Fields marked with <span className="text-destructive">*</span> are required. Changes are saved automatically.
+                      Fields marked with <span className="text-destructive">*</span> are required. Click{" "}
+                      <span className="font-medium text-foreground">Save profile</span> to save your changes (recommended). Auto-save may also run after you stop typing.
                     </p>
 
                     <div className="space-y-2">
