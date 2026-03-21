@@ -803,6 +803,19 @@ export default function HospitalDashboard() {
                 </div>
               </div>
 
+              {/* Tip callout */}
+              {totalApplications > 0 && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 flex items-start gap-3">
+                  <Mail className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Email &amp; invite your applicants</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Go to the <button onClick={() => setActiveTab("applications")} className="underline text-primary hover:text-primary/80">Student Applications</button> tab to select applicants, send bulk emails{isBcsPilot ? ", or send interview invites with your Calendly link" : ""}.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {opportunities.length === 0 ? (
                 <div className="bg-card border border-border rounded-xl p-12 text-center">
                   <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
