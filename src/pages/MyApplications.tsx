@@ -11,17 +11,21 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Calendar,
+  ChevronDown,
+  ChevronUp,
   Clock,
-  Loader2,
+  ExternalLink,
   FileText,
   CalendarPlus,
   CheckCircle2,
   AlertCircle,
   Building2,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from "@/types/positions";
-import type { PositionType, ApplicationStatus } from "@/types/positions";
+import type { PositionType, ApplicationStatus, QuestionType } from "@/types/positions";
 
 interface ApplicationWithOpp {
   id: string;
@@ -43,6 +47,19 @@ interface InterviewSlot {
   preference_rank: number;
 }
 
+interface SubmittedAnswer {
+  id: string;
+  question_id: string;
+  answer_text: string | null;
+  answer_options: string[] | null;
+  answer_file_url: string | null;
+  question: {
+    question_text: string;
+    question_type: QuestionType;
+    display_order: number;
+  } | null;
+}
+
 interface PositionApplication {
   id: string;
   position_id: string;
@@ -52,6 +69,7 @@ interface PositionApplication {
   position_title: string;
   position_type: PositionType;
   hospital_name: string;
+  answers: SubmittedAnswer[];
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -76,6 +94,7 @@ export default function MyApplications() {
   const [positionApps, setPositionApps] = useState<PositionApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<ApplicationWithOpp | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [slots, setSlots] = useState<InterviewSlot[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -145,6 +164,12 @@ export default function MyApplications() {
               hospital_id,
               opportunities:hospital_id (name)
             )
+          ),
+          application_answers (
+            id, question_id, answer_text, answer_options, answer_file_url,
+            question:position_questions (
+              question_text, question_type, display_order
+            )
           )
         `)
         .eq("student_id", user.id)
@@ -156,6 +181,27 @@ export default function MyApplications() {
         const pos = row.hospital_positions as Record<string, unknown> | null;
         const page = pos?.hospital_pages as Record<string, unknown> | null;
         const opp = page?.opportunities as Record<string, unknown> | null;
+        const rawAnswers = (row.application_answers as Record<string, unknown>[] | null) ?? [];
+        const answers: SubmittedAnswer[] = rawAnswers
+          .map((a) => {
+            const q = Array.isArray(a.question) ? a.question[0] : a.question;
+            return {
+              id: a.id as string,
+              question_id: a.question_id as string,
+              answer_text: (a.answer_text as string | null) ?? null,
+              answer_options: (a.answer_options as string[] | null) ?? null,
+              answer_file_url: (a.answer_file_url as string | null) ?? null,
+              question: q
+                ? {
+                    question_text: q.question_text as string,
+                    question_type: q.question_type as QuestionType,
+                    display_order: (q.display_order as number) ?? 0,
+                  }
+                : null,
+            };
+          })
+          .sort((a, b) => (a.question?.display_order ?? 0) - (b.question?.display_order ?? 0));
+
         return {
           id: row.id as string,
           position_id: row.position_id as string,
@@ -165,6 +211,7 @@ export default function MyApplications() {
           position_title: (pos?.title || "Unknown Position") as string,
           position_type: (pos?.position_type || "volunteer") as PositionType,
           hospital_name: (opp?.name || "Unknown Hospital") as string,
+          answers,
         };
       });
       setPositionApps(mapped);
@@ -181,6 +228,61 @@ export default function MyApplications() {
       .eq("application_id", applicationId)
       .order("preference_rank");
     setSlots((data as InterviewSlot[]) || []);
+  }
+
+  function toggleExpand(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function renderAnswerValue(ans: SubmittedAnswer) {
+    if (ans.answer_file_url) {
+      return (
+        <a
+          href={ans.answer_file_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm text-primary underline underline-offset-2"
+        >
+          {ans.answer_text?.trim() || "View uploaded file"}
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      );
+    }
+    if (ans.answer_options && ans.answer_options.length > 0) {
+      return (
+        <div className="space-y-1 mt-1">
+          {ans.answer_options.map((opt, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm">
+              <CheckSquare className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span>{opt}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (ans.question?.question_type === "yes_no") {
+      const val = ans.answer_text?.toLowerCase();
+      return (
+        <div className="flex items-center gap-2 mt-1">
+          {val === "yes" ? (
+            <CheckSquare className="h-4 w-4 text-green-400" />
+          ) : (
+            <Square className="h-4 w-4 text-muted-foreground" />
+          )}
+          <span className="text-sm capitalize">{ans.answer_text || "—"}</span>
+        </div>
+      );
+    }
+    return (
+      <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed mt-1">
+        {ans.answer_text?.trim() || <span className="text-muted-foreground italic">No answer provided</span>}
+      </p>
+    );
   }
 
   function openSchedule(app: ApplicationWithOpp) {
@@ -263,43 +365,108 @@ export default function MyApplications() {
             <div className="mb-8">
               <h2 className="text-lg font-semibold text-foreground mb-3">Position Applications</h2>
               <div className="space-y-3">
-                {positionApps.map((app) => (
-                  <div
-                    key={app.id}
-                    className="bg-card border border-border rounded-xl p-4"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="text-sm text-muted-foreground truncate">
-                            {app.hospital_name}
-                          </span>
+                {positionApps.map((app) => {
+                  const isExpanded = expandedIds.has(app.id);
+                  return (
+                    <div
+                      key={app.id}
+                      className="bg-card border border-border rounded-xl overflow-hidden"
+                    >
+                      {/* Card header */}
+                      <div className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="text-sm text-muted-foreground truncate">
+                                {app.hospital_name}
+                              </span>
+                            </div>
+                            <p className="font-semibold text-foreground">{app.position_title}</p>
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              <Badge variant="outline" className="text-xs">
+                                {POSITION_TYPE_LABELS[app.position_type]}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${STATUS_COLORS[app.status] || ""}`}
+                              >
+                                {APPLICATION_STATUS_LABELS[app.status] || app.status}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                Applied {format(new Date(app.submitted_at), "MMM d, yyyy")}
+                              </span>
+                            </div>
+                            {app.notes && (
+                              <p className="text-sm text-muted-foreground mt-2 italic border-l-2 border-border pl-3">
+                                {app.notes}
+                              </p>
+                            )}
+                          </div>
+                          {/* Expand toggle */}
+                          {app.answers.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+                              onClick={() => toggleExpand(app.id)}
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="h-4 w-4" />
+                                  <span className="text-xs">Hide</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="h-4 w-4" />
+                                  <span className="text-xs">View responses ({app.answers.length})</span>
+                                </>
+                              )}
+                            </Button>
+                          )}
                         </div>
-                        <p className="font-medium text-foreground">{app.position_title}</p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <Badge variant="outline" className="text-xs">
-                            {POSITION_TYPE_LABELS[app.position_type]}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${STATUS_COLORS[app.status] || ""}`}
-                          >
-                            {APPLICATION_STATUS_LABELS[app.status] || app.status}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            Applied {format(new Date(app.submitted_at), "MMM d, yyyy")}
-                          </span>
-                        </div>
-                        {app.notes && (
-                          <p className="text-sm text-muted-foreground mt-2 italic">
-                            Note: {app.notes}
-                          </p>
-                        )}
                       </div>
+
+                      {/* Expandable Q&A section */}
+                      {isExpanded && app.answers.length > 0 && (
+                        <div className="border-t border-border bg-muted/20 px-4 py-4 space-y-5">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Your submitted responses
+                          </p>
+                          {app.answers.map((ans, idx) => (
+                            <div key={ans.id} className="space-y-0.5">
+                              <div className="flex items-start gap-2">
+                                <span className="text-[10px] font-bold text-muted-foreground/60 mt-0.5 shrink-0 w-5">
+                                  {idx + 1}.
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground leading-snug">
+                                    {ans.question?.question_text || "Question"}
+                                  </p>
+                                  <div className="mt-1.5 pl-0">
+                                    {renderAnswerValue(ans)}
+                                  </div>
+                                </div>
+                              </div>
+                              {idx < app.answers.length - 1 && (
+                                <div className="border-b border-border/40 mt-4 ml-7" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* No responses state (has no questions) */}
+                      {isExpanded && app.answers.length === 0 && (
+                        <div className="border-t border-border bg-muted/20 px-4 py-3">
+                          <p className="text-sm text-muted-foreground italic">
+                            This position had no application questions.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

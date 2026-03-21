@@ -111,8 +111,20 @@ export default function EmailPage() {
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Failed to send');
       const sent = data?.sent ?? 0;
+      const failed = data?.failed ?? 0;
+      const errors: string[] = data?.errors ?? [];
+      console.log('[EmailPage] send result:', { sent, failed, total: data?.total, errors });
       if (sent > 0) toast.success(`Email sent to ${sent} recipient${sent === 1 ? '' : 's'}`);
-      if (data?.failed > 0) toast.error(`${data.failed} email(s) failed`);
+      if (failed > 0) {
+        const details = errors.length > 0
+          ? errors.slice(0, 3).join(' | ') + (errors.length > 3 ? ` (+${errors.length - 3} more)` : '')
+          : 'Check browser console for details';
+        toast.error(`${failed} email${failed === 1 ? '' : 's'} failed: ${details}`, { duration: 10000 });
+        console.error('[EmailPage] failed email details:', errors);
+      }
+      if (sent === 0 && failed === 0) {
+        toast.warning('No emails were sent — no valid recipient addresses found for the selected applicants');
+      }
 
       await logActivity('email_sent', {
         targetType: 'email',
@@ -128,7 +140,9 @@ export default function EmailPage() {
       setManualSelected([]);
       refetchLog();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to send emails');
+      const msg = err instanceof Error ? err.message : 'Failed to send emails';
+      console.error('[EmailPage] send error:', err);
+      toast.error(msg, { duration: 10000 });
     } finally {
       setSending(false);
     }

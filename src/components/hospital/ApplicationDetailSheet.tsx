@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ExternalLink, FileText, Loader2, Save } from 'lucide-react';
+import { CheckSquare, ExternalLink, FileText, Loader2, Save, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -256,9 +256,27 @@ export default function ApplicationDetailSheet({ application, onClose, onStatusC
                               {ans.answer_text?.trim() || 'View uploaded file'}
                               <ExternalLink className="h-3 w-3" />
                             </a>
+                          ) : ans.answer_options && ans.answer_options.length > 0 ? (
+                            <div className="space-y-1 mt-1">
+                              {ans.answer_options.map((opt, i) => (
+                                <div key={i} className="flex items-center gap-2 text-sm">
+                                  <CheckSquare className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  <span>{opt}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : ans.question?.question_type === 'yes_no' ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              {ans.answer_text?.toLowerCase() === 'yes' ? (
+                                <CheckSquare className="h-4 w-4 text-green-400" />
+                              ) : (
+                                <Square className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              <span className="text-sm capitalize">{ans.answer_text || '—'}</span>
+                            </div>
                           ) : (
                             <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                              {ans.answer_text?.trim() || '—'}
+                              {ans.answer_text?.trim() || <span className="text-muted-foreground italic">No answer</span>}
                             </p>
                           )}
                         </div>

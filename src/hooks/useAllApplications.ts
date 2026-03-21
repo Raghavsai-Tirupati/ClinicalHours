@@ -93,6 +93,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
             application_id,
             question_id,
             answer_text,
+            answer_options,
             answer_file_url,
             created_at,
             question:position_questions(
@@ -124,6 +125,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
             application_id: row.application_id as string,
             question_id: row.question_id as string,
             answer_text: (row.answer_text as string | null) ?? null,
+            answer_options: (row.answer_options as string[] | null) ?? null,
             answer_file_url: (row.answer_file_url as string | null) ?? null,
             created_at: row.created_at as string,
             question,

@@ -65,7 +65,7 @@ function getApplicantName(app: StudentApplication): string {
   );
 }
 
-type SortOption = 'newest' | 'oldest' | 'name_asc';
+type SortOption = 'newest' | 'oldest' | 'name_asc' | 'gpa_high' | 'gpa_low' | 'hours_high' | 'grad_year';
 
 export default function ApplicationsHub() {
   const { hospitalPage } = useHospitalPageContext();
@@ -109,6 +109,18 @@ export default function ApplicationsHub() {
         break;
       case 'name_asc':
         list.sort((a, b) => getApplicantName(a).localeCompare(getApplicantName(b)));
+        break;
+      case 'gpa_high':
+        list.sort((a, b) => (b.student_profile?.gpa ?? -1) - (a.student_profile?.gpa ?? -1));
+        break;
+      case 'gpa_low':
+        list.sort((a, b) => (a.student_profile?.gpa ?? 99) - (b.student_profile?.gpa ?? 99));
+        break;
+      case 'hours_high':
+        list.sort((a, b) => (b.student_profile?.clinical_hours ?? -1) - (a.student_profile?.clinical_hours ?? -1));
+        break;
+      case 'grad_year':
+        list.sort((a, b) => (a.student_profile?.graduation_year ?? 9999) - (b.student_profile?.graduation_year ?? 9999));
         break;
       default:
         list.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
@@ -308,13 +320,17 @@ export default function ApplicationsHub() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-              <SelectTrigger className="w-[150px] h-9">
+              <SelectTrigger className="w-[170px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="newest">Newest first</SelectItem>
                 <SelectItem value="oldest">Oldest first</SelectItem>
                 <SelectItem value="name_asc">Name A–Z</SelectItem>
+                <SelectItem value="gpa_high">GPA: High → Low</SelectItem>
+                <SelectItem value="gpa_low">GPA: Low → High</SelectItem>
+                <SelectItem value="hours_high">Clinical Hours: Most</SelectItem>
+                <SelectItem value="grad_year">Grad Year: Soonest</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -404,6 +420,18 @@ export default function ApplicationsHub() {
                           {app.student_profile.university}
                         </p>
                       )}
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {typeof app.student_profile?.gpa === 'number' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-medium">
+                            GPA {app.student_profile.gpa.toFixed(2)}
+                          </span>
+                        )}
+                        {typeof app.student_profile?.clinical_hours === 'number' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-medium">
+                            {app.student_profile.clinical_hours}h clinical
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
