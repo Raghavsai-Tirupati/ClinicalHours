@@ -150,7 +150,8 @@ export default function PositionApplicationsTable({ positionId }: Props) {
         toast.info('No invites were sent');
       }
       if (failed > 0) {
-        toast.error(`${failed} invite${failed === 1 ? '' : 's'} failed`);
+        const errDetails = data?.errors?.length ? `: ${data.errors[0]}` : '';
+        toast.error(`${failed} invite${failed === 1 ? '' : 's'} failed${errDetails}`);
       }
       setInviteDialogOpen(false);
       setInviteMessage('');
@@ -197,7 +198,8 @@ export default function PositionApplicationsTable({ positionId }: Props) {
         toast.info('No emails were sent');
       }
       if (failed > 0) {
-        toast.error(`${failed} email${failed === 1 ? '' : 's'} failed`);
+        const errDetails = data?.errors?.length ? `: ${data.errors[0]}` : '';
+        toast.error(`${failed} email${failed === 1 ? '' : 's'} failed${errDetails}`);
       }
       setEmailDialogOpen(false);
       setEmailSubject('');
