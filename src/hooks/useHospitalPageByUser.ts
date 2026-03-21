@@ -121,6 +121,7 @@ export function useHospitalPageByUser() {
             id: pageIdToUse,
             hospital_id: opportunityId || hospitalId,
             admin_email: user.email!,
+            interview_booking_url: null,
             is_claimed: true,
             claimed_at: null,
             created_at: new Date().toISOString(),
