@@ -30,7 +30,7 @@ export function useHospitalPageByUser() {
       const { data: page } = await supabase
         .from('hospital_pages')
         .select(`
-          id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by,
+          id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by, interview_booking_url,
           opportunities:hospital_id (id, name, location, type, website, logo_url, description)
         `)
         .eq('admin_email', user.email!)
