@@ -85,21 +85,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check for duplicate application
-    const { data: existing } = await supabaseAdmin
-      .from("student_applications")
-      .select("id")
-      .eq("position_id", position_id)
-      .eq("student_id", auth.user.id)
-      .maybeSingle();
-
-    if (existing) {
-      return new Response(JSON.stringify({ error: "You have already applied to this position" }), {
-        status: 409,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // Create application
     const { data: app, error: appErr } = await supabaseAdmin
       .from("student_applications")

@@ -101,10 +101,6 @@ export default function PositionApplyPage() {
         .single();
 
       if (appError) {
-        if (appError.code === '23505') {
-          toast.error('You have already applied to this position');
-          return;
-        }
         throw appError;
       }
 

@@ -41,15 +41,20 @@ export function usePositionApplications(positionId: string | undefined) {
         for (const app of apps) {
           const profile = profileMap.get(app.student_id);
           if (profile) {
+            const profileName = profile.full_name?.trim() || null;
             app.student_profile = {
-              full_name: profile.full_name,
-              email: '', // We'll leave this empty since we can't easily query auth.users
+              full_name: profileName,
+              // We persist applicant_email directly on student_applications.
+              email: app.applicant_email?.trim() || '',
               university: profile.university,
               major: profile.major,
               graduation_year: profile.graduation_year,
               phone: profile.phone,
               resume_url: profile.resume_url,
             };
+            if (!app.applicant_name?.trim() && profileName) {
+              app.applicant_name = profileName;
+            }
           }
         }
 
@@ -73,8 +78,13 @@ export function usePositionApplications(positionId: string | undefined) {
           .in('application_id', appIds);
 
         const answersByAppId = new Map<string, StudentApplication['answers']>();
+        const questionIdsMissingText = new Set<string>();
         (answerRows || []).forEach((row) => {
           const appId = row.application_id as string;
+          const question = Array.isArray(row.question) ? row.question[0] : row.question;
+          if (row.question_id && (!question || !question.question_text)) {
+            questionIdsMissingText.add(row.question_id as string);
+          }
           const existing = answersByAppId.get(appId) || [];
           existing.push({
             id: row.id as string,
@@ -83,10 +93,26 @@ export function usePositionApplications(positionId: string | undefined) {
             answer_text: (row.answer_text as string | null) ?? null,
             answer_file_url: (row.answer_file_url as string | null) ?? null,
             created_at: row.created_at as string,
-            question: Array.isArray(row.question) ? row.question[0] : row.question,
+            question,
           });
           answersByAppId.set(appId, existing);
         });
+
+        if (questionIdsMissingText.size > 0) {
+          const { data: questions } = await supabase
+            .from('position_questions')
+            .select('id, question_text, question_type, is_required, display_order')
+            .in('id', Array.from(questionIdsMissingText));
+          const questionMap = new Map((questions || []).map((q) => [q.id, q]));
+          answersByAppId.forEach((answers) => {
+            answers?.forEach((answer) => {
+              if (!answer.question?.question_text) {
+                const fallbackQuestion = questionMap.get(answer.question_id);
+                if (fallbackQuestion) answer.question = fallbackQuestion;
+              }
+            });
+          });
+        }
 
         apps.forEach((app) => {
           app.answers = answersByAppId.get(app.id) || [];
@@ -109,7 +135,12 @@ export function usePositionApplications(positionId: string | undefined) {
   const filtered = applications.filter((app) => {
     if (statusFilter !== 'all' && app.status !== statusFilter) return false;
     if (searchTerm) {
-      const name = app.student_profile?.full_name?.toLowerCase() || '';
+      const name = (
+        app.applicant_name?.trim() ||
+        app.student_profile?.full_name?.trim() ||
+        app.applicant_email?.split('@')[0] ||
+        app.student_id
+      ).toLowerCase();
       return name.includes(searchTerm.toLowerCase());
     }
     return true;

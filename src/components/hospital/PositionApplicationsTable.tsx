@@ -212,8 +212,9 @@ export default function PositionApplicationsTable({ positionId }: Props) {
   const getApplicantName = (app: StudentApplication) =>
     app.applicant_name?.trim() ||
     app.student_profile?.full_name?.trim() ||
+    app.student_profile?.email?.split('@')[0] ||
     app.applicant_email?.split('@')[0] ||
-    'Applicant';
+    `Student ${app.student_id.slice(0, 8)}`;
 
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
     setUpdatingStatus(true);
@@ -353,7 +354,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
                   <TableRow
                     key={app.id}
                     className="cursor-pointer"
-                    onClick={() => setSelectedApp(app)}
+                    onClick={() => setSelectedApp(allApplications.find((a) => a.id === app.id) || app)}
                   >
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
