@@ -975,33 +975,35 @@ export default function HospitalDashboard() {
           {/* Student Applications */}
           {activeTab === "applications" && (
             <>
-              <div className="bg-card border border-border rounded-xl p-4 mb-4">
-                <h3 className="text-sm font-semibold text-foreground mb-2">Interview Settings</h3>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Add your clinic's Calendly (or similar) booking URL. Applicants will receive this link in interview invite emails.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Input
-                    value={interviewBookingInput}
-                    onChange={(e) => setInterviewBookingInput(e.target.value)}
-                    placeholder="https://calendly.com/your-clinic/interview"
-                    className="flex-1"
-                  />
-                  <Button onClick={handleSaveInterviewBookingUrl} disabled={bookingSaving}>
-                    {bookingSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Save booking link
-                  </Button>
+              {isBcsPilot && (
+                <div className="bg-card border border-border rounded-xl p-4 mb-4">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Interview Settings</h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Add your clinic's Calendly (or similar) booking URL. Applicants will receive this link in interview invite emails.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      value={interviewBookingInput}
+                      onChange={(e) => setInterviewBookingInput(e.target.value)}
+                      placeholder="https://calendly.com/your-clinic/interview"
+                      className="flex-1"
+                    />
+                    <Button onClick={handleSaveInterviewBookingUrl} disabled={bookingSaving}>
+                      {bookingSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Save booking link
+                    </Button>
+                  </div>
+                  {!interviewBookingUrl ? (
+                    <p className="text-xs text-amber-600 mt-2">
+                      Add your scheduling link first to enable interview invites.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Current link: <span className="font-mono">{interviewBookingUrl}</span>
+                    </p>
+                  )}
                 </div>
-                {!interviewBookingUrl ? (
-                  <p className="text-xs text-amber-600 mt-2">
-                    Add your scheduling link first to enable interview invites.
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Current link: <span className="font-mono">{interviewBookingUrl}</span>
-                  </p>
-                )}
-              </div>
+              )}
 
               <div className="bg-card border border-border rounded-xl p-4 mb-4">
                 <div className="flex flex-col gap-3">
