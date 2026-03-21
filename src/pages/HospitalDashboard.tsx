@@ -1066,16 +1066,17 @@ export default function HospitalDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 border-l border-border pl-3">
-                      <Button
-                        size="sm"
-                        className="h-8 text-xs gap-1.5"
-                        onClick={() => setInviteDialogOpen(true)}
-                        disabled={selectedApplicationIds.length === 0 || !interviewBookingUrl}
-                      >
-                        <CalendarCheck className="h-3.5 w-3.5" />
-                        Send interview invite
-                      </Button>
-                      <Button
+                      {isBcsPilot && (
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs gap-1.5"
+                          onClick={() => setInviteDialogOpen(true)}
+                          disabled={selectedApplicationIds.length === 0 || !interviewBookingUrl}
+                        >
+                          <CalendarCheck className="h-3.5 w-3.5" />
+                          Send interview invite
+                        </Button>
+                      )}
                         size="sm"
                         className="h-8 text-xs gap-1.5"
                         onClick={() => {
