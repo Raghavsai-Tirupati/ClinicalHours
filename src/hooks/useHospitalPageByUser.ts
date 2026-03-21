@@ -45,6 +45,7 @@ export function useHospitalPageByUser() {
           id: page.id,
           hospital_id: page.hospital_id,
           admin_email: page.admin_email,
+          interview_booking_url: page.interview_booking_url ?? null,
           is_claimed: page.is_claimed,
           claimed_at: page.claimed_at,
           created_at: page.created_at,
