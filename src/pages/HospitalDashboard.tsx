@@ -171,6 +171,8 @@ export default function HospitalDashboard() {
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
 
+  const isBcsPilot = member?.hospitalName?.toLowerCase().includes("bcs free health clinic") ?? false;
+
   useEffect(() => {
     if (member) {
       fetchData();
