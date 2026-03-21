@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -23,6 +24,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Building2,
   MapPin,
@@ -45,6 +54,7 @@ import {
   Rocket,
   CalendarCheck,
   MessageSquare,
+  Mail,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -78,6 +88,12 @@ interface ApplicationWithGpa extends Application {
   _source?: "legacy" | "hospital";
   interview_requested_at?: string | null;
   interview_confirmed_at?: string | null;
+}
+
+interface ProfileSnapshot {
+  id: string;
+  gpa: number | null;
+  full_name: string | null;
 }
 
 interface AppQuestion {
@@ -145,7 +161,12 @@ export default function HospitalDashboard() {
   const [questionSaving, setQuestionSaving] = useState(false);
   const [haInterviewLoading, setHaInterviewLoading] = useState(false);
   const [haConfirmSlot, setHaConfirmSlot] = useState("");
-  
+  const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailTarget, setEmailTarget] = useState<"all" | "filtered" | "selected">("filtered");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -257,7 +278,7 @@ export default function HospitalDashboard() {
         const appsList = (allApps || []) as Application[];
         const studentIds = [...new Set(appsList.map((a) => a.student_id).filter(Boolean))] as string[];
 
-        let gpaMap: Record<string, number | null> = {};
+        const gpaMap: Record<string, number | null> = {};
         if (studentIds.length > 0) {
           const { data: profiles } = await supabase
             .from("profiles")
@@ -287,15 +308,15 @@ export default function HospitalDashboard() {
 
       if (hospApps && hospApps.length > 0) {
         const haStudentIds = [...new Set((hospApps as { student_id: string | null }[]).map((a) => a.student_id).filter(Boolean))] as string[];
-        let haGpaMap: Record<string, number | null> = {};
+        const haProfileMap: Record<string, ProfileSnapshot> = {};
         if (haStudentIds.length > 0) {
           const { data: haProfiles } = await supabase
             .from("profiles")
-            .select("id, gpa")
+            .select("id, gpa, full_name")
             .in("id", haStudentIds);
           if (haProfiles) {
-            (haProfiles as { id: string; gpa: number | null }[]).forEach((p) => {
-              haGpaMap[p.id] = p.gpa ?? null;
+            (haProfiles as ProfileSnapshot[]).forEach((p) => {
+              haProfileMap[p.id] = p;
             });
           }
         }
@@ -319,10 +340,16 @@ export default function HospitalDashboard() {
             interview_requested_at?: string | null;
             interview_confirmed_at?: string | null;
           };
+          const profile = h.student_id ? haProfileMap[h.student_id] : undefined;
+          const resolvedName =
+            h.applicant_name?.trim() ||
+            profile?.full_name?.trim() ||
+            (h.applicant_email?.includes("@") ? h.applicant_email.split("@")[0] : "") ||
+            "Unknown Applicant";
           haApps.push({
             id: h.id,
             opportunity_id: h.opportunity_id ?? "",
-            student_name: h.applicant_name ?? "—",
+            student_name: resolvedName,
             student_email: h.applicant_email ?? "—",
             student_phone: null,
             student_id: h.student_id,
@@ -330,7 +357,7 @@ export default function HospitalDashboard() {
             essay_responses: null,
             status: (statusMap[h.status] ?? "new") as Application["status"],
             created_at: h.submitted_at,
-            gpa: h.student_id ? haGpaMap[h.student_id] ?? null : null,
+            gpa: profile?.gpa ?? null,
             interview_requested_at: h.interview_requested_at ?? null,
             interview_confirmed_at: h.interview_confirmed_at ?? null,
             _source: "hospital" as const,
@@ -523,6 +550,116 @@ export default function HospitalDashboard() {
 
   const newCount = applications.filter((a) => a.status === "new").length;
   const totalApplications = opportunities.reduce((sum, o) => sum + o.application_count, 0);
+
+  const selectableAppIds = useMemo(
+    () => applications.filter((a) => a.student_email && a.student_email !== "—").map((a) => a.id),
+    [applications]
+  );
+
+  const selectedSet = useMemo(() => new Set(selectedApplicationIds), [selectedApplicationIds]);
+
+  const selectedRecipientsCount = useMemo(() => {
+    const emails = new Set<string>();
+    applications.forEach((a) => {
+      if (!selectedSet.has(a.id)) return;
+      const email = a.student_email?.trim().toLowerCase();
+      if (email && email !== "—" && email.includes("@")) emails.add(email);
+    });
+    return emails.size;
+  }, [applications, selectedSet]);
+
+  const filteredRecipientsCount = useMemo(() => {
+    const emails = new Set<string>();
+    filtered.forEach((a) => {
+      const email = a.student_email?.trim().toLowerCase();
+      if (email && email !== "—" && email.includes("@")) emails.add(email);
+    });
+    return emails.size;
+  }, [filtered]);
+
+  const allRecipientsCount = useMemo(() => {
+    const emails = new Set<string>();
+    applications.forEach((a) => {
+      const email = a.student_email?.trim().toLowerCase();
+      if (email && email !== "—" && email.includes("@")) emails.add(email);
+    });
+    return emails.size;
+  }, [applications]);
+
+  const recipientCount = emailTarget === "all"
+    ? allRecipientsCount
+    : emailTarget === "filtered"
+      ? filteredRecipientsCount
+      : selectedRecipientsCount;
+
+  function toggleSelectApp(appId: string, checked: boolean) {
+    setSelectedApplicationIds((prev) => {
+      if (checked) {
+        if (prev.includes(appId)) return prev;
+        return [...prev, appId];
+      }
+      return prev.filter((id) => id !== appId);
+    });
+  }
+
+  function toggleSelectFiltered(checked: boolean) {
+    const filteredIds = filtered.filter((a) => a.student_email && a.student_email !== "—").map((a) => a.id);
+    setSelectedApplicationIds((prev) => {
+      if (checked) {
+        const merged = new Set([...prev, ...filteredIds]);
+        return [...merged];
+      }
+      const remove = new Set(filteredIds);
+      return prev.filter((id) => !remove.has(id));
+    });
+  }
+
+  async function handleSendApplicantsEmail() {
+    if (!member) return;
+    if (!emailSubject.trim()) {
+      toast.error("Please add an email subject");
+      return;
+    }
+    if (!emailBody.trim()) {
+      toast.error("Please add an email message");
+      return;
+    }
+    if (recipientCount === 0) {
+      toast.error("No valid recipients in this target");
+      return;
+    }
+
+    const targetIds = emailTarget === "all"
+      ? undefined
+      : emailTarget === "filtered"
+        ? filtered.map((a) => a.id)
+        : selectedApplicationIds;
+
+    setEmailSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-hospital-applicant-email", {
+        body: {
+          accountId: member.accountId,
+          subject: emailSubject.trim(),
+          body: emailBody.trim(),
+          applicationIds: targetIds,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error ?? "Failed to send email");
+
+      toast.success(`Email sent to ${data.sent} applicant${data.sent === 1 ? "" : "s"}`);
+      setEmailDialogOpen(false);
+      setEmailSubject("");
+      setEmailBody("");
+    } catch (err) {
+      console.error("Send applicants email error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to send email");
+    } finally {
+      setEmailSending(false);
+    }
+  }
 
   const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
     { id: "overview", label: "Overview", icon: Briefcase },
@@ -847,6 +984,27 @@ export default function HospitalDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 border-l border-border pl-3">
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => {
+                          setEmailTarget(selectedApplicationIds.length > 0 ? "selected" : "filtered");
+                          setEmailDialogOpen(true);
+                        }}
+                        disabled={applications.length === 0}
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                        Email applicants
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs"
+                        onClick={() => setSelectedApplicationIds([])}
+                        disabled={selectedApplicationIds.length === 0}
+                      >
+                        Clear selection ({selectedApplicationIds.length})
+                      </Button>
                       <Button size="sm" variant="outline" className="h-8 text-xs" disabled title="Coming soon">
                         <Layers className="h-3 w-3 mr-1" />
                         Bulk actions
@@ -877,6 +1035,14 @@ export default function HospitalDashboard() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border bg-muted/20">
+                          <th className="text-center px-4 py-3">
+                            <input
+                              type="checkbox"
+                              aria-label="Select filtered applicants"
+                              checked={filtered.length > 0 && filtered.every((a) => selectedSet.has(a.id))}
+                              onChange={(e) => toggleSelectFiltered(e.target.checked)}
+                            />
+                          </th>
                           <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">Applicant</th>
                           <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden sm:table-cell">Email</th>
                           <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase hidden lg:table-cell">Opportunity</th>
@@ -889,6 +1055,15 @@ export default function HospitalDashboard() {
                       <tbody>
                         {filtered.map((app) => (
                           <tr key={app.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                            <td className="px-4 py-3 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`Select ${app.student_name}`}
+                                checked={selectedSet.has(app.id)}
+                                onChange={(e) => toggleSelectApp(app.id, e.target.checked)}
+                                disabled={!app.student_email || app.student_email === "—"}
+                              />
+                            </td>
                             <td className="px-4 py-3">
                               <p className="font-medium text-foreground">{app.student_name}</p>
                               <p className="text-xs text-muted-foreground sm:hidden">{app.student_email}</p>
@@ -969,7 +1144,9 @@ export default function HospitalDashboard() {
                     </div>
                   ))}
                 </div>
-              ) : null}
+              ) : (
+                <p className="text-sm text-muted-foreground">No written answers were submitted for this application.</p>
+              )}
               <div>
                 <p className="text-sm font-medium text-muted-foreground mb-2">Status</p>
                 <Select
@@ -1048,6 +1225,68 @@ export default function HospitalDashboard() {
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Email Applicants</DialogTitle>
+            <DialogDescription>
+              Send a direct message to applicants from your hospital admin dashboard.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Recipients</label>
+              <Select value={emailTarget} onValueChange={(value) => setEmailTarget(value as "all" | "filtered" | "selected")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="filtered">Filtered applicants ({filteredRecipientsCount})</SelectItem>
+                  <SelectItem value="selected" disabled={selectedApplicationIds.length === 0}>
+                    Selected applicants ({selectedRecipientsCount})
+                  </SelectItem>
+                  <SelectItem value="all">All applicants ({allRecipientsCount})</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This will send to approximately {recipientCount} unique email recipient{recipientCount === 1 ? "" : "s"}.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Subject</label>
+              <Input
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="e.g. Next steps for your application"
+                maxLength={200}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Message</label>
+              <Textarea
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                placeholder="Write your message to applicants..."
+                rows={7}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)} disabled={emailSending}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendApplicantsEmail} disabled={emailSending || recipientCount === 0}>
+              {emailSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+              Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </>

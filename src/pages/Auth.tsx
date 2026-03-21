@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,9 @@ const Auth = () => {
   const [rememberMe, setRememberMe] = useState(() => getRememberMePreference());
   const [showPassword, setShowPassword] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(false);
+  const [authRedirecting, setAuthRedirecting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const authInitRef = useRef(false);
 
   // Hospital signup fields
   const [isHospitalSignup, setIsHospitalSignup] = useState(false);
@@ -104,34 +106,31 @@ const Auth = () => {
   };
 
   // Check hospital account status and redirect accordingly
-  const redirectByAccountType = async (userId: string) => {
-    // Find owner memberships for this user
-    const { data: members } = await supabase
+  const redirectByAccountType = useCallback(async (userId: string) => {
+    // Single query with nested account status to reduce redirect latency.
+    const { data: memberships } = await supabase
       .from("hospital_members")
-      .select("account_id")
+      .select("hospital_accounts!inner(account_status)")
       .eq("user_id", userId)
       .eq("role", "owner");
 
-    if (!members?.length) {
+    if (!memberships?.length) {
       navigate("/dashboard");
       return;
     }
 
-    const accountIds = members.map((m) => m.account_id);
-    const { data: accounts } = await supabase
-      .from("hospital_accounts")
-      .select("account_status")
-      .in("id", accountIds);
+    const hasApproved = memberships.some((m) => {
+      const account = Array.isArray(m.hospital_accounts) ? m.hospital_accounts[0] : m.hospital_accounts;
+      return account?.account_status === "approved";
+    });
 
-    const hasApproved = accounts?.some((a) => a.account_status === "approved");
-    if (hasApproved) {
-      navigate("/hospital-dashboard");
-    } else {
-      navigate("/pending-approval");
-    }
-  };
+    navigate(hasApproved ? "/hospital-dashboard" : "/pending-approval");
+  }, [navigate]);
 
   useEffect(() => {
+    if (authInitRef.current) return;
+    authInitRef.current = true;
+
     const handleAuthCallback = async () => {
       // Check for OAuth callback in URL hash (for Google Sign-In)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -139,6 +138,7 @@ const Auth = () => {
       const refreshToken = hashParams.get('refresh_token');
 
       if (accessToken) {
+        setAuthRedirecting(true);
         // Set the session from the OAuth callback
         const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -150,7 +150,7 @@ const Auth = () => {
           const userId = data.session.user.id;
           const convertedFromGuest = isGuest;
           trackLogin(userId, "google");
-          await migrateGuestDataToUser(userId, { convertedFromGuest });
+          void migrateGuestDataToUser(userId, { convertedFromGuest });
           await redirectByAccountType(userId);
           return;
         }
@@ -159,15 +159,16 @@ const Auth = () => {
       // Check for existing session
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        setAuthRedirecting(true);
         const userId = session.user.id;
         const convertedFromGuest = isGuest;
-        await migrateGuestDataToUser(userId, { convertedFromGuest });
+        void migrateGuestDataToUser(userId, { convertedFromGuest });
         await redirectByAccountType(userId);
       }
     };
 
     handleAuthCallback();
-  }, [navigate]);
+  }, [isGuest, redirectByAccountType]);
 
   // Search opportunities when debounced query changes
   useEffect(() => {
@@ -622,6 +623,17 @@ const Auth = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Sign In
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (authRedirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-muted-foreground">Signing you in...</p>
         </div>
       </div>
     );

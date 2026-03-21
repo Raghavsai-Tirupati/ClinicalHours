@@ -9,7 +9,10 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
 import PageViewTracker from "./components/PageViewTracker";
 import { StudentOnlyRoute } from "./components/StudentOnlyRoute";
+import { HospitalOnlyRoute } from "./components/HospitalOnlyRoute";
+import { AdminOnlyRoute } from "./components/AdminOnlyRoute";
 import { useAppKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { AuthProvider } from "./hooks/useAuth";
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import("./pages/Home"));
@@ -113,18 +116,47 @@ function AppContent() {
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verify" element={<VerifyEmail />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/admin" element={<AdminDashboard />} />
+              <Route
+                path="/admin"
+                element={
+                  <AdminOnlyRoute>
+                    <AdminDashboard />
+                  </AdminOnlyRoute>
+                }
+              />
               <Route path="/opportunities/:slug/application" element={<StudentOnlyRoute><ApplicationForm /></StudentOnlyRoute>} />
               <Route path="/opportunities/:slug/apply" element={<StudentOnlyRoute><HospitalApplyPage /></StudentOnlyRoute>} />
-              <Route path="/opportunities/:slug/admin" element={<HospitalAdmin />} />
-              <Route path="/hospital-dashboard" element={<HospitalDashboardRedirect />}>
+<<<<<<< HEAD
+              <Route
+                path="/opportunities/:slug/admin"
+                element={
+                  <HospitalOnlyRoute>
+                    <HospitalAdmin />
+                  </HospitalOnlyRoute>
+                }
+              />
+              <Route
+                path="/hospital-dashboard"
+                element={
+                  <HospitalOnlyRoute>
+                    <HospitalDashboardRedirect />
+                  </HospitalOnlyRoute>
+                }
+              >
                 <Route index element={<HospitalOverview />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
               </Route>
-              <Route path="/hospital/admin" element={<HospitalDashboardRedirect />}>
+              <Route
+                path="/hospital/admin"
+                element={
+                  <HospitalOnlyRoute>
+                    <HospitalDashboardRedirect />
+                  </HospitalOnlyRoute>
+                }
+              >
                 <Route index element={<HospitalOverview />} />
               </Route>
               <Route path="/pending-approval" element={<PendingApproval />} />
@@ -164,9 +196,11 @@ const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" storageKey="clinicalhours-theme">
-        <ErrorBoundary>
-          <AppContent />
-        </ErrorBoundary>
+        <AuthProvider>
+          <ErrorBoundary>
+            <AppContent />
+          </ErrorBoundary>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   </HelmetProvider>

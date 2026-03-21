@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useHospitalMember } from "@/hooks/useHospitalMember";
 import {
   Loader2,
   AlertCircle,
@@ -35,6 +36,7 @@ interface Application {
   student_name: string;
   student_email: string;
   student_phone: string | null;
+  student_id?: string;
   resume_url: string;
   essay_responses: { question1: string; question2: string } | null;
   status: "new" | "under_review" | "accepted" | "rejected";
@@ -78,12 +80,14 @@ type SortDir = "asc" | "desc";
 
 export default function HospitalAdmin() {
   const { slug } = useParams<{ slug: string }>();
+  const { member, loading: memberLoading } = useHospitalMember();
 
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
@@ -108,19 +112,38 @@ export default function HospitalAdmin() {
 
     if (oppError || !opp) {
       setNotFound(true);
+      setAccessDenied(false);
       setLoading(false);
       setRefreshing(false);
       return;
     }
     setOpportunity(opp as Opportunity);
 
-    const { data: apps } = await supabase
-      .from("applications")
-      .select("*")
-      .eq("opportunity_id", opp.id)
-      .order("created_at", { ascending: false });
+    if (!member?.hospitalId) {
+      setAccessDenied(true);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
 
-    setApplications((apps as Application[]) || []);
+    const { data: apps, error: appsError } = await supabase.rpc("hospital_list_applications", {
+      p_hospital_id: member.hospitalId,
+      p_sort_by: sortKey,
+      p_sort_dir: sortDir,
+    });
+
+    if (appsError) {
+      // RPC enforces membership and will throw if caller isn't authorized
+      setAccessDenied(true);
+      setApplications([]);
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    const scoped = ((apps as Application[]) || []).filter((a) => a.opportunity_id === opp.id);
+    setApplications(scoped);
+    setAccessDenied(false);
     setLoading(false);
     setRefreshing(false);
   }
@@ -128,11 +151,14 @@ export default function HospitalAdmin() {
   useEffect(() => {
     if (!slug) {
       setNotFound(true);
+      setAccessDenied(false);
       setLoading(false);
       return;
     }
+    if (memberLoading) return;
     fetchData();
-  }, [slug]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, memberLoading, member?.hospitalId, sortKey, sortDir]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -247,10 +273,22 @@ export default function HospitalAdmin() {
     );
   }
 
-  if (loading) {
+  if (loading || memberLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center px-4">
+        <AlertCircle className="h-16 w-16 text-destructive mb-4" />
+        <h1 className="text-3xl font-bold text-foreground mb-2">Access Denied</h1>
+        <p className="text-muted-foreground max-w-md">
+          You don&apos;t have permission to view applications for this opportunity.
+        </p>
       </div>
     );
   }

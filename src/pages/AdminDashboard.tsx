@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -37,67 +36,8 @@ import AdminCreateHospitalPageTab from '@/components/admin/AdminCreateHospitalPa
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  const { isAdmin, isLoading: adminLoading } = useAdminCheck();
+  const { user } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
-
-  // Loading state
-  if (authLoading || adminLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Verifying access...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Not logged in
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-destructive" />
-              Authentication Required
-            </CardTitle>
-            <CardDescription>You must be logged in to access this page.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate('/auth')} className="w-full">
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Not admin
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Access Denied
-            </CardTitle>
-            <CardDescription>
-              You do not have permission to access the admin dashboard.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate('/')} variant="outline" className="w-full">
-              Return Home
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -122,7 +62,7 @@ export default function AdminDashboard() {
               </p>
             </div>
             <Badge variant="outline" className="text-sm">
-              {user.email}
+              {user?.email}
             </Badge>
           </div>
 

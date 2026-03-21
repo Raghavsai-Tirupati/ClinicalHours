@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -19,78 +20,61 @@ interface UseHospitalMemberResult {
 
 export function useHospitalMember(): UseHospitalMemberResult {
   const { user, isReady } = useAuth();
-  const [member, setMember] = useState<HospitalMemberInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!isReady) return;
+  const { data: member, isLoading, error } = useQuery({
+    queryKey: ['hospital-member', user?.id],
+    enabled: Boolean(user?.id) && isReady,
+    staleTime: 60 * 1000,
+    queryFn: async (): Promise<HospitalMemberInfo | null> => {
+      if (!user?.id) return null;
 
-    if (!user) {
-      setMember(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    async function fetchMember() {
-      try {
-        const { data, error: queryError } = await supabase
-          .from('hospital_members')
-          .select(`
-            id,
-            account_id,
-            role,
-            hospital_accounts (
-              hospital_id,
-              hospitals (
-                id,
-                name
-              )
+      const { data, error: queryError } = await supabase
+        .from('hospital_members')
+        .select(`
+          id,
+          account_id,
+          role,
+          hospital_accounts (
+            hospital_id,
+            hospitals (
+              id,
+              name
             )
-          `)
-          .eq('user_id', user!.id)
-          .limit(1)
-          .maybeSingle();
+          )
+        `)
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
 
-        if (queryError) {
-          console.error('useHospitalMember query error:', queryError);
-          setError(queryError.message);
-          setMember(null);
-        } else if (data) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const account = data.hospital_accounts as any;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const hospital = account?.hospitals as any;
-          setMember({
-            memberId: data.id,
-            accountId: data.account_id,
-            hospitalId: hospital?.id ?? account?.hospital_id,
-            hospitalName: hospital?.name ?? 'Unknown Hospital',
-            role: data.role as HospitalMemberInfo['role'],
-          });
-        } else {
-          setMember(null);
-        }
-      } catch (err: unknown) {
-        console.error('useHospitalMember unexpected error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load membership');
-        setMember(null);
-      } finally {
-        setLoading(false);
+      if (queryError) {
+        throw queryError;
       }
-    }
 
-    fetchMember();
-  }, [user, isReady, tick]);
+      if (!data) return null;
+
+      const account = data.hospital_accounts as { hospital_id?: string | null; hospitals?: { id?: string | null; name?: string | null } | null } | null;
+      const hospital = account?.hospitals ?? null;
+
+      return {
+        memberId: data.id,
+        accountId: data.account_id,
+        hospitalId: hospital?.id ?? account?.hospital_id ?? '',
+        hospitalName: hospital?.name ?? 'Unknown Hospital',
+        role: data.role as HospitalMemberInfo['role'],
+      };
+    },
+  });
+
+  const refresh = useCallback(() => {
+    if (!user?.id) return;
+    void queryClient.invalidateQueries({ queryKey: ['hospital-member', user.id] });
+  }, [queryClient, user?.id]);
 
   return {
-    member,
-    loading,
-    error,
-    refresh: () => setTick((t) => t + 1),
+    member: member ?? null,
+    loading: !isReady || (!!user && isLoading),
+    error: error instanceof Error ? error.message : null,
+    refresh,
   };
 }

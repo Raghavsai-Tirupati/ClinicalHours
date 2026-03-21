@@ -45,6 +45,7 @@ const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownTimeoutRef = useRef<number | null>(null);
+  const scrollRafRef = useRef<number | null>(null);
   const location = useLocation();
   const { user, isGuest } = useAuth();
   const { member: hospitalMember } = useHospitalMember();
@@ -61,11 +62,20 @@ const Navigation = () => {
   // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+      if (scrollRafRef.current !== null) return;
+      scrollRafRef.current = window.requestAnimationFrame(() => {
+        setIsScrolled(window.scrollY > 50);
+        scrollRafRef.current = null;
+      });
     };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollRafRef.current !== null) {
+        window.cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
   }, []);
 
   // Close mobile menu on route change

@@ -322,6 +322,30 @@ const Dashboard = () => {
   const [dialogOpp, setDialogOpp] = useState<Opportunity | null>(null);
   const [dialogTab, setDialogTab] = useState("overview");
 
+  const localReflections = useMemo(
+    () =>
+      localSelect<{
+        id: string;
+        activity_log_id: string;
+        what_happened: string | null;
+        what_stood_out: string | null;
+        what_learned: string | null;
+        created_at: string;
+      }>(TABLES.REFLECTIONS),
+    []
+  );
+
+  const localLogs = useMemo(
+    () =>
+      localSelect<{
+        id: string;
+        custom_organization_name: string | null;
+        session_date: string;
+        hours: number;
+      }>(TABLES.ACTIVITY_LOGS),
+    []
+  );
+
   // Get the user's first name from their metadata, or default for guests
   const firstName = useMemo(() => {
     if (isGuest || !user) return undefined;
@@ -437,14 +461,6 @@ const Dashboard = () => {
           }));
 
         // Merge in reflections from local store (Hour Tracker)
-        const localReflections = localSelect<{
-          id: string; activity_log_id: string;
-          what_happened: string | null; what_stood_out: string | null;
-          what_learned: string | null; created_at: string;
-        }>(TABLES.REFLECTIONS);
-        const localLogs = localSelect<{
-          id: string; custom_organization_name: string | null; session_date: string; hours: number;
-        }>(TABLES.ACTIVITY_LOGS);
         const logMap = new Map(localLogs.map((l) => [l.id, l]));
 
         const localMapped: Reflection[] = localReflections.map((r) => {
@@ -477,7 +493,7 @@ const Dashboard = () => {
     }
 
     fetchDashboardData();
-  }, [user, isGuest, toast]);
+  }, [user, isGuest, toast, localLogs, localReflections]);
 
   /** Guard: prompt sign-in for guest actions */
   const requireAuth = (action: string): boolean => {
@@ -509,8 +525,10 @@ const Dashboard = () => {
     );
   }, [opportunities, searchQuery]);
 
-  const localTrackerLogs = localSelect<{ id: string; hours: number }>(TABLES.ACTIVITY_LOGS);
-  const localTrackerHours = localTrackerLogs.reduce((s, l) => s + (l.hours || 0), 0);
+  const localTrackerHours = useMemo(
+    () => localLogs.reduce((s, l) => s + (l.hours || 0), 0),
+    [localLogs]
+  );
   const totalHours = opportunities.reduce((s, o) => s + o.hoursLogged, 0) + localTrackerHours;
   const hasExperience = totalHours > 0;
   const hasTrackedOpportunities = opportunities.length > 0;

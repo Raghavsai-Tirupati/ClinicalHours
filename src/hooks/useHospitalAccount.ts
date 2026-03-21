@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useHospitalMember } from './useHospitalMember';
 
 interface HospitalAccount {
   id: string;
@@ -24,12 +25,13 @@ interface HospitalAccountResult {
 
 export function useHospitalAccount(): HospitalAccountResult {
   const { user, isReady } = useAuth();
+  const { member, loading: memberLoading } = useHospitalMember();
   const [hospitalAccount, setHospitalAccount] = useState<HospitalAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function checkHospitalAccount() {
-      if (!isReady) return;
+      if (!isReady || memberLoading) return;
 
       if (!user) {
         setHospitalAccount(null);
@@ -38,15 +40,7 @@ export function useHospitalAccount(): HospitalAccountResult {
       }
 
       try {
-        const { data: member, error: memberError } = await supabase
-          .from('hospital_members')
-          .select('account_id')
-          .eq('user_id', user.id)
-          .eq('role', 'owner')
-          .limit(1)
-          .maybeSingle();
-
-        if (memberError || !member) {
+        if (!member?.accountId) {
           setHospitalAccount(null);
           setIsLoading(false);
           return;
@@ -55,7 +49,7 @@ export function useHospitalAccount(): HospitalAccountResult {
         const { data: row, error } = await supabase
           .from('hospital_accounts')
           .select('id, account_status, contact_email, contact_phone, description, admin_note, reviewed_at, created_at, hospitals(name, website, address)')
-          .eq('id', member.account_id)
+          .eq('id', member.accountId)
           .maybeSingle();
 
         if (error || !row) {
@@ -85,7 +79,7 @@ export function useHospitalAccount(): HospitalAccountResult {
     }
 
     checkHospitalAccount();
-  }, [user, isReady]);
+  }, [member?.accountId, memberLoading, user, isReady]);
 
   return {
     isHospital: !!hospitalAccount,

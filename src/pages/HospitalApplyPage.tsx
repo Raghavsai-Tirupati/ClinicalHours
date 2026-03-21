@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfileComplete } from "@/hooks/useProfileComplete";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export default function HospitalApplyPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isComplete: isProfileComplete, isLoading: profileLoading, missingFields, profile } = useProfileComplete();
 
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
@@ -49,6 +51,18 @@ export default function HospitalApplyPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!name.trim() && profile?.full_name) {
+      setName(profile.full_name);
+    }
+  }, [profile?.full_name, name]);
+
+  useEffect(() => {
+    if (!email.trim() && user?.email) {
+      setEmail(user.email);
+    }
+  }, [user?.email, email]);
 
   useEffect(() => {
     if (!slug) {
@@ -123,6 +137,17 @@ export default function HospitalApplyPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (profileLoading) {
+      setError("Checking your profile requirements. Please wait a moment and try again.");
+      return;
+    }
+
+    if (!isProfileComplete) {
+      setError("Please complete the required profile fields before submitting this application.");
+      return;
+    }
+
     const errors = validate();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -239,6 +264,25 @@ export default function HospitalApplyPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {!profileLoading && !isProfileComplete && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+                  <p className="text-sm font-medium text-amber-300">
+                    Complete your profile before applying
+                  </p>
+                  <p className="text-xs text-amber-200/90 mt-1">
+                    Required fields: {missingFields.join(", ")}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-3"
+                    onClick={() => navigate("/settings")}
+                  >
+                    Go to Settings
+                  </Button>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
@@ -319,7 +363,11 @@ export default function HospitalApplyPage() {
                 </div>
               )}
 
-              <Button type="submit" disabled={submitting} className="w-full">
+              <Button
+                type="submit"
+                disabled={submitting || profileLoading || !isProfileComplete}
+                className="w-full"
+              >
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
