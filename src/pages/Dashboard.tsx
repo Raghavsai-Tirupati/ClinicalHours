@@ -424,7 +424,18 @@ const Dashboard = () => {
         if (savedRes.error) throw savedRes.error;
         if (entriesRes.error) throw entriesRes.error;
 
-        const savedRows = (savedRes.data || []) as SavedOpportunityRow[];
+        const savedRows = ((savedRes.data || []) as unknown as Array<{
+          id: string;
+          opportunity_id: string;
+          status: string | null;
+          created_at: string;
+          opportunities: { id: string; name: string; type: string; location: string; website: string; logo_url: string; } | { id: string; name: string; type: string; location: string; website: string; logo_url: string; }[];
+        }>).map(row => ({
+          id: row.id,
+          opportunity_id: row.opportunity_id,
+          status: row.status,
+          opportunities: Array.isArray(row.opportunities) ? row.opportunities[0] ?? null : row.opportunities,
+        })) as SavedOpportunityRow[];
         const entries = (entriesRes.data || []) as ExperienceEntryRow[];
 
         // Build aggregation maps keyed by opportunity_id
