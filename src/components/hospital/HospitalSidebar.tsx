@@ -1,11 +1,20 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Plus, Settings, Briefcase, ChevronRight, LogOut } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Briefcase,
+  FileText,
+  Calendar,
+  Mail,
+  Activity,
+  Settings,
+  LogOut,
+  Plus,
+} from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -14,17 +23,9 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { usePositions } from '@/hooks/usePositions';
 import { supabase } from '@/integrations/supabase/client';
-
-const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-500/15 text-green-600',
-  draft: 'bg-muted text-muted-foreground',
-  paused: 'bg-yellow-500/15 text-yellow-600',
-  closed: 'bg-red-500/15 text-red-600',
-};
 
 export default function HospitalSidebar() {
   const location = useLocation();
@@ -32,84 +33,87 @@ export default function HospitalSidebar() {
   const { hospitalPage, basePath } = useHospitalPageContext();
   const { positions } = usePositions(hospitalPage?.id);
 
-  const isOverview = location.pathname === basePath || location.pathname === `${basePath}/`;
-  const isSettings = location.pathname === `${basePath}/settings`;
+  const isActive = (route: string) => {
+    if (route === basePath) {
+      return location.pathname === basePath || location.pathname === `${basePath}/`;
+    }
+    return location.pathname.startsWith(route);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
   };
 
+  const navItems = [
+    { label: 'Overview', icon: LayoutDashboard, route: basePath },
+    { label: 'Applications', icon: FileText, route: `${basePath}/applications` },
+    { label: 'Positions', icon: Briefcase, route: `${basePath}/positions`, badge: positions.length },
+    { label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
+    { label: 'Email', icon: Mail, route: `${basePath}/email` },
+    { label: 'Activity', icon: Activity, route: `${basePath}/activity` },
+  ];
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isOverview} tooltip="Overview">
-              <Link to={`${basePath}`}>
-                <LayoutDashboard className="h-4 w-4" />
-                <span>Overview</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="flex items-center gap-2 px-2 group-data-[collapsible=icon]:hidden">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+            {hospitalPage?.opportunity.name?.charAt(0) || 'H'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{hospitalPage?.opportunity.name}</p>
+            <p className="truncate text-xs text-muted-foreground">Admin Dashboard</p>
+          </div>
+        </div>
       </SidebarHeader>
 
       <SidebarSeparator />
 
       <SidebarContent>
-        <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup>
-            <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-muted/50 rounded-md transition-colors">
-                <Briefcase className="h-4 w-4 mr-2" />
-                Positions
-                <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {positions.map((pos) => {
-                    const isActive = location.pathname.includes(`/positions/${pos.id}`);
-                    return (
-                      <SidebarMenuItem key={pos.id}>
-                        <SidebarMenuButton asChild isActive={isActive} tooltip={pos.title}>
-                          <Link to={`${basePath}/positions/${pos.id}`}>
-                            <span className="truncate">{pos.title}</span>
-                            <Badge
-                              variant="secondary"
-                              className={`ml-auto text-[10px] px-1.5 py-0 ${STATUS_COLORS[pos.status] || ''}`}
-                            >
-                              {pos.status}
-                            </Badge>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="New Position">
-                      <Link
-                        to={`${basePath}/positions/new`}
-                        className="text-primary"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>New Position</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton asChild isActive={isActive(item.route)} tooltip={item.label}>
+                    <Link to={item.route}>
+                      <item.icon className="h-4 w-4" />
+                      <span className="flex-1">{item.label}</span>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <Badge
+                          variant="secondary"
+                          className="ml-auto h-5 min-w-5 px-1.5 text-[10px] font-medium"
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="New Position">
+                  <Link to={`${basePath}/positions/new`} className="text-primary">
+                    <Plus className="h-4 w-4" />
+                    <span>New Position</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isSettings} tooltip="Settings">
+            <SidebarMenuButton
+              asChild
+              isActive={isActive(`${basePath}/settings`)}
+              tooltip="Settings"
+            >
               <Link to={`${basePath}/settings`}>
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>

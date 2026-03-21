@@ -134,14 +134,13 @@ export function usePositionApplications(positionId: string | undefined) {
           }
         }
 
-        const { data: answerRows } = await supabase
+        const { data: answerRows, error: answersError } = await supabase
           .from('application_answers')
           .select(`
             id,
             application_id,
             question_id,
             answer_text,
-            answer_options,
             answer_file_url,
             created_at,
             question:position_questions(
@@ -153,6 +152,10 @@ export function usePositionApplications(positionId: string | undefined) {
             )
           `)
           .in('application_id', appIds);
+
+        if (answersError) {
+          console.error('Failed to fetch application answers:', answersError);
+        }
 
         const answersByAppId = new Map<string, StudentApplication['answers']>();
         const questionIdsMissingText = new Set<string>();
@@ -167,14 +170,7 @@ export function usePositionApplications(positionId: string | undefined) {
             id: row.id as string,
             application_id: row.application_id as string,
             question_id: row.question_id as string,
-            answer_text:
-              ((row.answer_text as string | null) ?? null) ||
-              (Array.isArray(row.answer_options)
-                ? (row.answer_options as string[]).filter(Boolean).join(', ')
-                : null),
-            answer_options: Array.isArray(row.answer_options)
-              ? (row.answer_options as string[]).filter(Boolean)
-              : null,
+            answer_text: (row.answer_text as string | null) ?? null,
             answer_file_url: (row.answer_file_url as string | null) ?? null,
             created_at: row.created_at as string,
             question,

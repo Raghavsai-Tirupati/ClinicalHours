@@ -43,6 +43,10 @@ const HospitalOverview = lazy(() => import("./components/hospital/HospitalOvervi
 const PositionForm = lazy(() => import("./components/hospital/PositionForm"));
 const PositionDetail = lazy(() => import("./components/hospital/PositionDetail"));
 const HospitalSettingsPage = lazy(() => import("./components/hospital/HospitalSettings"));
+const ApplicationsHub = lazy(() => import("./components/hospital/ApplicationsHub"));
+const InterviewsPage = lazy(() => import("./components/hospital/InterviewsPage"));
+const EmailPage = lazy(() => import("./components/hospital/EmailPage"));
+const ActivityPage = lazy(() => import("./components/hospital/ActivityPage"));
 const PositionApplyPage = lazy(() => import("./pages/PositionApplyPage"));
 const HospitalDashboardRedirect = lazy(() => import("./components/HospitalDashboardRedirect"));
 
@@ -142,9 +146,13 @@ function AppContent() {
                 }
               >
                 <Route index element={<HospitalOverview />} />
+                <Route path="applications" element={<ApplicationsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
+                <Route path="interviews" element={<InterviewsPage />} />
+                <Route path="email" element={<EmailPage />} />
+                <Route path="activity" element={<ActivityPage />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
               </Route>
               <Route
@@ -161,9 +169,14 @@ function AppContent() {
               {/* Hospital admin dashboard with sidebar layout */}
               <Route path="/hospital/:id" element={<HospitalDashboardLayout />}>
                 <Route index element={<HospitalOverview />} />
+                <Route path="applications" element={<ApplicationsHub />} />
+                <Route path="positions" element={<HospitalOverview />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
+                <Route path="interviews" element={<InterviewsPage />} />
+                <Route path="email" element={<EmailPage />} />
+                <Route path="activity" element={<ActivityPage />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
               </Route>
               {/* Student application form for a position */}

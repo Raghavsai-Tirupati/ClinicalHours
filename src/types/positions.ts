@@ -45,6 +45,7 @@ export interface StudentApplication {
   reviewed_at: string | null;
   reviewed_by: string | null;
   notes: string | null;
+  interview_invited_at?: string | null;
   // Joined data
   position?: HospitalPosition;
   student_profile?: {
@@ -135,3 +136,24 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   rejected: 'Rejected',
   waitlisted: 'Waitlisted',
 };
+
+export type ActivityActionType =
+  | 'status_change'
+  | 'email_sent'
+  | 'interview_invited'
+  | 'position_created'
+  | 'position_updated'
+  | 'position_closed'
+  | 'note_added'
+  | 'application_reviewed';
+
+export interface ActivityLogEntry {
+  id: string;
+  hospital_page_id: string;
+  actor_email: string;
+  action_type: ActivityActionType;
+  target_type: string | null;
+  target_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
