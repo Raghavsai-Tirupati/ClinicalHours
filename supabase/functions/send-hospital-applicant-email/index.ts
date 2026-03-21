@@ -164,6 +164,10 @@ const handler = async (req: Request): Promise<Response> => {
       .select("hospital_id, interview_booking_url")
       .eq("id", accountId)
       .maybeSingle();
+    if (accountError || !accountData?.hospital_id) {
+      throw new Error("Failed to resolve hospital account");
+    }
+
     const interviewBookingUrl = accountData.interview_booking_url?.trim() ?? "";
     if (emailType === "interview_invite" && !interviewBookingUrl) {
       return new Response(
@@ -189,10 +193,6 @@ const handler = async (req: Request): Promise<Response> => {
           { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
         );
       }
-    }
-
-    if (accountError || !accountData?.hospital_id) {
-      throw new Error("Failed to resolve hospital account");
     }
 
     const { data: opportunities, error: opportunitiesError } = await supabaseAdmin

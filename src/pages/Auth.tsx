@@ -89,6 +89,7 @@ const Auth = () => {
   const [hospitalWebsite, setHospitalWebsite] = useState("");
   const [hospitalAddress, setHospitalAddress] = useState("");
   const [hospitalDescription, setHospitalDescription] = useState("");
+  const redirectStartRef = useRef<number | null>(null);
 
   // Opportunity search state
   const [hospitalSearchQuery, setHospitalSearchQuery] = useState("");
@@ -126,6 +127,10 @@ const Auth = () => {
 
   // Check hospital account status and redirect accordingly
   const redirectByAccountType = useCallback(async (userId: string) => {
+    if (redirectStartRef.current === null) {
+      redirectStartRef.current = performance.now();
+    }
+
     // Single query with nested account status to reduce redirect latency.
     const { data: memberships } = await supabase
       .from("hospital_members")
@@ -143,6 +148,11 @@ const Auth = () => {
       return account?.account_status === "approved";
     });
 
+    if (import.meta.env.DEV && redirectStartRef.current !== null) {
+      const elapsed = Math.round(performance.now() - redirectStartRef.current);
+      console.info(`[Perf] Auth redirect decision in ${elapsed}ms`);
+    }
+
     navigate(hasApproved ? "/hospital-dashboard" : "/pending-approval");
   }, [navigate]);
 
@@ -158,6 +168,7 @@ const Auth = () => {
 
       if (accessToken) {
         setAuthRedirecting(true);
+        redirectStartRef.current = performance.now();
         // Set the session from the OAuth callback
         const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -179,6 +190,7 @@ const Auth = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setAuthRedirecting(true);
+        redirectStartRef.current = performance.now();
         const userId = session.user.id;
         const convertedFromGuest = isGuest;
         void migrateGuestDataToUser(userId, { convertedFromGuest });

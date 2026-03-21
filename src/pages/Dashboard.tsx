@@ -69,6 +69,28 @@ interface Reflection {
   text: string;
 }
 
+interface SavedOpportunityRow {
+  id: string;
+  opportunity_id: string;
+  status: string | null;
+  opportunities: {
+    id: string;
+    name: string;
+    type: string | null;
+    location: string | null;
+    website: string | null;
+    logo_url: string | null;
+  } | null;
+}
+
+interface ExperienceEntryRow {
+  id: string;
+  opportunity_id: string;
+  hours: number | null;
+  moment: string | null;
+  entry_date: string;
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function daysUntil(dateStr: string): number {
@@ -363,52 +385,53 @@ const Dashboard = () => {
     }
 
     async function fetchDashboardData() {
+      const fetchStart = performance.now();
       setLoadingData(true);
       try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("dashboard_tutorial_complete")
-          .eq("id", user!.id)
-          .single();
-
-        setDashboardTutorialComplete(Boolean(profile?.dashboard_tutorial_complete));
-
-        // 1. Fetch saved opportunities joined with the opportunity details
-        const { data: savedRows, error: savedErr } = await supabase
-          .from("saved_opportunities")
-          .select(`
-            id,
-            opportunity_id,
-            status,
-            created_at,
-            opportunities (
+        const [profileRes, savedRes, entriesRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("dashboard_tutorial_complete")
+            .eq("id", user!.id)
+            .single(),
+          supabase
+            .from("saved_opportunities")
+            .select(`
               id,
-              name,
-              type,
-              location,
-              website,
-              logo_url
-            )
-          `)
-          .eq("user_id", user!.id)
-          .order("created_at", { ascending: false });
+              opportunity_id,
+              status,
+              created_at,
+              opportunities (
+                id,
+                name,
+                type,
+                location,
+                website,
+                logo_url
+              )
+            `)
+            .eq("user_id", user!.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("experience_entries")
+            .select("id, opportunity_id, hours, moment, entry_date")
+            .eq("user_id", user!.id)
+            .order("entry_date", { ascending: false }),
+        ]);
 
-        if (savedErr) throw savedErr;
+        setDashboardTutorialComplete(Boolean(profileRes.data?.dashboard_tutorial_complete));
 
-        // 2. Fetch experience entries for hours + reflections aggregation
-        const { data: entries, error: entryErr } = await supabase
-          .from("experience_entries")
-          .select("id, opportunity_id, hours, moment, entry_date")
-          .eq("user_id", user!.id)
-          .order("entry_date", { ascending: false });
+        if (savedRes.error) throw savedRes.error;
+        if (entriesRes.error) throw entriesRes.error;
 
-        if (entryErr) throw entryErr;
+        const savedRows = (savedRes.data || []) as SavedOpportunityRow[];
+        const entries = (entriesRes.data || []) as ExperienceEntryRow[];
 
         // Build aggregation maps keyed by opportunity_id
         const hoursMap: Record<string, number> = {};
         const reflCountMap: Record<string, number> = {};
-        (entries || []).forEach((e) => {
-          const oid = e.opportunity_id as string;
+        entries.forEach((e) => {
+          const oid = e.opportunity_id;
           hoursMap[oid] = (hoursMap[oid] || 0) + (Number(e.hours) || 0);
           if (e.moment) reflCountMap[oid] = (reflCountMap[oid] || 0) + 1;
         });
@@ -417,23 +440,14 @@ const Dashboard = () => {
         const nameMap: Record<string, string> = {};
 
         // Map saved rows to dashboard Opportunity objects
-        const opps: Opportunity[] = (savedRows || []).map((row) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const opp = (row as any).opportunities as {
-            id: string;
-            name: string;
-            type: string;
-            location: string;
-            website: string | null;
-            logo_url: string | null;
-          } | null;
-
-          const oppId = row.opportunity_id as string;
+        const opps: Opportunity[] = savedRows.map((row) => {
+          const opp = row.opportunities;
+          const oppId = row.opportunity_id;
           const oppName = opp?.name || "Unknown";
           nameMap[oppId] = oppName;
 
           return {
-            id: row.id as string,
+            id: row.id,
             opportunityId: oppId,
             name: oppName,
             type: opp?.type || "hospital",
@@ -450,14 +464,14 @@ const Dashboard = () => {
         setOpportunities(opps);
 
         // Map experience entries with moments to reflections
-        const recentReflections: Reflection[] = (entries || [])
+        const recentReflections: Reflection[] = entries
           .filter((e) => !!e.moment)
           .map((e) => ({
-            id: e.id as string,
-            opportunityId: e.opportunity_id as string,
-            orgName: nameMap[e.opportunity_id as string] || "Unknown",
-            date: e.entry_date as string,
-            text: e.moment as string,
+            id: e.id,
+            opportunityId: e.opportunity_id,
+            orgName: nameMap[e.opportunity_id] || "Unknown",
+            date: e.entry_date,
+            text: e.moment || "",
           }));
 
         // Merge in reflections from local store (Hour Tracker)
@@ -480,6 +494,10 @@ const Dashboard = () => {
           .slice(0, 6);
 
         setReflections(allReflections);
+        if (import.meta.env.DEV) {
+          const elapsed = Math.round(performance.now() - fetchStart);
+          console.info(`[Perf] Dashboard loaded in ${elapsed}ms`);
+        }
       } catch (err) {
         console.error("Dashboard fetch error:", err);
         toast({
