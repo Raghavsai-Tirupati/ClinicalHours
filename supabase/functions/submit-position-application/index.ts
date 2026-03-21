@@ -92,9 +92,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const profileName = profile?.full_name?.trim() || null;
-    const metaName = typeof auth.user.user_metadata?.full_name === "string"
-      ? auth.user.user_metadata.full_name.trim()
-      : null;
+
+    // Fetch user metadata from auth.users for fallback name
+    let metaName: string | null = null;
+    const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(auth.user.id);
+    if (authUserData?.user?.user_metadata?.full_name) {
+      const raw = authUserData.user.user_metadata.full_name;
+      metaName = typeof raw === "string" ? raw.trim() : null;
+    }
     const applicantName = profileName || metaName || null;
     const applicantEmail = auth.user.email?.trim().toLowerCase() || null;
 

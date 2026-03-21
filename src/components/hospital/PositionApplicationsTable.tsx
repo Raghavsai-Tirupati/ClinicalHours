@@ -566,10 +566,26 @@ export default function PositionApplicationsTable({ positionId }: Props) {
                           <div key={ans.id} className="space-y-1">
                             <p className="text-xs text-muted-foreground">
                               {ans.question?.question_text || 'Question'}
+                              {ans.question?.question_type === 'file_upload' && (
+                                <span className="ml-1 text-muted-foreground/60">(file upload)</span>
+                              )}
                             </p>
-                            <p className="text-sm whitespace-pre-wrap">
-                              {ans.answer_text?.trim() || '—'}
-                            </p>
+                            {ans.answer_file_url ? (
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={ans.answer_file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-primary underline underline-offset-2 hover:text-primary/80"
+                                >
+                                  {ans.answer_text?.trim() || 'View uploaded file'}
+                                </a>
+                              </div>
+                            ) : (
+                              <p className="text-sm whitespace-pre-wrap">
+                                {ans.answer_text?.trim() || '—'}
+                              </p>
+                            )}
                           </div>
                         ))}
                     </div>
