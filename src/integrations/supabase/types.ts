@@ -581,6 +581,7 @@ export type Database = {
           created_by: string | null
           hospital_id: string
           id: string
+          interview_booking_url: string | null
           is_claimed: boolean
         }
         Insert: {
@@ -590,6 +591,7 @@ export type Database = {
           created_by?: string | null
           hospital_id: string
           id?: string
+          interview_booking_url?: string | null
           is_claimed?: boolean
         }
         Update: {
@@ -599,6 +601,7 @@ export type Database = {
           created_by?: string | null
           hospital_id?: string
           id?: string
+          interview_booking_url?: string | null
           is_claimed?: boolean
         }
         Relationships: [
@@ -1311,6 +1314,8 @@ export type Database = {
       }
       student_applications: {
         Row: {
+          applicant_email: string | null
+          applicant_name: string | null
           id: string
           notes: string | null
           position_id: string
@@ -1321,6 +1326,8 @@ export type Database = {
           submitted_at: string | null
         }
         Insert: {
+          applicant_email?: string | null
+          applicant_name?: string | null
           id?: string
           notes?: string | null
           position_id: string
@@ -1331,6 +1338,8 @@ export type Database = {
           submitted_at?: string | null
         }
         Update: {
+          applicant_email?: string | null
+          applicant_name?: string | null
           id?: string
           notes?: string | null
           position_id?: string
