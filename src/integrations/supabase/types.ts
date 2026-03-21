@@ -1702,6 +1702,22 @@ export type Database = {
         Args: { p_application_id: string; p_slot: string }
         Returns: undefined
       }
+      hospital_list_applications: {
+        Args: { p_hospital_id: string; p_sort_by?: string; p_sort_dir?: string }
+        Returns: {
+          created_at: string
+          essay_responses: Json
+          gpa: number
+          id: string
+          opportunity_id: string
+          resume_url: string
+          status: string
+          student_email: string
+          student_id: string
+          student_name: string
+          student_phone: string
+        }[]
+      }
       hospital_request_interview_ha: {
         Args: { p_application_id: string }
         Returns: undefined
