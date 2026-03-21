@@ -145,26 +145,7 @@ export function validateOrigin(req: Request): { valid: boolean; error?: string }
  * Authenticate user from session cookie
  */
 export async function authenticateFromCookie(req: Request): Promise<AuthResult> {
-  const sessionId = getSessionCookie(req);
-
-  if (!sessionId) {
-    return {
-      success: false,
-      error: "No session cookie found",
-      statusCode: 401
-    };
-  }
-
-  // TODO: In production, validate sessionId against database
-  // For now, we'll extract user info from the session cookie
-  // In a real implementation, you'd:
-  // 1. Decrypt sessionId
-  // 2. Look up session in database
-  // 3. Verify session hasn't expired
-  // 4. Return user info
-
-  // Temporary: Try to get user from Authorization header as fallback
-  // This allows gradual migration
+  // Try Authorization header first (supabase.functions.invoke sends this automatically)
   const authHeader = req.headers.get("authorization");
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.replace("Bearer ", "");
@@ -180,7 +161,7 @@ export async function authenticateFromCookie(req: Request): Promise<AuthResult> 
     if (error || !user) {
       return {
         success: false,
-        error: "Invalid session",
+        error: "Invalid token",
         statusCode: 401
       };
     }
@@ -194,11 +175,19 @@ export async function authenticateFromCookie(req: Request): Promise<AuthResult> 
     };
   }
 
-  // If no Authorization header and sessionId exists, we need to validate it
-  // For now, return error - in production, validate against database
+  // Fallback: session cookie
+  const sessionId = getSessionCookie(req);
+  if (!sessionId) {
+    return {
+      success: false,
+      error: "No authorization header or session cookie found",
+      statusCode: 401
+    };
+  }
+
   return {
     success: false,
-    error: "Session validation not implemented. Please use Authorization header during migration.",
+    error: "Session cookie validation not implemented. Please use Authorization header.",
     statusCode: 401
   };
 }
