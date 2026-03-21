@@ -30,7 +30,7 @@ export function useHospitalPageByUser() {
       const { data: page } = await supabase
         .from('hospital_pages')
         .select(`
-          id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by,
+          id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by, interview_booking_url,
           opportunities:hospital_id (id, name, location, type, website, logo_url, description)
         `)
         .eq('admin_email', user.email!)
@@ -45,6 +45,7 @@ export function useHospitalPageByUser() {
           id: page.id,
           hospital_id: page.hospital_id,
           admin_email: page.admin_email,
+          interview_booking_url: page.interview_booking_url ?? null,
           is_claimed: page.is_claimed,
           claimed_at: page.claimed_at,
           created_at: page.created_at,
@@ -120,6 +121,7 @@ export function useHospitalPageByUser() {
             id: pageIdToUse,
             hospital_id: opportunityId || hospitalId,
             admin_email: user.email!,
+            interview_booking_url: null,
             is_claimed: true,
             claimed_at: null,
             created_at: new Date().toISOString(),
