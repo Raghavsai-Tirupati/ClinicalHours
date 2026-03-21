@@ -50,14 +50,17 @@ export function useAllApplications(hospitalPageId: string | undefined) {
       const apps = (appData || []) as StudentApplication[];
 
       if (apps.length > 0) {
+        const appIds = apps.map((a) => a.id);
         const studentIds = apps.map((a) => a.student_id);
+        const positionMap = new Map(allPositions.map((p) => [p.id, p]));
+
+        // Fetch profiles
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name, university, major, graduation_year, phone, resume_url, gpa, clinical_hours, research_experience')
           .in('id', studentIds);
 
         const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
-        const positionMap = new Map(allPositions.map((p) => [p.id, p]));
 
         for (const app of apps) {
           app.position = positionMap.get(app.position_id);
@@ -81,6 +84,73 @@ export function useAllApplications(hospitalPageId: string | undefined) {
             }
           }
         }
+
+        // Fetch application answers with joined question text
+        const { data: answerRows, error: answersError } = await supabase
+          .from('application_answers')
+          .select(`
+            id,
+            application_id,
+            question_id,
+            answer_text,
+            answer_file_url,
+            created_at,
+            question:position_questions(
+              id,
+              question_text,
+              question_type,
+              is_required,
+              display_order
+            )
+          `)
+          .in('application_id', appIds);
+
+        if (answersError) {
+          console.error('Failed to fetch application answers:', answersError);
+        }
+
+        const answersByAppId = new Map<string, StudentApplication['answers']>();
+        const questionIdsMissingText = new Set<string>();
+
+        (answerRows || []).forEach((row) => {
+          const appId = row.application_id as string;
+          const question = Array.isArray(row.question) ? row.question[0] : row.question;
+          if (row.question_id && (!question || !question.question_text)) {
+            questionIdsMissingText.add(row.question_id as string);
+          }
+          const existing = answersByAppId.get(appId) || [];
+          existing.push({
+            id: row.id as string,
+            application_id: row.application_id as string,
+            question_id: row.question_id as string,
+            answer_text: (row.answer_text as string | null) ?? null,
+            answer_file_url: (row.answer_file_url as string | null) ?? null,
+            created_at: row.created_at as string,
+            question,
+          });
+          answersByAppId.set(appId, existing);
+        });
+
+        // Fallback fetch for any answers whose question text wasn't joined (e.g. deleted question)
+        if (questionIdsMissingText.size > 0) {
+          const { data: questions } = await supabase
+            .from('position_questions')
+            .select('id, question_text, question_type, is_required, display_order')
+            .in('id', Array.from(questionIdsMissingText));
+          const questionMap = new Map((questions || []).map((q) => [q.id, q]));
+          answersByAppId.forEach((answers) => {
+            answers?.forEach((answer) => {
+              if (!answer.question?.question_text) {
+                const fallback = questionMap.get(answer.question_id);
+                if (fallback) answer.question = fallback;
+              }
+            });
+          });
+        }
+
+        apps.forEach((app) => {
+          app.answers = answersByAppId.get(app.id) || [];
+        });
       }
 
       setApplications(apps);
