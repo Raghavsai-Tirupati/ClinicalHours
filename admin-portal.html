@@ -4,245 +4,301 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ClinicalHours — Clinic Admin Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f7f7f5;
-  --bg-tertiary: #efeeec;
-  --text-primary: #1a1a1a;
-  --text-secondary: #6b6b6b;
-  --text-tertiary: #9b9b9b;
-  --border: #e5e5e2;
-  --border-light: #ededea;
-  --accent: #1D9E75;
-  --accent-hover: #178a67;
-  --accent-bg: #EAF3DE;
-  --accent-text: #27500A;
-  --danger: #D93636;
-  --danger-bg: #FEF0EF;
-  --danger-text: #9E1A1A;
-  --amber-bg: #FEF5E7;
-  --amber-text: #7A4510;
-  --blue-bg: #EBF4FB;
-  --blue-text: #0C447C;
+  --sidebar-bg: #0C1222;
+  --sidebar-hover: #1a2538;
+  --sidebar-active: rgba(56,189,248,0.12);
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #e2e8f0;
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface-hover: #f8fafc;
+  --text: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --accent: #0d9488;
+  --accent-hover: #0f766e;
+  --accent-light: #ccfbf1;
+  --accent-text: #134e4a;
+  --blue: #3b82f6;
+  --blue-light: #dbeafe;
+  --blue-text: #1e40af;
+  --amber: #f59e0b;
+  --amber-light: #fef3c7;
+  --amber-text: #92400e;
+  --red: #ef4444;
+  --red-light: #fee2e2;
+  --red-text: #991b1b;
+  --purple: #8b5cf6;
+  --purple-light: #ede9fe;
+  --purple-text: #5b21b6;
   --radius: 8px;
   --radius-lg: 12px;
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --radius-xl: 16px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.05);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--font); background: var(--bg-secondary); color: var(--text-primary); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 button { font-family: inherit; cursor: pointer; }
 input, select, textarea { font-family: inherit; font-size: 13px; }
+::selection { background: var(--accent-light); color: var(--accent-text); }
 
 /* ========== LAYOUT ========== */
 .shell { display: flex; height: 100vh; overflow: hidden; }
-.sidebar { width: 224px; background: var(--bg-primary); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
-.sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid var(--border-light); }
-.sidebar-logo h1 { font-size: 15px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; }
-.sidebar-logo p { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
-.sidebar-nav { padding: 10px; flex: 1; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; font-size: 13px; color: var(--text-secondary); margin-bottom: 2px; transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; font-weight: 400; }
-.nav-item:hover { background: var(--bg-secondary); color: var(--text-primary); }
-.nav-item.active { background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
-.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.65; }
-.nav-item.active svg { opacity: 1; }
-.nav-badge { margin-left: auto; background: var(--danger); color: #fff; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 99px; line-height: 16px; }
-.sidebar-footer { padding: 14px 18px; border-top: 1px solid var(--border-light); }
-.sidebar-footer p { font-size: 12px; color: var(--text-tertiary); }
-.sidebar-footer strong { color: var(--text-secondary); font-weight: 500; }
 
+/* ========== SIDEBAR ========== */
+.sidebar { width: 240px; background: var(--sidebar-bg); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-brand { padding: 24px 20px 20px; display: flex; align-items: center; gap: 12px; }
+.sidebar-brand-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), #06b6d4); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.sidebar-brand-icon svg { width: 20px; height: 20px; color: #fff; }
+.sidebar-brand-text h1 { font-size: 15px; font-weight: 700; color: #f1f5f9; letter-spacing: -0.3px; line-height: 1.2; }
+.sidebar-brand-text p { font-size: 11px; color: var(--sidebar-text); margin-top: 1px; }
+.sidebar-section { padding: 0 12px; margin-top: 4px; }
+.sidebar-section-label { font-size: 10px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; padding: 16px 8px 6px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; font-size: 13px; color: var(--sidebar-text); margin-bottom: 1px; transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; font-weight: 400; }
+.nav-item:hover { background: var(--sidebar-hover); color: var(--sidebar-text-active); }
+.nav-item.active { background: var(--sidebar-active); color: #38bdf8; font-weight: 500; }
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.6; }
+.nav-item.active svg { opacity: 1; color: #38bdf8; }
+.nav-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; line-height: 14px; }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid #1e293b; margin-top: auto; display: flex; align-items: center; gap: 10px; }
+.sidebar-footer-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }
+.sidebar-footer-info p:first-child { font-size: 12px; font-weight: 500; color: #e2e8f0; }
+.sidebar-footer-info p:last-child { font-size: 11px; color: #64748b; }
+
+/* ========== MAIN ========== */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-.topbar { padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-primary); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-.topbar-left h2 { font-size: 16px; font-weight: 600; color: var(--text-primary); }
-.topbar-left p { font-size: 12px; color: var(--text-tertiary); margin-top: 1px; }
+.topbar { padding: 18px 28px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.topbar-left h2 { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+.topbar-left p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 .topbar-actions { display: flex; gap: 8px; }
-.content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.content { flex: 1; overflow-y: auto; padding: 24px 28px; }
 
 /* ========== BUTTONS ========== */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 450; border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-primary); cursor: pointer; transition: all 0.15s; white-space: nowrap; line-height: 1.3; }
-.btn:hover { background: var(--bg-secondary); border-color: var(--border); }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; transition: all 0.15s; white-space: nowrap; line-height: 1.3; box-shadow: var(--shadow); }
+.btn:hover { background: var(--surface-hover); border-color: #cbd5e1; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 1px 3px rgba(13,148,136,0.3); }
 .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-.btn-danger { color: var(--danger); border-color: #f0c8c8; }
-.btn-danger:hover { background: var(--danger-bg); }
-.btn-sm { padding: 5px 10px; font-size: 12px; }
-.btn-icon { width: 32px; height: 32px; padding: 0; justify-content: center; }
-.btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+.btn-danger { color: var(--red); border-color: #fecaca; }
+.btn-danger:hover { background: var(--red-light); }
+.btn-ghost { border: none; box-shadow: none; background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover { background: var(--border-light); color: var(--text); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-icon { width: 34px; height: 34px; padding: 0; justify-content: center; box-shadow: none; }
+.btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.btn-sm svg { width: 13px; height: 13px; }
 
-/* ========== CARDS & STATS ========== */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-.stat-card { background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px 18px; }
-.stat-card .label { font-size: 12px; color: var(--text-tertiary); margin-bottom: 6px; font-weight: 450; }
-.stat-card .value { font-size: 28px; font-weight: 600; color: var(--text-primary); line-height: 1; }
-.stat-card .delta { font-size: 11px; color: var(--accent); margin-top: 6px; font-weight: 500; }
+/* ========== STAT CARDS ========== */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card { background: var(--surface); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; border-radius: 4px 0 0 4px; }
+.stat-card:nth-child(1)::before { background: var(--accent); }
+.stat-card:nth-child(2)::before { background: var(--amber); }
+.stat-card:nth-child(3)::before { background: var(--blue); }
+.stat-card:nth-child(4)::before { background: var(--purple); }
+.stat-card .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+.stat-card:nth-child(1) .stat-icon { background: var(--accent-light); color: var(--accent); }
+.stat-card:nth-child(2) .stat-icon { background: var(--amber-light); color: var(--amber); }
+.stat-card:nth-child(3) .stat-icon { background: var(--blue-light); color: var(--blue); }
+.stat-card:nth-child(4) .stat-icon { background: var(--purple-light); color: var(--purple); }
+.stat-card .stat-icon svg { width: 20px; height: 20px; }
+.stat-card .label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px; }
+.stat-card .value { font-size: 32px; font-weight: 700; color: var(--text); line-height: 1; letter-spacing: -1px; }
+.stat-card .delta { font-size: 12px; color: var(--accent); margin-top: 8px; font-weight: 500; }
 
-.section-title { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 10px; }
-.card { background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); overflow: hidden; }
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.section-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.section-subtitle { font-size: 12px; color: var(--text-muted); }
+.card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; }
 
 /* ========== POSITIONS GRID ========== */
-.pos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
-.pos-card { background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px; cursor: pointer; transition: all 0.15s; }
-.pos-card:hover { border-color: var(--border); box-shadow: var(--shadow-sm); }
-.pos-card h3 { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
-.pos-card .meta { font-size: 12px; color: var(--text-tertiary); }
-.pos-card .footer { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
-.pos-add { background: var(--bg-secondary); border: 1px dashed var(--border); border-radius: var(--radius-lg); padding: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: var(--text-secondary); transition: all 0.15s; min-height: 100px; }
-.pos-add:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.pos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 32px; }
+.pos-card { background: var(--surface); border-radius: var(--radius-lg); padding: 18px; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow); border: 1px solid transparent; }
+.pos-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.pos-card h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.pos-card .meta { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+.pos-card .footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-light); }
+.pos-add { background: var(--surface); border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); transition: all 0.2s; min-height: 120px; }
+.pos-add:hover { border-color: var(--accent); color: var(--accent); background: #f0fdfa; }
 
 /* ========== PILLS ========== */
-.pill { font-size: 11px; padding: 3px 10px; border-radius: 99px; font-weight: 500; display: inline-block; line-height: 1.4; }
-.pill-green { background: var(--accent-bg); color: var(--accent-text); }
-.pill-amber { background: var(--amber-bg); color: var(--amber-text); }
-.pill-blue { background: var(--blue-bg); color: var(--blue-text); }
-.pill-gray { background: var(--bg-tertiary); color: var(--text-secondary); }
-.pill-red { background: var(--danger-bg); color: var(--danger-text); }
+.pill { font-size: 11px; padding: 3px 10px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; line-height: 1.4; letter-spacing: 0.01em; }
+.pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+.pill-green { background: var(--accent-light); color: var(--accent-text); }
+.pill-green::before { background: var(--accent); }
+.pill-amber { background: var(--amber-light); color: var(--amber-text); }
+.pill-amber::before { background: var(--amber); }
+.pill-blue { background: var(--blue-light); color: var(--blue-text); }
+.pill-blue::before { background: var(--blue); }
+.pill-gray { background: var(--border-light); color: var(--text-secondary); }
+.pill-gray::before { background: var(--text-muted); }
+.pill-red { background: var(--red-light); color: var(--red-text); }
+.pill-red::before { background: var(--red); }
 
 /* ========== APPLICATION ROWS ========== */
-.app-list { display: flex; flex-direction: column; gap: 6px; }
-.app-row { background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; transition: border-color 0.15s; }
-.app-row:hover { border-color: var(--border); }
-.app-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; }
-.avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
-.avatar-green { background: var(--accent-bg); color: var(--accent-text); }
-.avatar-blue { background: var(--blue-bg); color: var(--blue-text); }
-.avatar-amber { background: var(--amber-bg); color: var(--amber-text); }
+.app-list { display: flex; flex-direction: column; gap: 8px; }
+.app-row { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; transition: box-shadow 0.15s; }
+.app-row:hover { box-shadow: var(--shadow-md); }
+.app-header { display: flex; align-items: center; gap: 14px; padding: 14px 18px; cursor: pointer; }
+.avatar { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; letter-spacing: -0.3px; }
+.avatar-green { background: var(--accent-light); color: var(--accent-text); }
+.avatar-blue { background: var(--blue-light); color: var(--blue-text); }
+.avatar-amber { background: var(--amber-light); color: var(--amber-text); }
 .app-info { flex: 1; min-width: 0; }
-.app-info h4 { font-size: 13px; font-weight: 500; color: var(--text-primary); }
-.app-info p { font-size: 12px; color: var(--text-tertiary); }
-.app-actions { display: flex; gap: 6px; }
-.chevron { font-size: 12px; color: var(--text-tertiary); transition: transform 0.2s; margin-left: 4px; user-select: none; }
+.app-info h4 { font-size: 14px; font-weight: 600; color: var(--text); }
+.app-info p { font-size: 12px; color: var(--text-muted); }
+.app-actions { display: flex; gap: 4px; }
+.chevron { font-size: 12px; color: var(--text-muted); transition: transform 0.2s; margin-left: 4px; user-select: none; }
 .app-row.expanded .chevron { transform: rotate(180deg); }
-.app-detail { border-top: 1px solid var(--border-light); padding: 16px; background: var(--bg-secondary); display: none; }
+.app-detail { border-top: 1px solid var(--border-light); padding: 18px; background: #fafbfc; display: none; }
 .app-row.expanded .app-detail { display: block; }
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-.detail-item .label { font-size: 11px; color: var(--text-tertiary); margin-bottom: 2px; font-weight: 450; }
-.detail-item .val { font-size: 13px; color: var(--text-primary); font-weight: 450; }
-.activity-list { margin-bottom: 14px; }
-.activity-list .title { font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
+.detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+.detail-item .label { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+.detail-item .val { font-size: 13px; color: var(--text); font-weight: 500; }
+.activity-list { margin-bottom: 16px; padding: 14px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border-light); }
+.activity-list .title { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
 .activity-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-secondary); padding: 5px 0; }
-.activity-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dot-green { background: var(--accent); }
-.dot-blue { background: #378ADD; }
-.dot-amber { background: #F59E0B; }
-.dot-red { background: var(--danger); }
-.dot-gray { background: #b0b0aa; }
+.dot-blue { background: var(--blue); }
+.dot-amber { background: var(--amber); }
+.dot-red { background: var(--red); }
+.dot-gray { background: var(--text-muted); }
 .action-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ========== TOOLBAR (filters/search) ========== */
-.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-.search-box { position: relative; flex: 1; max-width: 280px; }
-.search-box input { width: 100%; padding: 8px 12px 8px 34px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--bg-primary); color: var(--text-primary); outline: none; transition: border-color 0.15s; }
-.search-box input:focus { border-color: var(--accent); }
-.search-box input::placeholder { color: var(--text-tertiary); }
-.search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-tertiary); }
-.filter-select { padding: 8px 30px 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--bg-primary); color: var(--text-primary); outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239b9b9b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; }
-.filter-select:focus { border-color: var(--accent); }
-.toolbar-count { font-size: 12px; color: var(--text-tertiary); margin-left: auto; }
+/* ========== TOOLBAR ========== */
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.search-box { position: relative; flex: 1; max-width: 300px; }
+.search-box input { width: 100%; padding: 9px 12px 9px 36px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--surface); color: var(--text); outline: none; transition: all 0.15s; box-shadow: var(--shadow); }
+.search-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+.search-box input::placeholder { color: var(--text-muted); }
+.search-box svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-muted); }
+.filter-select { padding: 9px 32px 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--surface); color: var(--text); outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; box-shadow: var(--shadow); transition: all 0.15s; font-weight: 500; }
+.filter-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+.toolbar-count { font-size: 13px; color: var(--text-muted); margin-left: auto; font-weight: 500; }
 
 /* ========== CALENDAR ========== */
-.cal-container { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+.cal-container { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
 .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.cal-header h3 { font-size: 15px; font-weight: 600; }
-.cal-nav { display: flex; gap: 6px; }
+.cal-header h3 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+.cal-nav { display: flex; gap: 4px; align-items: center; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-.cal-day-label { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-tertiary); padding: 8px 0; text-transform: uppercase; letter-spacing: 0.3px; }
-.cal-day { min-height: 80px; border: 1px solid var(--border-light); padding: 6px; cursor: pointer; transition: background 0.1s; position: relative; }
-.cal-day:hover { background: var(--bg-secondary); }
-.cal-day.today { background: #f0faf4; }
-.cal-day.other-month { opacity: 0.35; }
-.cal-day .day-num { font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
-.cal-day.today .day-num { color: var(--accent); font-weight: 600; }
-.cal-event { font-size: 10px; background: var(--accent-bg); color: var(--accent-text); padding: 2px 6px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
-.cal-sidebar { background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 18px; }
-.cal-sidebar h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
-.interview-item { padding: 12px; background: var(--bg-secondary); border-radius: var(--radius); margin-bottom: 8px; }
-.interview-item h4 { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
-.interview-item p { font-size: 12px; color: var(--text-tertiary); }
-.interview-item .actions { display: flex; gap: 6px; margin-top: 8px; }
+.cal-day-label { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-muted); padding: 10px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+.cal-day { min-height: 84px; border: 1px solid var(--border-light); padding: 6px 8px; cursor: pointer; transition: background 0.1s; }
+.cal-day:hover { background: var(--surface-hover); }
+.cal-day.today { background: #f0fdfa; }
+.cal-day.other-month { opacity: 0.3; }
+.cal-day .day-num { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+.cal-day.today .day-num { color: var(--accent); background: var(--accent-light); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.cal-event { font-size: 10px; background: var(--accent-light); color: var(--accent-text); padding: 2px 6px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.cal-sidebar-panel { }
+.cal-sidebar-panel h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.2px; }
+.interview-card { padding: 14px; background: var(--surface); border-radius: var(--radius); margin-bottom: 10px; box-shadow: var(--shadow); border: 1px solid var(--border-light); }
+.interview-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.interview-card p { font-size: 12px; color: var(--text-muted); }
+.interview-card .time-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--accent); margin-top: 6px; background: var(--accent-light); padding: 3px 8px; border-radius: 6px; }
+.interview-card .actions { display: flex; gap: 6px; margin-top: 10px; }
 
 /* ========== POSITIONS PAGE ========== */
-.positions-list { display: flex; flex-direction: column; gap: 10px; }
-.position-card-full { background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 18px 20px; display: flex; align-items: center; gap: 16px; transition: border-color 0.15s; }
-.position-card-full:hover { border-color: var(--border); }
-.position-card-full .info { flex: 1; }
-.position-card-full h3 { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
-.position-card-full .meta { font-size: 12px; color: var(--text-tertiary); }
-.position-card-full .stats { display: flex; gap: 20px; align-items: center; }
-.position-card-full .stat-item { text-align: center; }
-.position-card-full .stat-item .num { font-size: 18px; font-weight: 600; color: var(--text-primary); }
-.position-card-full .stat-item .lbl { font-size: 11px; color: var(--text-tertiary); }
+.positions-list { display: flex; flex-direction: column; gap: 12px; }
+.position-row { background: var(--surface); border-radius: var(--radius-lg); padding: 20px 22px; display: flex; align-items: center; gap: 18px; box-shadow: var(--shadow); transition: all 0.15s; }
+.position-row:hover { box-shadow: var(--shadow-md); }
+.position-row .pos-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.position-row .pos-icon svg { width: 22px; height: 22px; }
+.position-row .info { flex: 1; }
+.position-row h3 { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+.position-row .meta { font-size: 12px; color: var(--text-muted); }
+.position-row .stats { display: flex; gap: 24px; align-items: center; }
+.position-row .stat-item { text-align: center; }
+.position-row .stat-item .num { font-size: 20px; font-weight: 700; color: var(--text); }
+.position-row .stat-item .lbl { font-size: 11px; color: var(--text-muted); font-weight: 500; }
 
 /* ========== EMAIL PAGE ========== */
 .email-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.email-compose { background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 20px; }
-.email-compose h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
-.form-group { margin-bottom: 14px; }
-.form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 5px; }
-.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--bg-primary); color: var(--text-primary); outline: none; transition: border-color 0.15s; }
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
-.form-group textarea { min-height: 160px; resize: vertical; line-height: 1.5; }
-.email-log { background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 20px; }
-.email-log h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
-.email-entry { padding: 12px; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.1s; }
+.email-panel { background: var(--surface); border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow); }
+.email-panel h3 { font-size: 15px; font-weight: 700; margin-bottom: 18px; letter-spacing: -0.2px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--surface); color: var(--text); outline: none; transition: all 0.15s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+.form-group textarea { min-height: 180px; resize: vertical; line-height: 1.6; }
+.email-entry { padding: 14px 16px; border-bottom: 1px solid var(--border-light); cursor: pointer; transition: background 0.1s; border-radius: var(--radius); }
 .email-entry:last-child { border-bottom: none; }
-.email-entry:hover { background: var(--bg-secondary); }
-.email-entry h4 { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
-.email-entry .meta { font-size: 12px; color: var(--text-tertiary); }
-.email-entry .body-preview { font-size: 12px; color: var(--text-secondary); margin-top: 4px; display: none; white-space: pre-wrap; background: var(--bg-tertiary); padding: 10px; border-radius: var(--radius); }
+.email-entry:hover { background: var(--border-light); }
+.email-entry h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.email-entry .meta { font-size: 12px; color: var(--text-muted); }
+.email-entry .body-preview { font-size: 12px; color: var(--text-secondary); margin-top: 8px; display: none; white-space: pre-wrap; background: var(--border-light); padding: 12px; border-radius: var(--radius); line-height: 1.5; }
 .email-entry.expanded .body-preview { display: block; }
 
-/* ========== HISTORY PAGE ========== */
-.timeline { position: relative; padding-left: 24px; }
-.timeline::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
-.timeline-item { position: relative; padding: 8px 0 8px 12px; }
-.timeline-dot { position: absolute; left: -21px; top: 13px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg-secondary); }
-.timeline-item .time { font-size: 11px; color: var(--text-tertiary); margin-bottom: 2px; font-weight: 450; }
-.timeline-item .desc { font-size: 13px; color: var(--text-primary); }
-.timeline-item .sub { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+/* ========== HISTORY ========== */
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before { content: ''; position: absolute; left: 9px; top: 4px; bottom: 4px; width: 2px; background: var(--border); border-radius: 1px; }
+.timeline-item { position: relative; padding: 10px 0 10px 16px; }
+.timeline-dot { position: absolute; left: -23px; top: 16px; width: 12px; height: 12px; border-radius: 50%; border: 3px solid var(--bg); box-shadow: 0 0 0 2px var(--border); }
+.timeline-item .time { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; font-weight: 500; }
+.timeline-item .desc { font-size: 13px; color: var(--text); font-weight: 500; }
+.timeline-item .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
 /* ========== MODAL ========== */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
 .modal-backdrop.visible { opacity: 1; }
-.modal { background: var(--bg-primary); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
-.modal-header { padding: 18px 20px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; }
-.modal-header h3 { font-size: 15px; font-weight: 600; }
-.modal-close { width: 28px; height: 28px; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); color: var(--text-tertiary); font-size: 18px; }
-.modal-close:hover { background: var(--bg-secondary); color: var(--text-primary); }
-.modal-body { padding: 20px; }
-.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 8px; }
+.modal { background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+.modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; }
+.modal-header h3 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+.modal-close { width: 30px; height: 30px; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); color: var(--text-muted); font-size: 20px; transition: all 0.15s; }
+.modal-close:hover { background: var(--border-light); color: var(--text); }
+.modal-body { padding: 20px 24px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 8px; }
 
 /* ========== EMPTY STATE ========== */
-.empty-state { text-align: center; padding: 48px 20px; color: var(--text-tertiary); }
-.empty-state svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.4; }
-.empty-state h4 { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; }
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); }
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.3; }
+.empty-state h4 { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
 .empty-state p { font-size: 13px; }
 
 /* ========== TOAST ========== */
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--text-primary); color: #fff; padding: 12px 18px; border-radius: var(--radius); font-size: 13px; font-weight: 450; z-index: 2000; box-shadow: var(--shadow-lg); transform: translateY(80px); opacity: 0; transition: all 0.3s ease; }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--sidebar-bg); color: #e2e8f0; padding: 14px 20px; border-radius: var(--radius-lg); font-size: 13px; font-weight: 500; z-index: 2000; box-shadow: var(--shadow-lg); transform: translateY(80px); opacity: 0; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+.toast::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
 .toast.show { transform: translateY(0); opacity: 1; }
 
 /* ========== SCROLLBAR ========== */
 .content::-webkit-scrollbar { width: 6px; }
 .content::-webkit-scrollbar-track { background: transparent; }
 .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-.content::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+.content::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 </style>
 </head>
 <body>
 
 <div class="shell">
   <aside class="sidebar">
-    <div class="sidebar-logo">
-      <h1>ClinicalHours</h1>
-      <p>BCS Free Health Clinic</p>
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div class="sidebar-brand-text">
+        <h1>ClinicalHours</h1>
+        <p>Admin Portal</p>
+      </div>
     </div>
-    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Navigation</div>
+      <nav id="sidebar-nav"></nav>
+    </div>
     <div class="sidebar-footer">
-      <p><strong>Dr. Sarah Chen</strong></p>
-      <p>Clinic Administrator</p>
+      <div class="sidebar-footer-avatar">SC</div>
+      <div class="sidebar-footer-info">
+        <p>Dr. Sarah Chen</p>
+        <p>Clinic Administrator</p>
+      </div>
     </div>
   </aside>
   <div class="main">
@@ -256,44 +312,32 @@ input, select, textarea { font-family: inherit; font-size: 13px; }
 
 <script>
 // =====================================================================
-//  DATA STORE — localStorage-backed, shared across all pages
+//  DATA STORE
 // =====================================================================
-const STORAGE_KEY = 'clinicalhours_admin_v2';
-
+const STORAGE_KEY = 'clinicalhours_admin_v3';
 const AVATAR_COLORS = ['green', 'blue', 'amber'];
 
-function getInitials(name) {
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-}
-
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function getInitials(name) { return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2); }
 
 function fmtDate(d) {
   if (!d) return '—';
   const date = new Date(d + 'T00:00:00');
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
-
 function fmtDateTime(d, t) {
   if (!d) return '—';
   const date = new Date(d + 'T' + (t || '00:00'));
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' +
     date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
-
 function fmtTime(t) {
   if (!t) return '';
   const [h, m] = t.split(':');
-  const d = new Date(2000, 0, 1, +h, +m);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return new Date(2000, 0, 1, +h, +m).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
-
 function relTime(dateStr) {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diff = now - d;
+  const d = new Date(dateStr); const now = new Date(); const diff = now - d;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'Just now';
   if (mins < 60) return mins + 'm ago';
@@ -303,12 +347,14 @@ function relTime(dateStr) {
   if (days < 7) return days + 'd ago';
   return fmtDate(dateStr.split('T')[0]);
 }
+function esc(str) { if (!str) return ''; const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+function cap(str) { if (!str) return ''; return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' '); }
 
 const DEFAULT_DATA = {
   positions: [
-    { id: 'pos-1', title: 'Patient intake volunteer', schedule: 'Tuesdays', hoursPerWeek: 4, status: 'open', slots: 5, description: 'Assist with patient check-in, insurance verification, and intake form completion.', createdAt: '2025-02-15' },
-    { id: 'pos-2', title: 'Medical records assistant', schedule: 'Flexible', hoursPerWeek: 6, status: 'open', slots: 3, description: 'Help organize and digitize patient records, maintain filing systems.', createdAt: '2025-02-20' },
-    { id: 'pos-3', title: 'Pharmacy support', schedule: 'Thursdays', hoursPerWeek: 3, status: 'reviewing', slots: 2, description: 'Support pharmacy operations including inventory management and prescription sorting.', createdAt: '2025-03-01' }
+    { id: 'pos-1', title: 'Patient Intake Volunteer', schedule: 'Tuesdays', hoursPerWeek: 4, status: 'open', slots: 5, description: 'Assist with patient check-in, insurance verification, and intake form completion.', createdAt: '2025-02-15' },
+    { id: 'pos-2', title: 'Medical Records Assistant', schedule: 'Flexible', hoursPerWeek: 6, status: 'open', slots: 3, description: 'Help organize and digitize patient records, maintain filing systems.', createdAt: '2025-02-20' },
+    { id: 'pos-3', title: 'Pharmacy Support', schedule: 'Thursdays', hoursPerWeek: 3, status: 'reviewing', slots: 2, description: 'Support pharmacy operations including inventory management and prescription sorting.', createdAt: '2025-03-01' }
   ],
   applicants: [
     { id: 'a1', name: 'Arjun Kapoor', email: 'arjun.kapoor@tamu.edu', gpa: 3.82, year: 'Sophomore', major: 'Biology', availability: 'Tue, Thu afternoons', positionId: 'pos-1', status: 'under_review', appliedAt: '2025-03-18', color: 'green' },
@@ -334,14 +380,14 @@ const DEFAULT_DATA = {
     { id: 'ev2', type: 'status', desc: 'Status changed to Under Review', applicantId: 'a1', positionId: 'pos-1', ts: '2025-03-18T11:30:00' },
     { id: 'ev3', type: 'application', desc: 'Application submitted', applicantId: 'a2', positionId: 'pos-2', ts: '2025-03-15T08:45:00' },
     { id: 'ev4', type: 'email', desc: 'Interview scheduling email sent', applicantId: 'a2', positionId: 'pos-2', ts: '2025-03-19T10:30:00' },
-    { id: 'ev5', type: 'interview', desc: 'Interview scheduled for Mar 25, 2:00 PM', applicantId: 'a2', positionId: 'pos-2', ts: '2025-03-19T10:31:00' },
+    { id: 'ev5', type: 'interview', desc: 'Interview scheduled for Mar 25 at 2:00 PM', applicantId: 'a2', positionId: 'pos-2', ts: '2025-03-19T10:31:00' },
     { id: 'ev6', type: 'application', desc: 'Application submitted', applicantId: 'a3', positionId: 'pos-3', ts: '2025-03-21T14:20:00' },
     { id: 'ev7', type: 'application', desc: 'Application submitted', applicantId: 'a4', positionId: 'pos-1', ts: '2025-03-20T10:00:00' },
     { id: 'ev8', type: 'application', desc: 'Application submitted', applicantId: 'a5', positionId: 'pos-2', ts: '2025-03-17T13:00:00' },
     { id: 'ev9', type: 'status', desc: 'Status changed to Under Review', applicantId: 'a5', positionId: 'pos-2', ts: '2025-03-18T09:15:00' },
     { id: 'ev10', type: 'application', desc: 'Application submitted', applicantId: 'a6', positionId: 'pos-3', ts: '2025-03-14T11:00:00' },
     { id: 'ev11', type: 'email', desc: 'Interview scheduling email sent', applicantId: 'a6', positionId: 'pos-3', ts: '2025-03-18T14:15:00' },
-    { id: 'ev12', type: 'interview', desc: 'Interview scheduled for Mar 27, 10:00 AM', applicantId: 'a6', positionId: 'pos-3', ts: '2025-03-18T14:16:00' },
+    { id: 'ev12', type: 'interview', desc: 'Interview scheduled for Mar 27 at 10:00 AM', applicantId: 'a6', positionId: 'pos-3', ts: '2025-03-18T14:16:00' },
     { id: 'ev13', type: 'application', desc: 'Application submitted', applicantId: 'a7', positionId: 'pos-1', ts: '2025-03-10T08:30:00' },
     { id: 'ev14', type: 'interview', desc: 'Interview completed', applicantId: 'a7', positionId: 'pos-1', ts: '2025-03-13T15:00:00' },
     { id: 'ev15', type: 'email', desc: 'Acceptance email sent', applicantId: 'a7', positionId: 'pos-1', ts: '2025-03-15T09:00:00' },
@@ -357,112 +403,84 @@ const DEFAULT_DATA = {
 };
 
 let store;
-
 function loadStore() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      store = JSON.parse(raw);
-      if (!store.positions || !store.applicants) throw new Error('bad');
-    } else {
-      store = JSON.parse(JSON.stringify(DEFAULT_DATA));
-      saveStore();
-    }
-  } catch {
-    store = JSON.parse(JSON.stringify(DEFAULT_DATA));
-    saveStore();
-  }
+    if (raw) { store = JSON.parse(raw); if (!store.positions || !store.applicants) throw 0; }
+    else { store = JSON.parse(JSON.stringify(DEFAULT_DATA)); saveStore(); }
+  } catch { store = JSON.parse(JSON.stringify(DEFAULT_DATA)); saveStore(); }
 }
-
-function saveStore() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-}
-
-function resetStore() {
-  store = JSON.parse(JSON.stringify(DEFAULT_DATA));
-  saveStore();
-}
-
+function saveStore() { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+function resetStore() { store = JSON.parse(JSON.stringify(DEFAULT_DATA)); saveStore(); }
 function addEvent(type, desc, applicantId, positionId) {
   store.events.push({ id: uid(), type, desc, applicantId: applicantId || null, positionId: positionId || null, ts: new Date().toISOString() });
   saveStore();
 }
-
 function getPosition(id) { return store.positions.find(p => p.id === id); }
 function getApplicant(id) { return store.applicants.find(a => a.id === id); }
 function getApplicantsForPosition(posId) { return store.applicants.filter(a => a.positionId === posId); }
 function getEventsForApplicant(appId) { return store.events.filter(e => e.applicantId === appId).sort((a, b) => new Date(b.ts) - new Date(a.ts)); }
-
-function getStats() {
-  const apps = store.applicants;
-  return {
-    total: apps.length,
-    pending: apps.filter(a => a.status === 'new' || a.status === 'under_review').length,
-    interviews: apps.filter(a => a.status === 'interview_scheduled').length,
-    openPositions: store.positions.filter(p => p.status !== 'closed').length
-  };
-}
 
 // =====================================================================
 //  TOAST
 // =====================================================================
 function showToast(msg) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
+  el.innerHTML = msg;
   el.classList.add('show');
-  clearTimeout(el._timer);
-  el._timer = setTimeout(() => el.classList.remove('show'), 2500);
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2800);
 }
 
 // =====================================================================
-//  MODAL SYSTEM
+//  MODAL
 // =====================================================================
 function showModal(html) {
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)hideModal()"><div class="modal">${html}</div></div>`;
   requestAnimationFrame(() => root.querySelector('.modal-backdrop').classList.add('visible'));
-  document.addEventListener('keydown', onModalKey);
+  document.addEventListener('keydown', _mk);
 }
-
 function hideModal() {
   const root = document.getElementById('modal-root');
   const bd = root.querySelector('.modal-backdrop');
-  if (bd) { bd.classList.remove('visible'); setTimeout(() => { root.innerHTML = ''; }, 150); }
-  document.removeEventListener('keydown', onModalKey);
+  if (bd) { bd.classList.remove('visible'); setTimeout(() => root.innerHTML = '', 180); }
+  document.removeEventListener('keydown', _mk);
 }
-
-function onModalKey(e) { if (e.key === 'Escape') hideModal(); }
+function _mk(e) { if (e.key === 'Escape') hideModal(); }
 
 // =====================================================================
-//  SVG ICONS
+//  ICONS
 // =====================================================================
-const ICONS = {
-  overview: '<svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor" opacity="0.4"/><rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor" opacity="0.4"/><rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor" opacity="0.4"/></svg>',
-  applications: '<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
-  interviews: '<svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 3V1.5M11 3V1.5M2 7h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
-  positions: '<svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
-  email: '<svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 4.5l6.5 4.5 6.5-4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  history: '<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  plus: '<svg viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-  send: '<svg viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  search: '<svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
-  chevLeft: '<svg viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  chevRight: '<svg viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  mail: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M1 4l6 4 6-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
-  cal: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M4 2V1M10 2V1M1 6h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
-  check: '<svg viewBox="0 0 14 14" fill="none"><path d="M3 7.5l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  x: '<svg viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-  edit: '<svg viewBox="0 0 14 14" fill="none"><path d="M8.5 2.5l3 3M2 9l6.5-6.5 3 3L5 12H2V9z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>',
-  trash: '<svg viewBox="0 0 14 14" fill="none"><path d="M3 4h8l-.7 8H3.7L3 4zM5.5 2h3M2 4h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  reset: '<svg viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 1 1 1 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M2 10V7h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+const I = {
+  overview: '<svg viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="2" fill="currentColor"/><rect x="11" y="2" width="7" height="7" rx="2" fill="currentColor" opacity="0.35"/><rect x="2" y="11" width="7" height="7" rx="2" fill="currentColor" opacity="0.35"/><rect x="11" y="11" width="7" height="7" rx="2" fill="currentColor" opacity="0.35"/></svg>',
+  applications: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="6" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M3 17c0-3.5 3-6 7-6s7 2.5 7 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  interviews: '<svg viewBox="0 0 20 20" fill="none"><rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 3.5V1.5M14 3.5V1.5M2.5 8.5h15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  positions: '<svg viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h10M3 15h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  email: '<svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 6l8 5 8-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  history: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4.5l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  plus: '<svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  send: '<svg viewBox="0 0 16 16" fill="none"><path d="M2 8h10M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  search: '<svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  chevL: '<svg viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  chevR: '<svg viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  mail: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 4.5l7 4.5 7-4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  cal: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 2.5V1M11.5 2.5V1M1.5 6.5h13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  check: '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5L13 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  edit: '<svg viewBox="0 0 16 16" fill="none"><path d="M9.5 3.5l3 3M3 10l6-6 3 3-6 6H3v-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>',
+  trash: '<svg viewBox="0 0 16 16" fill="none"><path d="M4 5h8l-.6 8H4.6L4 5zM6.5 3h3M3 5h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  reset: '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8a5 5 0 1 1 1 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3 11V8h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  users: '<svg viewBox="0 0 20 20" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M1 17c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.3"/><circle cx="15" cy="7" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M19 17c0-2.5-2-4-4-4" stroke="currentColor" stroke-width="1.3"/></svg>',
+  clipboard: '<svg viewBox="0 0 20 20" fill="none"><rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M8 2h4M8 8h4M8 12h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  clock: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.3"/><path d="M10 6v4l3 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  briefcase: '<svg viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M7 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" stroke-width="1.3"/></svg>'
 };
 
 // =====================================================================
-//  ROUTER & NAVIGATION
+//  ROUTER
 // =====================================================================
 let currentPage = 'overview';
 let pageState = {};
-
 const PAGES = [
   { id: 'overview', label: 'Overview', icon: 'overview' },
   { id: 'applications', label: 'Applications', icon: 'applications', badge: true },
@@ -478,119 +496,109 @@ function navigate(page) {
   renderSidebar();
   renderTopbar();
   renderPage();
-}
-
-function renderSidebar() {
-  const pendingCount = store.applicants.filter(a => a.status === 'new' || a.status === 'under_review').length;
-  document.getElementById('sidebar-nav').innerHTML = PAGES.map(p =>
-    `<button class="nav-item${currentPage === p.id ? ' active' : ''}" onclick="navigate('${p.id}')">
-      ${ICONS[p.icon]}
-      ${p.label}
-      ${p.badge && pendingCount > 0 ? `<span class="nav-badge">${pendingCount}</span>` : ''}
-    </button>`
-  ).join('') + `<div style="flex:1"></div><button class="nav-item" onclick="confirmReset()" style="margin-top:auto;opacity:0.6">${ICONS.reset} Reset data</button>`;
-}
-
-function confirmReset() {
-  showModal(`
-    <div class="modal-header"><h3>Reset all data?</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
-    <div class="modal-body"><p style="font-size:13px;color:var(--text-secondary)">This will restore all positions, applicants, emails, and history to the original demo data. This cannot be undone.</p></div>
-    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-primary" onclick="resetStore();hideModal();navigate(currentPage);showToast('Data reset to defaults')">Reset</button></div>
-  `);
-}
-
-// =====================================================================
-//  TOPBAR
-// =====================================================================
-function renderTopbar() {
-  const topbar = document.getElementById('topbar');
-  const titles = {
-    overview: ['Admin overview', 'Spring 2025 cycle'],
-    applications: ['Applications', `${store.applicants.length} total applicants`],
-    interviews: ['Interview calendar', 'Scheduled interviews and availability'],
-    positions: ['Volunteer positions', `${store.positions.length} positions`],
-    email: ['Email', 'Compose and track messages'],
-    history: ['Activity history', 'Timeline of all events']
-  };
-  const [title, sub] = titles[currentPage] || ['', ''];
-  let actions = '';
-  if (currentPage === 'overview') {
-    actions = `<button class="btn" onclick="navigate('email')">${ICONS.send} Send emails</button><button class="btn btn-primary" onclick="openPositionModal()">${ICONS.plus} Add position</button>`;
-  } else if (currentPage === 'applications') {
-    actions = `<button class="btn btn-primary" onclick="openAddApplicantModal()">${ICONS.plus} Add applicant</button>`;
-  } else if (currentPage === 'positions') {
-    actions = `<button class="btn btn-primary" onclick="openPositionModal()">${ICONS.plus} Add position</button>`;
-  } else if (currentPage === 'email') {
-    actions = '';
-  }
-  topbar.innerHTML = `<div class="topbar-left"><h2>${title}</h2><p>${sub}</p></div><div class="topbar-actions">${actions}</div>`;
-}
-
-// =====================================================================
-//  PAGE RENDERERS
-// =====================================================================
-function renderPage() {
-  const c = document.getElementById('content');
-  switch (currentPage) {
-    case 'overview': c.innerHTML = renderOverview(); break;
-    case 'applications': c.innerHTML = renderApplications(); break;
-    case 'interviews': c.innerHTML = renderInterviews(); break;
-    case 'positions': c.innerHTML = renderPositions(); break;
-    case 'email': c.innerHTML = renderEmail(); break;
-    case 'history': c.innerHTML = renderHistory(); break;
-  }
   document.getElementById('content').scrollTop = 0;
 }
 
-// ---------- OVERVIEW ----------
+function renderSidebar() {
+  const pending = store.applicants.filter(a => a.status === 'new' || a.status === 'under_review').length;
+  document.getElementById('sidebar-nav').innerHTML = PAGES.map(p =>
+    `<button class="nav-item${currentPage === p.id ? ' active' : ''}" onclick="navigate('${p.id}')">
+      ${I[p.icon]}${p.label}${p.badge && pending > 0 ? `<span class="nav-badge">${pending}</span>` : ''}
+    </button>`
+  ).join('') + `<button class="nav-item" onclick="confirmReset()" style="margin-top:24px;opacity:0.5">${I.reset} Reset demo</button>`;
+}
+
+function confirmReset() {
+  showModal(`<div class="modal-header"><h3>Reset all data?</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
+    <div class="modal-body"><p style="font-size:13px;color:var(--text-secondary)">Restore all positions, applicants, emails, and history to demo defaults. This cannot be undone.</p></div>
+    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-primary" onclick="resetStore();hideModal();navigate(currentPage);showToast('Data reset to defaults')">Reset data</button></div>`);
+}
+
+function renderTopbar() {
+  const t = document.getElementById('topbar');
+  const titles = {
+    overview: ['Overview', 'Spring 2025 admission cycle'],
+    applications: ['Applications', `${store.applicants.length} total applicants`],
+    interviews: ['Interview Calendar', 'Schedule and manage interviews'],
+    positions: ['Volunteer Positions', `${store.positions.length} active positions`],
+    email: ['Email Center', 'Compose and track messages'],
+    history: ['Activity Log', 'Complete event timeline']
+  };
+  const [title, sub] = titles[currentPage] || ['', ''];
+  let actions = '';
+  if (currentPage === 'overview') actions = `<button class="btn" onclick="navigate('email')">${I.send} Send emails</button><button class="btn btn-primary" onclick="openPositionModal()">${I.plus} New position</button>`;
+  else if (currentPage === 'applications') actions = `<button class="btn btn-primary" onclick="openAddApplicantModal()">${I.plus} Add applicant</button>`;
+  else if (currentPage === 'positions') actions = `<button class="btn btn-primary" onclick="openPositionModal()">${I.plus} New position</button>`;
+  t.innerHTML = `<div class="topbar-left"><h2>${title}</h2><p>${sub}</p></div><div class="topbar-actions">${actions}</div>`;
+}
+
+function renderPage() {
+  const c = document.getElementById('content');
+  const renderers = { overview: renderOverview, applications: renderApplications, interviews: renderInterviews, positions: renderPositions, email: renderEmail, history: renderHistory };
+  c.innerHTML = (renderers[currentPage] || (() => ''))();
+}
+
+// =====================================================================
+//  OVERVIEW
+// =====================================================================
 function renderOverview() {
-  const s = getStats();
-  const recent = [...store.applicants].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt)).slice(0, 5);
+  const apps = store.applicants;
+  const pending = apps.filter(a => a.status === 'new' || a.status === 'under_review').length;
+  const interviews = apps.filter(a => a.status === 'interview_scheduled').length;
+  const openPos = store.positions.filter(p => p.status !== 'closed').length;
+  const recent = [...apps].sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt)).slice(0, 5);
+
   return `
     <div class="stat-grid">
-      <div class="stat-card"><div class="label">Total applicants</div><div class="value">${s.total}</div><div class="delta">Spring 2025</div></div>
-      <div class="stat-card"><div class="label">Pending review</div><div class="value">${s.pending}</div></div>
-      <div class="stat-card"><div class="label">Interviews scheduled</div><div class="value">${s.interviews}</div></div>
-      <div class="stat-card"><div class="label">Open positions</div><div class="value">${s.openPositions}</div></div>
+      <div class="stat-card">
+        <div class="stat-icon">${I.users}</div>
+        <div class="label">Total Applicants</div><div class="value">${apps.length}</div><div class="delta">Spring 2025</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">${I.clock}</div>
+        <div class="label">Pending Review</div><div class="value">${pending}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">${I.interviews}</div>
+        <div class="label">Interviews Scheduled</div><div class="value">${interviews}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">${I.briefcase}</div>
+        <div class="label">Open Positions</div><div class="value">${openPos}</div>
+      </div>
     </div>
-    <div class="section-title">Positions</div>
+    <div class="section-header"><div class="section-title">Active Positions</div><button class="btn btn-ghost btn-sm" onclick="navigate('positions')">View all ${I.chevR}</button></div>
     <div class="pos-grid">
       ${store.positions.map(p => {
         const count = getApplicantsForPosition(p.id).length;
-        const pillClass = p.status === 'open' ? 'pill-green' : p.status === 'reviewing' ? 'pill-amber' : 'pill-gray';
+        const pc = p.status === 'open' ? 'pill-green' : p.status === 'reviewing' ? 'pill-amber' : 'pill-gray';
         return `<div class="pos-card" onclick="navigate('positions')">
           <h3>${esc(p.title)}</h3>
           <div class="meta">${esc(p.schedule)} · ${p.hoursPerWeek}h/week</div>
-          <div class="footer">
-            <span class="pill ${pillClass}">${cap(p.status)}</span>
-            <span style="font-size:12px;color:var(--text-tertiary)">${count} applicant${count !== 1 ? 's' : ''}</span>
-          </div>
+          <div class="footer"><span class="pill ${pc}">${cap(p.status)}</span><span style="font-size:12px;color:var(--text-muted);font-weight:500">${count} applicant${count !== 1 ? 's' : ''}</span></div>
         </div>`;
       }).join('')}
-      <div class="pos-add" onclick="openPositionModal()">${ICONS.plus} Add position</div>
+      <div class="pos-add" onclick="openPositionModal()">${I.plus} Add position</div>
     </div>
-    <div class="section-title">Recent applications</div>
-    <div class="app-list">
-      ${recent.map(a => renderAppRow(a)).join('')}
-    </div>`;
+    <div class="section-header"><div class="section-title">Recent Applications</div><button class="btn btn-ghost btn-sm" onclick="navigate('applications')">View all ${I.chevR}</button></div>
+    <div class="app-list">${recent.map(a => renderAppRow(a)).join('')}</div>`;
 }
 
-// ---------- APPLICATION ROW (shared) ----------
+// =====================================================================
+//  APPLICATION ROW (shared component)
+// =====================================================================
 function renderAppRow(a) {
   const pos = getPosition(a.positionId);
   const events = getEventsForApplicant(a.id);
-  const statusPill = statusToPill(a.status);
+  const sp = statusPill(a.status);
   return `<div class="app-row" id="row-${a.id}">
     <div class="app-header" onclick="toggleRow('${a.id}')">
       <div class="avatar avatar-${a.color}">${getInitials(a.name)}</div>
-      <div class="app-info">
-        <h4>${esc(a.name)}</h4>
-        <p>${pos ? esc(pos.title) : 'Unknown position'}</p>
-      </div>
-      <span class="pill ${statusPill.cls}">${statusPill.label}</span>
+      <div class="app-info"><h4>${esc(a.name)}</h4><p>${pos ? esc(pos.title) : 'Unknown position'}</p></div>
+      <span class="pill ${sp.cls}">${sp.label}</span>
       <div class="app-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-icon btn-sm" title="Email" onclick="openEmailModalFor('${a.id}')">${ICONS.mail}</button>
-        <button class="btn btn-icon btn-sm" title="Schedule" onclick="openScheduleModal('${a.id}')">${ICONS.cal}</button>
+        <button class="btn btn-icon btn-sm" title="Send email" onclick="openEmailFor('${a.id}')">${I.mail}</button>
+        <button class="btn btn-icon btn-sm" title="Schedule interview" onclick="openScheduleModal('${a.id}')">${I.cal}</button>
       </div>
       <span class="chevron">▾</span>
     </div>
@@ -606,717 +614,327 @@ function renderAppRow(a) {
       </div>
       <div class="activity-list">
         <div class="title">Activity</div>
-        ${events.slice(0, 5).map(ev => `<div class="activity-row"><div class="activity-dot ${eventDotColor(ev.type)}"></div>${esc(ev.desc)} · ${relTime(ev.ts)}</div>`).join('')}
-        ${events.length === 0 ? '<div style="font-size:12px;color:var(--text-tertiary)">No activity recorded</div>' : ''}
+        ${events.slice(0, 5).map(ev => `<div class="activity-row"><div class="activity-dot ${evDot(ev.type)}"></div>${esc(ev.desc)} · ${relTime(ev.ts)}</div>`).join('')}
+        ${events.length === 0 ? '<div style="font-size:12px;color:var(--text-muted)">No activity recorded</div>' : ''}
       </div>
-      <div class="action-row">
-        ${renderActionButtons(a)}
-      </div>
+      <div class="action-row">${actionButtons(a)}</div>
     </div>
   </div>`;
 }
 
-function renderActionButtons(a) {
-  let btns = '';
+function actionButtons(a) {
+  let b = '';
   if (a.status === 'new') {
-    btns += `<button class="btn btn-sm" onclick="changeStatus('${a.id}','under_review')">Mark reviewing</button>`;
-    btns += `<button class="btn btn-primary btn-sm" onclick="openScheduleModal('${a.id}')">Schedule interview</button>`;
-    btns += `<button class="btn btn-sm" onclick="openEmailModalFor('${a.id}')">Send email</button>`;
-    btns += `<button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}')">Decline</button>`;
+    b += `<button class="btn btn-sm" onclick="changeStatus('${a.id}','under_review')">Start review</button>`;
+    b += `<button class="btn btn-primary btn-sm" onclick="openScheduleModal('${a.id}')">Schedule interview</button>`;
+    b += `<button class="btn btn-sm" onclick="openEmailFor('${a.id}')">Send email</button>`;
+    b += `<button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}')">Decline</button>`;
   } else if (a.status === 'under_review') {
-    btns += `<button class="btn btn-primary btn-sm" onclick="openScheduleModal('${a.id}')">Schedule interview</button>`;
-    btns += `<button class="btn btn-sm" onclick="openEmailModalFor('${a.id}')">Send email</button>`;
-    btns += `<button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}')">Decline</button>`;
+    b += `<button class="btn btn-primary btn-sm" onclick="openScheduleModal('${a.id}')">Schedule interview</button>`;
+    b += `<button class="btn btn-sm" onclick="openEmailFor('${a.id}')">Send email</button>`;
+    b += `<button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}')">Decline</button>`;
   } else if (a.status === 'interview_scheduled') {
-    btns += `<button class="btn btn-primary btn-sm" onclick="changeStatus('${a.id}','accepted')">${ICONS.check} Accept</button>`;
-    btns += `<button class="btn btn-sm" onclick="openScheduleModal('${a.id}')">Reschedule</button>`;
-    btns += `<button class="btn btn-sm" onclick="openEmailModalFor('${a.id}')">Send reminder</button>`;
-    btns += `<button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}')">Decline</button>`;
+    b += `<button class="btn btn-primary btn-sm" onclick="changeStatus('${a.id}','accepted')">${I.check} Accept</button>`;
+    b += `<button class="btn btn-sm" onclick="openScheduleModal('${a.id}')">Reschedule</button>`;
+    b += `<button class="btn btn-sm" onclick="openEmailFor('${a.id}')">Send reminder</button>`;
+    b += `<button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}')">Decline</button>`;
   } else if (a.status === 'accepted') {
-    btns += `<button class="btn btn-sm" onclick="openEmailModalFor('${a.id}')">Send email</button>`;
+    b += `<button class="btn btn-sm" onclick="openEmailFor('${a.id}')">Send email</button>`;
   } else if (a.status === 'declined') {
-    btns += `<button class="btn btn-sm" onclick="changeStatus('${a.id}','new')">Reopen</button>`;
-    btns += `<button class="btn btn-sm" onclick="openEmailModalFor('${a.id}')">Send email</button>`;
+    b += `<button class="btn btn-sm" onclick="changeStatus('${a.id}','new')">Reopen</button>`;
+    b += `<button class="btn btn-sm" onclick="openEmailFor('${a.id}')">Send email</button>`;
   }
-  return btns;
+  return b;
 }
 
-function statusToPill(status) {
-  const map = {
-    new: { label: 'New', cls: 'pill-gray' },
-    under_review: { label: 'Under review', cls: 'pill-amber' },
-    interview_scheduled: { label: 'Interview set', cls: 'pill-blue' },
-    accepted: { label: 'Accepted', cls: 'pill-green' },
-    declined: { label: 'Declined', cls: 'pill-red' }
-  };
-  return map[status] || { label: status, cls: 'pill-gray' };
+function statusPill(s) {
+  return { new: { label: 'New', cls: 'pill-gray' }, under_review: { label: 'Reviewing', cls: 'pill-amber' }, interview_scheduled: { label: 'Interview set', cls: 'pill-blue' }, accepted: { label: 'Accepted', cls: 'pill-green' }, declined: { label: 'Declined', cls: 'pill-red' } }[s] || { label: s, cls: 'pill-gray' };
 }
+function evDot(t) { return { application: 'dot-blue', status: 'dot-amber', email: 'dot-gray', interview: 'dot-green' }[t] || 'dot-gray'; }
+function dotBg(t) { return { application: 'var(--blue)', status: 'var(--amber)', email: 'var(--text-muted)', interview: 'var(--accent)' }[t] || 'var(--text-muted)'; }
+function toggleRow(id) { document.getElementById('row-' + id)?.classList.toggle('expanded'); }
 
-function eventDotColor(type) {
-  const map = { application: 'dot-blue', status: 'dot-amber', email: 'dot-gray', interview: 'dot-green' };
-  return map[type] || 'dot-gray';
-}
-
-function toggleRow(id) {
-  document.getElementById('row-' + id)?.classList.toggle('expanded');
-}
-
-// ---------- APPLICATIONS ----------
+// =====================================================================
+//  APPLICATIONS PAGE
+// =====================================================================
 function renderApplications() {
   let apps = [...store.applicants];
-  const search = (pageState.search || '').toLowerCase();
-  const statusFilter = pageState.statusFilter || 'all';
-  const posFilter = pageState.posFilter || 'all';
+  const q = (pageState.search || '').toLowerCase();
+  const sf = pageState.statusFilter || 'all';
+  const pf = pageState.posFilter || 'all';
   const sort = pageState.sort || 'newest';
-
-  if (search) apps = apps.filter(a => a.name.toLowerCase().includes(search) || a.email.toLowerCase().includes(search));
-  if (statusFilter !== 'all') apps = apps.filter(a => a.status === statusFilter);
-  if (posFilter !== 'all') apps = apps.filter(a => a.positionId === posFilter);
-
+  if (q) apps = apps.filter(a => a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q));
+  if (sf !== 'all') apps = apps.filter(a => a.status === sf);
+  if (pf !== 'all') apps = apps.filter(a => a.positionId === pf);
   if (sort === 'newest') apps.sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
   else if (sort === 'oldest') apps.sort((a, b) => new Date(a.appliedAt) - new Date(b.appliedAt));
   else if (sort === 'name') apps.sort((a, b) => a.name.localeCompare(b.name));
   else if (sort === 'gpa') apps.sort((a, b) => b.gpa - a.gpa);
 
-  return `
-    <div class="toolbar">
-      <div class="search-box">
-        ${ICONS.search}
-        <input type="text" placeholder="Search by name or email..." value="${esc(pageState.search || '')}" oninput="pageState.search=this.value;renderPage()">
-      </div>
-      <select class="filter-select" onchange="pageState.statusFilter=this.value;renderPage()">
-        <option value="all"${statusFilter === 'all' ? ' selected' : ''}>All statuses</option>
-        <option value="new"${statusFilter === 'new' ? ' selected' : ''}>New</option>
-        <option value="under_review"${statusFilter === 'under_review' ? ' selected' : ''}>Under review</option>
-        <option value="interview_scheduled"${statusFilter === 'interview_scheduled' ? ' selected' : ''}>Interview set</option>
-        <option value="accepted"${statusFilter === 'accepted' ? ' selected' : ''}>Accepted</option>
-        <option value="declined"${statusFilter === 'declined' ? ' selected' : ''}>Declined</option>
-      </select>
-      <select class="filter-select" onchange="pageState.posFilter=this.value;renderPage()">
-        <option value="all"${posFilter === 'all' ? ' selected' : ''}>All positions</option>
-        ${store.positions.map(p => `<option value="${p.id}"${posFilter === p.id ? ' selected' : ''}>${esc(p.title)}</option>`).join('')}
-      </select>
-      <select class="filter-select" onchange="pageState.sort=this.value;renderPage()">
-        <option value="newest"${sort === 'newest' ? ' selected' : ''}>Newest first</option>
-        <option value="oldest"${sort === 'oldest' ? ' selected' : ''}>Oldest first</option>
-        <option value="name"${sort === 'name' ? ' selected' : ''}>Name A-Z</option>
-        <option value="gpa"${sort === 'gpa' ? ' selected' : ''}>Highest GPA</option>
-      </select>
-      <span class="toolbar-count">${apps.length} result${apps.length !== 1 ? 's' : ''}</span>
-    </div>
-    <div class="app-list">
-      ${apps.length > 0 ? apps.map(a => renderAppRow(a)).join('') : `<div class="empty-state"><h4>No applications found</h4><p>Try adjusting your filters or search query.</p></div>`}
-    </div>`;
+  return `<div class="toolbar">
+    <div class="search-box">${I.search}<input type="text" placeholder="Search by name or email..." value="${esc(pageState.search || '')}" oninput="pageState.search=this.value;renderPage()"></div>
+    <select class="filter-select" onchange="pageState.statusFilter=this.value;renderPage()">
+      <option value="all"${sf==='all'?' selected':''}>All statuses</option><option value="new"${sf==='new'?' selected':''}>New</option><option value="under_review"${sf==='under_review'?' selected':''}>Reviewing</option><option value="interview_scheduled"${sf==='interview_scheduled'?' selected':''}>Interview set</option><option value="accepted"${sf==='accepted'?' selected':''}>Accepted</option><option value="declined"${sf==='declined'?' selected':''}>Declined</option>
+    </select>
+    <select class="filter-select" onchange="pageState.posFilter=this.value;renderPage()">
+      <option value="all"${pf==='all'?' selected':''}>All positions</option>${store.positions.map(p=>`<option value="${p.id}"${pf===p.id?' selected':''}>${esc(p.title)}</option>`).join('')}
+    </select>
+    <select class="filter-select" onchange="pageState.sort=this.value;renderPage()">
+      <option value="newest"${sort==='newest'?' selected':''}>Newest first</option><option value="oldest"${sort==='oldest'?' selected':''}>Oldest first</option><option value="name"${sort==='name'?' selected':''}>Name A-Z</option><option value="gpa"${sort==='gpa'?' selected':''}>Highest GPA</option>
+    </select>
+    <span class="toolbar-count">${apps.length} result${apps.length!==1?'s':''}</span>
+  </div>
+  <div class="app-list">${apps.length > 0 ? apps.map(a => renderAppRow(a)).join('') : '<div class="empty-state"><h4>No applications found</h4><p>Try adjusting your filters or search.</p></div>'}</div>`;
 }
 
-// ---------- INTERVIEWS ----------
+// =====================================================================
+//  INTERVIEWS PAGE
+// =====================================================================
 function renderInterviews() {
   const now = new Date();
-  const viewYear = pageState.calYear || now.getFullYear();
-  const viewMonth = pageState.calMonth !== undefined ? pageState.calMonth : now.getMonth();
+  const vy = pageState.calYear || now.getFullYear();
+  const vm = pageState.calMonth !== undefined ? pageState.calMonth : now.getMonth();
+  const ivs = store.applicants.filter(a => a.status === 'interview_scheduled' && a.interviewDate);
+  const upcoming = [...ivs].sort((a, b) => new Date(a.interviewDate) - new Date(b.interviewDate));
+  const first = new Date(vy, vm, 1), last = new Date(vy, vm + 1, 0);
+  const dow = first.getDay(), dim = last.getDate();
+  const mn = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 
-  const interviews = store.applicants.filter(a => a.status === 'interview_scheduled' && a.interviewDate);
-  const upcoming = [...interviews].sort((a, b) => new Date(a.interviewDate) - new Date(b.interviewDate));
-
-  const firstDay = new Date(viewYear, viewMonth, 1);
-  const lastDay = new Date(viewYear, viewMonth + 1, 0);
-  const startDow = firstDay.getDay();
-  const daysInMonth = lastDay.getDate();
-
-  const monthName = firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-  let calCells = '';
-  ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => {
-    calCells += `<div class="cal-day-label">${d}</div>`;
-  });
-
-  const prevMonth = new Date(viewYear, viewMonth, 0);
-  const prevDays = prevMonth.getDate();
-  for (let i = startDow - 1; i >= 0; i--) {
-    calCells += `<div class="cal-day other-month"><div class="day-num">${prevDays - i}</div></div>`;
+  let cells = '';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => cells += `<div class="cal-day-label">${d}</div>`);
+  const prev = new Date(vy, vm, 0).getDate();
+  for (let i = dow-1; i >= 0; i--) cells += `<div class="cal-day other-month"><div class="day-num">${prev-i}</div></div>`;
+  for (let d = 1; d <= dim; d++) {
+    const ds = `${vy}-${String(vm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const it = ds === todayStr;
+    const di = ivs.filter(a => a.interviewDate === ds);
+    cells += `<div class="cal-day${it?' today':''}" onclick="showDayDetail('${ds}')"><div class="day-num">${d}</div>${di.map(a=>`<div class="cal-event">${fmtTime(a.interviewTime)} ${esc(a.name.split(' ')[0])}</div>`).join('')}</div>`;
   }
+  const rem = (7-(dow+dim)%7)%7;
+  for (let i=1;i<=rem;i++) cells += `<div class="cal-day other-month"><div class="day-num">${i}</div></div>`;
 
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const isToday = dateStr === todayStr;
-    const dayInterviews = interviews.filter(a => a.interviewDate === dateStr);
-    calCells += `<div class="cal-day${isToday ? ' today' : ''}" onclick="showDayDetail('${dateStr}')">
-      <div class="day-num">${d}</div>
-      ${dayInterviews.map(a => `<div class="cal-event">${fmtTime(a.interviewTime)} ${esc(a.name.split(' ')[0])}</div>`).join('')}
-    </div>`;
-  }
-
-  const totalCells = startDow + daysInMonth;
-  const remaining = (7 - (totalCells % 7)) % 7;
-  for (let i = 1; i <= remaining; i++) {
-    calCells += `<div class="cal-day other-month"><div class="day-num">${i}</div></div>`;
-  }
-
-  return `
-    <div class="cal-container">
-      <div>
-        <div class="card" style="padding:16px">
-          <div class="cal-header">
-            <h3>${monthName}</h3>
-            <div class="cal-nav">
-              <button class="btn btn-icon btn-sm" onclick="calNav(-1)">${ICONS.chevLeft}</button>
-              <button class="btn btn-sm" onclick="calToday()">Today</button>
-              <button class="btn btn-icon btn-sm" onclick="calNav(1)">${ICONS.chevRight}</button>
-            </div>
-          </div>
-          <div class="cal-grid">${calCells}</div>
-        </div>
-      </div>
-      <div class="cal-sidebar">
-        <h3>Upcoming interviews</h3>
-        ${upcoming.length === 0 ? '<div style="font-size:13px;color:var(--text-tertiary);padding:12px 0">No interviews scheduled</div>' : ''}
-        ${upcoming.map(a => {
-          const pos = getPosition(a.positionId);
-          return `<div class="interview-item">
-            <h4>${esc(a.name)}</h4>
-            <p>${pos ? esc(pos.title) : ''}</p>
-            <p style="color:var(--text-primary);font-weight:500;margin-top:4px">${fmtDateTime(a.interviewDate, a.interviewTime)}</p>
-            <div class="actions">
-              <button class="btn btn-primary btn-sm" onclick="changeStatus('${a.id}','accepted')">${ICONS.check} Accept</button>
-              <button class="btn btn-sm" onclick="openScheduleModal('${a.id}')">Reschedule</button>
-              <button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}')">Decline</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-}
-
-function calNav(dir) {
-  const now = new Date();
-  let m = pageState.calMonth !== undefined ? pageState.calMonth : now.getMonth();
-  let y = pageState.calYear || now.getFullYear();
-  m += dir;
-  if (m < 0) { m = 11; y--; }
-  if (m > 11) { m = 0; y++; }
-  pageState.calMonth = m;
-  pageState.calYear = y;
-  renderPage();
-}
-
-function calToday() {
-  const now = new Date();
-  pageState.calMonth = now.getMonth();
-  pageState.calYear = now.getFullYear();
-  renderPage();
-}
-
-function showDayDetail(dateStr) {
-  const dayInterviews = store.applicants.filter(a => a.interviewDate === dateStr && a.status === 'interview_scheduled');
-  const d = new Date(dateStr + 'T00:00:00');
-  const formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  showModal(`
-    <div class="modal-header"><h3>${formatted}</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
-    <div class="modal-body">
-      ${dayInterviews.length === 0 ? '<p style="color:var(--text-tertiary)">No interviews on this day.</p><p style="margin-top:8px;font-size:13px;color:var(--text-secondary)">To schedule an interview, go to Applications and click "Schedule interview" on an applicant.</p>' : ''}
-      ${dayInterviews.map(a => {
-        const pos = getPosition(a.positionId);
-        return `<div class="interview-item" style="margin-bottom:10px">
-          <h4>${esc(a.name)}</h4>
-          <p>${pos ? esc(pos.title) : ''} · ${fmtTime(a.interviewTime)}</p>
-          <div class="actions">
-            <button class="btn btn-primary btn-sm" onclick="changeStatus('${a.id}','accepted');hideModal()">${ICONS.check} Accept</button>
-            <button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}');hideModal()">Decline</button>
-          </div>
-        </div>`;
-      }).join('')}
+  return `<div class="cal-container">
+    <div><div class="card" style="padding:18px">
+      <div class="cal-header"><h3>${mn}</h3><div class="cal-nav"><button class="btn btn-icon btn-sm" onclick="calNav(-1)">${I.chevL}</button><button class="btn btn-sm" onclick="calToday()">Today</button><button class="btn btn-icon btn-sm" onclick="calNav(1)">${I.chevR}</button></div></div>
+      <div class="cal-grid">${cells}</div>
+    </div></div>
+    <div class="cal-sidebar-panel">
+      <h3>Upcoming Interviews</h3>
+      ${upcoming.length===0?'<p style="font-size:13px;color:var(--text-muted)">No interviews scheduled</p>':''}
+      ${upcoming.map(a => { const pos = getPosition(a.positionId); return `<div class="interview-card">
+        <h4>${esc(a.name)}</h4><p>${pos?esc(pos.title):''}</p>
+        <div class="time-badge">${I.cal} ${fmtDateTime(a.interviewDate, a.interviewTime)}</div>
+        <div class="actions"><button class="btn btn-primary btn-sm" onclick="changeStatus('${a.id}','accepted')">${I.check} Accept</button><button class="btn btn-sm" onclick="openScheduleModal('${a.id}')">Reschedule</button><button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}')">Decline</button></div>
+      </div>`; }).join('')}
     </div>
-  `);
+  </div>`;
+}
+function calNav(dir) { const now=new Date(); let m=pageState.calMonth!==undefined?pageState.calMonth:now.getMonth(), y=pageState.calYear||now.getFullYear(); m+=dir; if(m<0){m=11;y--} if(m>11){m=0;y++} pageState.calMonth=m; pageState.calYear=y; renderPage(); }
+function calToday() { const n=new Date(); pageState.calMonth=n.getMonth(); pageState.calYear=n.getFullYear(); renderPage(); }
+function showDayDetail(ds) {
+  const di=store.applicants.filter(a=>a.interviewDate===ds&&a.status==='interview_scheduled');
+  const d=new Date(ds+'T00:00:00');
+  const f=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  showModal(`<div class="modal-header"><h3>${f}</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
+    <div class="modal-body">${di.length===0?'<p style="color:var(--text-muted)">No interviews on this day.</p><p style="margin-top:8px;font-size:13px;color:var(--text-secondary)">Schedule interviews from the Applications page.</p>':''}
+    ${di.map(a=>{const pos=getPosition(a.positionId);return`<div class="interview-card" style="margin-bottom:10px"><h4>${esc(a.name)}</h4><p>${pos?esc(pos.title):''} · ${fmtTime(a.interviewTime)}</p><div class="actions"><button class="btn btn-primary btn-sm" onclick="changeStatus('${a.id}','accepted');hideModal()">${I.check} Accept</button><button class="btn btn-danger btn-sm" onclick="confirmDecline('${a.id}');hideModal()">Decline</button></div></div>`;}).join('')}</div>`);
 }
 
-// ---------- POSITIONS ----------
+// =====================================================================
+//  POSITIONS PAGE
+// =====================================================================
 function renderPositions() {
-  return `
-    <div class="positions-list">
-      ${store.positions.map(p => {
-        const apps = getApplicantsForPosition(p.id);
-        const accepted = apps.filter(a => a.status === 'accepted').length;
-        const pending = apps.filter(a => a.status !== 'accepted' && a.status !== 'declined').length;
-        const pillClass = p.status === 'open' ? 'pill-green' : p.status === 'reviewing' ? 'pill-amber' : 'pill-gray';
-        return `<div class="position-card-full">
-          <div class="info">
-            <h3>${esc(p.title)}</h3>
-            <div class="meta">${esc(p.schedule)} · ${p.hoursPerWeek}h/week · ${p.slots} slot${p.slots !== 1 ? 's' : ''}</div>
-            ${p.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${esc(p.description)}</div>` : ''}
-          </div>
-          <div class="stats">
-            <div class="stat-item"><div class="num">${apps.length}</div><div class="lbl">Applied</div></div>
-            <div class="stat-item"><div class="num">${pending}</div><div class="lbl">Pending</div></div>
-            <div class="stat-item"><div class="num">${accepted}</div><div class="lbl">Accepted</div></div>
-          </div>
-          <span class="pill ${pillClass}" style="margin:0 8px">${cap(p.status)}</span>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-icon btn-sm" title="Edit" onclick="openPositionModal('${p.id}')">${ICONS.edit}</button>
-            <button class="btn btn-icon btn-sm btn-danger" title="Delete" onclick="confirmDeletePosition('${p.id}')">${ICONS.trash}</button>
-          </div>
-        </div>`;
-      }).join('')}
-      ${store.positions.length === 0 ? '<div class="empty-state"><h4>No positions yet</h4><p>Create your first volunteer position to start receiving applications.</p></div>' : ''}
-    </div>`;
+  return `<div class="positions-list">
+    ${store.positions.map(p => {
+      const apps=getApplicantsForPosition(p.id), acc=apps.filter(a=>a.status==='accepted').length, pend=apps.filter(a=>a.status!=='accepted'&&a.status!=='declined').length;
+      const pc=p.status==='open'?'pill-green':p.status==='reviewing'?'pill-amber':'pill-gray';
+      return `<div class="position-row">
+        <div class="pos-icon">${I.briefcase}</div>
+        <div class="info"><h3>${esc(p.title)}</h3><div class="meta">${esc(p.schedule)} · ${p.hoursPerWeek}h/week · ${p.slots} slot${p.slots!==1?'s':''}</div>${p.description?`<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${esc(p.description)}</div>`:''}</div>
+        <div class="stats"><div class="stat-item"><div class="num">${apps.length}</div><div class="lbl">Applied</div></div><div class="stat-item"><div class="num">${pend}</div><div class="lbl">Pending</div></div><div class="stat-item"><div class="num">${acc}</div><div class="lbl">Accepted</div></div></div>
+        <span class="pill ${pc}" style="margin:0 12px">${cap(p.status)}</span>
+        <div style="display:flex;gap:4px"><button class="btn btn-icon btn-sm" title="Edit" onclick="openPositionModal('${p.id}')">${I.edit}</button><button class="btn btn-icon btn-sm btn-danger" title="Delete" onclick="confirmDeletePosition('${p.id}')">${I.trash}</button></div>
+      </div>`;
+    }).join('')}
+    ${store.positions.length===0?'<div class="empty-state"><h4>No positions yet</h4><p>Create your first volunteer position to start receiving applications.</p></div>':''}
+  </div>`;
 }
 
-// ---------- EMAIL ----------
+// =====================================================================
+//  EMAIL PAGE
+// =====================================================================
 function renderEmail() {
-  const sentEmails = [...store.emails].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
-  return `
-    <div class="email-layout">
-      <div class="email-compose">
-        <h3>Compose email</h3>
-        <div class="form-group">
-          <label>To</label>
-          <select id="email-to">
-            <option value="">Select recipient...</option>
-            ${store.applicants.map(a => `<option value="${a.id}">${esc(a.name)} (${esc(a.email)})</option>`).join('')}
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Template</label>
-          <select id="email-template" onchange="applyEmailTemplate()">
-            <option value="">Custom message</option>
-            <option value="schedule">Interview scheduling invite</option>
-            <option value="reminder">Interview reminder</option>
-            <option value="acceptance">Acceptance letter</option>
-            <option value="rejection">Rejection notice</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Subject</label>
-          <input type="text" id="email-subject" placeholder="Email subject...">
-        </div>
-        <div class="form-group">
-          <label>Body</label>
-          <textarea id="email-body" placeholder="Write your message..."></textarea>
-        </div>
-        <button class="btn btn-primary" onclick="sendEmail()">${ICONS.send} Send email</button>
-        <!-- NOTE: This does not actually deliver an email. In production, this would call a backend API (e.g., Supabase Edge Function) that sends via SendGrid, Resend, or similar. -->
-      </div>
-      <div class="email-log">
-        <h3>Sent emails</h3>
-        ${sentEmails.length === 0 ? '<div style="padding:20px 0;text-align:center;color:var(--text-tertiary);font-size:13px">No emails sent yet</div>' : ''}
-        ${sentEmails.map(e => `<div class="email-entry" onclick="this.classList.toggle('expanded')">
-          <h4>${esc(e.subject)}</h4>
-          <div class="meta">To: ${esc(e.toName || e.to)} · ${relTime(e.sentAt)}</div>
-          <div class="body-preview">${esc(e.body)}</div>
-        </div>`).join('')}
-      </div>
-    </div>`;
+  const sent=[...store.emails].sort((a,b)=>new Date(b.sentAt)-new Date(a.sentAt));
+  return `<div class="email-layout">
+    <div class="email-panel"><h3>Compose</h3>
+      <div class="form-group"><label>To</label><select id="email-to"><option value="">Select recipient...</option>${store.applicants.map(a=>`<option value="${a.id}">${esc(a.name)} (${esc(a.email)})</option>`).join('')}</select></div>
+      <div class="form-group"><label>Template</label><select id="email-template" onchange="applyTmpl()"><option value="">Custom message</option><option value="schedule">Interview scheduling invite</option><option value="reminder">Interview reminder</option><option value="acceptance">Acceptance letter</option><option value="rejection">Rejection notice</option></select></div>
+      <div class="form-group"><label>Subject</label><input type="text" id="email-subject" placeholder="Email subject..."></div>
+      <div class="form-group"><label>Body</label><textarea id="email-body" placeholder="Write your message..."></textarea></div>
+      <button class="btn btn-primary" onclick="sendEmail()">${I.send} Send email</button>
+      <!-- NOTE: No real email is delivered. In production this would call a backend API (e.g. Supabase Edge Function + SendGrid/Resend). -->
+    </div>
+    <div class="email-panel"><h3>Sent Messages</h3>
+      ${sent.length===0?'<div style="padding:32px 0;text-align:center;color:var(--text-muted);font-size:13px">No emails sent yet</div>':''}
+      ${sent.map(e=>`<div class="email-entry" onclick="this.classList.toggle('expanded')"><h4>${esc(e.subject)}</h4><div class="meta">To: ${esc(e.toName||e.to)} · ${relTime(e.sentAt)}</div><div class="body-preview">${esc(e.body)}</div></div>`).join('')}
+    </div>
+  </div>`;
 }
 
-function applyEmailTemplate() {
-  const tmpl = document.getElementById('email-template').value;
-  const toSelect = document.getElementById('email-to');
-  const applicant = toSelect.value ? getApplicant(toSelect.value) : null;
-  const name = applicant ? applicant.name.split(' ')[0] : '[Name]';
-  const pos = applicant ? getPosition(applicant.positionId) : null;
-  const posTitle = pos ? pos.title : '[Position]';
-  const subj = document.getElementById('email-subject');
-  const body = document.getElementById('email-body');
-
-  const templates = {
-    schedule: {
-      subject: `Interview Scheduling — ${posTitle}`,
-      body: `Hi ${name},\n\nThank you for applying to the ${posTitle} position at BCS Free Health Clinic.\n\nWe'd like to invite you for a brief interview. Please let us know your availability for the coming week.\n\nBest regards,\nDr. Sarah Chen\nBCS Free Health Clinic`
-    },
-    reminder: {
-      subject: `Interview Reminder — ${posTitle}`,
-      body: `Hi ${name},\n\nThis is a friendly reminder about your upcoming interview for the ${posTitle} position.\n\nPlease arrive 5 minutes early and bring a valid student ID.\n\nBest regards,\nDr. Sarah Chen\nBCS Free Health Clinic`
-    },
-    acceptance: {
-      subject: `Congratulations! You've been accepted — ${posTitle}`,
-      body: `Hi ${name},\n\nWe're pleased to inform you that you've been accepted for the ${posTitle} position at BCS Free Health Clinic!\n\nYou'll receive onboarding details shortly. We're excited to have you on the team.\n\nBest regards,\nDr. Sarah Chen\nBCS Free Health Clinic`
-    },
-    rejection: {
-      subject: `Application Update — ${posTitle}`,
-      body: `Hi ${name},\n\nThank you for your interest in the ${posTitle} position at BCS Free Health Clinic.\n\nAfter careful consideration, we've decided to move forward with other candidates at this time. We encourage you to apply again in future cycles.\n\nBest regards,\nDr. Sarah Chen\nBCS Free Health Clinic`
-    }
+function applyTmpl() {
+  const tmpl=document.getElementById('email-template').value, toSel=document.getElementById('email-to');
+  const app=toSel.value?getApplicant(toSel.value):null;
+  const name=app?app.name.split(' ')[0]:'[Name]';
+  const pos=app?getPosition(app.positionId):null;
+  const pt=pos?pos.title:'[Position]';
+  const subj=document.getElementById('email-subject'), body=document.getElementById('email-body');
+  const T={
+    schedule:{subject:`Interview Scheduling — ${pt}`,body:`Hi ${name},\n\nThank you for applying to the ${pt} position at our clinic.\n\nWe'd like to invite you for a brief interview. Please let us know your availability for the coming week.\n\nBest regards,\nDr. Sarah Chen`},
+    reminder:{subject:`Interview Reminder — ${pt}`,body:`Hi ${name},\n\nThis is a friendly reminder about your upcoming interview for the ${pt} position.\n\nPlease arrive 5 minutes early and bring a valid student ID.\n\nBest regards,\nDr. Sarah Chen`},
+    acceptance:{subject:`Congratulations! — ${pt}`,body:`Hi ${name},\n\nWe're pleased to inform you that you've been accepted for the ${pt} position!\n\nYou'll receive onboarding details shortly. We're excited to have you on the team.\n\nBest regards,\nDr. Sarah Chen`},
+    rejection:{subject:`Application Update — ${pt}`,body:`Hi ${name},\n\nThank you for your interest in the ${pt} position.\n\nAfter careful consideration, we've decided to move forward with other candidates at this time. We encourage you to apply again in future cycles.\n\nBest regards,\nDr. Sarah Chen`}
   };
-
-  if (templates[tmpl]) {
-    subj.value = templates[tmpl].subject;
-    body.value = templates[tmpl].body;
-  }
+  if(T[tmpl]){subj.value=T[tmpl].subject;body.value=T[tmpl].body;}
 }
 
 function sendEmail() {
-  const toEl = document.getElementById('email-to');
-  const subjectEl = document.getElementById('email-subject');
-  const bodyEl = document.getElementById('email-body');
-
-  if (!toEl.value) { showToast('Please select a recipient'); return; }
-  if (!subjectEl.value.trim()) { showToast('Please enter a subject'); return; }
-  if (!bodyEl.value.trim()) { showToast('Please enter a message body'); return; }
-
-  const applicant = getApplicant(toEl.value);
-  const emailRecord = {
-    id: uid(),
-    to: applicant.email,
-    toName: applicant.name,
-    applicantId: applicant.id,
-    subject: subjectEl.value.trim(),
-    body: bodyEl.value.trim(),
-    sentAt: new Date().toISOString()
-  };
-  store.emails.push(emailRecord);
-  addEvent('email', `Email sent: "${emailRecord.subject}"`, applicant.id, applicant.positionId);
-
-  // NOTE: In production, this would trigger a real email delivery via backend API
-  showToast(`Email sent to ${applicant.name}`);
-  renderPage();
-  renderSidebar();
+  const to=document.getElementById('email-to'), subj=document.getElementById('email-subject'), body=document.getElementById('email-body');
+  if(!to.value){showToast('Select a recipient');return;} if(!subj.value.trim()){showToast('Enter a subject');return;} if(!body.value.trim()){showToast('Enter a message');return;}
+  const app=getApplicant(to.value);
+  store.emails.push({id:uid(),to:app.email,toName:app.name,applicantId:app.id,subject:subj.value.trim(),body:body.value.trim(),sentAt:new Date().toISOString()});
+  addEvent('email',`Email sent: "${subj.value.trim()}"`,app.id,app.positionId);
+  showToast(`Email sent to ${app.name}`);
+  renderPage(); renderSidebar();
 }
 
-// ---------- HISTORY ----------
+// =====================================================================
+//  HISTORY PAGE
+// =====================================================================
 function renderHistory() {
-  let events = [...store.events].sort((a, b) => new Date(b.ts) - new Date(a.ts));
-  const typeFilter = pageState.histType || 'all';
-  const appFilter = pageState.histApp || 'all';
-
-  if (typeFilter !== 'all') events = events.filter(e => e.type === typeFilter);
-  if (appFilter !== 'all') events = events.filter(e => e.applicantId === appFilter);
-
-  return `
-    <div class="toolbar">
-      <select class="filter-select" onchange="pageState.histType=this.value;renderPage()">
-        <option value="all"${typeFilter === 'all' ? ' selected' : ''}>All types</option>
-        <option value="application"${typeFilter === 'application' ? ' selected' : ''}>Applications</option>
-        <option value="status"${typeFilter === 'status' ? ' selected' : ''}>Status changes</option>
-        <option value="email"${typeFilter === 'email' ? ' selected' : ''}>Emails</option>
-        <option value="interview"${typeFilter === 'interview' ? ' selected' : ''}>Interviews</option>
-      </select>
-      <select class="filter-select" onchange="pageState.histApp=this.value;renderPage()">
-        <option value="all"${appFilter === 'all' ? ' selected' : ''}>All applicants</option>
-        ${store.applicants.map(a => `<option value="${a.id}"${appFilter === a.id ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}
-      </select>
-      <span class="toolbar-count">${events.length} event${events.length !== 1 ? 's' : ''}</span>
-    </div>
-    <div class="card" style="padding:20px 24px">
-      ${events.length === 0 ? '<div class="empty-state"><h4>No events found</h4><p>Activity will appear here as you manage applicants.</p></div>' : ''}
-      <div class="timeline">
-        ${events.map(ev => {
-          const applicant = ev.applicantId ? getApplicant(ev.applicantId) : null;
-          const pos = ev.positionId ? getPosition(ev.positionId) : null;
-          return `<div class="timeline-item">
-            <div class="timeline-dot ${eventDotColor(ev.type)}" style="background:${dotBg(ev.type)}"></div>
-            <div class="time">${relTime(ev.ts)}</div>
-            <div class="desc">${esc(ev.desc)}</div>
-            <div class="sub">${applicant ? esc(applicant.name) : ''}${applicant && pos ? ' · ' : ''}${pos ? esc(pos.title) : ''}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-}
-
-function dotBg(type) {
-  const map = { application: '#378ADD', status: '#F59E0B', email: '#b0b0aa', interview: 'var(--accent)' };
-  return map[type] || '#b0b0aa';
+  let evs=[...store.events].sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const tf=pageState.histType||'all', af=pageState.histApp||'all';
+  if(tf!=='all') evs=evs.filter(e=>e.type===tf);
+  if(af!=='all') evs=evs.filter(e=>e.applicantId===af);
+  return `<div class="toolbar">
+    <select class="filter-select" onchange="pageState.histType=this.value;renderPage()">
+      <option value="all"${tf==='all'?' selected':''}>All types</option><option value="application"${tf==='application'?' selected':''}>Applications</option><option value="status"${tf==='status'?' selected':''}>Status changes</option><option value="email"${tf==='email'?' selected':''}>Emails</option><option value="interview"${tf==='interview'?' selected':''}>Interviews</option>
+    </select>
+    <select class="filter-select" onchange="pageState.histApp=this.value;renderPage()">
+      <option value="all"${af==='all'?' selected':''}>All applicants</option>${store.applicants.map(a=>`<option value="${a.id}"${af===a.id?' selected':''}>${esc(a.name)}</option>`).join('')}
+    </select>
+    <span class="toolbar-count">${evs.length} event${evs.length!==1?'s':''}</span>
+  </div>
+  <div class="card" style="padding:24px 28px">
+    ${evs.length===0?'<div class="empty-state"><h4>No events found</h4><p>Activity appears here as you manage applicants.</p></div>':''}
+    <div class="timeline">${evs.map(ev=>{
+      const app=ev.applicantId?getApplicant(ev.applicantId):null;
+      const pos=ev.positionId?getPosition(ev.positionId):null;
+      return `<div class="timeline-item"><div class="timeline-dot" style="background:${dotBg(ev.type)}"></div><div class="time">${relTime(ev.ts)}</div><div class="desc">${esc(ev.desc)}</div><div class="sub">${app?esc(app.name):''}${app&&pos?' · ':''}${pos?esc(pos.title):''}</div></div>`;
+    }).join('')}</div>
+  </div>`;
 }
 
 // =====================================================================
-//  MODALS & FORMS
+//  MODALS & HANDLERS
 // =====================================================================
-
-// Schedule Interview
 function openScheduleModal(appId) {
-  const a = getApplicant(appId);
-  if (!a) return;
-  const today = new Date().toISOString().split('T')[0];
-  showModal(`
-    <div class="modal-header"><h3>Schedule interview</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
+  const a=getApplicant(appId); if(!a)return;
+  const today=new Date().toISOString().split('T')[0];
+  showModal(`<div class="modal-header"><h3>Schedule Interview</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Scheduling interview for <strong>${esc(a.name)}</strong></p>
-      <div class="form-group"><label>Date</label><input type="date" id="sched-date" min="${today}" value="${a.interviewDate || ''}"></div>
-      <div class="form-group"><label>Time</label><input type="time" id="sched-time" value="${a.interviewTime || '10:00'}"></div>
-      <div style="margin-top:6px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer">
-          <input type="checkbox" id="sched-send-email" checked> Send scheduling email to applicant
-        </label>
-        <!-- NOTE: The email is logged locally. In production, this would trigger an actual email delivery. -->
-      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:18px">Scheduling for <strong>${esc(a.name)}</strong></p>
+      <div class="form-group"><label>Date</label><input type="date" id="sd" min="${today}" value="${a.interviewDate||''}"></div>
+      <div class="form-group"><label>Time</label><input type="time" id="st" value="${a.interviewTime||'10:00'}"></div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer;margin-top:8px"><input type="checkbox" id="se" checked> Send scheduling email <!-- NOTE: Logged locally; real delivery requires backend --></label>
     </div>
-    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-primary" onclick="submitSchedule('${appId}')">Schedule</button></div>
-  `);
+    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-primary" onclick="submitSchedule('${appId}')">Schedule</button></div>`);
 }
-
 function submitSchedule(appId) {
-  const date = document.getElementById('sched-date').value;
-  const time = document.getElementById('sched-time').value;
-  const sendEmailChecked = document.getElementById('sched-send-email').checked;
-
-  if (!date) { showToast('Please select a date'); return; }
-  if (!time) { showToast('Please select a time'); return; }
-
-  const a = getApplicant(appId);
-  a.interviewDate = date;
-  a.interviewTime = time;
-  a.status = 'interview_scheduled';
-  addEvent('interview', `Interview scheduled for ${fmtDateTime(date, time)}`, appId, a.positionId);
-  addEvent('status', 'Status changed to Interview Scheduled', appId, a.positionId);
-
-  if (sendEmailChecked) {
-    const pos = getPosition(a.positionId);
-    const emailRecord = {
-      id: uid(),
-      to: a.email,
-      toName: a.name,
-      applicantId: a.id,
-      subject: `Interview Scheduled — ${pos ? pos.title : 'Volunteer Position'}`,
-      body: `Hi ${a.name.split(' ')[0]},\n\nYour interview has been scheduled for ${fmtDateTime(date, time)}.\n\nPlease arrive 5 minutes early and bring a valid student ID.\n\nBest regards,\nDr. Sarah Chen\nBCS Free Health Clinic`,
-      sentAt: new Date().toISOString()
-    };
-    store.emails.push(emailRecord);
-    addEvent('email', `Scheduling email sent: "${emailRecord.subject}"`, a.id, a.positionId);
-  }
-
-  saveStore();
-  hideModal();
-  showToast(`Interview scheduled for ${a.name}`);
-  renderSidebar();
-  renderTopbar();
-  renderPage();
+  const date=document.getElementById('sd').value, time=document.getElementById('st').value, sendE=document.getElementById('se').checked;
+  if(!date){showToast('Select a date');return;} if(!time){showToast('Select a time');return;}
+  const a=getApplicant(appId); a.interviewDate=date; a.interviewTime=time; a.status='interview_scheduled';
+  addEvent('interview',`Interview scheduled for ${fmtDateTime(date,time)}`,appId,a.positionId);
+  addEvent('status','Status changed to Interview Scheduled',appId,a.positionId);
+  if(sendE){const pos=getPosition(a.positionId);store.emails.push({id:uid(),to:a.email,toName:a.name,applicantId:a.id,subject:`Interview Scheduled — ${pos?pos.title:'Position'}`,body:`Hi ${a.name.split(' ')[0]},\n\nYour interview has been scheduled for ${fmtDateTime(date,time)}.\n\nPlease arrive 5 minutes early with a valid student ID.\n\nBest regards,\nDr. Sarah Chen`,sentAt:new Date().toISOString()});addEvent('email','Scheduling email sent',a.id,a.positionId);}
+  saveStore(); hideModal(); showToast(`Interview scheduled for ${a.name}`); renderSidebar(); renderTopbar(); renderPage();
 }
-
-// Email Modal (pre-filled for applicant)
-function openEmailModalFor(appId) {
-  navigate('email');
-  setTimeout(() => {
-    const toEl = document.getElementById('email-to');
-    if (toEl) toEl.value = appId;
-  }, 50);
+function openEmailFor(appId) { navigate('email'); setTimeout(()=>{const el=document.getElementById('email-to');if(el)el.value=appId;},50); }
+function changeStatus(appId,ns) {
+  const a=getApplicant(appId); if(!a)return; a.status=ns;
+  const labels={new:'New',under_review:'Under Review',interview_scheduled:'Interview Scheduled',accepted:'Accepted',declined:'Declined'};
+  addEvent('status',`Status changed to ${labels[ns]||ns}`,appId,a.positionId);
+  if(ns==='accepted'){const pos=getPosition(a.positionId);store.emails.push({id:uid(),to:a.email,toName:a.name,applicantId:a.id,subject:`Congratulations! — ${pos?pos.title:'Position'}`,body:`Hi ${a.name.split(' ')[0]},\n\nYou've been accepted for the ${pos?pos.title:''} position. Onboarding details to follow.\n\nBest,\nDr. Sarah Chen`,sentAt:new Date().toISOString()});addEvent('email','Acceptance email sent',a.id,a.positionId);}
+  saveStore(); showToast(`${a.name} — ${labels[ns]}`); renderSidebar(); renderTopbar(); renderPage();
 }
-
-// Change Status
-function changeStatus(appId, newStatus) {
-  const a = getApplicant(appId);
-  if (!a) return;
-  const oldStatus = a.status;
-  a.status = newStatus;
-
-  const labels = { new: 'New', under_review: 'Under Review', interview_scheduled: 'Interview Scheduled', accepted: 'Accepted', declined: 'Declined' };
-  addEvent('status', `Status changed to ${labels[newStatus] || newStatus}`, appId, a.positionId);
-
-  if (newStatus === 'accepted') {
-    const pos = getPosition(a.positionId);
-    const emailRecord = {
-      id: uid(), to: a.email, toName: a.name, applicantId: a.id,
-      subject: `Congratulations! You've been accepted — ${pos ? pos.title : 'Volunteer Position'}`,
-      body: `Hi ${a.name.split(' ')[0]},\n\nWe're pleased to inform you that you've been accepted for the ${pos ? pos.title : ''} position.\n\nYou'll receive onboarding details shortly.\n\nBest regards,\nDr. Sarah Chen\nBCS Free Health Clinic`,
-      sentAt: new Date().toISOString()
-    };
-    store.emails.push(emailRecord);
-    addEvent('email', `Acceptance email sent`, a.id, a.positionId);
-    // NOTE: Would trigger real email delivery in production
-  }
-
-  saveStore();
-  showToast(`${a.name} — ${labels[newStatus]}`);
-  renderSidebar();
-  renderTopbar();
-  renderPage();
-}
-
-// Decline Confirmation
 function confirmDecline(appId) {
-  const a = getApplicant(appId);
-  if (!a) return;
-  showModal(`
-    <div class="modal-header"><h3>Decline applicant?</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--text-secondary)">Are you sure you want to decline <strong>${esc(a.name)}</strong>?</p>
-      <div style="margin-top:12px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer">
-          <input type="checkbox" id="decline-send-email" checked> Send rejection email
-        </label>
-        <!-- NOTE: The email is logged locally. In production, this would send a real email. -->
-      </div>
-    </div>
-    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn" style="background:var(--danger);color:#fff;border-color:var(--danger)" onclick="submitDecline('${appId}')">Decline</button></div>
-  `);
+  const a=getApplicant(appId); if(!a)return;
+  showModal(`<div class="modal-header"><h3>Decline Applicant</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
+    <div class="modal-body"><p style="font-size:13px;color:var(--text-secondary)">Decline <strong>${esc(a.name)}</strong>?</p>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer;margin-top:12px"><input type="checkbox" id="de" checked> Send rejection email <!-- NOTE: Logged locally --></label></div>
+    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-danger" onclick="submitDecline('${appId}')">Decline</button></div>`);
 }
-
 function submitDecline(appId) {
-  const sendEmailChecked = document.getElementById('decline-send-email')?.checked;
-  const a = getApplicant(appId);
-  a.status = 'declined';
-  a.interviewDate = null;
-  a.interviewTime = null;
-  addEvent('status', 'Declined', appId, a.positionId);
-
-  if (sendEmailChecked) {
-    const pos = getPosition(a.positionId);
-    const emailRecord = {
-      id: uid(), to: a.email, toName: a.name, applicantId: a.id,
-      subject: `Application Update — ${pos ? pos.title : 'Volunteer Position'}`,
-      body: `Hi ${a.name.split(' ')[0]},\n\nThank you for your interest in the ${pos ? pos.title : ''} position.\n\nAfter careful review, we've decided to move forward with other candidates. We encourage you to apply again in future cycles.\n\nBest regards,\nDr. Sarah Chen\nBCS Free Health Clinic`,
-      sentAt: new Date().toISOString()
-    };
-    store.emails.push(emailRecord);
-    addEvent('email', `Rejection email sent`, a.id, a.positionId);
-  }
-
-  saveStore();
-  hideModal();
-  showToast(`${a.name} declined`);
-  renderSidebar();
-  renderTopbar();
-  renderPage();
+  const sendE=document.getElementById('de')?.checked;
+  const a=getApplicant(appId); a.status='declined'; a.interviewDate=null; a.interviewTime=null;
+  addEvent('status','Declined',appId,a.positionId);
+  if(sendE){const pos=getPosition(a.positionId);store.emails.push({id:uid(),to:a.email,toName:a.name,applicantId:a.id,subject:`Application Update — ${pos?pos.title:'Position'}`,body:`Hi ${a.name.split(' ')[0]},\n\nThank you for your interest. We've decided to move forward with other candidates. We encourage you to apply again.\n\nBest,\nDr. Sarah Chen`,sentAt:new Date().toISOString()});addEvent('email','Rejection email sent',a.id,a.positionId);}
+  saveStore(); hideModal(); showToast(`${a.name} declined`); renderSidebar(); renderTopbar(); renderPage();
 }
-
-// Add/Edit Position
 function openPositionModal(posId) {
-  const p = posId ? getPosition(posId) : null;
-  const isEdit = !!p;
-  showModal(`
-    <div class="modal-header"><h3>${isEdit ? 'Edit' : 'Add'} position</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
+  const p=posId?getPosition(posId):null; const isEdit=!!p;
+  showModal(`<div class="modal-header"><h3>${isEdit?'Edit':'New'} Position</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
     <div class="modal-body">
-      <div class="form-group"><label>Title</label><input type="text" id="pos-title" value="${p ? esc(p.title) : ''}" placeholder="e.g. Patient Intake Volunteer"></div>
-      <div class="form-group"><label>Schedule</label><input type="text" id="pos-schedule" value="${p ? esc(p.schedule) : ''}" placeholder="e.g. Tuesdays, Flexible"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group"><label>Hours/week</label><input type="number" id="pos-hours" min="1" max="40" value="${p ? p.hoursPerWeek : '4'}"></div>
-        <div class="form-group"><label>Open slots</label><input type="number" id="pos-slots" min="1" max="50" value="${p ? p.slots : '3'}"></div>
+      <div class="form-group"><label>Title</label><input type="text" id="pt" value="${p?esc(p.title):''}" placeholder="e.g. Patient Intake Volunteer"></div>
+      <div class="form-group"><label>Schedule</label><input type="text" id="ps" value="${p?esc(p.schedule):''}" placeholder="e.g. Tuesdays, Flexible"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group"><label>Hours/week</label><input type="number" id="ph" min="1" max="40" value="${p?p.hoursPerWeek:'4'}"></div>
+        <div class="form-group"><label>Open slots</label><input type="number" id="pl" min="1" max="50" value="${p?p.slots:'3'}"></div>
       </div>
-      <div class="form-group"><label>Status</label>
-        <select id="pos-status">
-          <option value="open"${p && p.status === 'open' ? ' selected' : ''}>Open</option>
-          <option value="reviewing"${p && p.status === 'reviewing' ? ' selected' : ''}>Reviewing</option>
-          <option value="closed"${p && p.status === 'closed' ? ' selected' : ''}>Closed</option>
-        </select>
-      </div>
-      <div class="form-group"><label>Description</label><textarea id="pos-desc" rows="3" placeholder="Brief description of responsibilities...">${p ? esc(p.description || '') : ''}</textarea></div>
+      <div class="form-group"><label>Status</label><select id="px"><option value="open"${p&&p.status==='open'?' selected':''}>Open</option><option value="reviewing"${p&&p.status==='reviewing'?' selected':''}>Reviewing</option><option value="closed"${p&&p.status==='closed'?' selected':''}>Closed</option></select></div>
+      <div class="form-group"><label>Description</label><textarea id="pd" rows="3" placeholder="Brief description...">${p?esc(p.description||''):''}</textarea></div>
     </div>
-    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-primary" onclick="submitPosition('${posId || ''}')">${isEdit ? 'Save changes' : 'Add position'}</button></div>
-  `);
+    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-primary" onclick="submitPosition('${posId||''}')">${isEdit?'Save':'Create'}</button></div>`);
 }
-
 function submitPosition(posId) {
-  const title = document.getElementById('pos-title').value.trim();
-  const schedule = document.getElementById('pos-schedule').value.trim();
-  const hours = parseInt(document.getElementById('pos-hours').value) || 4;
-  const slots = parseInt(document.getElementById('pos-slots').value) || 3;
-  const status = document.getElementById('pos-status').value;
-  const desc = document.getElementById('pos-desc').value.trim();
-
-  if (!title) { showToast('Please enter a position title'); return; }
-
-  if (posId) {
-    const p = getPosition(posId);
-    p.title = title; p.schedule = schedule; p.hoursPerWeek = hours; p.slots = slots; p.status = status; p.description = desc;
-    addEvent('status', `Position updated: "${title}"`, null, posId);
-    showToast('Position updated');
-  } else {
-    const newPos = { id: uid(), title, schedule, hoursPerWeek: hours, slots, status, description: desc, createdAt: new Date().toISOString().split('T')[0] };
-    store.positions.push(newPos);
-    addEvent('status', `New position created: "${title}"`, null, newPos.id);
-    showToast('Position created');
-  }
-
-  saveStore();
-  hideModal();
-  renderSidebar();
-  renderTopbar();
-  renderPage();
+  const title=document.getElementById('pt').value.trim(); if(!title){showToast('Enter a title');return;}
+  const data={title,schedule:document.getElementById('ps').value.trim(),hoursPerWeek:parseInt(document.getElementById('ph').value)||4,slots:parseInt(document.getElementById('pl').value)||3,status:document.getElementById('px').value,description:document.getElementById('pd').value.trim()};
+  if(posId){const p=getPosition(posId);Object.assign(p,data);addEvent('status',`Position updated: "${title}"`,null,posId);showToast('Position updated');}
+  else{const np={id:uid(),...data,createdAt:new Date().toISOString().split('T')[0]};store.positions.push(np);addEvent('status',`Position created: "${title}"`,null,np.id);showToast('Position created');}
+  saveStore();hideModal();renderSidebar();renderTopbar();renderPage();
 }
-
 function confirmDeletePosition(posId) {
-  const p = getPosition(posId);
-  if (!p) return;
-  const appCount = getApplicantsForPosition(posId).length;
-  showModal(`
-    <div class="modal-header"><h3>Delete position?</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--text-secondary)">Are you sure you want to delete <strong>${esc(p.title)}</strong>?</p>
-      ${appCount > 0 ? `<p style="font-size:13px;color:var(--danger);margin-top:8px">This position has ${appCount} applicant${appCount !== 1 ? 's' : ''} — they will be removed as well.</p>` : ''}
-    </div>
-    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn" style="background:var(--danger);color:#fff;border-color:var(--danger)" onclick="deletePosition('${posId}')">Delete</button></div>
-  `);
+  const p=getPosition(posId);if(!p)return;const c=getApplicantsForPosition(posId).length;
+  showModal(`<div class="modal-header"><h3>Delete Position</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
+    <div class="modal-body"><p style="font-size:13px;color:var(--text-secondary)">Delete <strong>${esc(p.title)}</strong>?</p>${c>0?`<p style="font-size:13px;color:var(--red);margin-top:8px">${c} applicant${c!==1?'s':''} will also be removed.</p>`:''}</div>
+    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-danger" onclick="deletePosition('${posId}')">Delete</button></div>`);
 }
-
 function deletePosition(posId) {
-  store.positions = store.positions.filter(p => p.id !== posId);
-  store.applicants = store.applicants.filter(a => a.positionId !== posId);
-  store.events = store.events.filter(e => e.positionId !== posId);
-  saveStore();
-  hideModal();
-  showToast('Position deleted');
-  renderSidebar();
-  renderTopbar();
-  renderPage();
+  store.positions=store.positions.filter(p=>p.id!==posId);store.applicants=store.applicants.filter(a=>a.positionId!==posId);store.events=store.events.filter(e=>e.positionId!==posId);
+  saveStore();hideModal();showToast('Position deleted');renderSidebar();renderTopbar();renderPage();
 }
-
-// Add Applicant
 function openAddApplicantModal() {
-  showModal(`
-    <div class="modal-header"><h3>Add applicant</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
+  showModal(`<div class="modal-header"><h3>Add Applicant</h3><button class="modal-close" onclick="hideModal()">&times;</button></div>
     <div class="modal-body">
-      <div class="form-group"><label>Full name</label><input type="text" id="new-app-name" placeholder="e.g. Jane Smith"></div>
-      <div class="form-group"><label>Email</label><input type="email" id="new-app-email" placeholder="e.g. jane.smith@tamu.edu"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group"><label>GPA</label><input type="number" id="new-app-gpa" step="0.01" min="0" max="4" value="3.5"></div>
-        <div class="form-group"><label>Year</label>
-          <select id="new-app-year"><option>Freshman</option><option>Sophomore</option><option selected>Junior</option><option>Senior</option></select>
-        </div>
+      <div class="form-group"><label>Full name</label><input type="text" id="an" placeholder="Jane Smith"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="ae" placeholder="jane@tamu.edu"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group"><label>GPA</label><input type="number" id="ag" step="0.01" min="0" max="4" value="3.5"></div>
+        <div class="form-group"><label>Year</label><select id="ay"><option>Freshman</option><option>Sophomore</option><option selected>Junior</option><option>Senior</option></select></div>
       </div>
-      <div class="form-group"><label>Major</label><input type="text" id="new-app-major" placeholder="e.g. Biology"></div>
-      <div class="form-group"><label>Position</label>
-        <select id="new-app-pos">
-          ${store.positions.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group"><label>Availability</label><input type="text" id="new-app-avail" placeholder="e.g. Tue, Thu afternoons"></div>
-      <!-- NOTE: In the real app, students would submit applications through the student portal. This form simulates manual entry by clinic admins for testing purposes. -->
+      <div class="form-group"><label>Major</label><input type="text" id="am" placeholder="Biology"></div>
+      <div class="form-group"><label>Position</label><select id="ap">${store.positions.map(p=>`<option value="${p.id}">${esc(p.title)}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Availability</label><input type="text" id="aa" placeholder="Tue, Thu afternoons"></div>
+      <!-- NOTE: In production, students apply through the student portal. This simulates manual admin entry. -->
     </div>
-    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-primary" onclick="submitNewApplicant()">Add applicant</button></div>
-  `);
+    <div class="modal-footer"><button class="btn" onclick="hideModal()">Cancel</button><button class="btn btn-primary" onclick="submitNewApplicant()">Add</button></div>`);
 }
-
 function submitNewApplicant() {
-  const name = document.getElementById('new-app-name').value.trim();
-  const email = document.getElementById('new-app-email').value.trim();
-  const gpa = parseFloat(document.getElementById('new-app-gpa').value) || 3.0;
-  const year = document.getElementById('new-app-year').value;
-  const major = document.getElementById('new-app-major').value.trim();
-  const positionId = document.getElementById('new-app-pos').value;
-  const availability = document.getElementById('new-app-avail').value.trim();
-
-  if (!name) { showToast('Please enter a name'); return; }
-  if (!email) { showToast('Please enter an email'); return; }
-
-  const newApp = {
-    id: uid(), name, email, gpa, year, major, availability, positionId,
-    status: 'new',
-    appliedAt: new Date().toISOString().split('T')[0],
-    color: AVATAR_COLORS[store.applicants.length % AVATAR_COLORS.length]
-  };
-  store.applicants.push(newApp);
-  addEvent('application', 'Application submitted', newApp.id, positionId);
-  // NOTE: In the real system, this would also trigger an auto-confirmation email to the student
-  saveStore();
-  hideModal();
-  showToast(`${name} added as applicant`);
-  renderSidebar();
-  renderTopbar();
-  renderPage();
-}
-
-// =====================================================================
-//  UTILITIES
-// =====================================================================
-function esc(str) {
-  if (!str) return '';
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-function cap(str) {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ');
+  const name=document.getElementById('an').value.trim(),email=document.getElementById('ae').value.trim();
+  if(!name){showToast('Enter a name');return;} if(!email){showToast('Enter an email');return;}
+  const na={id:uid(),name,email,gpa:parseFloat(document.getElementById('ag').value)||3.0,year:document.getElementById('ay').value,major:document.getElementById('am').value.trim(),availability:document.getElementById('aa').value.trim(),positionId:document.getElementById('ap').value,status:'new',appliedAt:new Date().toISOString().split('T')[0],color:AVATAR_COLORS[store.applicants.length%AVATAR_COLORS.length]};
+  store.applicants.push(na);addEvent('application','Application submitted',na.id,na.positionId);
+  saveStore();hideModal();showToast(`${name} added`);renderSidebar();renderTopbar();renderPage();
 }
 
 // =====================================================================
