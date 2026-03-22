@@ -22,6 +22,7 @@ import {
   Building2,
   CheckSquare,
   Square,
+  Loader2,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from "@/types/positions";
