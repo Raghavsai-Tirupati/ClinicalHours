@@ -49,6 +49,7 @@ const EmailPage = lazy(() => import("./components/hospital/EmailPage"));
 const ActivityPage = lazy(() => import("./components/hospital/ActivityPage"));
 const PositionApplyPage = lazy(() => import("./pages/PositionApplyPage"));
 const HospitalDashboardRedirect = lazy(() => import("./components/HospitalDashboardRedirect"));
+const GoogleAuthCallback = lazy(() => import("./pages/GoogleAuthCallback"));
 
 // Premium feature pages
 const Premium = lazy(() => import("./pages/Premium"));
@@ -108,6 +109,7 @@ function AppContent() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Settings />} />
               <Route path="/dashboard" element={<StudentOnlyRoute><Dashboard /></StudentOnlyRoute>} />
