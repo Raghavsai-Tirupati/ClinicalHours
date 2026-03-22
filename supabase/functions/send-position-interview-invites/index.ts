@@ -154,8 +154,11 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const bookingUrl = hospitalPage.interview_booking_url?.trim() ?? "";
-    const gmailRefreshToken = (hospitalPage as Record<string, unknown>).gmail_refresh_token as string | null;
-    const gmailFrom = (hospitalPage as Record<string, unknown>).gmail_email as string | null;
+    // Determine whether to send via the clinic admin's Gmail account or fall back to Resend.
+    const gmailRefreshToken = (hospitalPage as { gmail_refresh_token?: string | null }).gmail_refresh_token ?? null;
+    const gmailFrom = (hospitalPage as { gmail_email?: string | null }).gmail_email ?? null;
+    const useGmail = Boolean(gmailRefreshToken && gmailFrom);
+
     if (selectedEmailType === "interview_invite" && !bookingUrl) {
       return new Response(
         JSON.stringify({ success: false, error: "Interview booking link is not configured" }),
@@ -206,21 +209,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Determine whether to send via the clinic admin's Gmail account or fall back to Resend.
-    const gmailRefreshToken = (hospitalPage as { gmail_refresh_token?: string | null }).gmail_refresh_token ?? null;
-    const gmailFrom = (hospitalPage as { gmail_email?: string | null }).gmail_email ?? null;
-    const useGmail = Boolean(gmailRefreshToken && gmailFrom);
-
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
-    const useGmail = Boolean(gmailRefreshToken && gmailFrom);
 
     for (const recipient of recipients.values()) {
       const emailSubject = selectedEmailType === "general"
         ? (subject as string).trim()
         : "Interview invitation - schedule your slot";
-<<<<<<< HEAD
 
       const emailHtml = selectedEmailType === "general"
         ? `
@@ -252,38 +248,6 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
         `;
 
-=======
-      const emailHtml = selectedEmailType === "general"
-        ? `
-          <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
-            <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
-            <div style="line-height: 1.6; color: #333;">${formatBodyHtml((body as string).trim())}</div>
-          </div>
-        `
-        : `
-          <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
-            <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
-            <p style="line-height: 1.6; color: #333;">
-              You have been invited to schedule an interview with BCS Free Health Clinic.
-            </p>
-            ${
-              customMessage?.trim()
-                ? `<p style="line-height: 1.6; color: #333;">${formatBodyHtml(customMessage.trim())}</p>`
-                : ""
-            }
-            <p style="margin: 16px 0;">
-              <a href="${escapeHtml(bookingUrl)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;">
-                Schedule Interview
-              </a>
-            </p>
-            <p style="line-height: 1.6; color: #333;">
-              If the button does not work, copy this URL into your browser:<br/>
-              <span style="font-size: 12px; color: #555;">${escapeHtml(bookingUrl)}</span>
-            </p>
-          </div>
-        `;
-
->>>>>>> origin/main
       try {
         if (useGmail) {
           await sendViaGmail({
@@ -293,10 +257,7 @@ const handler = async (req: Request): Promise<Response> => {
             subject: emailSubject,
             html: emailHtml,
           });
-<<<<<<< HEAD
-=======
           sent++;
->>>>>>> origin/main
         } else {
           const emailResponse = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -311,34 +272,21 @@ const handler = async (req: Request): Promise<Response> => {
               html: emailHtml,
             }),
           });
-<<<<<<< HEAD
-          if (!emailResponse.ok) {
-            const errorData = await emailResponse.json().catch(() => ({})) as Record<string, string>;
-=======
 
           if (emailResponse.ok) {
             sent++;
           } else {
             failed++;
-            const errorData = await emailResponse.json().catch(() => ({}));
->>>>>>> origin/main
+            const errorData = await emailResponse.json().catch(() => ({})) as Record<string, string>;
             console.error("Resend API error for", recipient.email, JSON.stringify(errorData));
             if (errors.length < 5) {
               errors.push(`${recipient.email}: ${errorData?.message ?? errorData?.error ?? JSON.stringify(errorData)}`);
             }
-<<<<<<< HEAD
-            failed++;
             await new Promise((resolve) => setTimeout(resolve, 100));
             continue;
           }
         }
-        sent++;
       } catch (err: unknown) {
-=======
-          }
-        }
-      } catch (err) {
->>>>>>> origin/main
         failed++;
         console.error("Error sending to", recipient.email, err);
         if (errors.length < 5) {
