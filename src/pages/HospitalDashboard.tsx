@@ -170,6 +170,9 @@ export default function HospitalDashboard() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
+  const [protectedOppIds, setProtectedOppIds] = useState<Set<string>>(new Set());
+  const [deleteConfirmOpp, setDeleteConfirmOpp] = useState<OpportunityWithApps | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const isBcsPilot = member?.hospitalName?.toLowerCase().includes("bcs free health clinic") ?? false;
 
