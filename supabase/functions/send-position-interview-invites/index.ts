@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, validateOrigin } from "../_shared/auth.ts";
 import { sendViaGmail } from "../_shared/gmail.ts";
+import { jsonRateLimitResponse, reserveGmailSendBatch } from "../_shared/rate-limit.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "ClinicalHours <support@clinicalhours.org>";
@@ -207,6 +208,13 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ success: true, sent: 0, failed: 0, total: 0 }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
+    }
+
+    if (useGmail) {
+      const batchRl = await reserveGmailSendBatch(supabaseAdmin, hospitalPageId, recipients.size);
+      if (!batchRl.allowed) {
+        return jsonRateLimitResponse(corsHeaders, batchRl.retryAfterSeconds);
+      }
     }
 
     let sent = 0;

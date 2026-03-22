@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { position_id, answers } = await req.json();
+    const { position_id, answers, availability } = await req.json();
 
     if (!position_id) {
       return new Response(JSON.stringify({ error: "position_id is required" }), {
@@ -103,6 +103,14 @@ Deno.serve(async (req) => {
     const applicantName = profileName || metaName || null;
     const applicantEmail = auth.user.email?.trim().toLowerCase() || null;
 
+    const availabilityJson =
+      availability !== undefined &&
+      availability !== null &&
+      typeof availability === "object" &&
+      !Array.isArray(availability)
+        ? availability as Record<string, unknown>
+        : null;
+
     // Create application
     const { data: app, error: appErr } = await supabaseAdmin
       .from("student_applications")
@@ -111,6 +119,7 @@ Deno.serve(async (req) => {
         student_id: auth.user.id,
         applicant_name: applicantName,
         applicant_email: applicantEmail,
+        availability_json: availabilityJson,
       })
       .select("*")
       .single();

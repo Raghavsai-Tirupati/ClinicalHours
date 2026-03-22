@@ -2,6 +2,12 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, validateOrigin } from "../_shared/auth.ts";
 import { exchangeCodeForTokens } from "../_shared/gmail.ts";
+import {
+  GMAIL_OAUTH_CALLBACK_MAX_PER_HOUR,
+  jsonRateLimitResponse,
+  rateLimitKeyOAuthCallback,
+  reserveOAuthStep,
+} from "../_shared/rate-limit.ts";
 
 const GOOGLE_REDIRECT_URI = Deno.env.get("GOOGLE_REDIRECT_URI") ?? "https://clinicalhours.org/auth/google/callback";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -97,6 +103,15 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ success: false, error: "Hospital page access denied" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
+    }
+
+    const rl = await reserveOAuthStep(
+      supabaseAdmin,
+      rateLimitKeyOAuthCallback(authData.user.id),
+      GMAIL_OAUTH_CALLBACK_MAX_PER_HOUR,
+    );
+    if (!rl.allowed) {
+      return jsonRateLimitResponse(corsHeaders, rl.retryAfterSeconds);
     }
 
     const tokens = await exchangeCodeForTokens({ code, redirectUri: GOOGLE_REDIRECT_URI });

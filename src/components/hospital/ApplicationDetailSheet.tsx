@@ -9,7 +9,48 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
-import type { ApplicationStatus, StudentApplication } from '@/types/positions';
+import type { ApplicationAvailability, ApplicationStatus, StudentApplication } from '@/types/positions';
+
+const WEEKDAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function formatApplicantAvailability(raw: ApplicationAvailability | null | undefined): string | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const parts: string[] = [];
+  if (raw.days?.length) {
+    const idToLabel: Record<string, string> = {
+      mon: 'Mon',
+      tue: 'Tue',
+      wed: 'Wed',
+      thu: 'Thu',
+      fri: 'Fri',
+      sat: 'Sat',
+      sun: 'Sun',
+    };
+    const labels = raw.days.map((id) => idToLabel[id] || id).filter(Boolean);
+    labels.sort((a, b) => WEEKDAY_ORDER.indexOf(a) - WEEKDAY_ORDER.indexOf(b));
+    parts.push(labels.join(', '));
+  }
+  if (raw.time_pref) {
+    const timeLabels: Record<string, string> = {
+      morning: 'Mornings (8am – 12pm)',
+      afternoon: 'Afternoons (12pm – 5pm)',
+      evening: 'Evenings (5pm – 9pm)',
+      flexible: 'Flexible',
+    };
+    parts.push(timeLabels[raw.time_pref] || raw.time_pref);
+  }
+  if (typeof raw.hours_per_week === 'number') parts.push(`${raw.hours_per_week}h/week`);
+  if (raw.commitment) {
+    const c: Record<string, string> = {
+      '1sem': '1 semester',
+      '2sem': '2 semesters (full year)',
+      ongoing: 'Ongoing — no set end date',
+      summer: 'Summer only',
+    };
+    parts.push(c[raw.commitment] || raw.commitment);
+  }
+  return parts.length ? parts.join(' · ') : null;
+}
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   new: 'bg-blue-500/15 text-blue-400',
@@ -193,6 +234,15 @@ export default function ApplicationDetailSheet({ application, onClose, onStatusC
                       </>
                     )}
                   </div>
+                </div>
+              )}
+
+              {formatApplicantAvailability(application.availability_json) && (
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Availability</p>
+                  <p className="text-sm text-foreground/90">
+                    {formatApplicantAvailability(application.availability_json)}
+                  </p>
                 </div>
               )}
 

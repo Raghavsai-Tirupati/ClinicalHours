@@ -34,12 +34,21 @@ export interface PositionQuestion {
   created_at: string;
 }
 
+/** Saved from the student apply wizard (availability step). */
+export interface ApplicationAvailability {
+  days?: string[];
+  time_pref?: string;
+  hours_per_week?: number;
+  commitment?: string;
+}
+
 export interface StudentApplication {
   id: string;
   position_id: string;
   student_id: string;
   applicant_name?: string | null;
   applicant_email?: string | null;
+  availability_json?: ApplicationAvailability | null;
   status: ApplicationStatus;
   submitted_at: string;
   reviewed_at: string | null;

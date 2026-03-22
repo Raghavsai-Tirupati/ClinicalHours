@@ -1328,6 +1328,7 @@ export type Database = {
         Row: {
           applicant_email: string | null
           applicant_name: string | null
+          availability_json: Json | null
           id: string
           notes: string | null
           position_id: string
@@ -1340,6 +1341,7 @@ export type Database = {
         Insert: {
           applicant_email?: string | null
           applicant_name?: string | null
+          availability_json?: Json | null
           id?: string
           notes?: string | null
           position_id: string
@@ -1352,6 +1354,7 @@ export type Database = {
         Update: {
           applicant_email?: string | null
           applicant_name?: string | null
+          availability_json?: Json | null
           id?: string
           notes?: string | null
           position_id?: string

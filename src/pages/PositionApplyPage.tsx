@@ -1,22 +1,89 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment, type ReactNode } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Loader2, CheckCircle, ArrowLeft, MapPin, Clock, Building2, AlertCircle } from 'lucide-react';
+import {
+  Loader2,
+  Building2,
+  MapPin,
+  Clock,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { usePositionDetail } from '@/hooks/usePositionDetail';
 import { useProfileComplete } from '@/hooks/useProfileComplete';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
+import type { ApplicationAvailability, PositionQuestion } from '@/types/positions';
+
+import '@fontsource/lora/400.css';
+import './position-apply.css';
+
+type StepKey = 'info' | 'questions' | 'availability' | 'review';
+
+const LONG_ANSWER_MAX = 2000;
+
+const WEEKDAYS = [
+  { id: 'mon', label: 'Mon' },
+  { id: 'tue', label: 'Tue' },
+  { id: 'wed', label: 'Wed' },
+  { id: 'thu', label: 'Thu' },
+  { id: 'fri', label: 'Fri' },
+  { id: 'sat', label: 'Sat' },
+  { id: 'sun', label: 'Sun' },
+] as const;
+
+const TIME_PREF_OPTIONS = [
+  { value: 'morning', label: 'Mornings (8am – 12pm)' },
+  { value: 'afternoon', label: 'Afternoons (12pm – 5pm)' },
+  { value: 'evening', label: 'Evenings (5pm – 9pm)' },
+  { value: 'flexible', label: 'Flexible' },
+] as const;
+
+const COMMITMENT_OPTIONS = [
+  { value: '', label: 'Select…' },
+  { value: '1sem', label: '1 semester' },
+  { value: '2sem', label: '2 semesters (full year)' },
+  { value: 'ongoing', label: 'Ongoing — no set end date' },
+  { value: 'summer', label: 'Summer only' },
+] as const;
+
+const STEP_LABELS: Record<StepKey, string> = {
+  info: 'Your info',
+  questions: 'Questions',
+  availability: 'Availability',
+  review: 'Review',
+};
+
+function buildSteps(hasQuestions: boolean): StepKey[] {
+  return hasQuestions
+    ? ['info', 'questions', 'availability', 'review']
+    : ['info', 'availability', 'review'];
+}
+
+function formatAvailabilitySummary(a: ApplicationAvailability): string {
+  const parts: string[] = [];
+  if (a.days?.length) {
+    const order = WEEKDAYS.map((d) => d.label);
+    const labels = [...a.days]
+      .map((id) => WEEKDAYS.find((d) => d.id === id)?.label)
+      .filter(Boolean) as string[];
+    labels.sort((x, y) => order.indexOf(x) - order.indexOf(y));
+    parts.push(labels.join(', '));
+  }
+  if (a.time_pref) {
+    const opt = TIME_PREF_OPTIONS.find((o) => o.value === a.time_pref);
+    parts.push(opt?.label ?? a.time_pref);
+  }
+  if (typeof a.hours_per_week === 'number') parts.push(`${a.hours_per_week}h/week`);
+  if (a.commitment) {
+    const c = COMMITMENT_OPTIONS.find((o) => o.value === a.commitment);
+    parts.push(c?.label ?? a.commitment);
+  }
+  return parts.join(' · ') || '—';
+}
 
 export default function PositionApplyPage() {
   const { positionId } = useParams<{ positionId: string }>();
@@ -31,41 +98,57 @@ export default function PositionApplyPage() {
     university: string;
     major: string;
     phone: string;
+    gpa: number | null;
+    graduation_year: number | null;
   } | null>(null);
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fileAnswers, setFileAnswers] = useState<Record<string, File>>({});
+  const [fileNames, setFileNames] = useState<Record<string, string>>({});
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const [phoneInput, setPhoneInput] = useState('');
+  const [selectedDays, setSelectedDays] = useState<Set<string>>(() => new Set());
+  const [timePref, setTimePref] = useState<string>('');
+  const [hoursPerWeek, setHoursPerWeek] = useState(4);
+  const [commitment, setCommitment] = useState('');
+
+  const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [hospitalName, setHospitalName] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Fetch profile
+  const steps = useMemo(() => buildSteps(questions.length > 0), [questions.length]);
+  const currentStep = steps[stepIndex];
+
   useEffect(() => {
     if (!user) return;
-    const fetchProfile = async () => {
+    (async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('full_name, university, major, phone')
+        .select('full_name, university, major, phone, gpa, graduation_year')
         .eq('id', user.id)
         .single();
       if (data) {
+        const p = data.phone?.trim() ?? '';
         setProfile({
           full_name: data.full_name || '',
           email: user.email || '',
           university: data.university || '',
           major: data.major || '',
-          phone: data.phone || '',
+          phone: p,
+          gpa: typeof data.gpa === 'number' ? data.gpa : null,
+          graduation_year: typeof data.graduation_year === 'number' ? data.graduation_year : null,
         });
+        setPhoneInput(p);
       }
-    };
-    fetchProfile();
+    })();
   }, [user]);
 
-  // Fetch hospital name via position's hospital_page
   useEffect(() => {
     if (!position) return;
-    const fetchHospitalName = async () => {
+    (async () => {
       const { data } = await supabase
         .from('hospital_pages')
         .select('hospital_id, opportunities:hospital_id (name)')
@@ -74,43 +157,117 @@ export default function PositionApplyPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const opp = (data as any)?.opportunities;
       if (opp?.name) setHospitalName(opp.name);
-    };
-    fetchHospitalName();
+    })();
   }, [position]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !positionId) return;
+  useEffect(() => {
+    if (position?.hours_per_week != null) {
+      setHoursPerWeek(Math.min(20, Math.max(1, position.hours_per_week)));
+    }
+  }, [position?.hours_per_week]);
+
+  useEffect(() => {
+    const prev = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = '#0f0f0f';
+    return () => {
+      document.body.style.backgroundColor = prev;
+    };
+  }, []);
+
+  const availabilityPayload = useMemo<ApplicationAvailability>(
+    () => ({
+      days: Array.from(selectedDays),
+      time_pref: timePref || undefined,
+      hours_per_week: hoursPerWeek,
+      commitment: commitment || undefined,
+    }),
+    [selectedDays, timePref, hoursPerWeek, commitment],
+  );
+
+  const validateQuestions = useCallback(() => {
+    for (const q of questions) {
+      if (q.question_type === 'file_upload') {
+        if (q.is_required && !fileAnswers[q.id]) {
+          toast.error(`Please upload: "${q.question_text}"`);
+          return false;
+        }
+        continue;
+      }
+      if (q.is_required && !answers[q.id]?.trim()) {
+        toast.error(`Please answer: "${q.question_text}"`);
+        return false;
+      }
+    }
+    return true;
+  }, [questions, answers, fileAnswers]);
+
+  const validateCurrentStep = useCallback(() => {
+    if (currentStep === 'info') {
+      if (!phoneInput.trim()) {
+        toast.error('Please enter your phone number.');
+        return false;
+      }
+      return true;
+    }
+    if (currentStep === 'questions') return validateQuestions();
+    if (currentStep === 'availability') {
+      if (selectedDays.size === 0) {
+        toast.error('Select at least one day you are available.');
+        return false;
+      }
+      return true;
+    }
+    return true;
+  }, [currentStep, phoneInput, validateQuestions, selectedDays]);
+
+  const goNext = () => {
+    if (!validateCurrentStep()) return;
+    setStepIndex((i) => Math.min(i + 1, steps.length - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goBack = () => {
+    setStepIndex((i) => Math.max(0, i - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goToStepIndex = (i: number) => {
+    if (i < stepIndex) {
+      setStepIndex(i);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!user || !positionId || !position) return;
     setSubmitError(null);
 
     if (profileLoading) {
       setSubmitError('Checking your profile requirements. Please wait a moment and try again.');
       return;
     }
-
     if (!isProfileComplete) {
       setSubmitError('Please complete all required profile fields before submitting this application.');
       return;
     }
-
-    // Validate required questions
-    for (const q of questions) {
-      if (q.question_type === 'file_upload') {
-        if (q.is_required && !fileAnswers[q.id]) {
-          toast.error(`Please upload: "${q.question_text}"`);
-          return;
-        }
-        continue;
-      }
-
-      if (q.is_required && !answers[q.id]?.trim()) {
-        toast.error(`Please answer: "${q.question_text}"`);
-        return;
-      }
+    if (!phoneInput.trim()) {
+      toast.error('Please enter your phone number.');
+      return;
+    }
+    if (!validateQuestions()) return;
+    if (selectedDays.size === 0) {
+      toast.error('Select at least one day you are available.');
+      return;
     }
 
     setSubmitting(true);
     try {
+      const { error: phoneErr } = await supabase
+        .from('profiles')
+        .update({ phone: phoneInput.trim() })
+        .eq('id', user.id);
+      if (phoneErr) throw new Error(phoneErr.message);
+
       const uploadedFiles: Record<string, { fileName: string; publicUrl: string }> = {};
 
       for (const q of questions) {
@@ -157,17 +314,17 @@ export default function PositionApplyPage() {
         })
         .filter(Boolean);
 
-      const { data, error } = await supabase.functions.invoke('submit-position-application', {
+      const { data, error: fnError } = await supabase.functions.invoke('submit-position-application', {
         body: {
           position_id: positionId,
           answers: payloadAnswers,
+          availability: availabilityPayload,
         },
       });
 
-      if (error) {
-        throw new Error(error.message || 'Failed to submit application');
+      if (fnError) {
+        throw new Error(fnError.message || 'Failed to submit application');
       }
-
       if (data?.error) {
         throw new Error(data.error);
       }
@@ -184,275 +341,632 @@ export default function PositionApplyPage() {
     }
   };
 
-  if (authLoading || loading) {
-    return (
-      <>
-        <Navigation />
-        <div className="min-h-screen flex items-center justify-center pt-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  const renderQuestionField = (q: PositionQuestion) => {
+    const id = q.id;
+
+    if (q.question_type === 'short_answer') {
+      return (
+        <input
+          type="text"
+          className="pa-input"
+          value={answers[id] || ''}
+          onChange={(e) => setAnswers((prev) => ({ ...prev, [id]: e.target.value }))}
+          required={q.is_required}
+        />
+      );
+    }
+
+    if (q.question_type === 'long_answer') {
+      const len = (answers[id] || '').length;
+      return (
+        <div className="pa-char-wrap">
+          <textarea
+            className="pa-textarea"
+            style={{ minHeight: 110, paddingBottom: 28 }}
+            value={answers[id] || ''}
+            maxLength={LONG_ANSWER_MAX}
+            onChange={(e) => setAnswers((prev) => ({ ...prev, [id]: e.target.value }))}
+            required={q.is_required}
+            placeholder="Your answer…"
+          />
+          <span className="pa-char-count">
+            {len} / {LONG_ANSWER_MAX}
+          </span>
         </div>
-      </>
+      );
+    }
+
+    if (q.question_type === 'yes_no') {
+      return (
+        <div className="pa-options-list" role="radiogroup">
+          {(['Yes', 'No'] as const).map((opt) => (
+            <label
+              key={opt}
+              className={`pa-option-item ${answers[id] === opt ? 'pa-selected' : ''}`}
+            >
+              <input
+                type="radio"
+                name={`q-${id}`}
+                value={opt}
+                checked={answers[id] === opt}
+                onChange={() => setAnswers((prev) => ({ ...prev, [id]: opt }))}
+              />
+              <span className="pa-option-dot">
+                <span className="pa-option-dot-inner" />
+              </span>
+              <span className="pa-option-label">{opt}</span>
+            </label>
+          ))}
+        </div>
+      );
+    }
+
+    if (q.question_type === 'multiple_choice' && q.options) {
+      return (
+        <div className="pa-options-list" role="radiogroup">
+          {(q.options as string[]).map((opt, i) => (
+            <label
+              key={i}
+              className={`pa-option-item ${answers[id] === opt ? 'pa-selected' : ''}`}
+            >
+              <input
+                type="radio"
+                name={`q-${id}`}
+                value={opt}
+                checked={answers[id] === opt}
+                onChange={() => setAnswers((prev) => ({ ...prev, [id]: opt }))}
+              />
+              <span className="pa-option-dot">
+                <span className="pa-option-dot-inner" />
+              </span>
+              <span className="pa-option-label">{opt}</span>
+            </label>
+          ))}
+        </div>
+      );
+    }
+
+    if (q.question_type === 'file_upload') {
+      const name = fileNames[id];
+      return (
+        <>
+          <input
+            type="file"
+            ref={(el) => {
+              fileInputRefs.current[id] = el;
+            }}
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setFileAnswers((prev) => ({ ...prev, [id]: file }));
+                setFileNames((prev) => ({ ...prev, [id]: file.name }));
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="pa-file-drop w-full"
+            onClick={() => fileInputRefs.current[id]?.click()}
+          >
+            <span className="text-sm text-[var(--pa-text-1)]">
+              {name ? name : 'Click to upload or drag files here'}
+            </span>
+            <p>PDF, DOC, or DOCX recommended</p>
+            <span>Max file size per your hospital’s policy</span>
+          </button>
+        </>
+      );
+    }
+
+    return null;
+  };
+
+  const layout = (inner: ReactNode) => (
+    <div className="pa-root min-h-screen">
+      {inner}
+    </div>
+  );
+
+  if (authLoading || loading) {
+    return layout(
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--pa-accent)' }} />
+      </div>,
     );
   }
 
   if (!user) {
-    return (
-      <>
-        <Navigation />
-        <div className="min-h-screen flex items-center justify-center pt-20">
-          <Card className="max-w-md w-full">
-            <CardHeader>
-              <CardTitle>Sign In Required</CardTitle>
-              <CardDescription>You need to be logged in to apply</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full">
-                <Link to={`/auth?redirect=/apply/${positionId}`}>Sign In</Link>
-              </Button>
-            </CardContent>
-          </Card>
+    return layout(
+      <div className="pa-page flex min-h-[60vh] flex-col items-center justify-center text-center">
+        <div className="pa-section-card w-full max-w-md">
+          <div className="pa-section-head">
+            <h2>Sign in required</h2>
+            <p>You need to be logged in to apply to this position.</p>
+          </div>
+          <div className="pa-section-body">
+            <Link to={`/auth?redirect=/apply/${positionId}`} className="pa-btn pa-btn-primary w-full justify-center">
+              Sign in
+            </Link>
+          </div>
         </div>
-        <Footer />
-      </>
+      </div>,
     );
   }
 
   if (error || !position) {
-    return (
-      <>
-        <Navigation />
-        <div className="min-h-screen flex items-center justify-center pt-20">
-          <p className="text-muted-foreground">{error || 'Position not found'}</p>
-        </div>
-        <Footer />
-      </>
+    return layout(
+      <div className="pa-page text-center" style={{ color: 'var(--pa-text-2)' }}>
+        {error || 'Position not found'}
+      </div>,
     );
   }
 
   if (submitted) {
-    return (
+    return layout(
       <>
-        <Navigation />
-        <div className="min-h-screen flex items-center justify-center pt-20 pb-12 px-4">
-          <Card className="max-w-md w-full text-center">
-            <CardContent className="pt-8 pb-6 space-y-4">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-              <h2 className="text-xl font-bold">Application Submitted!</h2>
-              <p className="text-muted-foreground text-sm">
-                Your application to <strong>{hospitalName}</strong> for <strong>{position.title}</strong> has been submitted successfully.
-              </p>
-              <div className="flex gap-3 justify-center pt-2">
-                <Button variant="outline" asChild>
-                  <Link to="/my-applications">My Applications</Link>
-                </Button>
-                <Button asChild>
-                  <Link to="/opportunities">Browse More</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <nav className="pa-topnav">
+          <Link to="/dashboard" className="pa-nav-logo">
+            Clinical<span>Hours</span>
+          </Link>
+          <div className="pa-nav-links">
+            <Link to="/dashboard">Dashboard</Link>
+            <Link to="/opportunities">Opportunities</Link>
+            <Link to="/map">Map</Link>
+            <Link to="/settings">Settings</Link>
+          </div>
+        </nav>
+        <div className="pa-success-wrap">
+          <div className="pa-success-icon">
+            <Check className="h-6 w-6" style={{ color: 'var(--pa-accent)' }} strokeWidth={2.2} />
+          </div>
+          <div className="pa-success-title">Application submitted</div>
+          <p className="pa-success-body">
+            {hospitalName ? `${hospitalName} will` : 'The organization will'} review your application and reach out if
+            you are a good fit. Check your dashboard for updates.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link to="/my-applications" className="pa-btn">
+              My applications
+            </Link>
+            <Link to="/dashboard" className="pa-btn pa-btn-primary">
+              Back to dashboard
+            </Link>
+          </div>
         </div>
-        <Footer />
-      </>
+      </>,
     );
   }
+
+  const yearLabel = profile?.graduation_year
+    ? `Class of ${profile.graduation_year}`
+    : '—';
 
   return (
     <>
       <Helmet>
-        <title>Apply: {position.title} | ClinicalHours</title>
+        <title>
+          Apply: {position.title} · {hospitalName || 'ClinicalHours'}
+        </title>
       </Helmet>
-      <Navigation />
 
-      <main className="min-h-screen bg-background pt-20 pb-12">
-        <div className="container mx-auto px-4 max-w-2xl">
-          <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
+      <div className="pa-root min-h-screen">
+        <nav className="pa-topnav">
+          <Link to="/dashboard" className="pa-nav-logo">
+            Clinical<span>Hours</span>
+          </Link>
+          <div className="pa-nav-links">
+            <Link to="/dashboard">Dashboard</Link>
+            <Link to="/opportunities">Opportunities</Link>
+            <Link to="/map">Map</Link>
+            <Link to="/settings">Settings</Link>
+          </div>
+        </nav>
 
-          {/* Position info */}
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-center gap-2 mb-1">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">{hospitalName}</span>
+        <div className="pa-progress-track">
+          <div className="pa-progress-inner">
+            {steps.map((key, i) => (
+              <Fragment key={key}>
+                <button
+                  type="button"
+                  className={`pa-step ${i === stepIndex ? 'active' : ''} ${i < stepIndex ? 'done' : ''} ${
+                    i < stepIndex ? 'clickable' : ''
+                  }`}
+                  onClick={() => i < stepIndex && goToStepIndex(i)}
+                  disabled={i >= stepIndex}
+                >
+                  <span className="pa-step-dot">
+                    {i < stepIndex ? (
+                      <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+                    ) : (
+                      i + 1
+                    )}
+                  </span>
+                  <span>{STEP_LABELS[key]}</span>
+                </button>
+                {i < steps.length - 1 && (
+                  <div className={`pa-step-line ${i < stepIndex ? 'done' : ''}`} />
+                )}
+              </Fragment>
+            ))}
+          </div>
+        </div>
+
+        <div className="pa-page">
+          {/* Position header */}
+          <div className="pa-pos-header">
+            <div>
+              <div className="pa-pos-clinic">
+                <Building2 className="h-3.5 w-3.5" />
+                {hospitalName || 'Hospital'}
               </div>
-              <CardTitle>{position.title}</CardTitle>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Badge variant="outline">
-                  {POSITION_TYPE_LABELS[position.position_type]}
-                </Badge>
+              <h1 className="pa-pos-title">{position.title}</h1>
+              <div className="pa-pos-tags">
+                <span className="pa-tag pa-tag-accent">{POSITION_TYPE_LABELS[position.position_type]}</span>
+                {position.hours_per_week != null && (
+                  <span className="pa-tag flex items-center gap-1">
+                    <Clock className="h-3 w-3 opacity-70" />
+                    {position.hours_per_week}h / week
+                  </span>
+                )}
                 {position.location && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
+                  <span className="pa-tag flex items-center gap-1">
+                    <MapPin className="h-3 w-3 opacity-70" />
                     {position.location}
                   </span>
                 )}
-                {position.hours_per_week && (
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {position.hours_per_week} hrs/wk
-                  </span>
-                )}
+                {position.duration && <span className="pa-tag">{position.duration}</span>}
               </div>
-            </CardHeader>
-          </Card>
+            </div>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Profile info (pre-filled) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Your Information</CardTitle>
-                <CardDescription>Pre-filled from your profile</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Name</p>
-                  <p className="font-medium">{profile?.full_name || '—'}</p>
+          {!profileLoading && !isProfileComplete && (
+            <div className="pa-warn-banner">
+              <p>Complete your profile before applying</p>
+              <p className="pa-sub">Required fields: {missingFields.join(', ')}</p>
+              <button type="button" className="pa-btn mt-3" onClick={() => navigate('/settings')}>
+                Go to settings
+              </button>
+            </div>
+          )}
+
+          {submitError && <div className="pa-error-banner">{submitError}</div>}
+
+          {/* Step: Your info */}
+          {currentStep === 'info' && (
+            <>
+              <div className="pa-section-card">
+                <div className="pa-section-head">
+                  <h2>Your information</h2>
+                  <p>Pre-filled from your profile — edit in settings if anything is incorrect.</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Email</p>
-                  <p className="font-medium">{profile?.email || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">University</p>
-                  <p className="font-medium">{profile?.university || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Major</p>
-                  <p className="font-medium">{profile?.major || '—'}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Custom questions */}
-            {questions.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Application Questions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {questions.map((q) => (
-                    <div key={q.id} className="space-y-2">
-                      <Label>
-                        {q.question_text}
-                        {q.is_required && <span className="text-destructive ml-1">*</span>}
-                      </Label>
-
-                      {q.question_type === 'short_answer' && (
-                        <Input
-                          value={answers[q.id] || ''}
-                          onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                          required={q.is_required}
-                        />
-                      )}
-
-                      {q.question_type === 'long_answer' && (
-                        <Textarea
-                          value={answers[q.id] || ''}
-                          onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                          rows={4}
-                          required={q.is_required}
-                        />
-                      )}
-
-                      {q.question_type === 'yes_no' && (
-                        <RadioGroup
-                          value={answers[q.id] || ''}
-                          onValueChange={(v) => setAnswers((prev) => ({ ...prev, [q.id]: v }))}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              <RadioGroupItem value="Yes" id={`${q.id}-yes`} />
-                              <Label htmlFor={`${q.id}-yes`}>Yes</Label>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <RadioGroupItem value="No" id={`${q.id}-no`} />
-                              <Label htmlFor={`${q.id}-no`}>No</Label>
-                            </div>
-                          </div>
-                        </RadioGroup>
-                      )}
-
-                      {q.question_type === 'multiple_choice' && q.options && (
-                        <RadioGroup
-                          value={answers[q.id] || ''}
-                          onValueChange={(v) => setAnswers((prev) => ({ ...prev, [q.id]: v }))}
-                        >
-                          <div className="space-y-2">
-                            {(q.options as string[]).map((opt, i) => (
-                              <div key={i} className="flex items-center gap-2">
-                                <RadioGroupItem value={opt} id={`${q.id}-${i}`} />
-                                <Label htmlFor={`${q.id}-${i}`}>{opt}</Label>
-                              </div>
-                            ))}
-                          </div>
-                        </RadioGroup>
-                      )}
-
-                      {q.question_type === 'file_upload' && (
-                        <Input
-                          type="file"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setFileAnswers((prev) => ({ ...prev, [q.id]: file }));
-                            }
-                          }}
-                        />
-                      )}
+                <div className="pa-section-body">
+                  <div className="pa-info-grid">
+                    <div>
+                      <div className="pa-if-label">Full name</div>
+                      <div className="pa-if-val">{profile?.full_name || '—'}</div>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {!profileLoading && !isProfileComplete && (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
-                <p className="text-sm font-medium text-amber-300">
-                  Complete your profile before applying
-                </p>
-                <p className="text-xs text-amber-200/90 mt-1">
-                  Required fields: {missingFields.join(', ')}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-3"
-                  onClick={() => navigate('/settings')}
-                >
-                  Go to Settings
-                </Button>
+                    <div>
+                      <div className="pa-if-label">Email</div>
+                      <div className="pa-if-val">{profile?.email || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="pa-if-label">University</div>
+                      <div className="pa-if-val">{profile?.university || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="pa-if-label">Major</div>
+                      <div className="pa-if-val">{profile?.major || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="pa-if-label">GPA</div>
+                      <div className="pa-if-val">
+                        {profile?.gpa != null ? profile.gpa.toFixed(2) : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="pa-if-label">Year</div>
+                      <div className="pa-if-val">{yearLabel}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
 
-            {submitError && (
-              <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3">
-                <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-destructive">{submitError}</p>
+              <div className="pa-section-card">
+                <div className="pa-section-head">
+                  <h2>A bit more about you</h2>
+                  <p>Helps the site share accurate contact details with the organization.</p>
+                </div>
+                <div className="pa-section-body">
+                  <div className="pa-required-note">
+                    <span>*</span> Required fields
+                  </div>
+                  <div className="pa-form-group">
+                    <label className="pa-form-label">
+                      Phone number<span className="pa-req">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      className="pa-input"
+                      placeholder="(555) 000-0000"
+                      value={phoneInput}
+                      onChange={(e) => setPhoneInput(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
-            )}
+            </>
+          )}
 
-            <Button
-              type="submit"
-              className="w-full h-11"
-              disabled={submitting || profileLoading || !isProfileComplete}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Submitting...
-                </>
-              ) : (
-                'Submit Application'
-              )}
-            </Button>
-          </form>
+          {/* Step: Questions */}
+          {currentStep === 'questions' && questions.length > 0 && (
+            <div className="pa-section-card">
+              <div className="pa-section-head">
+                <h2>Application questions</h2>
+                <p>
+                  {hospitalName ? `Questions from ${hospitalName}` : 'Application questions'} — take your time with
+                  these.
+                </p>
+              </div>
+              <div className="pa-section-body">
+                <div className="pa-required-note">
+                  <span>*</span> Required fields
+                </div>
+                {questions.map((q, idx) => (
+                  <div key={q.id}>
+                    {idx > 0 && <div className="pa-field-divider" />}
+                    <div className="pa-form-group">
+                      <label className="pa-form-label">
+                        {q.question_text}
+                        {q.is_required && <span className="pa-req">*</span>}
+                      </label>
+                      {renderQuestionField(q)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step: Availability */}
+          {currentStep === 'availability' && (
+            <div className="pa-section-card">
+              <div className="pa-section-head">
+                <h2>Your availability</h2>
+                <p>Let the organization know when you are generally free each week.</p>
+              </div>
+              <div className="pa-section-body">
+                <div className="pa-form-group">
+                  <label className="pa-form-label">Which days are you available?</label>
+                  <div className="pa-avail-grid">
+                    {WEEKDAYS.map((d) => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        className={`pa-avail-day ${selectedDays.has(d.id) ? 'pa-selected' : ''}`}
+                        onClick={() => {
+                          setSelectedDays((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(d.id)) next.delete(d.id);
+                            else next.add(d.id);
+                            return next;
+                          });
+                        }}
+                      >
+                        <span className="pa-ad-name">{d.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pa-form-group">
+                  <label className="pa-form-label">Preferred time of day</label>
+                  <div className="pa-options-list" role="radiogroup">
+                    {TIME_PREF_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className={`pa-option-item ${timePref === opt.value ? 'pa-selected' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name="time_pref"
+                          value={opt.value}
+                          checked={timePref === opt.value}
+                          onChange={() => setTimePref(opt.value)}
+                        />
+                        <span className="pa-option-dot">
+                          <span className="pa-option-dot-inner" />
+                        </span>
+                        <span className="pa-option-label">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pa-form-group">
+                  <label className="pa-form-label">
+                    How many hours per week can you commit?{' '}
+                    <span style={{ color: 'var(--pa-accent)', fontFamily: 'monospace' }}>{hoursPerWeek}h</span>
+                  </label>
+                  <div className="pa-slider-wrap">
+                    <span className="text-xs" style={{ color: 'var(--pa-text-3)' }}>
+                      1h
+                    </span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={20}
+                      step={1}
+                      value={hoursPerWeek}
+                      className="pa-slider"
+                      onChange={(e) => setHoursPerWeek(Number(e.target.value))}
+                    />
+                    <span className="text-xs" style={{ color: 'var(--pa-text-3)' }}>
+                      20h
+                    </span>
+                  </div>
+                  {position.hours_per_week != null && (
+                    <p className="pa-form-hint">This position lists approximately {position.hours_per_week}h/week.</p>
+                  )}
+                </div>
+
+                <div className="pa-form-group">
+                  <label className="pa-form-label">Minimum commitment you can make</label>
+                  <select
+                    className="pa-select"
+                    value={commitment}
+                    onChange={(e) => setCommitment(e.target.value)}
+                  >
+                    {COMMITMENT_OPTIONS.map((o) => (
+                      <option key={o.value || 'empty'} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step: Review */}
+          {currentStep === 'review' && (
+            <div className="pa-section-card">
+              <div className="pa-section-head">
+                <h2>Review your application</h2>
+                <p>Everything looks good? Submit when you are ready — you cannot edit after submission.</p>
+              </div>
+              <div className="pa-section-body">
+                <div className="pa-form-group">
+                  <div className="pa-if-label" style={{ marginBottom: 12 }}>
+                    Applying to
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 rounded-md border border-[var(--pa-border)] bg-[var(--pa-surface-2)] p-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-[var(--pa-text-1)]">{position.title}</div>
+                      <div className="mt-0.5 text-xs text-[var(--pa-text-2)]">
+                        {hospitalName}
+                        {position.location ? ` · ${position.location}` : ''}
+                      </div>
+                    </div>
+                    <span className="pa-tag pa-tag-accent shrink-0">
+                      {POSITION_TYPE_LABELS[position.position_type]}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pa-form-group">
+                  <div className="pa-if-label" style={{ marginBottom: 12 }}>
+                    Your profile
+                  </div>
+                  <div className="pa-info-grid rounded-md border border-[var(--pa-border)] bg-[var(--pa-surface-2)] p-4">
+                    <div>
+                      <div className="pa-if-label">Name</div>
+                      <div className="pa-if-val">{profile?.full_name || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="pa-if-label">Email</div>
+                      <div className="pa-if-val">{profile?.email || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="pa-if-label">University</div>
+                      <div className="pa-if-val">{profile?.university || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="pa-if-label">Phone</div>
+                      <div className="pa-if-val">{phoneInput.trim() || '—'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {questions.length > 0 && (
+                  <div className="pa-form-group">
+                    <div className="pa-if-label" style={{ marginBottom: 12 }}>
+                      Application responses
+                    </div>
+                    <div className="space-y-3 rounded-md border border-[var(--pa-border)] bg-[var(--pa-surface-2)] p-4">
+                      {questions.map((q) => (
+                        <div key={q.id} className="text-sm">
+                          <div className="text-[var(--pa-text-3)]">{q.question_text}</div>
+                          <div className="mt-1 text-[var(--pa-text-1)]">
+                            {q.question_type === 'file_upload'
+                              ? fileNames[q.id] || fileAnswers[q.id]?.name || '—'
+                              : answers[q.id]?.trim() || '—'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pa-form-group">
+                  <div className="pa-if-label" style={{ marginBottom: 12 }}>
+                    Availability
+                  </div>
+                  <div className="pa-review-block">{formatAvailabilitySummary(availabilityPayload)}</div>
+                </div>
+
+                <div className="pa-confirm-box">
+                  By submitting, you confirm that the information provided is accurate and that you meet the eligibility
+                  requirements for this position.
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </main>
 
-      <Footer />
+        {/* Sticky actions */}
+        <div className="pa-action-bar">
+          <div className="pa-action-inner">
+            <div className="pa-action-left">
+              Step <span>{stepIndex + 1}</span> of {steps.length}
+              {currentStep === 'review' && (
+                <>
+                  {' '}
+                  · <span>Review & submit</span>
+                </>
+              )}
+            </div>
+            <div className="pa-action-btns">
+              {stepIndex > 0 && (
+                <button type="button" className="pa-btn" onClick={goBack} disabled={submitting}>
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </button>
+              )}
+              {currentStep !== 'review' ? (
+                <button
+                  type="button"
+                  className="pa-btn pa-btn-primary"
+                  onClick={goNext}
+                  disabled={submitting || profileLoading || !isProfileComplete}
+                >
+                  {currentStep === 'availability' ? 'Review application' : 'Continue'}
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="pa-btn pa-btn-primary"
+                  onClick={handleSubmit}
+                  disabled={submitting || profileLoading || !isProfileComplete}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Submitting…
+                    </>
+                  ) : (
+                    <>
+                      Submit application
+                      <ChevronRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

@@ -42,6 +42,8 @@ import {
   ArrowRight,
   Loader2,
   Building2,
+  Stethoscope,
+  ExternalLink,
 } from "lucide-react";
 import HospitalLogo from "@/components/HospitalLogo";
 import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from "@/types/positions";
@@ -95,13 +97,24 @@ interface ExperienceEntryRow {
   entry_date: string;
 }
 
-interface BcsClinicApplication {
+interface DashboardApplication {
   id: string;
   status: ApplicationStatus;
   submitted_at: string;
   position_title: string;
   position_type: PositionType;
   hospital_name: string;
+}
+
+/** Preview count on the dashboard; full list is on /my-applications */
+const DASHBOARD_APPLICATIONS_PREVIEW_LIMIT = 2;
+
+/** Matches `opportunities.slug` in the database */
+const BCS_OPPORTUNITY_SLUG = "bcs-free-health-clinic";
+
+function isBcsHospitalName(name: string): boolean {
+  const n = name.toLowerCase();
+  return n.includes("bcs free health clinic") || (n.includes("bcs") && n.includes("clinic"));
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -359,7 +372,19 @@ const Dashboard = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dashboardTutorialComplete, setDashboardTutorialComplete] = useState(true);
-  const [bcsClinicApplications, setBcsClinicApplications] = useState<BcsClinicApplication[]>([]);
+  const [dashboardApplications, setDashboardApplications] = useState<DashboardApplication[]>([]);
+
+  const recentDashboardApplications = useMemo(() => {
+    const sorted = [...dashboardApplications].sort(
+      (a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+    );
+    return sorted.slice(0, DASHBOARD_APPLICATIONS_PREVIEW_LIMIT);
+  }, [dashboardApplications]);
+
+  const bcsDashboardApplications = useMemo(
+    () => dashboardApplications.filter((app) => isBcsHospitalName(app.hospital_name)),
+    [dashboardApplications]
+  );
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -473,7 +498,7 @@ const Dashboard = () => {
           opportunities: Array.isArray(row.opportunities) ? row.opportunities[0] ?? null : row.opportunities,
         })) as SavedOpportunityRow[];
         const entries = (entriesRes.data || []) as ExperienceEntryRow[];
-        const clinicApplications = ((clinicAppsRes.data || []) as Record<string, unknown>[]).map((row) => {
+        const parsedApplications = ((clinicAppsRes.data || []) as Record<string, unknown>[]).map((row) => {
           const position = row.hospital_positions as Record<string, unknown> | null;
           const page = position?.hospital_pages as Record<string, unknown> | null;
           const opportunity = page?.opportunities as Record<string, unknown> | null;
@@ -487,17 +512,7 @@ const Dashboard = () => {
           };
         });
 
-        const clinicNameMatches = (hospitalName: string) => {
-          const normalized = hospitalName.toLowerCase();
-          return (
-            normalized.includes("bcs free health clinic") ||
-            (normalized.includes("bcs") && normalized.includes("clinic"))
-          );
-        };
-
-        setBcsClinicApplications(
-          clinicApplications.filter((app) => clinicNameMatches(app.hospital_name))
-        );
+        setDashboardApplications(parsedApplications);
 
         // Build aggregation maps keyed by opportunity_id
         const hoursMap: Record<string, number> = {};
@@ -706,6 +721,64 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* ─── Featured: BCS Free Health Clinic ───────────── */}
+        <section
+          className="mt-6 rounded-xl border border-emerald-500/35 bg-emerald-500/[0.07] backdrop-blur-sm overflow-hidden"
+          aria-labelledby="dashboard-bcs-feature-heading"
+        >
+          <div className="px-5 py-5 sm:px-6 sm:py-6 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+            <div className="flex gap-4 min-w-0">
+              <div className="shrink-0 flex h-11 w-11 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+                <Stethoscope className="h-5 w-5 text-emerald-400" aria-hidden />
+              </div>
+              <div className="min-w-0 space-y-2">
+                <p className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.2em] text-emerald-400/90">
+                  Featured — now accepting applications
+                </p>
+                <h2
+                  id="dashboard-bcs-feature-heading"
+                  className="text-lg sm:text-xl font-semibold text-foreground tracking-tight"
+                >
+                  BCS Free Health Clinic
+                </h2>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-xl">
+                  Free community health clinic in Bryan / College Station, Texas. Submit your application here
+                  (resume and short essays).
+                </p>
+                <a
+                  href="https://bcshealthclinic.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  bcshealthclinic.org
+                  <ExternalLink className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
+                </a>
+                {!isGuest && user && bcsDashboardApplications.length > 0 && (
+                  <p className="text-xs text-muted-foreground pt-1">
+                    You have {bcsDashboardApplications.length}{" "}
+                    {bcsDashboardApplications.length === 1 ? "application" : "applications"} to this clinic —{" "}
+                    <Link to="/my-applications" className="text-emerald-400 hover:text-emerald-300 underline-offset-2 hover:underline">
+                      view in My Applications
+                    </Link>
+                    .
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-2 shrink-0">
+              <Button asChild className="h-10 gap-1.5 font-medium">
+                <Link to={`/opportunities/${BCS_OPPORTUNITY_SLUG}/application`}>
+                  Apply now <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-10 border-emerald-500/40 hover:bg-emerald-500/10">
+                <Link to={`/opportunities/${BCS_OPPORTUNITY_SLUG}`}>View opportunity</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
         {/* ─── Dashboard content ─────────────────────────── */}
         <div className="mt-8">
           {(guestTutorialVisible || accountTutorialVisible) && (
@@ -762,10 +835,10 @@ const Dashboard = () => {
                 <StatCard icon={CalendarClock} label="Next Deadline" value={nextDeadline} />
               </div>
 
-              {/* Tracked Opportunities */}
+              {/* Applications preview (full list: /my-applications) */}
               <section className="mb-10">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-medium text-foreground">BCS Free Health Clinic Applications</h2>
+                  <h2 className="text-lg font-medium text-foreground">Applications</h2>
                   <Button asChild variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
                     <Link to="/my-applications">
                       View all applications <ArrowRight className="h-3.5 w-3.5" />
@@ -773,13 +846,13 @@ const Dashboard = () => {
                   </Button>
                 </div>
 
-                {bcsClinicApplications.length === 0 ? (
+                {dashboardApplications.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border p-5 text-sm text-muted-foreground">
-                    No BCS Free Health Clinic applications yet.
+                    No applications yet.
                   </div>
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {bcsClinicApplications.map((app) => (
+                    {recentDashboardApplications.map((app) => (
                       <div key={app.id} className="rounded-lg border border-border bg-card p-4">
                         <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
                           <Building2 className="h-3.5 w-3.5" />

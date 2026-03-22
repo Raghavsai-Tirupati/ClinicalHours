@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, validateOrigin } from "../_shared/auth.ts";
 import { sendViaGmail } from "../_shared/gmail.ts";
+import { jsonRateLimitResponse, reserveGmailSendBatch } from "../_shared/rate-limit.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "ClinicalHours <support@clinicalhours.org>";
@@ -140,10 +141,11 @@ const handler = async (req: Request): Promise<Response> => {
     // We match on admin_email to bridge the legacy and new admin systems.
     const { data: gmailPage } = await supabaseAdmin
       .from("hospital_pages")
-      .select("gmail_refresh_token, gmail_email")
+      .select("id, gmail_refresh_token, gmail_email")
       .eq("admin_email", user.email!)
       .maybeSingle();
 
+    const gmailPageId = (gmailPage as { id?: string } | null)?.id ?? null;
     const gmailRefreshToken = (gmailPage as { gmail_refresh_token?: string | null } | null)?.gmail_refresh_token ?? null;
     const gmailFrom = (gmailPage as { gmail_email?: string | null } | null)?.gmail_email ?? null;
     const useGmail = Boolean(gmailRefreshToken && gmailFrom);
@@ -249,6 +251,13 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ success: true, sent: 0, failed: 0, total: 0 }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
+    }
+
+    if (useGmail && gmailPageId) {
+      const batchRl = await reserveGmailSendBatch(supabaseAdmin, gmailPageId, recipients.length);
+      if (!batchRl.allowed) {
+        return jsonRateLimitResponse(corsHeaders, batchRl.retryAfterSeconds);
+      }
     }
 
     let sent = 0;
