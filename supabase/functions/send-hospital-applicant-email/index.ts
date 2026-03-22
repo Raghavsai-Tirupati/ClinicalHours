@@ -136,6 +136,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Look up Gmail credentials for send-on-behalf
+    const { data: gmailPage } = await supabaseAdmin
+      .from("hospital_pages")
+      .select("gmail_refresh_token, gmail_email")
+      .eq("admin_email", user.email!)
+      .maybeSingle();
+    const useGmail = Boolean(gmailPage?.gmail_refresh_token && gmailPage?.gmail_email);
+
     const recipientsMap = new Map<string, Recipient>();
 
     let hospitalQuery = supabaseAdmin
