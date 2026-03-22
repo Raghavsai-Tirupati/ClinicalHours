@@ -41,6 +41,7 @@ export type Database = {
       application_answers: {
         Row: {
           answer_file_url: string | null
+          answer_options: Json | null
           answer_text: string | null
           application_id: string
           created_at: string | null
@@ -49,6 +50,7 @@ export type Database = {
         }
         Insert: {
           answer_file_url?: string | null
+          answer_options?: Json | null
           answer_text?: string | null
           application_id: string
           created_at?: string | null
@@ -57,6 +59,7 @@ export type Database = {
         }
         Update: {
           answer_file_url?: string | null
+          answer_options?: Json | null
           answer_text?: string | null
           application_id?: string
           created_at?: string | null
