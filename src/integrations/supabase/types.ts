@@ -582,6 +582,9 @@ export type Database = {
           claimed_at: string | null
           created_at: string
           created_by: string | null
+          gmail_connected_at: string | null
+          gmail_email: string | null
+          gmail_refresh_token: string | null
           hospital_id: string
           id: string
           interview_booking_url: string | null
@@ -592,6 +595,9 @@ export type Database = {
           claimed_at?: string | null
           created_at?: string
           created_by?: string | null
+          gmail_connected_at?: string | null
+          gmail_email?: string | null
+          gmail_refresh_token?: string | null
           hospital_id: string
           id?: string
           interview_booking_url?: string | null
@@ -602,6 +608,9 @@ export type Database = {
           claimed_at?: string | null
           created_at?: string
           created_by?: string | null
+          gmail_connected_at?: string | null
+          gmail_email?: string | null
+          gmail_refresh_token?: string | null
           hospital_id?: string
           id?: string
           interview_booking_url?: string | null
