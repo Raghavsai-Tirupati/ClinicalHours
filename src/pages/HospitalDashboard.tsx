@@ -1471,6 +1471,31 @@ export default function HospitalDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Opportunity Confirm Dialog */}
+      <Dialog open={!!deleteConfirmOpp} onOpenChange={(open) => !open && setDeleteConfirmOpp(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Opportunity</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deleteConfirmOpp?.name}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpp(null)} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmOpp && handleDeleteOpportunity(deleteConfirmOpp)}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </>
   );
