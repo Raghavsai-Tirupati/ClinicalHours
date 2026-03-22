@@ -47,6 +47,8 @@ export default function PositionForm() {
   const [applicationDeadline, setApplicationDeadline] = useState('');
   const [spotsAvailable, setSpotsAvailable] = useState('');
   const [questions, setQuestions] = useState<QuestionFormData[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Pre-fill location from opportunity
   useEffect(() => {
