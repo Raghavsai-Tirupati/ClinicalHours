@@ -240,7 +240,7 @@ export default function HospitalDashboard() {
       const haApps: ApplicationWithGpa[] = [];
       const oppIds = opps.map((o) => o.id);
 
-      const [appsRes, hospAppsRes, questionsRes, accountRes] = await Promise.all([
+      const [appsRes, hospAppsRes, questionsRes, accountRes, protectedRes] = await Promise.all([
         supabase
           .from("applications")
           .select("*")
@@ -262,6 +262,10 @@ export default function HospitalDashboard() {
           .select("interview_booking_url")
           .eq("id", member.accountId)
           .maybeSingle(),
+        supabase
+          .from("hospital_pages")
+          .select("hospital_id")
+          .in("hospital_id", oppIds),
       ]);
 
       const appsList = (appsRes.data || []) as Application[];
