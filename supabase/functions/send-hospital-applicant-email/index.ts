@@ -256,84 +256,85 @@ const handler = async (req: Request): Promise<Response> => {
       const batch = recipients.slice(i, i + BATCH_SIZE);
 
       for (const recipient of batch) {
-        try {
-          const emailResponse = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${RESEND_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(
-              emailType === "interview_invite"
-                ? {
-                    from: RESEND_FROM_EMAIL,
-                    to: [recipient.email],
-                    subject: "Interview invitation - schedule your slot",
-                    html: `
-                      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
-                        <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
-                        <p style="line-height: 1.6; color: #333;">
-                          You have been invited to schedule an interview with our clinic team.
-                        </p>
-                        ${
-                          customMessage?.trim()
-                            ? `<p style="line-height: 1.6; color: #333;">${formatBodyHtml(customMessage.trim())}</p>`
-                            : ""
-                        }
-                        <p style="line-height: 1.6; color: #333;">
-                          Please use the scheduling link below:
-                        </p>
-                        <p style="margin: 16px 0;">
-                          <a href="${escapeHtml(interviewBookingUrl)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;">
-                            Schedule Interview
-                          </a>
-                        </p>
-                        <p style="line-height: 1.6; color: #333;">
-                          If the button does not work, copy this URL into your browser:<br/>
-                          <span style="font-size: 12px; color: #555;">${escapeHtml(interviewBookingUrl)}</span>
-                        </p>
-                        <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
-                        <p style="font-size: 12px; color: #666;">
-                          Sent from ClinicalHours on behalf of your hospital application team.
-                        </p>
-                      </div>
-                    `,
-                  }
-                : {
-                    from: RESEND_FROM_EMAIL,
-                    to: [recipient.email],
-                    subject: subject,
-                    html: `
-                      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
-                        <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
-                        <div style="line-height: 1.6; color: #333;">
-                          ${formatBodyHtml(body ?? "")}
-                        </div>
-                        <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
-                        <p style="font-size: 12px; color: #666;">
-                          Sent from ClinicalHours on behalf of your hospital application team.
-                        </p>
-                      </div>
-                    `,
-                  },
-            ),
-          });
+        const emailSubject = emailType === "interview_invite"
+          ? "Interview invitation - schedule your slot"
+          : (subject as string);
+        const emailHtml = emailType === "interview_invite"
+          ? `
+            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+              <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
+              <p style="line-height: 1.6; color: #333;">
+                You have been invited to schedule an interview with our clinic team.
+              </p>
+              ${
+                customMessage?.trim()
+                  ? `<p style="line-height: 1.6; color: #333;">${formatBodyHtml(customMessage.trim())}</p>`
+                  : ""
+              }
+              <p style="line-height: 1.6; color: #333;">Please use the scheduling link below:</p>
+              <p style="margin: 16px 0;">
+                <a href="${escapeHtml(interviewBookingUrl)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;">
+                  Schedule Interview
+                </a>
+              </p>
+              <p style="line-height: 1.6; color: #333;">
+                If the button does not work, copy this URL into your browser:<br/>
+                <span style="font-size: 12px; color: #555;">${escapeHtml(interviewBookingUrl)}</span>
+              </p>
+              <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
+              <p style="font-size: 12px; color: #666;">Sent from ClinicalHours on behalf of your hospital application team.</p>
+            </div>
+          `
+          : `
+            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+              <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
+              <div style="line-height: 1.6; color: #333;">${formatBodyHtml(body ?? "")}</div>
+              <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
+              <p style="font-size: 12px; color: #666;">Sent from ClinicalHours on behalf of your hospital application team.</p>
+            </div>
+          `;
 
-          if (emailResponse.ok) {
+        try {
+          if (useGmail) {
+            await sendViaGmail({
+              refreshToken: gmailPage!.gmail_refresh_token!,
+              fromEmail: gmailPage!.gmail_email!,
+              toEmail: recipient.email,
+              subject: emailSubject,
+              html: emailHtml,
+            });
             sent++;
           } else {
-            failed++;
-            const errorData = await emailResponse.json().catch(() => ({}));
-            console.error("Resend API error for", recipient.email, JSON.stringify(errorData));
-            if (errors.length < 5) {
-              errors.push(`${recipient.email}: ${errorData?.message ?? errorData?.error ?? JSON.stringify(errorData)}`);
+            const emailResponse = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${RESEND_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: RESEND_FROM_EMAIL,
+                to: [recipient.email],
+                subject: emailSubject,
+                html: emailHtml,
+              }),
+            });
+
+            if (emailResponse.ok) {
+              sent++;
+            } else {
+              failed++;
+              const errorData = await emailResponse.json().catch(() => ({}));
+              console.error("Resend API error for", recipient.email, JSON.stringify(errorData));
+              if (errors.length < 5) {
+                errors.push(`${recipient.email}: ${errorData?.message ?? errorData?.error ?? JSON.stringify(errorData)}`);
+              }
             }
           }
         } catch (err) {
           failed++;
-          console.error("Network error sending to", recipient.email, err);
+          console.error("Error sending to", recipient.email, err);
           if (errors.length < 5) {
-            errors.push(`${recipient.email}: Failed to send`);
+            errors.push(`${recipient.email}: ${err instanceof Error ? err.message : "Failed to send"}`);
           }
         }
 
