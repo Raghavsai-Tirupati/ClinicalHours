@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { usePositionDetail } from '@/hooks/usePositionDetail';
 import PositionQuestionsEditor from './PositionQuestionsEditor';
@@ -39,6 +47,8 @@ export default function PositionForm() {
   const [applicationDeadline, setApplicationDeadline] = useState('');
   const [spotsAvailable, setSpotsAvailable] = useState('');
   const [questions, setQuestions] = useState<QuestionFormData[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Pre-fill location from opportunity
   useEffect(() => {
@@ -332,23 +342,81 @@ export default function PositionForm() {
 
       <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
 
-      <div className="flex gap-3 justify-end pt-4">
-        <Button
-          variant="outline"
-          onClick={() => handleSave('draft')}
-          disabled={saving}
-        >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          Save as Draft
-        </Button>
-        <Button
-          onClick={() => handleSave('active')}
-          disabled={saving}
-        >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          {isEdit ? 'Update Position' : 'Publish Position'}
-        </Button>
+      <div className="flex gap-3 justify-between pt-4">
+        {isEdit && (
+          <Button
+            variant="destructive"
+            onClick={() => setDeleteDialogOpen(true)}
+            disabled={saving}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Position
+          </Button>
+        )}
+        <div className="flex gap-3 ml-auto">
+          <Button
+            variant="outline"
+            onClick={() => handleSave('draft')}
+            disabled={saving}
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Save as Draft
+          </Button>
+          <Button
+            onClick={() => handleSave('active')}
+            disabled={saving}
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {isEdit ? 'Update Position' : 'Publish Position'}
+          </Button>
+        </div>
       </div>
+
+      {/* Delete Position Confirm Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Position</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{title || 'this position'}</strong>? All associated questions and applications will also be removed. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={async () => {
+                if (!positionId) return;
+                setDeleting(true);
+                try {
+                  // Delete questions first, then position
+                  await supabase.from('application_answers').delete().in(
+                    'question_id',
+                    existingQuestions.map((q) => q.id)
+                  );
+                  await supabase.from('student_applications').delete().eq('position_id', positionId);
+                  await supabase.from('position_questions').delete().eq('position_id', positionId);
+                  const { error } = await supabase.from('hospital_positions').delete().eq('id', positionId);
+                  if (error) throw error;
+                  toast.success('Position deleted');
+                  navigate(basePath);
+                } catch (err: unknown) {
+                  console.error('Delete position error:', err);
+                  toast.error((err as Error)?.message || 'Failed to delete position');
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
