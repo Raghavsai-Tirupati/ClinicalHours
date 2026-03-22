@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { StudentApplication, ApplicationStatus, HospitalPosition } from '@/types/positions';
+import type { StudentApplication, ApplicationStatus, HospitalPosition, QuestionType } from '@/types/positions';
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 
@@ -129,7 +129,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
                   answer_file_url: null,
                   created_at: '',
                   question: q
-                    ? { id: q.id, question_text: q.question_text, question_type: q.question_type, is_required: q.is_required, display_order: q.display_order }
+                    ? { id: q.id, question_text: q.question_text, question_type: q.question_type as QuestionType, is_required: q.is_required, display_order: q.display_order }
                     : undefined,
                 });
                 answersByAppId.set(row.application_id, existing);
