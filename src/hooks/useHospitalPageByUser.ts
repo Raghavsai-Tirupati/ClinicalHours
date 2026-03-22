@@ -31,6 +31,7 @@ export function useHospitalPageByUser() {
         .from('hospital_pages')
         .select(`
           id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by, interview_booking_url,
+          gmail_email, gmail_connected_at,
           opportunities:hospital_id (id, name, location, type, website, logo_url, description)
         `)
         .eq('admin_email', user.email!)
