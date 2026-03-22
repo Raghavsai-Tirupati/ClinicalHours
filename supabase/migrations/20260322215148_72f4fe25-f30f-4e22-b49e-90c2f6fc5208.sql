@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "BCS hospital admins can delete non-protected opportunities" ON public.opportunities;
