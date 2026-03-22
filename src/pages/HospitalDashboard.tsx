@@ -898,14 +898,26 @@ export default function HospitalDashboard() {
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              {opp.slug && (
-                                <Link to={`/opportunities/${opp.slug}/admin`}>
-                                  <Button size="sm" variant="outline" className="text-xs h-7">
-                                    <ExternalLink className="h-3 w-3 mr-1" />
-                                    Manage
+                              <div className="flex items-center justify-end gap-1">
+                                {opp.slug && (
+                                  <Link to={`/opportunities/${opp.slug}/admin`}>
+                                    <Button size="sm" variant="outline" className="text-xs h-7">
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      Manage
+                                    </Button>
+                                  </Link>
+                                )}
+                                {isBcsPilot && (member?.role === "owner" || member?.role === "admin") && !protectedOppIds.has(opp.id) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => setDeleteConfirmOpp(opp)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
                                   </Button>
-                                </Link>
-                              )}
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
