@@ -391,25 +391,6 @@ export default function HospitalDashboard() {
     }
   }
 
-  async function handleDeleteOpportunity(opp: OpportunityWithApps) {
-    if (!member) return;
-    setDeleteLoading(true);
-    try {
-      const { error } = await supabase
-        .from("opportunities")
-        .delete()
-        .eq("id", opp.id);
-      if (error) throw error;
-      toast.success(`"${opp.name}" deleted`);
-      setDeleteConfirmOpp(null);
-      fetchData();
-    } catch (err) {
-      console.error("Delete opportunity error:", err);
-      toast.error(err instanceof Error ? err.message : "Failed to delete opportunity");
-    } finally {
-      setDeleteLoading(false);
-    }
-  }
 
   async function handleAddQuestion() {
     if (!member || !newQuestionText.trim()) return;
