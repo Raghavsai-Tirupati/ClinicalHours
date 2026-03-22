@@ -420,6 +420,7 @@ export default function HospitalDashboard() {
     }
   }
 
+  async function handleAddQuestion() {
     if (!member || !newQuestionText.trim()) return;
     setQuestionSaving(true);
     try {
