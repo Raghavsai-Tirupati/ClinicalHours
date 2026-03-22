@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { StudentApplication, ApplicationStatus, HospitalPosition } from '@/types/positions';
+import type { StudentApplication, ApplicationStatus, HospitalPosition, QuestionType } from '@/types/positions';
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 
