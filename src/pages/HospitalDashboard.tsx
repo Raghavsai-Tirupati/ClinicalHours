@@ -272,6 +272,8 @@ export default function HospitalDashboard() {
       const hospApps = hospAppsRes.data || [];
       const questions = (questionsRes.data || []) as AppQuestion[];
       const bookingUrl = accountRes.data?.interview_booking_url?.trim() ?? "";
+      const protectedIds = new Set((protectedRes.data || []).map((r: { hospital_id: string }) => r.hospital_id));
+      setProtectedOppIds(protectedIds);
 
       const allStudentIds = [
         ...new Set(
