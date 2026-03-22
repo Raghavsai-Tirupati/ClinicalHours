@@ -228,6 +228,9 @@ export default function HospitalSettings() {
               </Button>
             </div>
           )}
+          <p className="text-xs text-muted-foreground">
+            Gmail sending is limited to 200 emails/hour and 450/day per connected account.
+          </p>
         </CardContent>
       </Card>
     </div>
