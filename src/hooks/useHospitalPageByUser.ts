@@ -27,19 +27,37 @@ export function useHospitalPageByUser() {
 
     try {
       // 1. Try hospital_pages by admin_email
-      const { data: page } = await supabase
+      // Try with gmail fields; if the migration hasn't run yet these columns won't exist
+      // and Supabase will return an error — in that case retry without them.
+      let pageResult = await supabase
         .from('hospital_pages')
         .select(`
           id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by, interview_booking_url,
+          gmail_email, gmail_connected_at,
           opportunities:hospital_id (id, name, location, type, website, logo_url, description)
         `)
         .eq('admin_email', user.email!)
         .limit(1)
         .maybeSingle();
 
+      if (pageResult.error?.message?.includes('gmail_')) {
+        pageResult = await supabase
+          .from('hospital_pages')
+          .select(`
+            id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by, interview_booking_url,
+            opportunities:hospital_id (id, name, location, type, website, logo_url, description)
+          `)
+          .eq('admin_email', user.email!)
+          .limit(1)
+          .maybeSingle();
+      }
+
+      const page = pageResult.data;
+
       if (page) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const opp = (page as any).opportunities;
+        const p = page as any;
+        const opp = p.opportunities;
         setPageId(page.id);
         setHospitalPage({
           id: page.id,
@@ -50,6 +68,8 @@ export function useHospitalPageByUser() {
           claimed_at: page.claimed_at,
           created_at: page.created_at,
           created_by: page.created_by,
+          gmail_email: p.gmail_email ?? null,
+          gmail_connected_at: p.gmail_connected_at ?? null,
           opportunity: {
             id: opp?.id || page.hospital_id,
             name: opp?.name || 'Unknown Hospital',

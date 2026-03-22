@@ -17,20 +17,35 @@ export function useHospitalPage(pageId: string | undefined) {
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
+      // Try with gmail fields; fall back if the migration hasn't run yet.
+      let queryResult = await supabase
         .from('hospital_pages')
         .select(`
           id, hospital_id, admin_email, interview_booking_url, is_claimed, claimed_at, created_at, created_by,
+          gmail_email, gmail_connected_at,
           opportunities:hospital_id (id, name, location, type, website, logo_url, description)
         `)
         .eq('id', pageId)
         .single();
 
+      if (queryResult.error?.message?.includes('gmail_')) {
+        queryResult = await supabase
+          .from('hospital_pages')
+          .select(`
+            id, hospital_id, admin_email, interview_booking_url, is_claimed, claimed_at, created_at, created_by,
+            opportunities:hospital_id (id, name, location, type, website, logo_url, description)
+          `)
+          .eq('id', pageId)
+          .single();
+      }
+
+      const { data, error: fetchError } = queryResult;
       if (fetchError) throw fetchError;
 
       if (data) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const opp = (data as any).opportunities;
+        const d = data as any;
+        const opp = d.opportunities;
         setHospitalPage({
           id: data.id,
           hospital_id: data.hospital_id,
@@ -40,6 +55,8 @@ export function useHospitalPage(pageId: string | undefined) {
           claimed_at: data.claimed_at,
           created_at: data.created_at,
           created_by: data.created_by,
+          gmail_email: d.gmail_email ?? null,
+          gmail_connected_at: d.gmail_connected_at ?? null,
           opportunity: {
             id: opp?.id || data.hospital_id,
             name: opp?.name || 'Unknown Hospital',
