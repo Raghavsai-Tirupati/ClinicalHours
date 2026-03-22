@@ -323,8 +323,7 @@ const Settings = () => {
     try {
       const sanitizedData = sanitizeProfileData(profile);
 
-      const { error } = await supabase.from("profiles").upsert({
-        id: user.id,
+      const { error } = await supabase.from("profiles").update({
         full_name: sanitizedData.full_name,
         city: sanitizedData.city,
         state: sanitizedData.state,
@@ -345,7 +344,7 @@ const Settings = () => {
         linkedin_url: sanitizedData.linkedin_url,
         resume_url: sanitizedData.resume_url,
         email_opt_in: profile.email_opt_in,
-      });
+      }).eq("id", user.id);
 
       if (error) throw error;
 
