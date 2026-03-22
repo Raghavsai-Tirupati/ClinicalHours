@@ -126,7 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: hospitalPage, error: pageError } = await supabaseAdmin
       .from("hospital_pages")
-      .select("id, admin_email, interview_booking_url, opportunities:hospital_id(name)")
+      .select("id, admin_email, interview_booking_url, gmail_refresh_token, gmail_email, opportunities:hospital_id(name)")
       .eq("id", hospitalPageId)
       .maybeSingle();
 
