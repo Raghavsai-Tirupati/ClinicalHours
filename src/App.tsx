@@ -109,6 +109,7 @@ function AppContent() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Settings />} />
               <Route path="/dashboard" element={<StudentOnlyRoute><Dashboard /></StudentOnlyRoute>} />

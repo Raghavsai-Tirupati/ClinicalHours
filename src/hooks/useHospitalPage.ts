@@ -41,6 +41,8 @@ export function useHospitalPage(pageId: string | undefined) {
           claimed_at: data.claimed_at,
           created_at: data.created_at,
           created_by: data.created_by,
+          gmail_email: (data as Record<string, unknown>).gmail_email as string | null ?? null,
+          gmail_connected_at: (data as Record<string, unknown>).gmail_connected_at as string | null ?? null,
           opportunity: {
             id: opp?.id || data.hospital_id,
             name: opp?.name || 'Unknown Hospital',
