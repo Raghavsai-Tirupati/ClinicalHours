@@ -154,6 +154,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const bookingUrl = hospitalPage.interview_booking_url?.trim() ?? "";
+    const gmailRefreshToken = (hospitalPage as Record<string, unknown>).gmail_refresh_token as string | null;
+    const gmailFrom = (hospitalPage as Record<string, unknown>).gmail_email as string | null;
     if (selectedEmailType === "interview_invite" && !bookingUrl) {
       return new Response(
         JSON.stringify({ success: false, error: "Interview booking link is not configured" }),
