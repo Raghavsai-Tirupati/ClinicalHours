@@ -36,6 +36,7 @@ const MyApplications = lazy(() => import("./pages/MyApplications"));
 const HospitalApplyPage = lazy(() => import("./pages/HospitalApplyPage"));
 const PendingApproval = lazy(() => import("./pages/PendingApproval"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const GoogleAuthCallback = lazy(() => import("./pages/GoogleAuthCallback"));
 
 // Hospital admin dashboard (position system)
 const HospitalDashboardLayout = lazy(() => import("./layouts/HospitalDashboardLayout"));
@@ -49,7 +50,6 @@ const EmailPage = lazy(() => import("./components/hospital/EmailPage"));
 const ActivityPage = lazy(() => import("./components/hospital/ActivityPage"));
 const PositionApplyPage = lazy(() => import("./pages/PositionApplyPage"));
 const HospitalDashboardRedirect = lazy(() => import("./components/HospitalDashboardRedirect"));
-const GoogleAuthCallback = lazy(() => import("./pages/GoogleAuthCallback"));
 
 // Premium feature pages
 const Premium = lazy(() => import("./pages/Premium"));

@@ -1,14 +1,3 @@
-/**
- * gmail-disconnect
- *
- * Removes the stored Gmail OAuth credentials from a hospital_pages row
- * so that future emails fall back to the platform default (Resend).
- *
- * Also revokes the token with Google so it can't be replayed.
- *
- * POST  { hospitalPageId: string }
- * Returns { success: true }
- */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, validateOrigin } from "../_shared/auth.ts";
@@ -41,7 +30,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { hospitalPageId } = await req.json() as { hospitalPageId?: string };
+    let payload: { hospitalPageId: string };
+    try {
+      payload = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid JSON body" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const { hospitalPageId } = payload;
     if (!hospitalPageId) {
       return new Response(
         JSON.stringify({ success: false, error: "hospitalPageId is required" }),
@@ -55,42 +54,45 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
-    const user = authData?.user;
-    if (authError || !user) {
+    if (authError || !authData?.user) {
       return new Response(
         JSON.stringify({ success: false, error: "Invalid authentication" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    const userEmail = user.email?.trim().toLowerCase() ?? "";
+    const userEmail = authData.user.email?.trim().toLowerCase();
 
-    const { data: page, error: pageError } = await supabaseAdmin
+    const { data: hospitalPage, error: pageError } = await supabaseAdmin
       .from("hospital_pages")
       .select("id, admin_email, gmail_refresh_token")
       .eq("id", hospitalPageId)
       .maybeSingle();
 
-    if (pageError || !page) {
+    if (pageError || !hospitalPage) {
       return new Response(
         JSON.stringify({ success: false, error: "Hospital page not found" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    if ((page.admin_email ?? "").trim().toLowerCase() !== userEmail) {
+    if ((hospitalPage.admin_email ?? "").trim().toLowerCase() !== userEmail) {
       return new Response(
-        JSON.stringify({ success: false, error: "Access denied" }),
+        JSON.stringify({ success: false, error: "Hospital page access denied" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    // Best-effort token revocation with Google.
-    const existingToken = (page as { gmail_refresh_token?: string | null }).gmail_refresh_token;
-    if (existingToken) {
-      fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(existingToken)}`, {
-        method: "POST",
-      }).catch((err) => console.warn("Token revocation failed (non-fatal):", err));
+    // Best-effort revoke
+    if (hospitalPage.gmail_refresh_token) {
+      try {
+        await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(hospitalPage.gmail_refresh_token)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        });
+      } catch (e) {
+        console.warn("Gmail token revocation failed (non-fatal):", e);
+      }
     }
 
     const { error: updateError } = await supabaseAdmin
@@ -103,7 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("id", hospitalPageId);
 
     if (updateError) {
-      throw new Error(`Failed to remove Gmail credentials: ${updateError.message}`);
+      throw new Error("Failed to clear Gmail credentials");
     }
 
     return new Response(
@@ -113,10 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: unknown) {
     console.error("gmail-disconnect error:", error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to disconnect Gmail",
-      }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Internal error" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   }

@@ -40,6 +40,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
 
       if (posError) throw posError;
       const allPositions = (posData || []) as HospitalPosition[];
+      console.log('[useAllApplications] hospitalPageId=', hospitalPageId, 'positions=', allPositions.length);
       setPositions(allPositions);
 
       let newSystemApps: StudentApplication[] = [];
@@ -54,6 +55,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
 
         if (appError) throw appError;
         newSystemApps = (appData || []) as StudentApplication[];
+        console.log('[useAllApplications] new-system apps=', newSystemApps.length);
       }
 
       // ── 2. Legacy system: hospital_applications via hospital_accounts ─────────
@@ -62,11 +64,13 @@ export function useAllApplications(hospitalPageId: string | undefined) {
       let legacyApps: StudentApplication[] = [];
       let legacyQuestions: { id: string; question_text: string; question_type: string; is_required: boolean; display_order: number }[] = [];
 
-      const { data: pageData } = await supabase
+      const { data: pageData, error: pageDataError } = await supabase
         .from('hospital_pages')
         .select('hospital_id')
         .eq('id', hospitalPageId)
         .maybeSingle();
+
+      console.log('[useAllApplications] legacy chain: pageData=', pageData, 'error=', pageDataError);
 
       if (pageData?.hospital_id) {
         // hospital_pages.hospital_id = opportunities.id
@@ -76,6 +80,8 @@ export function useAllApplications(hospitalPageId: string | undefined) {
           .eq('id', pageData.hospital_id)
           .maybeSingle();
 
+        console.log('[useAllApplications] legacy chain: oppData=', oppData);
+
         if (oppData?.hospital_id) {
           // oppData.hospital_id = hospitals.id = hospital_accounts.hospital_id
           const { data: accountData } = await supabase
@@ -83,6 +89,8 @@ export function useAllApplications(hospitalPageId: string | undefined) {
             .select('id')
             .eq('hospital_id', oppData.hospital_id)
             .maybeSingle();
+
+          console.log('[useAllApplications] legacy chain: accountData=', accountData);
 
           if (accountData?.id) {
             const [legacyAppsRes, legacyQsRes] = await Promise.all([
@@ -98,6 +106,9 @@ export function useAllApplications(hospitalPageId: string | undefined) {
                 .order('order_index'),
             ]);
 
+            console.log('[useAllApplications] legacy apps:', legacyAppsRes.data?.length, 'error:', legacyAppsRes.error);
+            console.log('[useAllApplications] legacy questions:', legacyQsRes.data?.length, 'error:', legacyQsRes.error);
+
             legacyQuestions = (legacyQsRes.data || []).map((q: any) => ({
               id: q.id,
               question_text: q.question_text,
@@ -109,10 +120,12 @@ export function useAllApplications(hospitalPageId: string | undefined) {
             if (legacyAppsRes.data && legacyAppsRes.data.length > 0) {
               // Fetch answers for all legacy apps
               const legacyAppIds = legacyAppsRes.data.map((a: any) => a.id);
-              const { data: legacyAnswerRows } = await supabase
+              const { data: legacyAnswerRows, error: legacyAnswerError } = await supabase
                 .from('hospital_application_answers')
                 .select('id, application_id, question_id, answer_text, answer_options')
                 .in('application_id', legacyAppIds);
+
+              console.log('[useAllApplications] legacy answers:', legacyAnswerRows?.length, 'error:', legacyAnswerError);
 
               const answersByAppId = new Map<string, StudentApplication['answers']>();
               const questionMap = new Map(legacyQuestions.map((q) => [q.id, q]));

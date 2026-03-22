@@ -1,13 +1,3 @@
-/**
- * gmail-oauth-initiate
- *
- * Generates a Google OAuth 2.0 authorisation URL for the gmail.send scope.
- * The Client ID and redirect URI are read from environment variables so they
- * never appear in the client-side bundle.
- *
- * POST  { hospitalPageId: string }
- * Returns { url: string }  — redirect the user's browser to this URL.
- */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, validateOrigin } from "../_shared/auth.ts";
@@ -37,7 +27,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     if (!GOOGLE_CLIENT_ID) {
       return new Response(
-        JSON.stringify({ success: false, error: "Google OAuth is not configured" }),
+        JSON.stringify({ success: false, error: "Google OAuth not configured" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
@@ -50,7 +40,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { hospitalPageId } = await req.json() as { hospitalPageId?: string };
+    let payload: { hospitalPageId: string };
+    try {
+      payload = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid JSON body" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const { hospitalPageId } = payload;
     if (!hospitalPageId) {
       return new Response(
         JSON.stringify({ success: false, error: "hospitalPageId is required" }),
@@ -64,42 +64,44 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
-    const user = authData?.user;
-    if (authError || !user) {
+    if (authError || !authData?.user) {
       return new Response(
         JSON.stringify({ success: false, error: "Invalid authentication" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    const userEmail = user.email?.trim().toLowerCase() ?? "";
+    const userEmail = authData.user.email?.trim().toLowerCase();
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ success: false, error: "User email is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
 
-    // Verify the caller is the admin for this hospital page.
-    const { data: page, error: pageError } = await supabaseAdmin
+    const { data: hospitalPage, error: pageError } = await supabaseAdmin
       .from("hospital_pages")
       .select("id, admin_email")
       .eq("id", hospitalPageId)
       .maybeSingle();
 
-    if (pageError || !page) {
+    if (pageError || !hospitalPage) {
       return new Response(
         JSON.stringify({ success: false, error: "Hospital page not found" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    if ((page.admin_email ?? "").trim().toLowerCase() !== userEmail) {
+    if ((hospitalPage.admin_email ?? "").trim().toLowerCase() !== userEmail) {
       return new Response(
-        JSON.stringify({ success: false, error: "Access denied" }),
+        JSON.stringify({ success: false, error: "Hospital page access denied" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    // Encode the hospitalPageId into the state so the callback knows where to store the token.
-    const state = btoa(JSON.stringify({ hospitalPageId }))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
+    // base64url encode state
+    const stateJson = JSON.stringify({ hospitalPageId });
+    const state = btoa(stateJson).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
     const url = buildGoogleOAuthUrl({
       clientId: GOOGLE_CLIENT_ID,
@@ -114,10 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: unknown) {
     console.error("gmail-oauth-initiate error:", error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to generate OAuth URL",
-      }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Internal error" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   }

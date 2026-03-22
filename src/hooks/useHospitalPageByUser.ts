@@ -146,6 +146,8 @@ export function useHospitalPageByUser() {
             claimed_at: null,
             created_at: new Date().toISOString(),
             created_by: user.id,
+            gmail_email: null,
+            gmail_connected_at: null,
             opportunity: {
               id: opportunityId || hospitalId,
               name: opp?.name || hospital?.name || 'Unknown Hospital',

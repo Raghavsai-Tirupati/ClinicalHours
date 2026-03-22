@@ -136,17 +136,25 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+<<<<<<< HEAD
     // Check whether this admin has a hospital_page with Gmail connected.
     // We match on admin_email to bridge the legacy and new admin systems.
+=======
+    // Look up Gmail credentials for send-on-behalf
+>>>>>>> origin/main
     const { data: gmailPage } = await supabaseAdmin
       .from("hospital_pages")
       .select("gmail_refresh_token, gmail_email")
       .eq("admin_email", user.email!)
       .maybeSingle();
+<<<<<<< HEAD
 
     const gmailRefreshToken = (gmailPage as { gmail_refresh_token?: string | null } | null)?.gmail_refresh_token ?? null;
     const gmailFrom = (gmailPage as { gmail_email?: string | null } | null)?.gmail_email ?? null;
     const useGmail = Boolean(gmailRefreshToken && gmailFrom);
+=======
+    const useGmail = Boolean(gmailPage?.gmail_refresh_token && gmailPage?.gmail_email);
+>>>>>>> origin/main
 
     const recipientsMap = new Map<string, Recipient>();
 
@@ -263,6 +271,7 @@ const handler = async (req: Request): Promise<Response> => {
         const emailSubject = emailType === "interview_invite"
           ? "Interview invitation - schedule your slot"
           : (subject as string);
+<<<<<<< HEAD
 
         const emailHtml = emailType === "interview_invite"
           ? `
@@ -304,10 +313,56 @@ const handler = async (req: Request): Promise<Response> => {
             await sendViaGmail({
               refreshToken: gmailRefreshToken!,
               fromEmail: gmailFrom!,
+=======
+        const emailHtml = emailType === "interview_invite"
+          ? `
+            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+              <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
+              <p style="line-height: 1.6; color: #333;">
+                You have been invited to schedule an interview with our clinic team.
+              </p>
+              ${
+                customMessage?.trim()
+                  ? `<p style="line-height: 1.6; color: #333;">${formatBodyHtml(customMessage.trim())}</p>`
+                  : ""
+              }
+              <p style="line-height: 1.6; color: #333;">Please use the scheduling link below:</p>
+              <p style="margin: 16px 0;">
+                <a href="${escapeHtml(interviewBookingUrl)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;">
+                  Schedule Interview
+                </a>
+              </p>
+              <p style="line-height: 1.6; color: #333;">
+                If the button does not work, copy this URL into your browser:<br/>
+                <span style="font-size: 12px; color: #555;">${escapeHtml(interviewBookingUrl)}</span>
+              </p>
+              <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
+              <p style="font-size: 12px; color: #666;">Sent from ClinicalHours on behalf of your hospital application team.</p>
+            </div>
+          `
+          : `
+            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+              <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
+              <div style="line-height: 1.6; color: #333;">${formatBodyHtml(body ?? "")}</div>
+              <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
+              <p style="font-size: 12px; color: #666;">Sent from ClinicalHours on behalf of your hospital application team.</p>
+            </div>
+          `;
+
+        try {
+          if (useGmail) {
+            await sendViaGmail({
+              refreshToken: gmailPage!.gmail_refresh_token!,
+              fromEmail: gmailPage!.gmail_email!,
+>>>>>>> origin/main
               toEmail: recipient.email,
               subject: emailSubject,
               html: emailHtml,
             });
+<<<<<<< HEAD
+=======
+            sent++;
+>>>>>>> origin/main
           } else {
             const emailResponse = await fetch("https://api.resend.com/emails", {
               method: "POST",
@@ -322,15 +377,27 @@ const handler = async (req: Request): Promise<Response> => {
                 html: emailHtml,
               }),
             });
+<<<<<<< HEAD
             if (!emailResponse.ok) {
               failed++;
               const errorData = await emailResponse.json().catch(() => ({})) as Record<string, string>;
+=======
+
+            if (emailResponse.ok) {
+              sent++;
+            } else {
+              failed++;
+              const errorData = await emailResponse.json().catch(() => ({}));
+>>>>>>> origin/main
               console.error("Resend API error for", recipient.email, JSON.stringify(errorData));
               if (errors.length < 5) {
                 errors.push(`${recipient.email}: ${errorData?.message ?? errorData?.error ?? JSON.stringify(errorData)}`);
               }
+<<<<<<< HEAD
               await new Promise((resolve) => setTimeout(resolve, 80));
               continue;
+=======
+>>>>>>> origin/main
             }
           }
           sent++;
