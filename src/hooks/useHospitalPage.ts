@@ -21,6 +21,7 @@ export function useHospitalPage(pageId: string | undefined) {
         .from('hospital_pages')
         .select(`
           id, hospital_id, admin_email, interview_booking_url, is_claimed, claimed_at, created_at, created_by,
+          gmail_email, gmail_connected_at,
           opportunities:hospital_id (id, name, location, type, website, logo_url, description)
         `)
         .eq('id', pageId)
@@ -40,6 +41,8 @@ export function useHospitalPage(pageId: string | undefined) {
           claimed_at: data.claimed_at,
           created_at: data.created_at,
           created_by: data.created_by,
+          gmail_email: (data as Record<string, unknown>).gmail_email as string | null ?? null,
+          gmail_connected_at: (data as Record<string, unknown>).gmail_connected_at as string | null ?? null,
           opportunity: {
             id: opp?.id || data.hospital_id,
             name: opp?.name || 'Unknown Hospital',

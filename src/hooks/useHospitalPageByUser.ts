@@ -31,6 +31,7 @@ export function useHospitalPageByUser() {
         .from('hospital_pages')
         .select(`
           id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by, interview_booking_url,
+          gmail_email, gmail_connected_at,
           opportunities:hospital_id (id, name, location, type, website, logo_url, description)
         `)
         .eq('admin_email', user.email!)
@@ -50,6 +51,8 @@ export function useHospitalPageByUser() {
           claimed_at: page.claimed_at,
           created_at: page.created_at,
           created_by: page.created_by,
+          gmail_email: (page as Record<string, unknown>).gmail_email as string | null ?? null,
+          gmail_connected_at: (page as Record<string, unknown>).gmail_connected_at as string | null ?? null,
           opportunity: {
             id: opp?.id || page.hospital_id,
             name: opp?.name || 'Unknown Hospital',
@@ -126,6 +129,8 @@ export function useHospitalPageByUser() {
             claimed_at: null,
             created_at: new Date().toISOString(),
             created_by: user.id,
+            gmail_email: null,
+            gmail_connected_at: null,
             opportunity: {
               id: opportunityId || hospitalId,
               name: opp?.name || hospital?.name || 'Unknown Hospital',

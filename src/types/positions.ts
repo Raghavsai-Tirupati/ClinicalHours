@@ -84,6 +84,10 @@ export interface HospitalPageWithOpportunity {
   claimed_at: string | null;
   created_at: string;
   created_by: string | null;
+  /** Gmail address connected for send-on-behalf (null = not connected). */
+  gmail_email: string | null;
+  /** When Gmail was last connected. */
+  gmail_connected_at: string | null;
   opportunity: {
     id: string;
     name: string;

@@ -36,6 +36,7 @@ const MyApplications = lazy(() => import("./pages/MyApplications"));
 const HospitalApplyPage = lazy(() => import("./pages/HospitalApplyPage"));
 const PendingApproval = lazy(() => import("./pages/PendingApproval"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const GoogleAuthCallback = lazy(() => import("./pages/GoogleAuthCallback"));
 
 // Hospital admin dashboard (position system)
 const HospitalDashboardLayout = lazy(() => import("./layouts/HospitalDashboardLayout"));
@@ -108,6 +109,7 @@ function AppContent() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Settings />} />
               <Route path="/dashboard" element={<StudentOnlyRoute><Dashboard /></StudentOnlyRoute>} />
