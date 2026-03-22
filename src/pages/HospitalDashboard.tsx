@@ -880,16 +880,6 @@ export default function HospitalDashboard() {
                                     </Button>
                                   </Link>
                                 )}
-                                {isBcsPilot && (member?.role === "owner" || member?.role === "admin") && !protectedOppIds.has(opp.id) && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    onClick={() => setDeleteConfirmOpp(opp)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                )}
                               </div>
                             </td>
                           </tr>
