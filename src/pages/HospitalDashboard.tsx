@@ -237,7 +237,7 @@ export default function HospitalDashboard() {
       const haApps: ApplicationWithGpa[] = [];
       const oppIds = opps.map((o) => o.id);
 
-      const [appsRes, hospAppsRes, questionsRes, accountRes, protectedRes] = await Promise.all([
+      const [appsRes, hospAppsRes, questionsRes, accountRes] = await Promise.all([
         supabase
           .from("applications")
           .select("*")
