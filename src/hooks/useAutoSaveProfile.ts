@@ -71,7 +71,7 @@ export function useAutoSaveProfile(
 
       const { error } = await supabase
         .from("profiles")
-        .upsert({
+        .update({
           id: userId,
           full_name: sanitizedData.full_name,
           city: sanitizedData.city,
@@ -89,7 +89,8 @@ export function useAutoSaveProfile(
           linkedin_url: sanitizedData.linkedin_url,
           resume_url: sanitizedData.resume_url,
           email_opt_in: data.email_opt_in ?? false,
-        });
+        })
+        .eq("id", userId);
 
       if (error) throw error;
 
