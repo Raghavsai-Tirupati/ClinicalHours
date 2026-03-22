@@ -188,7 +188,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
         const { data: answerRows, error: answersError } = await supabase
           .from('application_answers')
           .select(`
-            id, application_id, question_id, answer_text, answer_file_url, created_at,
+            id, application_id, question_id, answer_text, answer_options, answer_file_url, created_at,
             question:position_questions(id, question_text, question_type, is_required, display_order)
           `)
           .in('application_id', appIds);
@@ -212,7 +212,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
             application_id: row.application_id,
             question_id: row.question_id,
             answer_text: row.answer_text ?? null,
-            answer_options: null,
+            answer_options: (row.answer_options as string[] | null) ?? null,
             answer_file_url: row.answer_file_url ?? null,
             created_at: row.created_at,
             question,

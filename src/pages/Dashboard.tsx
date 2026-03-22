@@ -742,8 +742,8 @@ const Dashboard = () => {
                   BCS Free Health Clinic
                 </h2>
                 <p className="text-sm text-muted-foreground leading-relaxed max-w-xl">
-                  Free community health clinic in Bryan / College Station, Texas. Submit your application here
-                  (resume and short essays).
+                  Free community health clinic in Bryan / College Station, Texas. Open positions are listed on the
+                  opportunity page—apply to a role from there.
                 </p>
                 <a
                   href="https://bcshealthclinic.org/"
@@ -766,14 +766,11 @@ const Dashboard = () => {
                 )}
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-2 shrink-0">
-              <Button asChild className="h-10 gap-1.5 font-medium">
-                <Link to={`/opportunities/${BCS_OPPORTUNITY_SLUG}/application`}>
-                  Apply now <ArrowRight className="h-3.5 w-3.5" />
+            <div className="shrink-0">
+              <Button asChild className="h-10 gap-1.5 font-medium border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25">
+                <Link to={`/opportunities/${BCS_OPPORTUNITY_SLUG}`}>
+                  View opportunity <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-10 border-emerald-500/40 hover:bg-emerald-500/10">
-                <Link to={`/opportunities/${BCS_OPPORTUNITY_SLUG}`}>View opportunity</Link>
               </Button>
             </div>
           </div>

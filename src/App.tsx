@@ -30,7 +30,6 @@ const CheckEmail = lazy(() => import("./pages/CheckEmail"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
-const ApplicationForm = lazy(() => import("./pages/ApplicationForm"));
 const HospitalAdmin = lazy(() => import("./pages/HospitalAdmin"));
 const MyApplications = lazy(() => import("./pages/MyApplications"));
 const HospitalApplyPage = lazy(() => import("./pages/HospitalApplyPage"));
@@ -129,7 +128,6 @@ function AppContent() {
                   </AdminOnlyRoute>
                 }
               />
-              <Route path="/opportunities/:slug/application" element={<StudentOnlyRoute><ApplicationForm /></StudentOnlyRoute>} />
               <Route path="/opportunities/:slug/apply" element={<StudentOnlyRoute><HospitalApplyPage /></StudentOnlyRoute>} />
               <Route
                 path="/opportunities/:slug/admin"
