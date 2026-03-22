@@ -92,6 +92,10 @@ export default function HospitalSettings() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
+      if (data?.code === 'rate_limited' || (error && String((error as any)?.status) === '429')) {
+        toast({ title: 'Too many attempts', description: 'Please wait a few minutes and try again.', variant: 'destructive' });
+        return;
+      }
       if (error || !data?.success) {
         throw new Error(data?.error ?? error?.message ?? 'Failed to disconnect Gmail');
       }
