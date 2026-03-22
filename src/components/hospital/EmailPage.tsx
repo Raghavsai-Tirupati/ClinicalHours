@@ -98,8 +98,7 @@ export default function EmailPage() {
 
     setSending(true);
     try {
-      // BACKEND: Email delivery requires verified Resend domain. Edge function is wired correctly.
-      const { data, error } = await supabase.functions.invoke('send-position-interview-invites', {
+      const res = await supabase.functions.invoke('send-position-interview-invites', {
         body: {
           hospitalPageId: hospitalPage.id,
           applicationIds: selectedIds,
@@ -108,6 +107,12 @@ export default function EmailPage() {
           body: body.trim(),
         },
       });
+
+      const { data, error } = res;
+      if (data?.code === 'rate_limited' || (error && String((error as any)?.status) === '429')) {
+        toast.error('Email rate limit reached — please wait a few minutes before sending again.', { duration: 6000 });
+        return;
+      }
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Failed to send');
       const sent = data?.sent ?? 0;

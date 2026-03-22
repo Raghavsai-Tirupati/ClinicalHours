@@ -206,6 +206,27 @@ export type Database = {
         }
         Relationships: []
       }
+      edge_function_rate_limits: {
+        Row: {
+          bucket: number
+          count: number
+          key: string
+          updated_at: string
+        }
+        Insert: {
+          bucket: number
+          count?: number
+          key: string
+          updated_at?: string
+        }
+        Update: {
+          bucket?: number
+          count?: number
+          key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_verification_tokens: {
         Row: {
           created_at: string | null
@@ -1328,7 +1349,6 @@ export type Database = {
         Row: {
           applicant_email: string | null
           applicant_name: string | null
-          availability_json: Json | null
           id: string
           notes: string | null
           position_id: string
@@ -1341,7 +1361,6 @@ export type Database = {
         Insert: {
           applicant_email?: string | null
           applicant_name?: string | null
-          availability_json?: Json | null
           id?: string
           notes?: string | null
           position_id: string
@@ -1354,7 +1373,6 @@ export type Database = {
         Update: {
           applicant_email?: string | null
           applicant_name?: string | null
-          availability_json?: Json | null
           id?: string
           notes?: string | null
           position_id?: string
@@ -1752,6 +1770,24 @@ export type Database = {
       link_opportunity_to_hospital: {
         Args: { p_hospital_id: string; p_opportunity_id: string }
         Returns: undefined
+      }
+      reserve_edge_rate_limit: {
+        Args: {
+          p_delta?: number
+          p_key: string
+          p_max: number
+          p_window_seconds: number
+        }
+        Returns: Json
+      }
+      reserve_gmail_send_limits: {
+        Args: {
+          p_delta: number
+          p_hospital_page_id: string
+          p_max_day?: number
+          p_max_hour?: number
+        }
+        Returns: Json
       }
       submit_guest_hospital_application: {
         Args: {

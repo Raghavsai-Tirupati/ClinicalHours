@@ -66,7 +66,7 @@ function buildSteps(hasQuestions: boolean): StepKey[] {
 function formatAvailabilitySummary(a: ApplicationAvailability): string {
   const parts: string[] = [];
   if (a.days?.length) {
-    const order = WEEKDAYS.map((d) => d.label);
+    const order: string[] = WEEKDAYS.map((d) => d.label);
     const labels = [...a.days]
       .map((id) => WEEKDAYS.find((d) => d.id === id)?.label)
       .filter(Boolean) as string[];

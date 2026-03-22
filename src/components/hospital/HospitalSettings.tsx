@@ -51,6 +51,10 @@ export default function HospitalSettings() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
+      if (data?.code === 'rate_limited' || (error && String((error as any)?.status) === '429')) {
+        toast({ title: 'Too many attempts', description: 'Please wait a few minutes and try again.', variant: 'destructive' });
+        return;
+      }
       if (error || !data?.success) {
         throw new Error(data?.error ?? error?.message ?? 'Failed to start Gmail connection');
       }
@@ -88,6 +92,10 @@ export default function HospitalSettings() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
+      if (data?.code === 'rate_limited' || (error && String((error as any)?.status) === '429')) {
+        toast({ title: 'Too many attempts', description: 'Please wait a few minutes and try again.', variant: 'destructive' });
+        return;
+      }
       if (error || !data?.success) {
         throw new Error(data?.error ?? error?.message ?? 'Failed to disconnect Gmail');
       }
@@ -220,6 +228,9 @@ export default function HospitalSettings() {
               </Button>
             </div>
           )}
+          <p className="text-xs text-muted-foreground">
+            Gmail sending is limited to 200 emails/hour and 450/day per connected account.
+          </p>
         </CardContent>
       </Card>
     </div>

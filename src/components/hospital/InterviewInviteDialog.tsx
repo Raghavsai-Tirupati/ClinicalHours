@@ -37,13 +37,19 @@ export default function InterviewInviteDialog({ open, onOpenChange, hospitalPage
 
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-position-interview-invites', {
+      const res = await supabase.functions.invoke('send-position-interview-invites', {
         body: {
           hospitalPageId,
           applicationIds: selectedApplicationIds,
           customMessage: message.trim() || undefined,
         },
       });
+
+      const { data, error } = res;
+      if (data?.code === 'rate_limited' || (error && String((error as any)?.status) === '429')) {
+        toast.error('Email rate limit reached — please wait a few minutes before sending again.', { duration: 6000 });
+        return;
+      }
       if (error) throw new Error(error.message || 'Failed to send interview invites');
       if (!data?.success) throw new Error(data?.error || 'Failed to send interview invites');
 
