@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Hospital admins can view answers to their positions" ON public.application_answers;
