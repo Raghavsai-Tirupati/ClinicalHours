@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Search, User, Filter, Loader2, Mail, Calendar } from 'lucide-react';
+import { Search, User, Filter, Loader2, Mail, Calendar, BarChart2, List } from 'lucide-react';
+import ResponseAnalytics from '@/components/hospital/ResponseAnalytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +72,7 @@ export default function ApplicationsHub() {
   const { hospitalPage } = useHospitalPageContext();
   const { applications, positions, stats, loading, refetch } = useAllApplications(hospitalPage?.id);
 
+  const [activeTab, setActiveTab] = useState<'applications' | 'analytics'>('applications');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | 'all'>('all');
   const [positionFilter, setPositionFilter] = useState<string>('all');
@@ -251,13 +253,45 @@ export default function ApplicationsHub() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header + Tab Switcher */}
       <div>
         <h2 className="text-2xl font-bold">Applications</h2>
         <p className="text-sm text-muted-foreground mt-1">
           All applications across every position
         </p>
+        <div className="flex gap-1 mt-4 border-b border-border">
+          <button
+            onClick={() => setActiveTab('applications')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'applications'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <List className="h-4 w-4" />
+            Applicants
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'analytics'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <BarChart2 className="h-4 w-4" />
+            Response Analytics
+          </button>
+        </div>
       </div>
+
+      {/* Analytics tab */}
+      {activeTab === 'analytics' && (
+        <ResponseAnalytics applications={applications} />
+      )}
+
+      {/* Applications tab */}
+      {activeTab !== 'analytics' && (<>
 
       {/* Stats */}
       <div className="flex flex-wrap items-center gap-3">
@@ -559,6 +593,7 @@ export default function ApplicationsHub() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </>)}
     </div>
   );
 }
