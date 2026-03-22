@@ -259,18 +259,12 @@ export default function HospitalDashboard() {
           .select("interview_booking_url")
           .eq("id", member.accountId)
           .maybeSingle(),
-        supabase
-          .from("hospital_pages")
-          .select("hospital_id")
-          .in("hospital_id", oppIds),
       ]);
 
       const appsList = (appsRes.data || []) as Application[];
       const hospApps = hospAppsRes.data || [];
       const questions = (questionsRes.data || []) as AppQuestion[];
       const bookingUrl = accountRes.data?.interview_booking_url?.trim() ?? "";
-      const protectedIds = new Set((protectedRes.data || []).map((r: { hospital_id: string }) => r.hospital_id));
-      setProtectedOppIds(protectedIds);
 
       const allStudentIds = [
         ...new Set(
