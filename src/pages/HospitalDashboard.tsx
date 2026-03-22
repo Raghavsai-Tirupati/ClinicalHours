@@ -170,6 +170,9 @@ export default function HospitalDashboard() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
+  const [protectedOppIds, setProtectedOppIds] = useState<Set<string>>(new Set());
+  const [deleteConfirmOpp, setDeleteConfirmOpp] = useState<OpportunityWithApps | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const isBcsPilot = member?.hospitalName?.toLowerCase().includes("bcs free health clinic") ?? false;
 
@@ -237,7 +240,7 @@ export default function HospitalDashboard() {
       const haApps: ApplicationWithGpa[] = [];
       const oppIds = opps.map((o) => o.id);
 
-      const [appsRes, hospAppsRes, questionsRes, accountRes] = await Promise.all([
+      const [appsRes, hospAppsRes, questionsRes, accountRes, protectedRes] = await Promise.all([
         supabase
           .from("applications")
           .select("*")
@@ -259,12 +262,18 @@ export default function HospitalDashboard() {
           .select("interview_booking_url")
           .eq("id", member.accountId)
           .maybeSingle(),
+        supabase
+          .from("hospital_pages")
+          .select("hospital_id")
+          .in("hospital_id", oppIds),
       ]);
 
       const appsList = (appsRes.data || []) as Application[];
       const hospApps = hospAppsRes.data || [];
       const questions = (questionsRes.data || []) as AppQuestion[];
       const bookingUrl = accountRes.data?.interview_booking_url?.trim() ?? "";
+      const protectedIds = new Set((protectedRes.data || []).map((r: { hospital_id: string }) => r.hospital_id));
+      setProtectedOppIds(protectedIds);
 
       const allStudentIds = [
         ...new Set(
@@ -388,6 +397,26 @@ export default function HospitalDashboard() {
       toast.error(err instanceof Error ? err.message : "Failed to post position");
     } finally {
       setDeployLoading(false);
+    }
+  }
+
+  async function handleDeleteOpportunity(opp: OpportunityWithApps) {
+    if (!member) return;
+    setDeleteLoading(true);
+    try {
+      const { error } = await supabase
+        .from("opportunities")
+        .delete()
+        .eq("id", opp.id);
+      if (error) throw error;
+      toast.success(`"${opp.name}" deleted`);
+      setDeleteConfirmOpp(null);
+      fetchData();
+    } catch (err) {
+      console.error("Delete opportunity error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete opportunity");
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -870,14 +899,26 @@ export default function HospitalDashboard() {
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              {opp.slug && (
-                                <Link to={`/opportunities/${opp.slug}/admin`}>
-                                  <Button size="sm" variant="outline" className="text-xs h-7">
-                                    <ExternalLink className="h-3 w-3 mr-1" />
-                                    Manage
+                              <div className="flex items-center justify-end gap-1">
+                                {opp.slug && (
+                                  <Link to={`/opportunities/${opp.slug}/admin`}>
+                                    <Button size="sm" variant="outline" className="text-xs h-7">
+                                      <ExternalLink className="h-3 w-3 mr-1" />
+                                      Manage
+                                    </Button>
+                                  </Link>
+                                )}
+                                {isBcsPilot && (member?.role === "owner" || member?.role === "admin") && !protectedOppIds.has(opp.id) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => setDeleteConfirmOpp(opp)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
                                   </Button>
-                                </Link>
-                              )}
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1425,6 +1466,31 @@ export default function HospitalDashboard() {
             <Button onClick={handleSendInterviewInvites} disabled={inviteSending || !interviewBookingUrl || selectedApplicationIds.length === 0}>
               {inviteSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CalendarCheck className="h-4 w-4 mr-2" />}
               Send Invites
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Opportunity Confirm Dialog */}
+      <Dialog open={!!deleteConfirmOpp} onOpenChange={(open) => !open && setDeleteConfirmOpp(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Opportunity</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deleteConfirmOpp?.name}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpp(null)} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmOpp && handleDeleteOpportunity(deleteConfirmOpp)}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
