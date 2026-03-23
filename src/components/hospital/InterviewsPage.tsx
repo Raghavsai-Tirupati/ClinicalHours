@@ -234,6 +234,7 @@ export default function InterviewsPage() {
           .from('student_applications')
           .update({
             interview_confirmed_at: iso,
+            interview_source: 'manual',
             ...(bumpInterview ? { status: 'interview' as ApplicationStatus } : {}),
           })
           .eq('id', scheduleTarget.id);
