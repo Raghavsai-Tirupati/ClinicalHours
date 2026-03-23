@@ -176,6 +176,12 @@ export default function AdminDashboard() {
                 <AdminDeletionEventsTab />
               </TabErrorBoundary>
             </TabsContent>
+
+            <TabsContent value="clone">
+              <TabErrorBoundary tabName="Clone Template">
+                <AdminCloneTemplateTab />
+              </TabErrorBoundary>
+            </TabsContent>
           </Tabs>
         </div>
       </main>
