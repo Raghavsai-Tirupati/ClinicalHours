@@ -14,8 +14,27 @@ import { AdminOnlyRoute } from "./components/AdminOnlyRoute";
 import { useAppKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { AuthProvider } from "./hooks/useAuth";
 
-// Lazy load pages for code splitting
-const Home = lazy(() => import("./pages/Home"));
+// Retry wrapper for lazy imports — handles chunk-loading failures after deploys
+function lazyRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+): React.LazyExoticComponent<T> {
+  return lazy(() =>
+    factory().catch((err) => {
+      // If we already tried reloading, don't loop
+      const key = 'chunk_reload';
+      const hasReloaded = sessionStorage.getItem(key);
+      if (!hasReloaded) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        return new Promise(() => {}); // never resolves — page is reloading
+      }
+      sessionStorage.removeItem(key);
+      throw err; // let ErrorBoundary handle it
+    }),
+  );
+}
+
+const Home = lazyRetry(() => import("./pages/Home"));
 const Opportunities = lazy(() => import("./pages/Opportunities"));
 const OpportunityDetail = lazy(() => import("./pages/OpportunityDetail"));
 const Projects = lazy(() => import("./pages/Projects"));
