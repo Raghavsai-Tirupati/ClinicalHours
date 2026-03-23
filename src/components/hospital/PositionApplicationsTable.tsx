@@ -142,7 +142,6 @@ export default function PositionApplicationsTable({ positionId }: Props) {
       }
       toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
       updateApplicationLocally(appId, { status: newStatus });
-      if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
     } catch (err: any) {
       console.error('Failed to update status:', err);
       toast.error(err?.message || 'Failed to update status');
