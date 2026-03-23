@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { position_id, title, description, requirements, location, position_type, hours_per_week, duration, start_date, application_deadline, spots_available, status, questions } = await req.json();
+    const { position_id, title, description, requirements, location, position_type, hours_per_week, duration, start_date, application_deadline, spots_available, ask_for_availability, status, questions } = await req.json();
 
     if (!position_id) {
       return new Response(JSON.stringify({ error: "position_id is required" }), {
