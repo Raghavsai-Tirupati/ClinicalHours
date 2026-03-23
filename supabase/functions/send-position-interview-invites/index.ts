@@ -470,8 +470,15 @@ const handler = async (req: Request): Promise<Response> => {
       : [...recipients.values()];
 
     if (recipientsToSend.length === 0) {
+      const alreadyInvited = selectedEmailType === "interview_invite" ? recipients.size : 0;
       return new Response(
-        JSON.stringify({ success: true, sent: 0, failed: 0, total: recipients.size }),
+        JSON.stringify({
+          success: true,
+          sent: 0,
+          failed: 0,
+          total: recipients.size,
+          alreadyInvited,
+        }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
