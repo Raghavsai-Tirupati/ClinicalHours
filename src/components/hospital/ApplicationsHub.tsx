@@ -12,6 +12,7 @@ import {
   ArrowUp,
 } from 'lucide-react';
 import ResponseAnalytics from '@/components/hospital/ResponseAnalytics';
+import RichEmailDialog from '@/components/hospital/RichEmailDialog';
 import ApplicationFilterBar from '@/components/hospital/ApplicationFilterBar';
 import ApplicantReviewPanel from '@/components/hospital/ApplicantReviewPanel';
 import ApplicationKanban from '@/components/hospital/ApplicationKanban';
