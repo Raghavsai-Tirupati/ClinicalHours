@@ -38,6 +38,44 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_activity_log: {
+        Row: {
+          action_type: string
+          actor_email: string
+          created_at: string
+          hospital_page_id: string | null
+          id: string
+          metadata: Json | null
+          target_type: string | null
+        }
+        Insert: {
+          action_type: string
+          actor_email: string
+          created_at?: string
+          hospital_page_id?: string | null
+          id?: string
+          metadata?: Json | null
+          target_type?: string | null
+        }
+        Update: {
+          action_type?: string
+          actor_email?: string
+          created_at?: string
+          hospital_page_id?: string | null
+          id?: string
+          metadata?: Json | null
+          target_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_activity_log_hospital_page_id_fkey"
+            columns: ["hospital_page_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_answers: {
         Row: {
           answer_file_url: string | null
