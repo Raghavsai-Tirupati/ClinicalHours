@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -273,140 +272,150 @@ export default function PositionForm() {
         </h2>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Position Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              placeholder="e.g. Medical Assistant Intern"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
-              placeholder="What does this role involve?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="requirements">Requirements</Label>
-            <Textarea
-              id="requirements"
-              placeholder="Qualifications, certifications, year in school, etc."
-              value={requirements}
-              onChange={(e) => setRequirements(e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <Card className="xl:col-span-7">
+          <CardHeader>
+            <CardTitle>Position Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
+              <Label htmlFor="title">Title *</Label>
               <Input
-                id="location"
-                placeholder="City, State"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                id="title"
+                placeholder="e.g. Medical Assistant Intern"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Position Type</Label>
-              <Select value={positionType} onValueChange={(v) => setPositionType(v as PositionType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(POSITION_TYPE_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="hours">Hours per Week</Label>
-              <Input
-                id="hours"
-                type="number"
-                placeholder="e.g. 10"
-                value={hoursPerWeek}
-                onChange={(e) => setHoursPerWeek(e.target.value)}
+              <Label htmlFor="description">Description *</Label>
+              <Textarea
+                id="description"
+                placeholder="What does this role involve?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="duration">Duration</Label>
-              <Input
-                id="duration"
-                placeholder="e.g. 3 months"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
+              <Label htmlFor="requirements">Requirements</Label>
+              <Textarea
+                id="requirements"
+                placeholder="Qualifications, certifications, year in school, etc."
+                value={requirements}
+                onChange={(e) => setRequirements(e.target.value)}
+                rows={3}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="spots">Spots Available</Label>
-              <Input
-                id="spots"
-                type="number"
-                placeholder="e.g. 5"
-                value={spotsAvailable}
-                onChange={(e) => setSpotsAvailable(e.target.value)}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  placeholder="City, State"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Position Type</Label>
+                <Select value={positionType} onValueChange={(v) => setPositionType(v as PositionType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(POSITION_TYPE_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="hours">Hours per Week</Label>
+                <Input
+                  id="hours"
+                  type="number"
+                  placeholder="e.g. 10"
+                  value={hoursPerWeek}
+                  onChange={(e) => setHoursPerWeek(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration</Label>
+                <Input
+                  id="duration"
+                  placeholder="e.g. 3 months"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="spots">Spots Available</Label>
+                <Input
+                  id="spots"
+                  type="number"
+                  placeholder="e.g. 5"
+                  value={spotsAvailable}
+                  onChange={(e) => setSpotsAvailable(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deadline">Application Deadline</Label>
+                <Input
+                  id="deadline"
+                  type="date"
+                  value={applicationDeadline}
+                  onChange={(e) => setApplicationDeadline(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
+              <div className="space-y-1">
+                <Label htmlFor="ask-for-availability">Ask for availability?</Label>
+                <p className="text-xs text-muted-foreground">
+                  If enabled, applicants complete an availability step (days, preferred time, weekly hours).
+                </p>
+              </div>
+              <Switch
+                id="ask-for-availability"
+                checked={askForAvailability}
+                onCheckedChange={setAskForAvailability}
               />
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="deadline">Application Deadline</Label>
-              <Input
-                id="deadline"
-                type="date"
-                value={applicationDeadline}
-                onChange={(e) => setApplicationDeadline(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
-            <div className="space-y-1">
-              <Label htmlFor="ask-for-availability">Ask for availability?</Label>
-              <p className="text-xs text-muted-foreground">
-                If enabled, applicants complete an availability step (days, preferred time, weekly hours).
-              </p>
-            </div>
-            <Switch
-              id="ask-for-availability"
-              checked={askForAvailability}
-              onCheckedChange={setAskForAvailability}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
+        <Card className="xl:col-span-5 xl:sticky xl:top-6 h-fit">
+          <CardHeader className="pb-3">
+            <CardTitle>Custom Application Questions</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Build and organize the form students complete for this position.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="flex gap-3 justify-between pt-4">
         <div>

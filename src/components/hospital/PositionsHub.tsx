@@ -28,6 +28,12 @@ const STATUS_DOT: Record<PositionStatus, string> = {
   archived: 'bg-muted-foreground/40',
 };
 
+const KANBAN_COLUMNS = [
+  { key: 'draft', title: 'Draft', statuses: ['draft'] as PositionStatus[] },
+  { key: 'active', title: 'Active', statuses: ['active'] as PositionStatus[] },
+  { key: 'archived', title: 'Archived', statuses: ['archived', 'paused', 'closed'] as PositionStatus[] },
+] as const;
+
 export default function PositionsHub() {
   const { hospitalPage, basePath } = useHospitalPageContext();
   const { applications, positions, loading } = useAllApplications(hospitalPage?.id);
@@ -53,6 +59,15 @@ export default function PositionsHub() {
     }
     return counts;
   }, [applications]);
+
+  const positionsByColumn = useMemo(
+    () =>
+      KANBAN_COLUMNS.map((column) => ({
+        ...column,
+        positions: filteredPositions.filter((position) => column.statuses.includes(position.status)),
+      })),
+    [filteredPositions],
+  );
 
   if (loading) {
     return (
@@ -101,7 +116,7 @@ export default function PositionsHub() {
         </div>
       )}
 
-      {/* Position Cards */}
+      {/* Kanban Board */}
       {filteredPositions.length === 0 ? (
         <Card className="border-border/50">
           <CardContent className="flex flex-col items-center justify-center py-16">
@@ -127,67 +142,85 @@ export default function PositionsHub() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredPositions.map((pos) => {
-            const counts = appCountsByPosition[pos.id] ?? { total: 0, new: 0 };
-            return (
-              <Link key={pos.id} to={`${basePath}/positions/${pos.id}`} className="group">
-                <Card className="h-full transition-all group-hover:border-primary/40 group-hover:shadow-md">
-                  <CardContent className="pt-5 pb-4 px-5 flex flex-col h-full">
-                    {/* Status + Type row */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full ${STATUS_DOT[pos.status]}`} />
-                        <span className="text-[11px] font-medium capitalize text-muted-foreground">
-                          {pos.status}
-                        </span>
-                      </div>
-                      <Badge variant="outline" className="text-[10px] py-0 ml-auto">
-                        {POSITION_TYPE_LABELS[pos.position_type] || pos.position_type}
-                      </Badge>
-                    </div>
+        <div className="grid gap-4 xl:grid-cols-3">
+          {positionsByColumn.map((column) => (
+            <div key={column.key} className="rounded-lg border border-border/50 bg-muted/20 p-3">
+              <div className="mb-3 flex items-center justify-between px-1">
+                <h3 className="text-sm font-semibold">{column.title}</h3>
+                <Badge variant="outline" className="text-[10px] py-0">
+                  {column.positions.length}
+                </Badge>
+              </div>
+              <div className="space-y-3 min-h-[180px]">
+                {column.positions.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-border/70 bg-background/40 px-3 py-6 text-center text-xs text-muted-foreground">
+                    No {column.title.toLowerCase()} positions
+                  </div>
+                ) : (
+                  column.positions.map((pos) => {
+                    const counts = appCountsByPosition[pos.id] ?? { total: 0, new: 0 };
+                    return (
+                      <Link key={pos.id} to={`${basePath}/positions/${pos.id}`} className="group block">
+                        <Card className="transition-all group-hover:border-primary/40 group-hover:shadow-md">
+                          <CardContent className="pt-5 pb-4 px-5 flex flex-col">
+                            {/* Status + Type row */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`h-2 w-2 rounded-full ${STATUS_DOT[pos.status]}`} />
+                                <span className="text-[11px] font-medium capitalize text-muted-foreground">
+                                  {pos.status}
+                                </span>
+                              </div>
+                              <Badge variant="outline" className="text-[10px] py-0 ml-auto">
+                                {POSITION_TYPE_LABELS[pos.position_type] || pos.position_type}
+                              </Badge>
+                            </div>
 
-                    {/* Title */}
-                    <h3 className="text-sm font-semibold truncate mb-2 group-hover:text-primary transition-colors">
-                      {pos.title}
-                    </h3>
+                            {/* Title */}
+                            <h3 className="text-sm font-semibold truncate mb-2 group-hover:text-primary transition-colors">
+                              {pos.title}
+                            </h3>
 
-                    {/* Meta */}
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mb-4">
-                      {pos.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {pos.location}
-                        </span>
-                      )}
-                      {pos.hours_per_week && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {pos.hours_per_week} hrs/wk
-                        </span>
-                      )}
-                    </div>
+                            {/* Meta */}
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mb-4">
+                              {pos.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {pos.location}
+                                </span>
+                              )}
+                              {pos.hours_per_week && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {pos.hours_per_week} hrs/wk
+                                </span>
+                              )}
+                            </div>
 
-                    {/* App stats + arrow */}
-                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Users className="h-3.5 w-3.5" />
-                          {counts.total} applicant{counts.total !== 1 ? 's' : ''}
-                        </span>
-                        {counts.new > 0 && (
-                          <Badge className="bg-blue-500/15 text-blue-400 text-[10px] py-0 px-1.5">
-                            {counts.new} new
-                          </Badge>
-                        )}
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
+                            {/* App stats + arrow */}
+                            <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
+                              <div className="flex items-center gap-3">
+                                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <Users className="h-3.5 w-3.5" />
+                                  {counts.total} applicant{counts.total !== 1 ? 's' : ''}
+                                </span>
+                                {counts.new > 0 && (
+                                  <Badge className="bg-blue-500/15 text-blue-400 text-[10px] py-0 px-1.5">
+                                    {counts.new} new
+                                  </Badge>
+                                )}
+                              </div>
+                              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

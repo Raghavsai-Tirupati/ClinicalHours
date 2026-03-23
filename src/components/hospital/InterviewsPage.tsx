@@ -158,22 +158,22 @@ export default function InterviewsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Invited</CardTitle>
-            <Calendar className="h-4 w-4 text-yellow-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{invited.length}</div>
-            <p className="text-xs text-muted-foreground">Awaiting interview completion</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
-            <Clock className="h-4 w-4 text-blue-400" />
+            <Clock className="h-4 w-4 text-yellow-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingReview.length}</div>
             <p className="text-xs text-muted-foreground">Not yet invited</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Invited</CardTitle>
+            <Calendar className="h-4 w-4 text-blue-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{invited.length}</div>
+            <p className="text-xs text-muted-foreground">Awaiting interview completion</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
@@ -188,15 +188,6 @@ export default function InterviewsPage() {
         </Card>
       </div>
 
-      {/* Invited Section */}
-      <InterviewSection
-        title="Invited"
-        description="Applicants who received an interview invite"
-        icon={<Calendar className="h-4 w-4 text-yellow-400" />}
-        applicants={invited}
-        emptyText="No applicants have been invited to interview yet."
-      />
-
       {/* Pending Review Section */}
       <InterviewSection
         title="Pending Review"
@@ -204,6 +195,15 @@ export default function InterviewsPage() {
         icon={<Clock className="h-4 w-4 text-blue-400" />}
         applicants={pendingReview}
         emptyText="No new applications to review."
+      />
+
+      {/* Invited Section */}
+      <InterviewSection
+        title="Invited"
+        description="Applicants who received an interview invite"
+        icon={<Calendar className="h-4 w-4 text-yellow-400" />}
+        applicants={invited}
+        emptyText="No applicants have been invited to interview yet."
       />
 
       {/* Completed Section */}
