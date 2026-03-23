@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { useHasApplications } from "@/hooks/useHasApplications";
 import {
   DropdownMenu,
   DropdownMenuContent,
