@@ -431,7 +431,7 @@ export default function ApplicantReviewPanel({
       )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
-        <div className="space-y-5 min-w-0 order-2 lg:order-1">
+        <div className="space-y-5 min-w-0 order-1 lg:order-1">
           {profile && (
             <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Profile</p>
