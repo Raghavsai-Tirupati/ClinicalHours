@@ -156,6 +156,7 @@ export default function ApplicantReviewPanel({
   const email = application.applicant_email || application.student_profile?.email || '';
   const initial = name.charAt(0).toUpperCase();
   const profile = application.student_profile;
+  const availabilitySummary = formatApplicantAvailability(application.availability_json);
   const roleDescription = application.position?.description?.trim() || null;
   const roleRequirements = application.position?.requirements?.trim() || null;
 
@@ -299,6 +300,13 @@ export default function ApplicantReviewPanel({
         </div>
       )}
 
+      <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Availability</p>
+        <p className="text-sm text-foreground/90">
+          {availabilitySummary || 'Not provided for this application.'}
+        </p>
+      </div>
+
       {profile && (
         <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Profile</p>
@@ -342,13 +350,6 @@ export default function ApplicantReviewPanel({
           </div>
         </div>
       )}
-
-      <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Availability</p>
-        <p className="text-sm text-foreground/90">
-          {formatApplicantAvailability(application.availability_json) || 'No availability submitted.'}
-        </p>
-      </div>
 
       {resumeUrl && (
         <Button variant="outline" size="sm" className="gap-2" asChild>
