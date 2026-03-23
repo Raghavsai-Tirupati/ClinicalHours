@@ -325,13 +325,6 @@ export default function PositionApplicationsTable({ positionId }: Props) {
       </div>
 
       {/* Sub-components */}
-      <ApplicationDetailSheet
-        application={selectedApp}
-        onClose={() => setSelectedApp(null)}
-        onStatusChange={handleStatusChange}
-        onNoteSaved={refetch}
-        onApplicationPatched={handleApplicationPatched}
-      />
 
       {hospitalPage?.id && (
         <>
