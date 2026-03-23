@@ -23,6 +23,14 @@ interface Recipient {
   name: string;
 }
 
+interface InterviewInviteTemplateData {
+  recipientName: string;
+  clinicName: string;
+  bookingUrl: string;
+  customMessage?: string;
+  adminName: string;
+}
+
 function escapeHtml(unsafe: string): string {
   return unsafe
     .replace(/&/g, "&amp;")
@@ -41,6 +49,169 @@ function normalizeEmail(email: string | null | undefined): string | null {
   const trimmed = email.trim().toLowerCase();
   if (!trimmed || !trimmed.includes("@")) return null;
   return trimmed;
+}
+
+function deriveAdminName(userEmail: string, fullName?: string | null): string {
+  const cleanedFullName = fullName?.trim();
+  if (cleanedFullName) return cleanedFullName;
+  const localPart = userEmail.split("@")[0] ?? "Clinic Admin";
+  const normalized = localPart.replace(/[._-]+/g, " ").trim();
+  if (!normalized) return "Clinic Admin";
+  return normalized
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function buildInterviewInviteEmailHtml(data: InterviewInviteTemplateData): string {
+  const recipientName = escapeHtml(data.recipientName || "there");
+  const clinicName = escapeHtml(data.clinicName || "ClinicalHours");
+  const bookingUrl = escapeHtml(data.bookingUrl);
+  const adminName = escapeHtml(data.adminName || "Clinic Admin");
+  const safeCustomMessage = data.customMessage?.trim()
+    ? `<p style="margin:0 0 16px 0; font-size:15px; line-height:24px; color:#1f2937;">${formatBodyHtml(data.customMessage.trim())}</p>`
+    : "";
+
+  return `
+<!doctype html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interview invitation</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#f3f4f6;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f3f4f6; margin:0; padding:24px 0;">
+      <tr>
+        <td align="center" style="padding:0 12px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px; width:100%; background-color:#ffffff; border-collapse:separate; border-spacing:0; border-radius:14px; overflow:hidden;">
+            <tr>
+              <td style="padding:0; background-color:#111827; background-image:linear-gradient(130deg, #c97b6b 0%, #b8848c 44%, #9ba8c4 100%);">
+                <!--[if mso]>
+                <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:640px;height:74px;">
+                  <v:fill color="#b8848c" />
+                  <v:textbox inset="0,0,0,0">
+                <![endif]-->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td style="padding:22px 28px;">
+                      <div style="font-family:Arial, Helvetica, sans-serif; font-size:24px; line-height:30px; font-weight:700; letter-spacing:0.2px; color:#ffffff;">
+                        ClinicalHours
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+                <!--[if mso]>
+                  </v:textbox>
+                </v:rect>
+                <![endif]-->
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:26px 28px 10px 28px; font-family:Arial, Helvetica, sans-serif;">
+                <h1 style="margin:0; font-size:26px; line-height:34px; font-weight:700; color:#111827;">
+                  You've been invited to interview
+                </h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 28px 0 28px; font-family:Arial, Helvetica, sans-serif;">
+                <p style="margin:0 0 16px 0; font-size:15px; line-height:24px; color:#1f2937;">
+                  Hi ${recipientName},
+                </p>
+                <p style="margin:0 0 16px 0; font-size:15px; line-height:24px; color:#1f2937;">
+                  Your application has been reviewed, and <strong>${clinicName}</strong> would like to move forward with an interview.
+                </p>
+                <p style="margin:0 0 16px 0; font-size:15px; line-height:24px; color:#1f2937;">
+                  Please review the interview details below and use the scheduling button to pick your preferred time.
+                </p>
+                ${safeCustomMessage}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:4px 28px 0 28px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #c9d6ee; background-color:#f8fafc; border-radius:12px;">
+                  <tr>
+                    <td style="padding:16px 18px; font-family:Arial, Helvetica, sans-serif;">
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#111827;"><strong>Date / Window:</strong> Choose your preferred date in the scheduler</p>
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#111827;"><strong>Available slots:</strong> Live availability shown after clicking the button</p>
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#111827;"><strong>Location / Format:</strong> Listed on the scheduling page</p>
+                      <p style="margin:0; font-size:14px; line-height:22px; color:#111827;"><strong>Clinic:</strong> ${clinicName}</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="center" style="padding:24px 28px 6px 28px;">
+                <!--[if mso]>
+                <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${bookingUrl}" style="height:46px;v-text-anchor:middle;width:220px;" arcsize="16%" strokecolor="#b8848c" fillcolor="#b8848c">
+                  <w:anchorlock/>
+                  <center style="color:#ffffff;font-family:Arial, Helvetica, sans-serif;font-size:15px;font-weight:700;">
+                    Schedule your slot
+                  </center>
+                </v:roundrect>
+                <![endif]-->
+                <!--[if !mso]><!-- -->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" style="border-radius:10px; background-color:#c97b6b; background-image:linear-gradient(130deg, #c97b6b 0%, #b8848c 44%, #9ba8c4 100%);">
+                      <a href="${bookingUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:15px; font-weight:700; color:#ffffff; text-decoration:none; padding:14px 22px; border-radius:10px;">
+                        Schedule your slot
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <!--<![endif]-->
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 28px 0 28px; font-family:Arial, Helvetica, sans-serif;">
+                <p style="margin:0; font-size:12px; line-height:20px; color:#6b7280;">
+                  If the button does not work, paste this URL into your browser:<br />
+                  <a href="${bookingUrl}" target="_blank" rel="noopener noreferrer" style="color:#6b7280; text-decoration:underline; word-break:break-all;">${bookingUrl}</a>
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:20px 28px 8px 28px; font-family:Arial, Helvetica, sans-serif;">
+                <p style="margin:0 0 6px 0; font-size:15px; line-height:24px; color:#1f2937;">Questions? Reply directly to this email.</p>
+                <p style="margin:0; font-size:15px; line-height:24px; color:#1f2937;">
+                  ${adminName}<br />
+                  ${clinicName}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:16px 28px 24px 28px; font-family:Arial, Helvetica, sans-serif;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #e5e7eb;">
+                  <tr>
+                    <td style="padding-top:12px;">
+                      <p style="margin:0 0 4px 0; font-size:12px; line-height:18px; color:#6b7280;">
+                        ClinicalHours · <a href="https://clinicalhours.org" target="_blank" rel="noopener noreferrer" style="color:#6b7280; text-decoration:underline;">clinicalhours.org</a>
+                      </p>
+                      <p style="margin:0; font-size:11px; line-height:17px; color:#9ca3af;">
+                        You are receiving this email because you applied through ClinicalHours and a clinic selected your application for an interview.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+  `;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -151,6 +322,7 @@ const handler = async (req: Request): Promise<Response> => {
     const useGmail = Boolean(gmailRefreshToken && gmailFrom);
 
     const recipientsMap = new Map<string, Recipient>();
+    const adminName = deriveAdminName(user.email ?? "", (user.user_metadata?.full_name as string | undefined) ?? (user.user_metadata?.name as string | undefined));
 
     let hospitalQuery = supabaseAdmin
       .from("hospital_applications")
@@ -257,31 +429,13 @@ const handler = async (req: Request): Promise<Response> => {
           : (subject as string);
 
         const emailHtml = emailType === "interview_invite"
-          ? `
-            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
-              <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
-              <p style="line-height: 1.6; color: #333;">
-                You have been invited to schedule an interview with our clinic team.
-              </p>
-              ${
-                customMessage?.trim()
-                  ? `<p style="line-height: 1.6; color: #333;">${formatBodyHtml(customMessage.trim())}</p>`
-                  : ""
-              }
-              <p style="line-height: 1.6; color: #333;">Please use the scheduling link below:</p>
-              <p style="margin: 16px 0;">
-                <a href="${escapeHtml(interviewBookingUrl)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;">
-                  Schedule Interview
-                </a>
-              </p>
-              <p style="line-height: 1.6; color: #333;">
-                If the button does not work, copy this URL into your browser:<br/>
-                <span style="font-size: 12px; color: #555;">${escapeHtml(interviewBookingUrl)}</span>
-              </p>
-              <hr style="margin: 28px 0; border: none; border-top: 1px solid #eee;" />
-              <p style="font-size: 12px; color: #666;">Sent from ClinicalHours on behalf of your hospital application team.</p>
-            </div>
-          `
+          ? buildInterviewInviteEmailHtml({
+            recipientName: recipient.name,
+            clinicName: "our clinic team",
+            bookingUrl: interviewBookingUrl,
+            customMessage,
+            adminName,
+          })
           : `
             <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
               <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
