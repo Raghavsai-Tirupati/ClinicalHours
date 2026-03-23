@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
     if (start_date !== undefined) updateFields.start_date = start_date || null;
     if (application_deadline !== undefined) updateFields.application_deadline = application_deadline || null;
     if (spots_available !== undefined) updateFields.spots_available = spots_available || null;
+    if (ask_for_availability !== undefined) updateFields.ask_for_availability = ask_for_availability;
     if (status !== undefined) updateFields.status = status;
 
     let updatedPosition = null;
