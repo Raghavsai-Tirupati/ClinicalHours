@@ -134,8 +134,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
       const { error } = await supabase
         .from('student_applications')
         .update(updatePayload)
-        .eq('id', appId)
-        .select('id');
+        .eq('id', appId);
       if (error) {
         console.error('Status update error:', error.message, error.code, error.details);
         throw error;
