@@ -197,7 +197,7 @@ export default function HospitalOverview() {
           </div>
           {applications.length > 5 && (
             <Button variant="ghost" size="sm" asChild>
-              <Link to={`${basePath}/applications`}>
+              <Link to={`${basePath}/positions`}>
                 View All
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Link>

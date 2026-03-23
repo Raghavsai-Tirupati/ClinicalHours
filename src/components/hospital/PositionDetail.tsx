@@ -1,13 +1,15 @@
 import { Link, useParams } from 'react-router-dom';
-import { Loader2, Pencil, Users, Clock, MapPin, Calendar } from 'lucide-react';
+import { Loader2, Pencil, Users, Clock, MapPin, Calendar, BarChart2, Settings2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { usePositionDetail } from '@/hooks/usePositionDetail';
+import { usePositionApplications } from '@/hooks/usePositionApplications';
 import PositionApplicationsTable from './PositionApplicationsTable';
-import { POSITION_TYPE_LABELS, APPLICATION_STATUS_LABELS } from '@/types/positions';
+import ResponseAnalytics from './ResponseAnalytics';
+import { POSITION_TYPE_LABELS } from '@/types/positions';
 import type { PositionStatus } from '@/types/positions';
 import { format } from 'date-fns';
 
@@ -23,6 +25,7 @@ export default function PositionDetail() {
   const { positionId } = useParams<{ positionId: string }>();
   const { basePath } = useHospitalPageContext();
   const { position, questions, loading, error } = usePositionDetail(positionId);
+  const { allApplications } = usePositionApplications(positionId || '');
 
   if (loading) {
     return (
@@ -52,11 +55,9 @@ export default function PositionDetail() {
             </Badge>
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Badge variant="outline" className="text-xs">
-                {POSITION_TYPE_LABELS[position.position_type] || position.position_type}
-              </Badge>
-            </span>
+            <Badge variant="outline" className="text-xs">
+              {POSITION_TYPE_LABELS[position.position_type] || position.position_type}
+            </Badge>
             {position.location && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
@@ -85,21 +86,34 @@ export default function PositionDetail() {
         </Button>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="applications">
+      {/* Tabs: Applicants, Analytics, Settings */}
+      <Tabs defaultValue="applicants">
         <TabsList>
-          <TabsTrigger value="applications" className="flex items-center gap-2">
+          <TabsTrigger value="applicants" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Applications
+            Applicants
           </TabsTrigger>
-          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart2 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings2 className="h-4 w-4" />
+            Details
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="applications" className="mt-4">
+        <TabsContent value="applicants" className="mt-4">
           <PositionApplicationsTable positionId={position.id} />
         </TabsContent>
 
-        <TabsContent value="details" className="mt-4">
+        <TabsContent value="analytics" className="mt-4">
+          <ResponseAnalytics
+            applications={allApplications}
+          />
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-4">
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>

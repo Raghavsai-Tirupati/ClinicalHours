@@ -64,6 +64,7 @@ const PositionForm = lazyRetry(() => import("./components/hospital/PositionForm"
 const PositionDetail = lazyRetry(() => import("./components/hospital/PositionDetail"));
 const HospitalSettingsPage = lazyRetry(() => import("./components/hospital/HospitalSettings"));
 const ApplicationsHub = lazyRetry(() => import("./components/hospital/ApplicationsHub"));
+const PositionsHub = lazyRetry(() => import("./components/hospital/PositionsHub"));
 const InterviewsPage = lazyRetry(() => import("./components/hospital/InterviewsPage"));
 const EmailPage = lazyRetry(() => import("./components/hospital/EmailPage"));
 const ActivityPage = lazyRetry(() => import("./components/hospital/ActivityPage"));
@@ -167,7 +168,7 @@ function AppContent() {
               >
                 <Route index element={<HospitalOverview />} />
                 <Route path="applications" element={<ApplicationsHub />} />
-                <Route path="positions" element={<HospitalOverview />} />
+                <Route path="positions" element={<PositionsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
@@ -191,7 +192,7 @@ function AppContent() {
               <Route path="/hospital/:id" element={<HospitalDashboardLayout />}>
                 <Route index element={<HospitalOverview />} />
                 <Route path="applications" element={<ApplicationsHub />} />
-                <Route path="positions" element={<HospitalOverview />} />
+                <Route path="positions" element={<PositionsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />

@@ -334,6 +334,8 @@ export default function PositionApplicationsTable({ positionId }: Props) {
             open={emailDialogOpen}
             onOpenChange={setEmailDialogOpen}
             hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.opportunity?.name}
+            senderEmail={hospitalPage.gmail_email}
             selectedApplicationIds={selectedApplicationIds}
             applications={applications}
           />
