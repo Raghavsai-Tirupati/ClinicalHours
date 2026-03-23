@@ -191,25 +191,8 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
-    if (emailType === "interview_invite") {
-      const { data: hospitalData, error: hospitalError } = await supabaseAdmin
-        .from("hospitals")
-        .select("name")
-        .eq("id", accountData.hospital_id)
-        .maybeSingle();
-      if (hospitalError || !hospitalData?.name) {
-        return new Response(
-          JSON.stringify({ success: false, error: "Unable to validate hospital for interview invites" }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
-        );
-      }
-      if (!hospitalData.name.toLowerCase().includes("bcs free health clinic")) {
-        return new Response(
-          JSON.stringify({ success: false, error: "Interview invite flow is currently enabled only for BCS Free Health Clinic" }),
-          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
-        );
-      }
-    }
+    // Interview invite email uses the per-account scheduling URL stored on `hospital_accounts`.
+    // Calendly (or the linked scheduling service) is responsible for real-time availability + booking.
 
     const { data: opportunities, error: opportunitiesError } = await supabaseAdmin
       .from("opportunities")

@@ -85,7 +85,7 @@ export default function InterviewsPage() {
   const invited = useMemo(
     () =>
       applications.filter(
-        (app) => app.interview_invited_at && app.status === 'under_review',
+        (app) => app.interview_invited_at && (app.status === 'under_review' || app.status === 'interview'),
       ),
     [applications],
   );

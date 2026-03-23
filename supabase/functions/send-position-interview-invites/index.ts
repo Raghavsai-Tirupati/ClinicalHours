@@ -17,6 +17,7 @@ interface InviteRequest {
   body?: string;
   htmlBody?: string;
   customMessage?: string;
+  attachments?: Array<{ fileName?: string; publicUrl?: string }>;
 }
 
 function escapeHtml(unsafe: string): string {
@@ -43,6 +44,34 @@ function getBodyPreview(input: string, max = 400): string {
   const cleaned = input.replace(/\s+/g, " ").trim();
   if (cleaned.length <= max) return cleaned;
   return `${cleaned.slice(0, max)}…`;
+}
+
+function escapeAttachmentUrl(url: string): string {
+  // Minimal escaping since URLs are expected to be already public; we still escape special chars.
+  return escapeHtml(url);
+}
+
+function buildAttachmentsHtml(attachments: Array<{ fileName?: string; publicUrl?: string }>): string {
+  if (!Array.isArray(attachments) || attachments.length === 0) return "";
+
+  const itemsHtml = attachments
+    .map((att) => {
+      const name = att.fileName?.trim();
+      const url = att.publicUrl?.trim();
+      if (!name || !url) return "";
+      return `<li style="margin: 4px 0;"><a href="${escapeAttachmentUrl(url)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">${escapeHtml(name)}</a></li>`;
+    })
+    .filter(Boolean)
+    .join("");
+
+  if (!itemsHtml) return "";
+
+  return `
+    <div style="margin-top: 16px;">
+      <p style="font-size: 13px; color: #555; margin: 0 0 8px 0;">Attachments</p>
+      <ul style="margin: 0; padding-left: 18px;">${itemsHtml}</ul>
+    </div>
+  `;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -87,7 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { hospitalPageId, applicationIds, emailType, subject, body, htmlBody, customMessage } = payload;
+    const { hospitalPageId, applicationIds, emailType, subject, body, htmlBody, customMessage, attachments } = payload;
     if (!hospitalPageId) {
       return new Response(
         JSON.stringify({ success: false, error: "hospitalPageId is required" }),
@@ -154,12 +183,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     const hospitalName = (hospitalPage as { opportunities?: { name?: string } | null }).opportunities?.name ?? "";
     const selectedEmailType = emailType === "general" ? "general" : "interview_invite";
-    if (selectedEmailType === "interview_invite" && !hospitalName.toLowerCase().includes("bcs free health clinic")) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Interview invite flow is currently enabled only for BCS Free Health Clinic" }),
-        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
-      );
-    }
 
     const bookingUrl = hospitalPage.interview_booking_url?.trim() ?? "";
     // Determine whether to send via the clinic admin's Gmail account or fall back to Resend.
@@ -188,9 +211,13 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    const normalizedAttachments = Array.isArray(attachments)
+      ? attachments.filter((a) => a && typeof a.fileName === "string" && typeof a.publicUrl === "string")
+      : [];
+
     const { data: apps, error: appsError } = await supabaseAdmin
       .from("student_applications")
-      .select("id, applicant_name, applicant_email, hospital_positions!inner(hospital_page_id)")
+      .select("id, applicant_name, applicant_email, status, interview_invited_at, hospital_positions!inner(hospital_page_id)")
       .in("id", validIds)
       .eq("hospital_positions.hospital_page_id", hospitalPageId);
 
@@ -198,7 +225,13 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Failed to fetch selected applications");
     }
 
-    const recipients = new Map<string, { email: string; name: string }>();
+    type Recipient = {
+      email: string;
+      name: string;
+      pendingApplicationIds: string[];
+    };
+
+    const recipients = new Map<string, Recipient>();
     for (const app of apps ?? []) {
       const email = normalizeEmail(app.applicant_email);
       if (!email) continue;
@@ -206,19 +239,28 @@ const handler = async (req: Request): Promise<Response> => {
         recipients.set(email, {
           email,
           name: app.applicant_name?.trim() || "Applicant",
+          pendingApplicationIds: [],
         });
+      }
+      // Idempotency: if we've already marked this app as invited, don't spam another email.
+      if (selectedEmailType === "interview_invite" && !app.interview_invited_at) {
+        recipients.get(email)!.pendingApplicationIds.push(app.id);
       }
     }
 
-    if (recipients.size === 0) {
+    const recipientsToSend = selectedEmailType === "interview_invite"
+      ? [...recipients.values()].filter((r) => r.pendingApplicationIds.length > 0)
+      : [...recipients.values()];
+
+    if (recipientsToSend.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, sent: 0, failed: 0, total: 0 }),
+        JSON.stringify({ success: true, sent: 0, failed: 0, total: recipients.size }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
     if (useGmail) {
-      const batchRl = await reserveGmailSendBatch(supabaseAdmin, hospitalPageId, recipients.size);
+      const batchRl = await reserveGmailSendBatch(supabaseAdmin, hospitalPageId, recipientsToSend.length);
       if (!batchRl.allowed) {
         return jsonRateLimitResponse(corsHeaders, batchRl.retryAfterSeconds);
       }
@@ -227,30 +269,35 @@ const handler = async (req: Request): Promise<Response> => {
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
+    const invitedApplicationIdsToUpdate: string[] = [];
 
-    for (const recipient of recipients.values()) {
+    for (const recipient of recipientsToSend) {
+      let didSend = false;
       const emailSubject = selectedEmailType === "general"
         ? (subject as string).trim()
         : "Interview invitation - schedule your slot";
 
+      const attachmentsHtml = selectedEmailType === "general" ? buildAttachmentsHtml(normalizedAttachments) : "";
       const emailHtml = selectedEmailType === "general"
         ? ((htmlBody?.trim().length ?? 0) > 0
           ? `
           <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; line-height: 1.6; color: #333;">
             ${htmlBody}
+            ${attachmentsHtml}
           </div>
         `
           : `
           <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
             <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
             <div style="line-height: 1.6; color: #333;">${formatBodyHtml((body as string).trim())}</div>
+            ${attachmentsHtml}
           </div>
         `)
         : `
           <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
             <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
             <p style="line-height: 1.6; color: #333;">
-              You have been invited to schedule an interview with BCS Free Health Clinic.
+              You have been invited to schedule an interview with ${escapeHtml(hospitalName || "our clinic team")}.
             </p>
             ${
               customMessage?.trim()
@@ -279,6 +326,7 @@ const handler = async (req: Request): Promise<Response> => {
             html: emailHtml,
           });
           sent++;
+          didSend = true;
         } else {
           const emailResponse = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -296,6 +344,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           if (emailResponse.ok) {
             sent++;
+            didSend = true;
           } else {
             failed++;
             const errorData = await emailResponse.json().catch(() => ({})) as Record<string, string>;
@@ -314,7 +363,23 @@ const handler = async (req: Request): Promise<Response> => {
           errors.push(`${recipient.email}: ${err instanceof Error ? err.message : "Failed to send"}`);
         }
       }
+
+      // Track invite timestamp only when the email was successfully sent.
+      if (selectedEmailType === "interview_invite" && didSend && recipient.pendingApplicationIds.length > 0) {
+        invitedApplicationIdsToUpdate.push(...recipient.pendingApplicationIds);
+      }
       await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    const invitedAppIdsUnique = [...new Set(invitedApplicationIdsToUpdate)];
+    if (selectedEmailType === "interview_invite" && invitedAppIdsUnique.length > 0) {
+      const { error: invitedError } = await supabaseAdmin
+        .from("student_applications")
+        .update({ interview_invited_at: new Date().toISOString() })
+        .in("id", invitedAppIdsUnique);
+      if (invitedError) {
+        console.error("Failed to persist interview_invited_at:", invitedError.message, invitedError);
+      }
     }
 
     let activityLogged = true;
@@ -331,6 +396,27 @@ const handler = async (req: Request): Promise<Response> => {
             recipientCount: sent,
             applicationIds: validIds,
             bodyPreview: getBodyPreview((body as string).trim()),
+            attachmentCount: normalizedAttachments.length,
+          },
+        });
+      if (activityError) {
+        activityLogged = false;
+        console.error("Failed to persist admin_activity_log:", activityError.message, activityError);
+      }
+    }
+    if (selectedEmailType === "interview_invite" && sent > 0) {
+      const { error: activityError } = await supabaseAdmin
+        .from("admin_activity_log")
+        .insert({
+          hospital_page_id: hospitalPageId,
+          actor_email: userEmail,
+          action_type: "interview_invited",
+          target_type: "email",
+          target_id: null,
+          metadata: {
+            recipientCount: sent,
+            applicationIds: invitedAppIdsUnique,
+            bookingUrl,
           },
         });
       if (activityError) {

@@ -64,6 +64,11 @@ function getApplicantName(app: StudentApplication): string {
 type FilterMode = 'all' | 'position' | 'status';
 
 const DEFAULT_EMAIL_HTML = '<p><br></p>';
+const DEFAULT_EMAIL_DRAFT = {
+  subject: '',
+  htmlBody: DEFAULT_EMAIL_HTML,
+  attachments: [] as Array<{ name: string; url: string }>,
+};
 
 function stripHtml(value: string): string {
   if (!value) return '';
@@ -83,6 +88,15 @@ function sanitizeRichHtml(value: string): string {
   return doc.body.innerHTML || DEFAULT_EMAIL_HTML;
 }
 
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export default function EmailPage() {
   const { hospitalPage } = useHospitalPageContext();
   const { applications, positions, loading: appsLoading } = useAllApplications(hospitalPage?.id);
@@ -93,9 +107,15 @@ export default function EmailPage() {
   const [manualSelected, setManualSelected] = useState<string[]>([]);
   const [subject, setSubject] = useState('');
   const [htmlBody, setHtmlBody] = useState(DEFAULT_EMAIL_HTML);
+  const [attachments, setAttachments] = useState<Array<{ name: string; url: string }>>([]);
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const editorRef = useRef<HTMLDivElement | null>(null);
+
+  const draftKey = useMemo(() => {
+    if (!hospitalPage?.id) return null;
+    return `email_draft:${hospitalPage.id}`;
+  }, [hospitalPage?.id]);
 
   // The composer uses a contentEditable div. We keep it effectively uncontrolled so re-renders
   // don't reset caret/selection while typing (which shows up as "typing backwards").
@@ -105,6 +125,48 @@ export default function EmailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load draft (autosave) when hospital page changes.
+  useEffect(() => {
+    if (!draftKey) return;
+    const raw = localStorage.getItem(draftKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as typeof DEFAULT_EMAIL_DRAFT;
+      if (typeof parsed.subject === 'string') setSubject(parsed.subject);
+      if (typeof parsed.htmlBody === 'string') setEditorContent(parsed.htmlBody);
+      if (Array.isArray(parsed.attachments)) {
+        setAttachments(
+          parsed.attachments
+            .filter((a) => a && typeof a.name === 'string' && typeof a.url === 'string')
+            .map((a) => ({ name: a.name, url: a.url })),
+        );
+      }
+    } catch {
+      // ignore corrupted drafts
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Autosave draft while typing (debounced).
+  useEffect(() => {
+    if (!draftKey) return;
+    const handle = window.setTimeout(() => {
+      const shouldClear =
+        subject.trim().length === 0 &&
+        htmlBody === DEFAULT_EMAIL_HTML &&
+        attachments.length === 0;
+
+      if (shouldClear) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+
+      const draft = { subject, htmlBody, attachments };
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+    }, 400);
+    return () => window.clearTimeout(handle);
+  }, [draftKey, subject, htmlBody, attachments]);
 
   const filteredRecipients = useMemo(() => {
     if (filterMode === 'all') return applications;
@@ -143,6 +205,30 @@ export default function EmailPage() {
 
   const plainBody = useMemo(() => stripHtml(htmlBody), [htmlBody]);
 
+  const attachmentsPreviewHtml = useMemo(() => {
+    if (attachments.length === 0) return '';
+    const itemsHtml = attachments
+      .map(
+        (a) => `
+          <li>
+            <a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer">
+              ${escapeHtml(a.name)}
+            </a>
+          </li>
+        `,
+      )
+      .join('');
+
+    return `
+      <div style="margin-top:16px;">
+        <p style="margin:0 0 8px 0; font-size:13px; color:#555;">Attachments</p>
+        <ul style="margin:0; padding-left:18px;">${itemsHtml}</ul>
+      </div>
+    `;
+  }, [attachments]);
+
+  const previewHtml = useMemo(() => sanitizeRichHtml(htmlBody) + attachmentsPreviewHtml, [htmlBody, attachmentsPreviewHtml]);
+
   const applyFormat = (command: string, value?: string) => {
     editorRef.current?.focus();
     document.execCommand(command, false, value);
@@ -157,6 +243,37 @@ export default function EmailPage() {
       editorRef.current.innerHTML = sanitized;
     }
   };
+
+  async function handleFileAttachments(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    if (!hospitalPage?.id) return;
+
+    const fileArr = Array.from(files);
+    const uploaded: Array<{ name: string; url: string }> = [];
+
+    for (const file of fileArr) {
+      try {
+        const safeName = file.name.replace(/[^\w.\- ]+/g, '_');
+        const storageFileName = `email-attachments/${hospitalPage.id}/${Date.now()}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage.from('resumes').upload(storageFileName, file);
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage.from('resumes').getPublicUrl(storageFileName);
+        const publicUrl = publicUrlData?.publicUrl;
+        if (!publicUrl) throw new Error('Could not create public URL');
+
+        uploaded.push({ name: safeName, url: publicUrl });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to upload file';
+        toast.error(msg);
+      }
+    }
+
+    if (uploaded.length > 0) {
+      setAttachments((prev) => [...prev, ...uploaded]);
+    }
+  }
 
   const handleSend = async () => {
     if (!hospitalPage?.id) return;
@@ -174,6 +291,7 @@ export default function EmailPage() {
           subject: subject.trim(),
           body: plainBody.trim(),
           htmlBody: sanitizeRichHtml(htmlBody),
+          attachments: attachments.map((a) => ({ fileName: a.name, publicUrl: a.url })),
         },
       });
 
@@ -207,6 +325,8 @@ export default function EmailPage() {
       setSubject('');
       setEditorContent(DEFAULT_EMAIL_HTML);
       setManualSelected([]);
+      setAttachments([]);
+      if (draftKey) localStorage.removeItem(draftKey);
       refetchLog();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to send emails';
@@ -360,6 +480,48 @@ export default function EmailPage() {
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Message
               </label>
+
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Attach files
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Uploaded files are included as download links in the email.
+                    </div>
+                  </div>
+                  <Input
+                    type="file"
+                    multiple
+                    className="w-full sm:w-auto"
+                    onChange={(e) => handleFileAttachments(e.target.files)}
+                  />
+                </div>
+
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    {attachments.map((a) => (
+                      <div
+                        key={a.url}
+                        className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium truncate">{a.name}</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setAttachments((prev) => prev.filter((x) => x.url !== a.url))}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-md border border-input bg-background overflow-hidden">
                 <div className="border-b border-border p-2 flex flex-wrap gap-1">
                   <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => applyFormat('bold')}>
@@ -475,7 +637,7 @@ export default function EmailPage() {
                     <div className="px-6 py-5 max-h-[50vh] overflow-y-auto">
                       <div
                         className="text-sm leading-relaxed text-foreground [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-0.5 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold [&_em]:italic [&_s]:line-through"
-                        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(htmlBody) }}
+                        dangerouslySetInnerHTML={{ __html: previewHtml }}
                       />
                     </div>
 
