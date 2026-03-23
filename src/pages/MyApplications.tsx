@@ -303,27 +303,8 @@ export default function MyApplications() {
       return;
     }
     setSubmitting(true);
-    setError(null);
-    supabase
-      .from("application_interview_slots")
-      .insert({
-        application_id: selectedApp.id,
-        slot_start: start.toISOString(),
-        slot_end: end.toISOString(),
-        preference_rank: slots.length + 1,
-      })
-      .then(({ error: err }) => {
-        if (err) {
-          setError(err.message);
-        } else {
-          fetchSlots(selectedApp.id);
-          setSuccess(true);
-          setNewSlotDate(format(addDays(new Date(), 1), "yyyy-MM-dd"));
-          setNewSlotStart("09:00");
-          setNewSlotEnd("10:00");
-        }
-        setSubmitting(false);
-      });
+    setError("Interview scheduling is not yet available.");
+    setSubmitting(false);
   }
 
   function removeSlot(slotId: string) {
