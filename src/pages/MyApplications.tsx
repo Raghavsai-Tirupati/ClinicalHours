@@ -307,12 +307,8 @@ export default function MyApplications() {
     setSubmitting(false);
   }
 
-  function removeSlot(slotId: string) {
-    supabase
-      .from("application_interview_slots")
-      .delete()
-      .eq("id", slotId)
-      .then(() => selectedApp && fetchSlots(selectedApp.id));
+  function removeSlot(_slotId: string) {
+    // no-op — table not yet created
   }
 
   if (authLoading || loading) {
