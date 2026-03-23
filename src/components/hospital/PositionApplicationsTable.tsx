@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, Search, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -14,7 +15,6 @@ import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
-import ApplicationDetailSheet from './ApplicationDetailSheet';
 import EmailDialog from './EmailDialog';
 import InterviewInviteDialog from './InterviewInviteDialog';
 
@@ -42,10 +42,11 @@ interface Props {
 
 export default function PositionApplicationsTable({ positionId }: Props) {
   const { hospitalPage } = useHospitalPageContext();
-  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, refetch, updateApplicationLocally } =
+  const navigate = useNavigate();
+  const { basePath } = useHospitalPageContext();
+  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, updateApplicationLocally } =
     usePositionApplications(positionId);
 
-  const [selectedApp, setSelectedApp] = useState<StudentApplication | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
   const [bookingUrlInput, setBookingUrlInput] = useState('');
@@ -119,14 +120,6 @@ export default function PositionApplicationsTable({ positionId }: Props) {
     }
   };
 
-  const handleApplicationPatched = useCallback(
-    (appId: string, patch: Partial<StudentApplication>) => {
-      updateApplicationLocally(appId, patch);
-      if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, ...patch } : null));
-    },
-    [updateApplicationLocally, selectedApp?.id],
-  );
-
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
     setUpdatingStatus(true);
     try {
@@ -141,7 +134,6 @@ export default function PositionApplicationsTable({ positionId }: Props) {
       }
       toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
       updateApplicationLocally(appId, { status: newStatus });
-      if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
     } catch (err: any) {
       console.error('Failed to update status:', err);
       toast.error(err?.message || 'Failed to update status');
@@ -267,7 +259,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
               </TableHeader>
               <TableBody>
                 {applications.map((app) => (
-                  <TableRow key={app.id} className="cursor-pointer" onClick={() => setSelectedApp(allApplications.find((a) => a.id === app.id) || app)}>
+                  <TableRow key={app.id} className="cursor-pointer" onClick={() => navigate(`${basePath}/applicants/${app.id}`)}>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedApplicationIds.includes(app.id)}
@@ -325,13 +317,6 @@ export default function PositionApplicationsTable({ positionId }: Props) {
       </div>
 
       {/* Sub-components */}
-      <ApplicationDetailSheet
-        application={selectedApp}
-        onClose={() => setSelectedApp(null)}
-        onStatusChange={handleStatusChange}
-        onNoteSaved={refetch}
-        onApplicationPatched={handleApplicationPatched}
-      />
 
       {hospitalPage?.id && (
         <>
