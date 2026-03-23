@@ -254,6 +254,16 @@ export function usePositionApplications(positionId: string | undefined) {
     return getApplicantSortName(a).localeCompare(getApplicantSortName(b));
   });
 
+  /** Optimistically patch a single application in local state (no refetch). */
+  const updateApplicationLocally = useCallback(
+    (appId: string, patch: Partial<StudentApplication>) => {
+      setApplications((prev) =>
+        prev.map((a) => (a.id === appId ? { ...a, ...patch } : a)),
+      );
+    },
+    [],
+  );
+
   return {
     applications: sorted,
     allApplications: applications,
@@ -265,5 +275,6 @@ export function usePositionApplications(positionId: string | undefined) {
     sortBy,
     setSortBy,
     refetch: fetchApplications,
+    updateApplicationLocally,
   };
 }

@@ -41,7 +41,7 @@ interface Props {
 
 export default function PositionApplicationsTable({ positionId }: Props) {
   const { hospitalPage } = useHospitalPageContext();
-  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, refetch } =
+  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, refetch, updateApplicationLocally } =
     usePositionApplications(positionId);
 
   const [selectedApp, setSelectedApp] = useState<StudentApplication | null>(null);

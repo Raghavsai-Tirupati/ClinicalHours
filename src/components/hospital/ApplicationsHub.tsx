@@ -134,7 +134,7 @@ function ApplicantReviewWhenExpanded({
 
 export default function ApplicationsHub() {
   const { hospitalPage } = useHospitalPageContext();
-  const { applications, positions, stats, loading, refetch } = useAllApplications(hospitalPage?.id);
+  const { applications, positions, stats, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
 
   const [activeTab, setActiveTab] = useState<'applications' | 'analytics'>('applications');
   const [filterRules, setFilterRules] = useState<ApplicationFilterRule[]>([]);
