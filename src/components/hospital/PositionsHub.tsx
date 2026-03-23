@@ -19,7 +19,6 @@ import { useAllApplications } from '@/hooks/useAllApplications';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
 import type { PositionStatus } from '@/types/positions';
 
-const STATUS_DOT
 
 const STATUS_DOT: Record<PositionStatus, string> = {
   active: 'bg-green-400',
