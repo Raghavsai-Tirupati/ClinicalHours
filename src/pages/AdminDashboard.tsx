@@ -111,6 +111,10 @@ export default function AdminDashboard() {
                 <Trash2 className="h-4 w-4" />
                 <span className="hidden sm:inline">Deletions</span>
               </TabsTrigger>
+              <TabsTrigger value="clone" className="flex items-center gap-2">
+                <Copy className="h-4 w-4" />
+                <span className="hidden sm:inline">Clone</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
