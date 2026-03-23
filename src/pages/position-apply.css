@@ -9,9 +9,10 @@
   --pa-text-1: #f0ede8;
   --pa-text-2: #9b9890;
   --pa-text-3: #5a5855;
-  --pa-accent: #1d9e75;
-  --pa-accent-dim: rgba(29, 158, 117, 0.15);
-  --pa-accent-border: rgba(29, 158, 117, 0.35);
+  /* Logo-derived: blue-purple gradient from favicon, warm off-white undertones */
+  --pa-accent: #8b5cf6;
+  --pa-accent-dim: rgba(139, 92, 246, 0.15);
+  --pa-accent-border: rgba(139, 92, 246, 0.4);
   --pa-danger: #e05a4e;
   --pa-font-display: "Lora", Georgia, serif;
   --pa-font-body: "DM Sans", system-ui, sans-serif;
@@ -582,8 +583,8 @@
   color: #fff;
 }
 .pa-btn-primary:hover:not(:disabled) {
-  background: #189966;
-  border-color: #189966;
+  background: #7c3aed;
+  border-color: #7c3aed;
 }
 
 .pa-field-divider {

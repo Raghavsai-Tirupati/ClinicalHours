@@ -159,6 +159,8 @@ export default function HospitalDashboard() {
   const [haInterviewLoading, setHaInterviewLoading] = useState(false);
   const [haConfirmSlot, setHaConfirmSlot] = useState("");
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
+  const [protectedOpportunityIds, setProtectedOpportunityIds] = useState<string[]>([]);
+  const [deletingOppId, setDeletingOppId] = useState<string | null>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailTarget, setEmailTarget] = useState<"all" | "filtered" | "selected">("filtered");
   const [emailSubject, setEmailSubject] = useState("");
@@ -223,6 +225,7 @@ export default function HospitalDashboard() {
         setOpportunities([]);
         setApplications([]);
         setQuestions([]);
+        setProtectedOpportunityIds([]);
         return;
       }
 
@@ -230,12 +233,21 @@ export default function HospitalDashboard() {
         setOpportunities([]);
         setApplications([]);
         setQuestions([]);
+        setProtectedOpportunityIds([]);
         return;
       }
 
       const legacyApps: ApplicationWithGpa[] = [];
       const haApps: ApplicationWithGpa[] = [];
       const oppIds = opps.map((o) => o.id);
+
+      const { data: pageLinks } =
+        oppIds.length > 0
+          ? await supabase.from("hospital_pages").select("hospital_id").in("hospital_id", oppIds)
+          : { data: null as { hospital_id: string }[] | null };
+      setProtectedOpportunityIds(
+        (pageLinks ?? []).map((r) => r.hospital_id).filter(Boolean) as string[]
+      );
 
       const [appsRes, hospAppsRes, questionsRes, accountRes] = await Promise.all([
         supabase
@@ -370,6 +382,37 @@ export default function HospitalDashboard() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  async function handleDeleteOpportunity(opp: OpportunityWithApps) {
+    if (!member || !isBcsPilot) return;
+    if (member.role !== "owner" && member.role !== "admin") {
+      toast.error("Only hospital owners and admins can delete opportunities.");
+      return;
+    }
+    if (protectedOpportunityIds.includes(opp.id)) {
+      toast.error("This listing is linked to your hospital page and cannot be deleted.");
+      return;
+    }
+    if (
+      !confirm(
+        `Delete "${opp.name}"? This permanently removes the opportunity and related applications. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setDeletingOppId(opp.id);
+    try {
+      const { error } = await supabase.from("opportunities").delete().eq("id", opp.id);
+      if (error) throw error;
+      toast.success("Opportunity deleted");
+      await fetchData(true);
+    } catch (err) {
+      console.error("Delete opportunity error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete opportunity");
+    } finally {
+      setDeletingOppId(null);
     }
   }
 
@@ -871,7 +914,7 @@ export default function HospitalDashboard() {
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-1">
+                              <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
                                 {opp.slug && (
                                   <Link to={`/opportunities/${opp.slug}/admin`}>
                                     <Button size="sm" variant="outline" className="text-xs h-7">
@@ -880,6 +923,25 @@ export default function HospitalDashboard() {
                                     </Button>
                                   </Link>
                                 )}
+                                {isBcsPilot &&
+                                  (member?.role === "owner" || member?.role === "admin") &&
+                                  !protectedOpportunityIds.includes(opp.id) && (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-xs h-7 text-destructive border-destructive/40 hover:bg-destructive/10"
+                                      disabled={deletingOppId === opp.id}
+                                      onClick={() => handleDeleteOpportunity(opp)}
+                                      title="Remove duplicate or test listing (not the main hospital page)"
+                                    >
+                                      {deletingOppId === opp.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                  )}
                               </div>
                             </td>
                           </tr>
