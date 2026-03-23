@@ -139,7 +139,8 @@ function ApplicantReviewWhenExpanded({
 }
 
 export default function ApplicationsHub() {
-  const { hospitalPage } = useHospitalPageContext();
+  const navigate = useNavigate();
+  const { hospitalPage, basePath } = useHospitalPageContext();
   const { applications, positions, stats, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
 
   const [activeTab, setActiveTab] = useState<'applications' | 'kanban' | 'analytics'>('applications');
