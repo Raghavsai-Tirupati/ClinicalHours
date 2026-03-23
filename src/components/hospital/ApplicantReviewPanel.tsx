@@ -431,7 +431,7 @@ export default function ApplicantReviewPanel({
       )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
-        <div className="space-y-5 min-w-0 order-2 lg:order-1">
+        <div className="space-y-5 min-w-0 order-1 lg:order-1">
           {profile && (
             <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Profile</p>
@@ -520,7 +520,7 @@ export default function ApplicantReviewPanel({
                 Loading…
               </div>
             ) : contactHistory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No logged contact for this application yet.</p>
+              <p className="text-sm text-muted-foreground">No logged contact yet. Send an email from the Applications tab to log activity here.</p>
             ) : (
               <ul className="space-y-3">
                 {contactHistory.map((entry) => {
@@ -610,7 +610,7 @@ export default function ApplicantReviewPanel({
           )}
         </div>
 
-        <div className="space-y-4 order-1 lg:order-2 lg:sticky lg:top-4 lg:self-start">
+        <div className="space-y-4 order-2 lg:order-2 lg:sticky lg:top-4 lg:self-start">
           <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Availability</p>
             <p className="text-sm text-foreground/90">

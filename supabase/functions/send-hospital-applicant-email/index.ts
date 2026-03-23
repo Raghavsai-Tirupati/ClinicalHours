@@ -499,12 +499,43 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // ── Activity logging ──────────────────────────────────────────────────────
+    let activityLogged = true;
+    if (sent > 0 && gmailPageId) {
+      const logActionType = emailType === "interview_invite" ? "interview_invited" : "email_sent";
+      const logMetadata: Record<string, unknown> = {
+        recipientCount: sent,
+        applicationIds: applicationIdFilter.length > 0 ? applicationIdFilter : undefined,
+      };
+      if (emailType === "general" && subject) {
+        logMetadata.subject = subject.trim();
+      }
+      if (emailType === "interview_invite") {
+        logMetadata.bookingUrl = interviewBookingUrl;
+      }
+
+      const { error: activityError } = await supabaseAdmin
+        .from("admin_activity_log")
+        .insert({
+          hospital_page_id: gmailPageId,
+          actor_email: user.email!,
+          action_type: logActionType,
+          target_type: "email",
+          metadata: logMetadata,
+        });
+      if (activityError) {
+        activityLogged = false;
+        console.error("Failed to persist admin_activity_log:", activityError.message, activityError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         sent,
         failed,
         total: recipients.length,
+        activityLogged,
         errors: errors.length > 0 ? errors : undefined,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
