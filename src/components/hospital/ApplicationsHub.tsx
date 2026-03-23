@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   Loader2,
   Mail,
   Calendar,
