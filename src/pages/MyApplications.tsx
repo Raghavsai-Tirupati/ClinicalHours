@@ -47,6 +47,8 @@ interface InterviewSlot {
   slot_end: string;
   preference_rank: number;
 }
+
+interface SubmittedAnswer {
   id: string;
   question_id: string;
   answer_text: string | null;
