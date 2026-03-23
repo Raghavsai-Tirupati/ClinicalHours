@@ -387,7 +387,7 @@ export default function HospitalDashboard() {
   }
 
   async function handleDeleteOpportunity(opp: OpportunityWithApps) {
-    if (!member || !isBcsPilot) return;
+    if (!member) return;
     if (member.role !== "owner" && member.role !== "admin") {
       toast.error("Only hospital owners and admins can delete opportunities.");
       return;
