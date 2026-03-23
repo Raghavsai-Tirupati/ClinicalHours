@@ -578,7 +578,10 @@ const handler = async (req: Request): Promise<Response> => {
     if (selectedEmailType === "interview_invite" && invitedAppIdsUnique.length > 0) {
       const { error: invitedError } = await supabaseAdmin
         .from("student_applications")
-        .update({ interview_invited_at: new Date().toISOString() })
+        .update({
+          interview_invited_at: new Date().toISOString(),
+          status: "interview",
+        })
         .in("id", invitedAppIdsUnique);
       if (invitedError) {
         console.error("Failed to persist interview_invited_at:", invitedError.message, invitedError);
