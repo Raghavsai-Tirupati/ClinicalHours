@@ -168,7 +168,7 @@ function AppContent() {
               >
                 <Route index element={<HospitalOverview />} />
                 <Route path="applications" element={<ApplicationsHub />} />
-                <Route path="positions" element={<HospitalOverview />} />
+                <Route path="positions" element={<PositionsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
