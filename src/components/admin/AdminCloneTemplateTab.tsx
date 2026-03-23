@@ -44,7 +44,7 @@ export default function AdminCloneTemplateTab() {
   const [isForceUpdate, setIsForceUpdate] = useState(false);
   const [lastResult, setLastResult] = useState<CloneResult | null>(null);
 
-  const handleClone = async () => {
+  const executeClone = async () => {
     setConfirmOpen(false);
     setLoading(true);
     setLastResult(null);
@@ -83,6 +83,28 @@ export default function AdminCloneTemplateTab() {
 
   return (
     <div className="space-y-6">
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isForceUpdate ? "Force Update from Source?" : "Clone Hospital Template?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isForceUpdate
+                ? `This will re-apply the template from "${sourceEmail}" to "${targetEmail}". Existing positions with matching titles will be skipped. New positions and questions will be added.`
+                : `This will clone hospital admin configuration from "${sourceEmail}" to "${targetEmail}". No student data or applications will be copied.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeClone}>
+              {isForceUpdate ? "Force Update" : "Clone"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Clone Form */}
       <Card>
         <CardHeader>
@@ -181,7 +203,7 @@ export default function AdminCloneTemplateTab() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               Clone Result
             </CardTitle>
           </CardHeader>
