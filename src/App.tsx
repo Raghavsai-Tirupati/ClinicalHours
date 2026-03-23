@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import type React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,55 +15,74 @@ import { AdminOnlyRoute } from "./components/AdminOnlyRoute";
 import { useAppKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { AuthProvider } from "./hooks/useAuth";
 
-// Lazy load pages for code splitting
-const Home = lazy(() => import("./pages/Home"));
-const Opportunities = lazy(() => import("./pages/Opportunities"));
-const OpportunityDetail = lazy(() => import("./pages/OpportunityDetail"));
-const Projects = lazy(() => import("./pages/Projects"));
-const Contact = lazy(() => import("./pages/Contact"));
-const Auth = lazy(() => import("./pages/Auth"));
-const Settings = lazy(() => import("./pages/Settings"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const MapView = lazy(() => import("./pages/MapView"));
-const Terms = lazy(() => import("./pages/Terms"));
-const Privacy = lazy(() => import("./pages/Privacy"));
-const CheckEmail = lazy(() => import("./pages/CheckEmail"));
-const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
-const HospitalAdmin = lazy(() => import("./pages/HospitalAdmin"));
-const MyApplications = lazy(() => import("./pages/MyApplications"));
-const HospitalApplyPage = lazy(() => import("./pages/HospitalApplyPage"));
-const PendingApproval = lazy(() => import("./pages/PendingApproval"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const GoogleAuthCallback = lazy(() => import("./pages/GoogleAuthCallback"));
+// Retry wrapper for lazy imports — handles chunk-loading failures after deploys
+function lazyRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+): React.LazyExoticComponent<T> {
+  return lazy(() =>
+    factory().catch((err) => {
+      // If we already tried reloading, don't loop
+      const key = 'chunk_reload';
+      const hasReloaded = sessionStorage.getItem(key);
+      if (!hasReloaded) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        return new Promise(() => {}); // never resolves — page is reloading
+      }
+      sessionStorage.removeItem(key);
+      throw err; // let ErrorBoundary handle it
+    }),
+  );
+}
+
+const Home = lazyRetry(() => import("./pages/Home"));
+const Opportunities = lazyRetry(() => import("./pages/Opportunities"));
+const OpportunityDetail = lazyRetry(() => import("./pages/OpportunityDetail"));
+const Projects = lazyRetry(() => import("./pages/Projects"));
+const Contact = lazyRetry(() => import("./pages/Contact"));
+const Auth = lazyRetry(() => import("./pages/Auth"));
+const Settings = lazyRetry(() => import("./pages/Settings"));
+const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
+const MapView = lazyRetry(() => import("./pages/MapView"));
+const Terms = lazyRetry(() => import("./pages/Terms"));
+const Privacy = lazyRetry(() => import("./pages/Privacy"));
+const CheckEmail = lazyRetry(() => import("./pages/CheckEmail"));
+const VerifyEmail = lazyRetry(() => import("./pages/VerifyEmail"));
+const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"));
+const AdminDashboard = lazyRetry(() => import("./pages/AdminDashboard"));
+const HospitalAdmin = lazyRetry(() => import("./pages/HospitalAdmin"));
+const MyApplications = lazyRetry(() => import("./pages/MyApplications"));
+const HospitalApplyPage = lazyRetry(() => import("./pages/HospitalApplyPage"));
+const PendingApproval = lazyRetry(() => import("./pages/PendingApproval"));
+const NotFound = lazyRetry(() => import("./pages/NotFound"));
+const GoogleAuthCallback = lazyRetry(() => import("./pages/GoogleAuthCallback"));
 
 // Hospital admin dashboard (position system)
-const HospitalDashboardLayout = lazy(() => import("./layouts/HospitalDashboardLayout"));
-const HospitalOverview = lazy(() => import("./components/hospital/HospitalOverview"));
-const PositionForm = lazy(() => import("./components/hospital/PositionForm"));
-const PositionDetail = lazy(() => import("./components/hospital/PositionDetail"));
-const HospitalSettingsPage = lazy(() => import("./components/hospital/HospitalSettings"));
-const ApplicationsHub = lazy(() => import("./components/hospital/ApplicationsHub"));
-const InterviewsPage = lazy(() => import("./components/hospital/InterviewsPage"));
-const EmailPage = lazy(() => import("./components/hospital/EmailPage"));
-const ActivityPage = lazy(() => import("./components/hospital/ActivityPage"));
-const PositionApplyPage = lazy(() => import("./pages/PositionApplyPage"));
-const HospitalDashboardRedirect = lazy(() => import("./components/HospitalDashboardRedirect"));
+const HospitalDashboardLayout = lazyRetry(() => import("./layouts/HospitalDashboardLayout"));
+const HospitalOverview = lazyRetry(() => import("./components/hospital/HospitalOverview"));
+const PositionForm = lazyRetry(() => import("./components/hospital/PositionForm"));
+const PositionDetail = lazyRetry(() => import("./components/hospital/PositionDetail"));
+const HospitalSettingsPage = lazyRetry(() => import("./components/hospital/HospitalSettings"));
+const ApplicationsHub = lazyRetry(() => import("./components/hospital/ApplicationsHub"));
+const InterviewsPage = lazyRetry(() => import("./components/hospital/InterviewsPage"));
+const EmailPage = lazyRetry(() => import("./components/hospital/EmailPage"));
+const ActivityPage = lazyRetry(() => import("./components/hospital/ActivityPage"));
+const PositionApplyPage = lazyRetry(() => import("./pages/PositionApplyPage"));
+const HospitalDashboardRedirect = lazyRetry(() => import("./components/HospitalDashboardRedirect"));
 
 // Premium feature pages
-const Premium = lazy(() => import("./pages/Premium"));
-const PremiumPurchase = lazy(() => import("./pages/PremiumPurchase"));
-const HourTracker = lazy(() => import("./pages/HourTracker"));
-const OpportunityQuiz = lazy(() => import("./pages/OpportunityQuiz"));
-const CompetencyMapper = lazy(() => import("./pages/CompetencyMapper"));
-const AMCASGenerator = lazy(() => import("./pages/AMCASGenerator"));
-const LORTracker = lazy(() => import("./pages/LORTracker"));
-const TimelinePlanner = lazy(() => import("./pages/TimelinePlanner"));
-const SecondaryEngine = lazy(() => import("./pages/SecondaryEngine"));
-const CostSimulator = lazy(() => import("./pages/CostSimulator"));
-const SchoolListBuilder = lazy(() => import("./pages/SchoolListBuilder"));
-const DirectApplicationFinder = lazy(() => import("./pages/DirectApplicationFinder"));
+const Premium = lazyRetry(() => import("./pages/Premium"));
+const PremiumPurchase = lazyRetry(() => import("./pages/PremiumPurchase"));
+const HourTracker = lazyRetry(() => import("./pages/HourTracker"));
+const OpportunityQuiz = lazyRetry(() => import("./pages/OpportunityQuiz"));
+const CompetencyMapper = lazyRetry(() => import("./pages/CompetencyMapper"));
+const AMCASGenerator = lazyRetry(() => import("./pages/AMCASGenerator"));
+const LORTracker = lazyRetry(() => import("./pages/LORTracker"));
+const TimelinePlanner = lazyRetry(() => import("./pages/TimelinePlanner"));
+const SecondaryEngine = lazyRetry(() => import("./pages/SecondaryEngine"));
+const CostSimulator = lazyRetry(() => import("./pages/CostSimulator"));
+const SchoolListBuilder = lazyRetry(() => import("./pages/SchoolListBuilder"));
+const DirectApplicationFinder = lazyRetry(() => import("./pages/DirectApplicationFinder"));
 
 // Loading fallback component
 const PageLoader = () => (
