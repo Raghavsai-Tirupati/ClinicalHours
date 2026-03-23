@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/Navigation';
