@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Briefcase,
@@ -16,8 +16,10 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
+import { supabase } from '@/integrations/supabase/client';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
-import type { PositionStatus } from '@/types/positions';
+import type { HospitalPosition, PositionStatus } from '@/types/positions';
+import { toast } from 'sonner';
 
 
 const STATUS_DOT: Record<PositionStatus, string> = {
@@ -38,16 +40,23 @@ export default function PositionsHub() {
   const { hospitalPage, basePath } = useHospitalPageContext();
   const { applications, positions, loading } = useAllApplications(hospitalPage?.id);
   const [search, setSearch] = useState('');
+  const [localPositions, setLocalPositions] = useState<HospitalPosition[]>([]);
+  const [draggedPositionId, setDraggedPositionId] = useState<string | null>(null);
+  const [dragOverColumnKey, setDragOverColumnKey] = useState<PositionStatus | null>(null);
+
+  useEffect(() => {
+    setLocalPositions(positions);
+  }, [positions]);
 
   const filteredPositions = useMemo(() => {
-    if (!search.trim()) return positions;
+    if (!search.trim()) return localPositions;
     const q = search.toLowerCase();
-    return positions.filter(
+    return localPositions.filter(
       (p) =>
         p.title.toLowerCase().includes(q) ||
         (p.location?.toLowerCase().includes(q) ?? false),
     );
-  }, [positions, search]);
+  }, [localPositions, search]);
 
   const appCountsByPosition = useMemo(() => {
     const counts: Record<string, { total: number; new: number }> = {};
@@ -68,6 +77,40 @@ export default function PositionsHub() {
       })),
     [filteredPositions],
   );
+
+  const handleDropToColumn = async (targetStatus: PositionStatus) => {
+    if (!draggedPositionId) return;
+
+    const draggedPosition = localPositions.find((p) => p.id === draggedPositionId);
+    if (!draggedPosition || draggedPosition.status === targetStatus) {
+      setDraggedPositionId(null);
+      setDragOverColumnKey(null);
+      return;
+    }
+
+    const previousPositions = localPositions;
+    setLocalPositions((prev) =>
+      prev.map((position) =>
+        position.id === draggedPositionId ? { ...position, status: targetStatus } : position,
+      ),
+    );
+    setDraggedPositionId(null);
+    setDragOverColumnKey(null);
+
+    const { error } = await supabase
+      .from('hospital_positions')
+      .update({ status: targetStatus })
+      .eq('id', draggedPositionId);
+
+    if (error) {
+      setLocalPositions(previousPositions);
+      toast.error('Could not move position. Please try again.');
+      return;
+    }
+
+    const statusLabel = targetStatus.charAt(0).toUpperCase() + targetStatus.slice(1);
+    toast.success(`Position moved to ${statusLabel}`);
+  };
 
   if (loading) {
     return (
@@ -142,9 +185,30 @@ export default function PositionsHub() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-3">
+        <>
+          {draggedPositionId && (
+            <div className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
+              Drag a card into `Draft`, `Active`, or `Archived` to update its status.
+            </div>
+          )}
+          <div className="grid gap-4 xl:grid-cols-3">
           {positionsByColumn.map((column) => (
-            <div key={column.key} className="rounded-lg border border-border/50 bg-muted/20 p-3">
+            <div
+              key={column.key}
+              className={`rounded-lg border p-3 transition-all ${
+                dragOverColumnKey === column.key
+                  ? 'border-primary bg-primary/10 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
+                  : 'border-border/50 bg-muted/20'
+              }`}
+              onDragOver={(event) => event.preventDefault()}
+              onDragEnter={() => setDragOverColumnKey(column.key)}
+              onDragLeave={() => {
+                if (dragOverColumnKey === column.key) {
+                  setDragOverColumnKey(null);
+                }
+              }}
+              onDrop={() => void handleDropToColumn(column.key)}
+            >
               <div className="mb-3 flex items-center justify-between px-1">
                 <h3 className="text-sm font-semibold">{column.title}</h3>
                 <Badge variant="outline" className="text-[10px] py-0">
@@ -161,7 +225,17 @@ export default function PositionsHub() {
                     const counts = appCountsByPosition[pos.id] ?? { total: 0, new: 0 };
                     return (
                       <Link key={pos.id} to={`${basePath}/positions/${pos.id}`} className="group block">
-                        <Card className="transition-all group-hover:border-primary/40 group-hover:shadow-md">
+                        <Card
+                          className={`transition-all group-hover:border-primary/40 group-hover:shadow-md ${
+                            draggedPositionId === pos.id ? 'opacity-70 scale-[0.99]' : ''
+                          }`}
+                          draggable
+                          onDragStart={() => setDraggedPositionId(pos.id)}
+                          onDragEnd={() => {
+                            setDraggedPositionId(null);
+                            setDragOverColumnKey(null);
+                          }}
+                        >
                           <CardContent className="pt-5 pb-4 px-5 flex flex-col">
                             {/* Status + Type row */}
                             <div className="flex items-center gap-2 mb-3">
@@ -221,7 +295,8 @@ export default function PositionsHub() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

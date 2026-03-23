@@ -14,8 +14,9 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 const STATUS_COLORS: Record<string, string> = {
-  new: 'bg-blue-500/15 text-blue-400',
-  under_review: 'bg-yellow-500/15 text-yellow-400',
+  new: 'bg-orange-500/15 text-orange-400',
+  under_review: 'bg-orange-500/15 text-orange-400',
+  interview: 'bg-blue-500/15 text-blue-400',
   accepted: 'bg-green-500/15 text-green-400',
   rejected: 'bg-red-500/15 text-red-400',
   waitlisted: 'bg-purple-500/15 text-purple-400',
@@ -159,7 +160,7 @@ export default function InterviewsPage() {
         <Card className="border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-400" />
+            <Clock className="h-4 w-4 text-orange-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingReview.length}</div>
@@ -192,7 +193,7 @@ export default function InterviewsPage() {
       <InterviewSection
         title="Pending Review"
         description="New applications awaiting your review"
-        icon={<Clock className="h-4 w-4 text-blue-400" />}
+        icon={<Clock className="h-4 w-4 text-orange-400" />}
         applicants={pendingReview}
         emptyText="No new applications to review."
       />
@@ -201,7 +202,7 @@ export default function InterviewsPage() {
       <InterviewSection
         title="Invited"
         description="Applicants who received an interview invite"
-        icon={<Calendar className="h-4 w-4 text-yellow-400" />}
+        icon={<Calendar className="h-4 w-4 text-blue-400" />}
         applicants={invited}
         emptyText="No applicants have been invited to interview yet."
       />

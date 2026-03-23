@@ -258,7 +258,7 @@ export default function PositionForm() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-6xl w-full space-y-6">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -272,8 +272,8 @@ export default function PositionForm() {
         </h2>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <Card className="xl:col-span-7">
+      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
+        <Card className="2xl:col-span-8">
           <CardHeader>
             <CardTitle>Position Details</CardTitle>
           </CardHeader>
@@ -404,7 +404,7 @@ export default function PositionForm() {
           </CardContent>
         </Card>
 
-        <Card className="xl:col-span-5 xl:sticky xl:top-6 h-fit">
+        <Card className="2xl:col-span-4 h-fit">
           <CardHeader className="pb-3">
             <CardTitle>Custom Application Questions</CardTitle>
             <p className="text-xs text-muted-foreground">
