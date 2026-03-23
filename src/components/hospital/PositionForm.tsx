@@ -484,6 +484,30 @@ export default function PositionForm() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Archive Position Confirm Dialog */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Position</DialogTitle>
+            <DialogDescription>
+              Archive <strong>{title || 'this position'}</strong>? All applicant data, questions, and responses will be preserved. You can restore it later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)} disabled={archiving}>
+              Cancel
+            </Button>
+            <Button
+              disabled={archiving}
+              onClick={handleArchive}
+            >
+              {archiving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+              Archive
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
