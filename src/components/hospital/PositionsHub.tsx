@@ -6,7 +6,6 @@ import {
   Plus,
   ArrowRight,
   Search,
-  FileText,
   Clock,
   MapPin,
 } from 'lucide-react';
