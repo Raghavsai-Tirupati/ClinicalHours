@@ -261,7 +261,7 @@ const handler = async (req: Request): Promise<Response> => {
     };
 
     const recipients = new Map<string, Recipient>();
-    for (const app of apps ?? []) {
+    for (const app of selectedApps) {
       const email = normalizeEmail(app.applicant_email);
       if (!email) continue;
       if (!recipients.has(email)) {
