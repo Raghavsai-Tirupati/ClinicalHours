@@ -3,7 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { isPositionDeadlinePassed } from '@/lib/positionAvailability';
 import type { HospitalPosition, PositionQuestion } from '@/types/positions';
 
-export function usePositionDetail(positionId: string | undefined) {
+export type UsePositionDetailOptions = {
+  /**
+   * When true, loads the position for hospital staff (draft, archived, closed, past deadline OK).
+   * When false (default), enforces student-facing rules: active only + deadline not passed.
+   */
+  adminMode?: boolean;
+};
+
+export function usePositionDetail(
+  positionId: string | undefined,
+  options?: UsePositionDetailOptions,
+) {
+  const adminMode = options?.adminMode ?? false;
   const [position, setPosition] = useState<HospitalPosition | null>(null);
   const [questions, setQuestions] = useState<PositionQuestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,11 +47,14 @@ export function usePositionDetail(positionId: string | undefined) {
       if (posResult.error) throw posResult.error;
 
       const resolvedPosition = posResult.data as HospitalPosition;
-      if (resolvedPosition.status !== 'active') {
-        throw new Error('This position is no longer accepting applications.');
-      }
-      if (isPositionDeadlinePassed(resolvedPosition.application_deadline)) {
-        throw new Error('Applications for this position have closed.');
+
+      if (!adminMode) {
+        if (resolvedPosition.status !== 'active') {
+          throw new Error('This position is no longer accepting applications.');
+        }
+        if (isPositionDeadlinePassed(resolvedPosition.application_deadline)) {
+          throw new Error('Applications for this position have closed.');
+        }
       }
 
       setPosition(resolvedPosition);
@@ -49,7 +64,7 @@ export function usePositionDetail(positionId: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [positionId]);
+  }, [positionId, adminMode]);
 
   useEffect(() => {
     fetchDetail();

@@ -12,6 +12,7 @@ import ResponseAnalytics from './ResponseAnalytics';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
 import type { PositionStatus } from '@/types/positions';
 import { format } from 'date-fns';
+import { isPositionDeadlinePassed } from '@/lib/positionAvailability';
 
 const STATUS_COLORS: Record<PositionStatus, string> = {
   active: 'bg-green-500/15 text-green-700 border-green-500/30',
@@ -24,7 +25,7 @@ const STATUS_COLORS: Record<PositionStatus, string> = {
 export default function PositionDetail() {
   const { positionId } = useParams<{ positionId: string }>();
   const { basePath } = useHospitalPageContext();
-  const { position, questions, loading, error } = usePositionDetail(positionId);
+  const { position, questions, loading, error } = usePositionDetail(positionId, { adminMode: true });
   const { allApplications } = usePositionApplications(positionId || '');
 
   if (loading) {
@@ -45,6 +46,20 @@ export default function PositionDetail() {
 
   return (
     <div className="space-y-6">
+      {position.status !== 'active' && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          This position is <span className="font-medium">{position.status}</span> — it is not shown to students.
+          You can still review applicants, edit, or move it between columns from the Positions board.
+        </div>
+      )}
+
+      {position.status === 'active' && isPositionDeadlinePassed(position.application_deadline) && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          The application deadline has passed. New students may not be able to apply until you extend the deadline
+          or change status.
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>

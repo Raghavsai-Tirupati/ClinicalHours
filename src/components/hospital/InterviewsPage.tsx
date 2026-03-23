@@ -104,6 +104,11 @@ export default function InterviewsPage() {
     [applications],
   );
 
+  const scheduled = useMemo(
+    () => applications.filter((app) => !!app.interview_confirmed_at),
+    [applications],
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -156,7 +161,7 @@ export default function InterviewsPage() {
       </Card>
 
       {/* Section Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <Card className="border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
@@ -187,6 +192,16 @@ export default function InterviewsPage() {
             <p className="text-xs text-muted-foreground">Accepted or rejected</p>
           </CardContent>
         </Card>
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
+            <Calendar className="h-4 w-4 text-cyan-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{scheduled.length}</div>
+            <p className="text-xs text-muted-foreground">Interview date & time confirmed</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Pending Review Section */}
@@ -201,7 +216,7 @@ export default function InterviewsPage() {
       {/* Invited Section */}
       <InterviewSection
         title="Invited"
-        description="Applicants who received an interview invite"
+        description="Applicants who received an interview invite. Scheduled interviews show date and time."
         icon={<Calendar className="h-4 w-4 text-blue-400" />}
         applicants={invited}
         emptyText="No applicants have been invited to interview yet."
@@ -292,7 +307,12 @@ function ApplicantCard({ app }: { app: StudentApplication }) {
       </div>
       {app.interview_invited_at && (
         <p className="text-[11px] text-muted-foreground">
-          Invited {format(new Date(app.interview_invited_at), 'MMM d, yyyy')}
+          Invited {format(new Date(app.interview_invited_at), "MMM d, yyyy 'at' p")}
+        </p>
+      )}
+      {app.interview_confirmed_at && (
+        <p className="text-[11px] text-cyan-300">
+          Scheduled {format(new Date(app.interview_confirmed_at), "MMM d, yyyy 'at' p")}
         </p>
       )}
     </div>

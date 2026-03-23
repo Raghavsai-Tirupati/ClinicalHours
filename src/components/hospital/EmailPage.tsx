@@ -61,6 +61,13 @@ function getApplicantName(app: StudentApplication): string {
   );
 }
 
+function parseMetadataApplicationIds(meta: Record<string, unknown> | null | undefined): string[] {
+  if (!meta) return [];
+  const raw = meta.applicationIds;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((v): v is string => typeof v === 'string' && v.length > 0);
+}
+
 type FilterMode = 'all' | 'position' | 'status';
 
 const DEFAULT_EMAIL_HTML = '<p><br></p>';
@@ -110,6 +117,7 @@ export default function EmailPage() {
   const [attachments, setAttachments] = useState<Array<{ name: string; url: string }>>([]);
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedSentEmailId, setSelectedSentEmailId] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
 
   const draftKey = useMemo(() => {
@@ -202,6 +210,31 @@ export default function EmailPage() {
     () => entries.filter((e) => e.action_type === 'email_sent'),
     [entries],
   );
+
+  const applicationsById = useMemo(() => {
+    const map = new Map<string, StudentApplication>();
+    applications.forEach((app) => map.set(app.id, app));
+    return map;
+  }, [applications]);
+
+  const selectedSentEmail = useMemo(
+    () => sentEmails.find((entry) => entry.id === selectedSentEmailId) ?? null,
+    [sentEmails, selectedSentEmailId],
+  );
+
+  const selectedSentRecipients = useMemo(() => {
+    if (!selectedSentEmail) return [] as Array<{ id: string; name: string; email: string }>;
+    const meta = (selectedSentEmail.metadata as Record<string, unknown>) || {};
+    const ids = parseMetadataApplicationIds(meta);
+    return ids
+      .map((id) => {
+        const app = applicationsById.get(id);
+        if (!app) return null;
+        const email = (app.applicant_email || app.student_profile?.email || '').trim();
+        return { id, name: getApplicantName(app), email };
+      })
+      .filter((row): row is { id: string; name: string; email: string } => !!row);
+  }, [selectedSentEmail, applicationsById]);
 
   const plainBody = useMemo(() => stripHtml(htmlBody), [htmlBody]);
 
@@ -695,10 +728,13 @@ export default function EmailPage() {
                   const emailSubject = (meta.subject as string) || 'No subject';
                   const recipientCount = (meta.recipientCount as number) || 0;
                   const bodyPreview = typeof meta.bodyPreview === 'string' ? meta.bodyPreview : '';
+                  const hasRecipients = parseMetadataApplicationIds(meta).length > 0;
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={entry.id}
-                      className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1"
+                      onClick={() => setSelectedSentEmailId(entry.id)}
+                      className="w-full text-left rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1 transition hover:bg-muted/35"
                     >
                       <p className="text-sm font-medium truncate">{emailSubject}</p>
                       {bodyPreview ? (
@@ -717,7 +753,12 @@ export default function EmailPage() {
                       <p className="text-[11px] text-muted-foreground">
                         by {entry.actor_email}
                       </p>
-                    </div>
+                      {hasRecipients ? (
+                        <p className="text-[11px] text-primary">Click to view recipients</p>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">Recipient details unavailable</p>
+                      )}
+                    </button>
                   );
                 })}
               </div>
@@ -725,6 +766,33 @@ export default function EmailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!selectedSentEmailId} onOpenChange={(open) => !open && setSelectedSentEmailId(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Sent Email Recipients</DialogTitle>
+          </DialogHeader>
+          {!selectedSentEmail ? (
+            <p className="text-sm text-muted-foreground">This email log entry is no longer available.</p>
+          ) : selectedSentRecipients.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Recipient details were not stored for this email send.
+            </p>
+          ) : (
+            <div className="max-h-[360px] overflow-y-auto space-y-2">
+              {selectedSentRecipients.map((recipient) => (
+                <div
+                  key={recipient.id}
+                  className="rounded-md border border-border/50 bg-muted/20 px-3 py-2"
+                >
+                  <p className="text-sm font-medium truncate">{recipient.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{recipient.email || 'No email found'}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

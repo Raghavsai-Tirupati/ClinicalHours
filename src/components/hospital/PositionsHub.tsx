@@ -8,6 +8,7 @@ import {
   Search,
   Clock,
   MapPin,
+  GripVertical,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,9 @@ const STATUS_DOT: Record<PositionStatus, string> = {
   closed: 'bg-red-400',
   archived: 'bg-muted-foreground/40',
 };
+
+/** MIME type for HTML5 DnD (also mirrored in dataTransfer for drop fallback). */
+const POSITION_DRAG_MIME = 'application/x-clinicalhours-position-id';
 
 const KANBAN_COLUMNS = [
   { key: 'draft', title: 'Draft', statuses: ['draft'] as PositionStatus[] },
@@ -78,10 +82,19 @@ export default function PositionsHub() {
     [filteredPositions],
   );
 
-  const handleDropToColumn = async (targetStatus: PositionStatus) => {
-    if (!draggedPositionId) return;
+  const handleDropToColumn = async (
+    targetStatus: PositionStatus,
+    dataTransfer: DataTransfer | null,
+  ) => {
+    const droppedId =
+      draggedPositionId ||
+      (typeof dataTransfer?.getData === 'function'
+        ? dataTransfer.getData(POSITION_DRAG_MIME)
+        : '') ||
+      null;
+    if (!droppedId) return;
 
-    const draggedPosition = localPositions.find((p) => p.id === draggedPositionId);
+    const draggedPosition = localPositions.find((p) => p.id === droppedId);
     if (!draggedPosition || draggedPosition.status === targetStatus) {
       setDraggedPositionId(null);
       setDragOverColumnKey(null);
@@ -91,7 +104,7 @@ export default function PositionsHub() {
     const previousPositions = localPositions;
     setLocalPositions((prev) =>
       prev.map((position) =>
-        position.id === draggedPositionId ? { ...position, status: targetStatus } : position,
+        position.id === droppedId ? { ...position, status: targetStatus } : position,
       ),
     );
     setDraggedPositionId(null);
@@ -100,7 +113,7 @@ export default function PositionsHub() {
     const { error } = await supabase
       .from('hospital_positions')
       .update({ status: targetStatus })
-      .eq('id', draggedPositionId);
+      .eq('id', droppedId);
 
     if (error) {
       setLocalPositions(previousPositions);
@@ -188,7 +201,9 @@ export default function PositionsHub() {
         <>
           {draggedPositionId && (
             <div className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
-              Drag a card into `Draft`, `Active`, or `Archived` to update its status.
+              Drag from the <strong className="font-semibold">grip</strong> on the left edge of a card, then drop it on{' '}
+              <strong className="font-semibold">Draft</strong>, <strong className="font-semibold">Active</strong>, or{' '}
+              <strong className="font-semibold">Archived</strong> to update its status.
             </div>
           )}
           <div className="grid gap-4 xl:grid-cols-3">
@@ -200,14 +215,21 @@ export default function PositionsHub() {
                   ? 'border-primary bg-primary/10 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]'
                   : 'border-border/50 bg-muted/20'
               }`}
-              onDragOver={(event) => event.preventDefault()}
-              onDragEnter={() => setDragOverColumnKey(column.key)}
-              onDragLeave={() => {
-                if (dragOverColumnKey === column.key) {
-                  setDragOverColumnKey(null);
-                }
+              onDragOver={(event) => {
+                const types = event.dataTransfer?.types;
+                const fromOurDrag =
+                  !!draggedPositionId ||
+                  (types != null &&
+                    Array.from(types as Iterable<string>).includes(POSITION_DRAG_MIME));
+                if (!fromOurDrag) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                setDragOverColumnKey(column.key);
               }}
-              onDrop={() => void handleDropToColumn(column.key)}
+              onDrop={(event) => {
+                event.preventDefault();
+                void handleDropToColumn(column.key, event.dataTransfer);
+              }}
             >
               <div className="mb-3 flex items-center justify-between px-1">
                 <h3 className="text-sm font-semibold">{column.title}</h3>
@@ -224,71 +246,89 @@ export default function PositionsHub() {
                   column.positions.map((pos) => {
                     const counts = appCountsByPosition[pos.id] ?? { total: 0, new: 0 };
                     return (
-                      <Link key={pos.id} to={`${basePath}/positions/${pos.id}`} className="group block">
-                        <Card
-                          className={`transition-all group-hover:border-primary/40 group-hover:shadow-md ${
-                            draggedPositionId === pos.id ? 'opacity-70 scale-[0.99]' : ''
-                          }`}
+                      <div
+                        key={pos.id}
+                        className={`flex overflow-hidden rounded-lg border border-border/50 bg-card transition-shadow hover:border-primary/40 hover:shadow-md ${
+                          draggedPositionId === pos.id ? 'opacity-80 ring-1 ring-primary/30' : ''
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          aria-label={`Drag to change status: ${pos.title}`}
+                          className="flex w-9 shrink-0 cursor-grab touch-none items-center justify-center border-r border-border/50 bg-muted/25 text-muted-foreground hover:bg-muted/45 active:cursor-grabbing"
                           draggable
-                          onDragStart={() => setDraggedPositionId(pos.id)}
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            setDraggedPositionId(pos.id);
+                            e.dataTransfer.setData(POSITION_DRAG_MIME, pos.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                          }}
                           onDragEnd={() => {
                             setDraggedPositionId(null);
                             setDragOverColumnKey(null);
                           }}
                         >
-                          <CardContent className="pt-5 pb-4 px-5 flex flex-col">
-                            {/* Status + Type row */}
-                            <div className="flex items-center gap-2 mb-3">
-                              <div className="flex items-center gap-1.5">
-                                <span className={`h-2 w-2 rounded-full ${STATUS_DOT[pos.status]}`} />
-                                <span className="text-[11px] font-medium capitalize text-muted-foreground">
-                                  {pos.status}
-                                </span>
+                          <GripVertical className="h-4 w-4" />
+                        </button>
+                        <Link
+                          to={`${basePath}/positions/${pos.id}`}
+                          className="group/link min-w-0 flex-1 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-r-lg"
+                        >
+                          <Card className="rounded-none border-0 shadow-none">
+                            <CardContent className="pt-5 pb-4 px-5 flex flex-col">
+                              {/* Status + Type row */}
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`h-2 w-2 rounded-full ${STATUS_DOT[pos.status]}`} />
+                                  <span className="text-[11px] font-medium capitalize text-muted-foreground">
+                                    {pos.status}
+                                  </span>
+                                </div>
+                                <Badge variant="outline" className="text-[10px] py-0 ml-auto">
+                                  {POSITION_TYPE_LABELS[pos.position_type] || pos.position_type}
+                                </Badge>
                               </div>
-                              <Badge variant="outline" className="text-[10px] py-0 ml-auto">
-                                {POSITION_TYPE_LABELS[pos.position_type] || pos.position_type}
-                              </Badge>
-                            </div>
 
-                            {/* Title */}
-                            <h3 className="text-sm font-semibold truncate mb-2 group-hover:text-primary transition-colors">
-                              {pos.title}
-                            </h3>
+                              {/* Title */}
+                              <h3 className="text-sm font-semibold truncate mb-2 group-hover/link:text-primary transition-colors">
+                                {pos.title}
+                              </h3>
 
-                            {/* Meta */}
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mb-4">
-                              {pos.location && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  {pos.location}
-                                </span>
-                              )}
-                              {pos.hours_per_week && (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {pos.hours_per_week} hrs/wk
-                                </span>
-                              )}
-                            </div>
-
-                            {/* App stats + arrow */}
-                            <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
-                              <div className="flex items-center gap-3">
-                                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <Users className="h-3.5 w-3.5" />
-                                  {counts.total} applicant{counts.total !== 1 ? 's' : ''}
-                                </span>
-                                {counts.new > 0 && (
-                                  <Badge className="bg-blue-500/15 text-blue-400 text-[10px] py-0 px-1.5">
-                                    {counts.new} new
-                                  </Badge>
+                              {/* Meta */}
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mb-4">
+                                {pos.location && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    {pos.location}
+                                  </span>
+                                )}
+                                {pos.hours_per_week && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {pos.hours_per_week} hrs/wk
+                                  </span>
                                 )}
                               </div>
-                              <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
+
+                              {/* App stats + arrow */}
+                              <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/50">
+                                <div className="flex items-center gap-3">
+                                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Users className="h-3.5 w-3.5" />
+                                    {counts.total} applicant{counts.total !== 1 ? 's' : ''}
+                                  </span>
+                                  {counts.new > 0 && (
+                                    <Badge className="bg-blue-500/15 text-blue-400 text-[10px] py-0 px-1.5">
+                                      {counts.new} new
+                                    </Badge>
+                                  )}
+                                </div>
+                                <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      </div>
                     );
                   })
                 )}

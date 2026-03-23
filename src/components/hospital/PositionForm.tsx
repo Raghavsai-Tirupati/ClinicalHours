@@ -32,7 +32,8 @@ export default function PositionForm() {
   const isEdit = !!positionId;
 
   const { position: existingPosition, questions: existingQuestions, loading: detailLoading } = usePositionDetail(
-    isEdit ? positionId : undefined
+    isEdit ? positionId : undefined,
+    { adminMode: true },
   );
 
   const [saving, setSaving] = useState(false);

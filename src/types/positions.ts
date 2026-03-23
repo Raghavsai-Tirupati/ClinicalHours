@@ -56,6 +56,7 @@ export interface StudentApplication {
   reviewed_by: string | null;
   notes: string | null;
   interview_invited_at?: string | null;
+  interview_confirmed_at?: string | null;
   ai_summary?: string | null;
   // Joined data
   position?: HospitalPosition;
