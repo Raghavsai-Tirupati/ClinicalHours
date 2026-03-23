@@ -8,8 +8,6 @@ import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Shield,
-  AlertTriangle,
-  Loader2,
   Users,
   Building2,
   Clock,
