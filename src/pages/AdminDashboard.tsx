@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
   Shield,
   Users,
@@ -19,6 +18,7 @@ import {
   Trash2,
   FilePlus,
 } from 'lucide-react';
+import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
 import AdminUserList from '@/components/admin/AdminUserList';
 import AdminHospitalsTab from '@/components/admin/AdminHospitalsTab';
@@ -31,7 +31,6 @@ import AdminDeletionEventsTab from '@/components/admin/AdminDeletionEventsTab';
 import AdminCreateHospitalPageTab from '@/components/admin/AdminCreateHospitalPageTab';
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -113,43 +112,63 @@ export default function AdminDashboard() {
             </TabsList>
 
             <TabsContent value="overview">
-              <AdminOverviewTab />
+              <TabErrorBoundary tabName="Overview">
+                <AdminOverviewTab />
+              </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="students">
-              <AdminUserList />
+              <TabErrorBoundary tabName="Students">
+                <AdminUserList />
+              </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="hospitals">
-              <AdminHospitalsTab />
+              <TabErrorBoundary tabName="Hospitals">
+                <AdminHospitalsTab />
+              </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="pending">
-              <AdminPendingApprovalsTab onPendingCountChange={setPendingCount} />
+              <TabErrorBoundary tabName="Pending Approvals">
+                <AdminPendingApprovalsTab onPendingCountChange={setPendingCount} />
+              </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="tools">
-              <AdminToolsTab />
+              <TabErrorBoundary tabName="Tools">
+                <AdminToolsTab />
+              </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="logos">
-              <AdminLogosTab />
+              <TabErrorBoundary tabName="Logos">
+                <AdminLogosTab />
+              </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="pages">
-              <AdminCreateHospitalPageTab />
+              <TabErrorBoundary tabName="Hospital Pages">
+                <AdminCreateHospitalPageTab />
+              </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="guest-sessions">
-              <GuestSessionsTab />
+              <TabErrorBoundary tabName="Guest Sessions">
+                <GuestSessionsTab />
+              </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="activity">
-              <AdminActivityTab />
+              <TabErrorBoundary tabName="Activity">
+                <AdminActivityTab />
+              </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="deletions">
-              <AdminDeletionEventsTab />
+              <TabErrorBoundary tabName="Deletions">
+                <AdminDeletionEventsTab />
+              </TabErrorBoundary>
             </TabsContent>
           </Tabs>
         </div>
