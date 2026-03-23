@@ -44,7 +44,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
   const { hospitalPage } = useHospitalPageContext();
   const navigate = useNavigate();
   const { basePath } = useHospitalPageContext();
-  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, refetch, updateApplicationLocally } =
+  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, updateApplicationLocally } =
     usePositionApplications(positionId);
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
