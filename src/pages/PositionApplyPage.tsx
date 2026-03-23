@@ -10,8 +10,10 @@ import {
   ChevronLeft,
   Check,
 } from 'lucide-react';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { isPositionDeadlinePassed } from '@/lib/positionAvailability';
 import { useAuth } from '@/hooks/useAuth';
 import { usePositionDetail } from '@/hooks/usePositionDetail';
 import { useProfileComplete } from '@/hooks/useProfileComplete';
@@ -340,11 +342,25 @@ export default function PositionApplyPage() {
 
       setSubmitted(true);
     } catch (err) {
-      if (err && typeof err === 'object' && 'message' in err) {
-        toast.error(String((err as { message: unknown }).message));
-      } else {
-        toast.error('Failed to submit application');
+      let message = 'Failed to submit application';
+
+      if (err instanceof FunctionsHttpError) {
+        try {
+          const payload = await err.context.json();
+          if (payload?.error && typeof payload.error === 'string') {
+            message = payload.error;
+          } else if (err.message) {
+            message = err.message;
+          }
+        } catch {
+          message = err.message || message;
+        }
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        message = String((err as { message: unknown }).message);
       }
+
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -507,6 +523,34 @@ export default function PositionApplyPage() {
     return layout(
       <div className="pa-page text-center" style={{ color: 'var(--pa-text-2)' }}>
         {error || 'Position not found'}
+      </div>,
+    );
+  }
+
+  if (position.status !== 'active' || isPositionDeadlinePassed(position.application_deadline)) {
+    return layout(
+      <div className="pa-page flex min-h-[60vh] flex-col items-center justify-center text-center">
+        <div className="pa-section-card w-full max-w-2xl">
+          <div className="pa-section-head">
+            <h2>Applications are closed</h2>
+            <p>This position is no longer accepting submissions.</p>
+          </div>
+          <div className="pa-section-body">
+            <p className="pa-sub">
+              {position.application_deadline
+                ? `The deadline passed on ${new Date(position.application_deadline).toLocaleDateString()}.`
+                : 'Please return to the opportunities page to explore currently open positions.'}
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link to="/opportunities" className="pa-btn pa-btn-primary">
+                Browse open positions
+              </Link>
+              <Link to="/dashboard" className="pa-btn">
+                Back to dashboard
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>,
     );
   }
