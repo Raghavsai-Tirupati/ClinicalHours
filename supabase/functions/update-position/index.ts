@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { position_id, title, description, requirements, location, position_type, hours_per_week, duration, start_date, application_deadline, spots_available, status, questions } = await req.json();
+    const { position_id, title, description, requirements, location, position_type, hours_per_week, duration, start_date, application_deadline, spots_available, ask_for_availability, status, questions } = await req.json();
 
     if (!position_id) {
       return new Response(JSON.stringify({ error: "position_id is required" }), {
@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
     if (start_date !== undefined) updateFields.start_date = start_date || null;
     if (application_deadline !== undefined) updateFields.application_deadline = application_deadline || null;
     if (spots_available !== undefined) updateFields.spots_available = spots_available || null;
+    if (ask_for_availability !== undefined) updateFields.ask_for_availability = ask_for_availability;
     if (status !== undefined) updateFields.status = status;
 
     let updatedPosition = null;

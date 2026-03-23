@@ -656,8 +656,8 @@ export type Database = {
       }
       hospital_positions: {
         Row: {
-          ask_for_availability: boolean
           application_deadline: string | null
+          ask_for_availability: boolean
           created_at: string | null
           description: string | null
           duration: string | null
@@ -674,8 +674,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          ask_for_availability?: boolean
           application_deadline?: string | null
+          ask_for_availability?: boolean
           created_at?: string | null
           description?: string | null
           duration?: string | null
@@ -692,8 +692,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          ask_for_availability?: boolean
           application_deadline?: string | null
+          ask_for_availability?: boolean
           created_at?: string | null
           description?: string | null
           duration?: string | null
@@ -1350,7 +1350,6 @@ export type Database = {
       }
       student_applications: {
         Row: {
-          availability_json: Json | null
           applicant_email: string | null
           applicant_name: string | null
           id: string
@@ -1363,7 +1362,6 @@ export type Database = {
           submitted_at: string | null
         }
         Insert: {
-          availability_json?: Json | null
           applicant_email?: string | null
           applicant_name?: string | null
           id?: string
@@ -1376,7 +1374,6 @@ export type Database = {
           submitted_at?: string | null
         }
         Update: {
-          availability_json?: Json | null
           applicant_email?: string | null
           applicant_name?: string | null
           id?: string

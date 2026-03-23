@@ -1,0 +1,1 @@
+ALTER TABLE public.hospital_positions ADD COLUMN IF NOT EXISTS ask_for_availability boolean NOT NULL DEFAULT false;
