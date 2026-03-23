@@ -180,6 +180,7 @@ export function HospitalDetail({
           /* Serper link — only shown when no active positions on our platform */
           <div className="flex flex-col gap-2">
             <FindApplicationButton
+              key={opportunity.id}
               opportunityId={opportunity.id}
               opportunityName={opportunity.name}
               websiteHint={opportunity.website}
