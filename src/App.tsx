@@ -64,6 +64,7 @@ const PositionForm = lazyRetry(() => import("./components/hospital/PositionForm"
 const PositionDetail = lazyRetry(() => import("./components/hospital/PositionDetail"));
 const HospitalSettingsPage = lazyRetry(() => import("./components/hospital/HospitalSettings"));
 const ApplicationsHub = lazyRetry(() => import("./components/hospital/ApplicationsHub"));
+const PositionsHub = lazyRetry(() => import("./components/hospital/PositionsHub"));
 const InterviewsPage = lazyRetry(() => import("./components/hospital/InterviewsPage"));
 const EmailPage = lazyRetry(() => import("./components/hospital/EmailPage"));
 const ActivityPage = lazyRetry(() => import("./components/hospital/ActivityPage"));
