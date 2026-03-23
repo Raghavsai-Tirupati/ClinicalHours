@@ -138,7 +138,12 @@ function ApplicantReviewWhenExpanded({
   );
 }
 
-export default function ApplicationsHub() {
+interface ApplicationsHubProps {
+  /** When true, shows "All Applicants" header for use under Positions tab */
+  embeddedInPositions?: boolean;
+}
+
+export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHubProps = {}) {
   const navigate = useNavigate();
   const { hospitalPage, basePath } = useHospitalPageContext();
   const { applications, positions, stats, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
@@ -323,8 +328,10 @@ export default function ApplicationsHub() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Applications</h2>
-        <p className="text-sm text-muted-foreground mt-1">All applications across every position</p>
+        <h2 className="text-2xl font-bold">{embeddedInPositions ? 'All Applicants' : 'Applications'}</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          {embeddedInPositions ? 'Applicants across all positions' : 'All applications across every position'}
+        </p>
         <div className="flex gap-1 mt-4 border-b border-border">
           <button
             type="button"

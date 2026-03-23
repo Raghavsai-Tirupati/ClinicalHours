@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useHospitalPage } from '@/hooks/useHospitalPage';
+import { useAllHospitalPages } from '@/hooks/useAllHospitalPages';
+import { isSuperAdmin } from '@/lib/constants';
 import HospitalPageContext from '@/contexts/HospitalPageContext';
 import HospitalTopBar from '@/components/hospital/HospitalTopBar';
 import HospitalSidebar from '@/components/hospital/HospitalSidebar';
@@ -15,6 +17,7 @@ export default function HospitalDashboardLayout() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { hospitalPage, loading, error, refetch } = useHospitalPage(id);
+  const allPages = useAllHospitalPages();
 
   if (authLoading || loading) {
     return (
@@ -66,10 +69,10 @@ export default function HospitalDashboardLayout() {
     );
   }
 
-  // Check if user email matches admin_email
+  // Check if user email matches admin_email (or super-admin)
   const userEmail = user.email?.toLowerCase();
   const adminEmail = hospitalPage.admin_email.toLowerCase();
-  if (userEmail !== adminEmail) {
+  if (!isSuperAdmin(user.email) && userEmail !== adminEmail) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
@@ -99,7 +102,7 @@ export default function HospitalDashboardLayout() {
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
-      <HospitalPageContext.Provider value={{ hospitalPage, loading, error, refetch, basePath: `/hospital/${id}` }}>
+      <HospitalPageContext.Provider value={{ hospitalPage, loading, error, refetch, basePath: `/hospital/${id}`, allPages, isSuperAdmin: isSuperAdmin(user.email) }}>
         <SidebarProvider>
           <div className="flex min-h-screen w-full">
             <HospitalSidebar />

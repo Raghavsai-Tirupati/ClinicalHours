@@ -8,6 +8,9 @@ interface HospitalPageContextValue {
   refetch: () => void;
   /** Base URL path for all dashboard links (e.g. "/hospital-dashboard" or "/hospital/abc-123") */
   basePath: string;
+  /** All clinic pages (super-admin only); empty for regular admins */
+  allPages: HospitalPageWithOpportunity[];
+  isSuperAdmin: boolean;
 }
 
 const HospitalPageContext = createContext<HospitalPageContextValue | null>(null);

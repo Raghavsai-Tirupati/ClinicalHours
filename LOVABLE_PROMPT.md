@@ -10,11 +10,12 @@ Use this prompt in Lovable to align UI/UX and behavior with the ClinicalHours ho
 Build or refine a hospital/clinic admin dashboard with these requirements:
 
 ### Navigation (sidebar)
-- Items: Overview, Applications, Positions (badge = active position count), Interviews, Email, Activity, New Position, Settings, Log Out.
-- Route `/applications` (or `{basePath}/applications`) must expose the full applicant workspace: advanced filters (multi-rule filter bar: status, position, custom application questions, presets), sortable table, kanban, and response analytics — not only inside a single position.
+- Items: Overview, Positions (badge = active position count), Interviews, Email, Activity, New Position, Settings, Log Out.
+- The full applicant workspace (advanced filters, sortable table, kanban, response analytics) lives under Positions in the "All Applicants" tab.
 
 ### Positions
-- List/kanban of positions by status (draft, active, paused, closed, archived).
+- Route `{basePath}/positions` with two tabs: Positions (list/kanban) and All Applicants (applicant workspace with advanced filters, multi-rule filter bar, presets, sortable table, kanban, response analytics).
+- Positions tab: list/kanban of positions by status (draft, active, paused, closed, archived).
 - Position detail URL: `{basePath}/positions/:positionId` with tabs: Applicants | Analytics | Details.
 - Applicants tab: search, status filter, sort (newest, GPA, clinical hours, experience, resume readiness, name), bulk select, “Email selected”, “Send interview invite”, interview booking link (HTTPS Calendly-style URL saved on the hospital page).
 - Analytics tab: response analytics (bar segments per custom question); clicking a segment shows which applicants chose it.
@@ -29,7 +30,7 @@ Build or refine a hospital/clinic admin dashboard with these requirements:
   3) Completed — accepted or rejected.
 - Each applicant card: avatar initial, name, email, status badge, position title, optional “Legacy application” badge, “Invited …” line (date+time from `interview_invited_at`), “Scheduled …” line (date+time from `interview_confirmed_at`).
 - Card overflow menu (⋯):
-  - Open position → link to position detail when `position_id` is a real hospital position; else link to All applications.
+  - Open position → link to position detail when `position_id` is a real hospital position; else link to All applicants (Positions > All Applicants tab).
   - Review queue: Mark under review (if new); Advance to interview; Set interview time.
   - Interview: Set/reschedule interview time; Clear scheduled time; Mark accepted / rejected / waitlisted; Back to under review.
   - Completed: Reopen as under review.
@@ -55,6 +56,23 @@ Implement empty states, loading skeletons, and toasts for success/errors. Keep m
 
 ---
 
+## Super-admin (clinicalhours.org@gmail.com)
+
+The email `clinicalhours.org@gmail.com` is a super-admin: full read/write access to every clinic's dashboard and data.
+
+- **Access**: When logged in as this email, the user bypasses normal admin checks and can view/edit any clinic.
+- **Clinic switcher**: In the hospital dashboard top bar, super-admin sees a dropdown next to the clinic name to switch between all clinics. Badge shows "Super Admin" instead of "Admin".
+- **Routes**: Works on both `/hospital-dashboard` (uses `?page=ID` to pick clinic) and `/hospital/:id` (direct link).
+- **Implementation**: `src/lib/constants.ts` defines `SUPER_ADMIN_EMAIL` and `isSuperAdmin()`. RLS policies in migration `20260323240000_super_admin_rls.sql` extend hospital-admin policies with `OR public.is_super_admin()`.
+
+When refining the dashboard in Lovable, preserve the super-admin behavior: allow this email to access any clinic, show the clinic switcher when `isSuperAdmin` is true, and ensure RLS still includes the super-admin bypass.
+
+---
+
 ## Repo-specific note for developers
 
-After pulling this repository, apply pending Supabase migrations (including `20260323230000_student_interview_confirmed_legacy_page_admin_update.sql`) so `student_applications.interview_confirmed_at` and legacy hospital-page admin update policy exist in production.
+After pulling this repository, apply pending Supabase migrations (including `20260323230000_student_interview_confirmed_legacy_page_admin_update.sql` and `20260323240000_super_admin_rls.sql`) so `student_applications.interview_confirmed_at`, legacy hospital-page admin update policy, and super-admin RLS exist in production.
+
+## Calendly webhook (optional)
+
+To auto-sync student-chosen interview times from Calendly into the dashboard, see **[docs/LOVABLE_CALENDLY_WEBHOOK_PROMPT.md](docs/LOVABLE_CALENDLY_WEBHOOK_PROMPT.md)** for a full Lovable prompt covering the Edge Function, database, and setup.

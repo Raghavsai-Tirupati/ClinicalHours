@@ -1,17 +1,47 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { isSuperAdmin } from '@/lib/constants';
 import type { HospitalPageWithOpportunity } from '@/types/positions';
+
+function pageToContext(p: Record<string, unknown>): HospitalPageWithOpportunity {
+  const opp = p.opportunities as Record<string, unknown> | null;
+  return {
+    id: p.id as string,
+    hospital_id: p.hospital_id as string,
+    admin_email: p.admin_email as string,
+    interview_booking_url: (p.interview_booking_url as string | null) ?? null,
+    is_claimed: p.is_claimed as boolean,
+    claimed_at: p.claimed_at as string | null,
+    created_at: p.created_at as string,
+    created_by: p.created_by as string | null,
+    gmail_email: (p.gmail_email as string | null) ?? null,
+    gmail_connected_at: (p.gmail_connected_at as string | null) ?? null,
+    opportunity: {
+      id: (opp?.id as string) || (p.hospital_id as string),
+      name: (opp?.name as string) || 'Unknown Hospital',
+      location: (opp?.location as string) || '',
+      type: (opp?.type as string) || '',
+      website: (opp?.website as string | null) ?? null,
+      logo_url: (opp?.logo_url as string | null) ?? null,
+      description: (opp?.description as string | null) ?? null,
+    },
+  };
+}
 
 /**
  * Finds the hospital page for the current user.
- * 1. Checks hospital_pages by admin_email match
- * 2. Falls back to hospital_members → hospital_accounts → opportunities
- *    to build a HospitalPageWithOpportunity without requiring a hospital_pages record.
+ * 1. Super-admin: fetches all pages, uses ?page=ID or first
+ * 2. hospital_pages by admin_email match
+ * 3. Falls back to hospital_members → hospital_accounts → opportunities
  */
 export function useHospitalPageByUser() {
   const { user, loading: authLoading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageParam = searchParams.get('page');
   const [hospitalPage, setHospitalPage] = useState<HospitalPageWithOpportunity | null>(null);
+  const [allPages, setAllPages] = useState<HospitalPageWithOpportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pageId, setPageId] = useState<string | null>(null);
@@ -26,6 +56,52 @@ export function useHospitalPageByUser() {
     setError(null);
 
     try {
+      // 0. Super-admin: fetch all hospital pages (RLS allows)
+      if (isSuperAdmin(user.email)) {
+        const { data: pages, error: pagesError } = await supabase
+          .from('hospital_pages')
+          .select(`
+            id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by, interview_booking_url,
+            gmail_email, gmail_connected_at,
+            opportunities:hospital_id (id, name, location, type, website, logo_url, description)
+          `)
+          .order('created_at', { ascending: true });
+
+        if (pagesError?.message?.includes('gmail_')) {
+          const fallback = await supabase
+            .from('hospital_pages')
+            .select(`
+              id, hospital_id, admin_email, is_claimed, claimed_at, created_at, created_by, interview_booking_url,
+              opportunities:hospital_id (id, name, location, type, website, logo_url, description)
+            `)
+            .order('created_at', { ascending: true });
+          if (fallback.error) throw fallback.error;
+          const mapped = (fallback.data ?? []).map((p) =>
+            pageToContext({ ...p, gmail_email: null, gmail_connected_at: null })
+          );
+          setAllPages(mapped);
+          const selected = pageParam
+            ? mapped.find((x) => x.id === pageParam) ?? mapped[0]
+            : mapped[0];
+          if (selected) {
+            setHospitalPage(selected);
+            setPageId(selected.id);
+          } else setError('No clinics found');
+        } else {
+          if (pagesError) throw pagesError;
+          const mapped = (pages ?? []).map((p) => pageToContext(p as Record<string, unknown>));
+          setAllPages(mapped);
+          const selected = pageParam
+            ? mapped.find((x) => x.id === pageParam) ?? mapped[0]
+            : mapped[0];
+          if (selected) {
+            setHospitalPage(selected);
+            setPageId(selected.id);
+          } else setError('No clinics found');
+        }
+        return;
+      }
+
       // 1. Try hospital_pages by admin_email
       // Try with gmail fields; if the migration hasn't run yet these columns won't exist
       // and Supabase will return an error — in that case retry without them.
@@ -177,5 +253,13 @@ export function useHospitalPageByUser() {
     }
   }, [authLoading, fetchPage]);
 
-  return { hospitalPage, loading: loading || authLoading, error, refetch: fetchPage, pageId };
+  return {
+    hospitalPage,
+    loading: loading || authLoading,
+    error,
+    refetch: fetchPage,
+    pageId,
+    allPages,
+    isSuperAdmin: isSuperAdmin(user?.email),
+  };
 }

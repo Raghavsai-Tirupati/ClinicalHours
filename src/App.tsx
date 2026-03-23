@@ -3,7 +3,7 @@ import type React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -64,7 +64,6 @@ const PositionForm = lazyRetry(() => import("./components/hospital/PositionForm"
 const PositionDetail = lazyRetry(() => import("./components/hospital/PositionDetail"));
 const ApplicantProfilePage = lazyRetry(() => import("./components/hospital/ApplicantProfilePage"));
 const HospitalSettingsPage = lazyRetry(() => import("./components/hospital/HospitalSettings"));
-const ApplicationsHub = lazyRetry(() => import("./components/hospital/ApplicationsHub"));
 const PositionsHub = lazyRetry(() => import("./components/hospital/PositionsHub"));
 const InterviewsPage = lazyRetry(() => import("./components/hospital/InterviewsPage"));
 const EmailPage = lazyRetry(() => import("./components/hospital/EmailPage"));
@@ -168,7 +167,7 @@ function AppContent() {
                 }
               >
                 <Route index element={<HospitalOverview />} />
-                <Route path="applications" element={<ApplicationsHub />} />
+                <Route path="applications" element={<Navigate to="../positions" replace />} />
                 <Route path="positions" element={<PositionsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
@@ -193,7 +192,7 @@ function AppContent() {
               {/* Hospital admin dashboard with sidebar layout */}
               <Route path="/hospital/:id" element={<HospitalDashboardLayout />}>
                 <Route index element={<HospitalOverview />} />
-                <Route path="applications" element={<ApplicationsHub />} />
+                <Route path="applications" element={<Navigate to="../positions" replace />} />
                 <Route path="positions" element={<PositionsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />

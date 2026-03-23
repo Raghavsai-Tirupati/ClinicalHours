@@ -563,9 +563,9 @@ function InterviewApplicantCard({
             )}
             {!positionUrl && (
               <DropdownMenuItem asChild>
-                <Link to={`${basePath}/applications`} className="flex items-center gap-2 cursor-pointer">
+                <Link to={`${basePath}/positions?tab=applicants`} className="flex items-center gap-2 cursor-pointer">
                   <ExternalLink className="h-3.5 w-3.5" />
-                  All applications
+                  All applicants
                 </Link>
               </DropdownMenuItem>
             )}

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { isSuperAdmin } from '@/lib/constants';
 
 export interface HospitalMemberInfo {
   memberId: string;
@@ -28,6 +29,17 @@ export function useHospitalMember(): UseHospitalMemberResult {
     staleTime: 60 * 1000,
     queryFn: async (): Promise<HospitalMemberInfo | null> => {
       if (!user?.id) return null;
+
+      // 0. Super-admin always has hospital access
+      if (isSuperAdmin(user.email)) {
+        return {
+          memberId: 'super-admin',
+          accountId: 'super-admin',
+          hospitalId: 'super-admin',
+          hospitalName: 'ClinicalHours Admin',
+          role: 'owner',
+        };
+      }
 
       // 1. Check hospital_members table (legacy system)
       const { data, error: queryError } = await supabase
