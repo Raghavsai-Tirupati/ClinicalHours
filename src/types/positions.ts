@@ -3,7 +3,7 @@
 export type PositionType = 'volunteer' | 'internship' | 'shadowing' | 'paid' | 'research' | 'other';
 export type PositionStatus = 'draft' | 'active' | 'paused' | 'closed' | 'archived';
 export type QuestionType = 'short_answer' | 'long_answer' | 'multiple_choice' | 'yes_no' | 'file_upload';
-export type ApplicationStatus = 'new' | 'under_review' | 'accepted' | 'rejected' | 'waitlisted';
+export type ApplicationStatus = 'new' | 'under_review' | 'interview' | 'accepted' | 'rejected' | 'waitlisted';
 
 export interface HospitalPosition {
   id: string;
@@ -56,6 +56,7 @@ export interface StudentApplication {
   reviewed_by: string | null;
   notes: string | null;
   interview_invited_at?: string | null;
+  ai_summary?: string | null;
   // Joined data
   position?: HospitalPosition;
   student_profile?: {
@@ -147,6 +148,7 @@ export const POSITION_TYPE_LABELS: Record<PositionType, string> = {
 export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   new: 'New',
   under_review: 'Under Review',
+  interview: 'Interview',
   accepted: 'Accepted',
   rejected: 'Rejected',
   waitlisted: 'Waitlisted',

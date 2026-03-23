@@ -313,6 +313,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
     total: applications.length,
     new: applications.filter((a) => a.status === 'new').length,
     underReview: applications.filter((a) => a.status === 'under_review').length,
+    interview: applications.filter((a) => a.status === 'interview').length,
     accepted: applications.filter((a) => a.status === 'accepted').length,
     rejected: applications.filter((a) => a.status === 'rejected').length,
     waitlisted: applications.filter((a) => a.status === 'waitlisted').length,

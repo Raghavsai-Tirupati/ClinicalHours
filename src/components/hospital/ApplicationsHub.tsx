@@ -7,12 +7,14 @@ import {
   Calendar,
   BarChart2,
   List,
+  Columns3,
   ArrowDown,
   ArrowUp,
 } from 'lucide-react';
 import ResponseAnalytics from '@/components/hospital/ResponseAnalytics';
 import ApplicationFilterBar from '@/components/hospital/ApplicationFilterBar';
 import ApplicantReviewPanel from '@/components/hospital/ApplicantReviewPanel';
+import ApplicationKanban from '@/components/hospital/ApplicationKanban';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -63,6 +65,7 @@ import { Input } from '@/components/ui/input';
 const STATUS_COLORS: Record<string, string> = {
   new: 'bg-blue-500/15 text-blue-400',
   under_review: 'bg-yellow-500/15 text-yellow-400',
+  interview: 'bg-cyan-500/15 text-cyan-400',
   accepted: 'bg-green-500/15 text-green-400',
   rejected: 'bg-red-500/15 text-red-400',
   waitlisted: 'bg-purple-500/15 text-purple-400',
@@ -136,7 +139,7 @@ export default function ApplicationsHub() {
   const { hospitalPage } = useHospitalPageContext();
   const { applications, positions, stats, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
 
-  const [activeTab, setActiveTab] = useState<'applications' | 'analytics'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'kanban' | 'analytics'>('applications');
   const [filterRules, setFilterRules] = useState<ApplicationFilterRule[]>([]);
   const [sortState, setSortState] = useState<SortState | null>(null);
 
@@ -333,6 +336,18 @@ export default function ApplicationsHub() {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('kanban')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'kanban'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Columns3 className="h-4 w-4" />
+            Kanban Board
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('analytics')}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'analytics'
@@ -350,6 +365,14 @@ export default function ApplicationsHub() {
         <ResponseAnalytics applications={applications} onViewApplicant={handleViewApplicantFromAnalytics} />
       )}
 
+      {activeTab === 'kanban' && (
+        <ApplicationKanban
+          applications={applications}
+          onStatusChange={handleStatusChange}
+          updateApplicationLocally={updateApplicationLocally}
+        />
+      )}
+
       {activeTab === 'applications' && (
         <>
           <div className="flex flex-wrap items-center gap-3">
@@ -358,6 +381,7 @@ export default function ApplicationsHub() {
             </Badge>
             <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.new}`}>{stats.new} new</Badge>
             <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.under_review}`}>{stats.underReview} reviewing</Badge>
+            <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.interview}`}>{stats.interview} interview</Badge>
             <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.accepted}`}>{stats.accepted} accepted</Badge>
             <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.rejected}`}>{stats.rejected} rejected</Badge>
           </div>
