@@ -223,12 +223,8 @@ export default function MyApplications() {
   }
 
   async function fetchSlots(applicationId: string) {
-    const { data } = await supabase
-      .from("application_interview_slots")
-      .select("*")
-      .eq("application_id", applicationId)
-      .order("preference_rank");
-    setSlots((data as InterviewSlot[]) || []);
+    // application_interview_slots table not yet created — no-op for now
+    setSlots([]);
   }
 
   function toggleExpand(id: string) {
