@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,49 @@ export default function PositionForm() {
   const [questions, setQuestions] = useState<QuestionFormData[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+
+  const isArchived = existingPosition?.status === 'archived';
+
+  const handleArchive = useCallback(async () => {
+    if (!positionId) return;
+    setArchiving(true);
+    try {
+      const { error } = await supabase
+        .from('hospital_positions')
+        .update({ status: 'archived', updated_at: new Date().toISOString() })
+        .eq('id', positionId);
+      if (error) throw error;
+      toast.success('Position archived. All applicant data has been preserved.');
+      navigate(basePath);
+    } catch (err: unknown) {
+      console.error('Archive position error:', err);
+      toast.error((err as Error)?.message || 'Failed to archive position');
+    } finally {
+      setArchiving(false);
+      setArchiveDialogOpen(false);
+    }
+  }, [positionId, basePath, navigate]);
+
+  const handleUnarchive = useCallback(async () => {
+    if (!positionId) return;
+    setArchiving(true);
+    try {
+      const { error } = await supabase
+        .from('hospital_positions')
+        .update({ status: 'draft', updated_at: new Date().toISOString() })
+        .eq('id', positionId);
+      if (error) throw error;
+      toast.success('Position restored as draft.');
+      navigate(`${basePath}/positions/${positionId}`);
+    } catch (err: unknown) {
+      console.error('Unarchive position error:', err);
+      toast.error((err as Error)?.message || 'Failed to restore position');
+    } finally {
+      setArchiving(false);
+    }
+  }, [positionId, basePath, navigate]);
 
   // Pre-fill location from opportunity
   useEffect(() => {
@@ -343,32 +386,56 @@ export default function PositionForm() {
       <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
 
       <div className="flex gap-3 justify-between pt-4">
-        {isEdit && (
+        {isEdit && !isArchived && (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setArchiveDialogOpen(true)}
+              disabled={saving || archiving}
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              Archive
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={saving}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        )}
+        {isEdit && isArchived && (
           <Button
-            variant="destructive"
-            onClick={() => setDeleteDialogOpen(true)}
-            disabled={saving}
+            variant="outline"
+            onClick={handleUnarchive}
+            disabled={archiving}
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Position
+            {archiving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+            Restore Position
           </Button>
         )}
         <div className="flex gap-3 ml-auto">
-          <Button
-            variant="outline"
-            onClick={() => handleSave('draft')}
-            disabled={saving}
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Save as Draft
-          </Button>
-          <Button
-            onClick={() => handleSave('active')}
-            disabled={saving}
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            {isEdit ? 'Update Position' : 'Publish Position'}
-          </Button>
+          {!isArchived && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => handleSave('draft')}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Save as Draft
+              </Button>
+              <Button
+                onClick={() => handleSave('active')}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {isEdit ? 'Update Position' : 'Publish Position'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -413,6 +480,30 @@ export default function PositionForm() {
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Position Confirm Dialog */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive Position</DialogTitle>
+            <DialogDescription>
+              Archive <strong>{title || 'this position'}</strong>? All applicant data, questions, and responses will be preserved. You can restore it later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)} disabled={archiving}>
+              Cancel
+            </Button>
+            <Button
+              disabled={archiving}
+              onClick={handleArchive}
+            >
+              {archiving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+              Archive
             </Button>
           </DialogFooter>
         </DialogContent>

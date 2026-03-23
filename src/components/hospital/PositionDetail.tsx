@@ -16,6 +16,7 @@ const STATUS_COLORS: Record<PositionStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
   paused: 'bg-yellow-500/15 text-yellow-700 border-yellow-500/30',
   closed: 'bg-red-500/15 text-red-700 border-red-500/30',
+  archived: 'bg-muted text-muted-foreground opacity-60',
 };
 
 export default function PositionDetail() {
