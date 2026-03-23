@@ -120,13 +120,6 @@ export default function PositionApplicationsTable({ positionId }: Props) {
     }
   };
 
-  const handleApplicationPatched = useCallback(
-    (appId: string, patch: Partial<StudentApplication>) => {
-      updateApplicationLocally(appId, patch);
-    },
-    [updateApplicationLocally],
-  );
-
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
     setUpdatingStatus(true);
     try {
