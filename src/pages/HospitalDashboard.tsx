@@ -173,7 +173,8 @@ export default function HospitalDashboard() {
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
 
-  const isBcsPilot = member?.hospitalName?.toLowerCase().includes("bcs free health clinic") ?? false;
+  // Per-clinic scheduling is now available to all clinics (BCS pilot restriction removed)
+  const isBcsPilot = true;
 
   useEffect(() => {
     if (member) {
