@@ -141,7 +141,7 @@ const Navigation = () => {
   const bottomTabs = [
     { name: "Dashboard", path: "/dashboard", icon: Home },
     { name: "Opportunities", path: "/opportunities", icon: MapPin },
-    { name: "Tracker", path: "/my-applications", icon: Sparkles },
+    ...(hasApplications ? [{ name: "Tracker", path: "/my-applications", icon: Sparkles }] : []),
     { name: "Settings", path: "/settings", icon: SettingsIcon },
   ];
 
