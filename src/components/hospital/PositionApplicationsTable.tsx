@@ -124,9 +124,8 @@ export default function PositionApplicationsTable({ positionId }: Props) {
   const handleApplicationPatched = useCallback(
     (appId: string, patch: Partial<StudentApplication>) => {
       updateApplicationLocally(appId, patch);
-      if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, ...patch } : null));
     },
-    [updateApplicationLocally, selectedApp?.id],
+    [updateApplicationLocally],
   );
 
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
