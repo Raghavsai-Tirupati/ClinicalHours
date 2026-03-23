@@ -386,32 +386,56 @@ export default function PositionForm() {
       <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
 
       <div className="flex gap-3 justify-between pt-4">
-        {isEdit && (
+        {isEdit && !isArchived && (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setArchiveDialogOpen(true)}
+              disabled={saving || archiving}
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              Archive
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={saving}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        )}
+        {isEdit && isArchived && (
           <Button
-            variant="destructive"
-            onClick={() => setDeleteDialogOpen(true)}
-            disabled={saving}
+            variant="outline"
+            onClick={handleUnarchive}
+            disabled={archiving}
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Position
+            {archiving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+            Restore Position
           </Button>
         )}
         <div className="flex gap-3 ml-auto">
-          <Button
-            variant="outline"
-            onClick={() => handleSave('draft')}
-            disabled={saving}
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Save as Draft
-          </Button>
-          <Button
-            onClick={() => handleSave('active')}
-            disabled={saving}
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            {isEdit ? 'Update Position' : 'Publish Position'}
-          </Button>
+          {!isArchived && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => handleSave('draft')}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Save as Draft
+              </Button>
+              <Button
+                onClick={() => handleSave('active')}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {isEdit ? 'Update Position' : 'Publish Position'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

@@ -34,6 +34,7 @@ const POSITION_STATUS_COLORS: Record<PositionStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
   paused: 'bg-yellow-500/15 text-yellow-400',
   closed: 'bg-red-500/15 text-red-400',
+  archived: 'bg-muted text-muted-foreground opacity-60',
 };
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
