@@ -1,0 +1,2 @@
+ALTER TABLE public.student_applications DROP CONSTRAINT student_applications_status_check;
+ALTER TABLE public.student_applications ADD CONSTRAINT student_applications_status_check CHECK (status = ANY (ARRAY['new'::text, 'under_review'::text, 'interview'::text, 'accepted'::text, 'rejected'::text, 'waitlisted'::text]));
