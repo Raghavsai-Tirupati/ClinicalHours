@@ -610,7 +610,7 @@ export default function ApplicantReviewPanel({
           )}
         </div>
 
-        <div className="space-y-4 order-1 lg:order-2 lg:sticky lg:top-4 lg:self-start">
+        <div className="space-y-4 order-2 lg:order-2 lg:sticky lg:top-4 lg:self-start">
           <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Availability</p>
             <p className="text-sm text-foreground/90">
