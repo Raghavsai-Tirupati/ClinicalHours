@@ -299,6 +299,16 @@ export function useAllApplications(hospitalPageId: string | undefined) {
     fetchAll();
   }, [fetchAll]);
 
+  /** Optimistically patch a single application in local state (no refetch). */
+  const updateApplicationLocally = useCallback(
+    (appId: string, patch: Partial<StudentApplication>) => {
+      setApplications((prev) =>
+        prev.map((a) => (a.id === appId ? { ...a, ...patch } : a)),
+      );
+    },
+    [],
+  );
+
   const stats = {
     total: applications.length,
     new: applications.filter((a) => a.status === 'new').length,
@@ -316,5 +326,5 @@ export function useAllApplications(hospitalPageId: string | undefined) {
         : 0,
   };
 
-  return { applications, positions, stats, loading, refetch: fetchAll };
+  return { applications, positions, stats, loading, refetch: fetchAll, updateApplicationLocally };
 }

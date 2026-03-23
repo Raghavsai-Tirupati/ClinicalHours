@@ -41,7 +41,7 @@ interface Props {
 
 export default function PositionApplicationsTable({ positionId }: Props) {
   const { hospitalPage } = useHospitalPageContext();
-  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, refetch } =
+  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, refetch, updateApplicationLocally } =
     usePositionApplications(positionId);
 
   const [selectedApp, setSelectedApp] = useState<StudentApplication | null>(null);
@@ -120,10 +120,10 @@ export default function PositionApplicationsTable({ positionId }: Props) {
 
   const handleApplicationPatched = useCallback(
     (appId: string, patch: Partial<StudentApplication>) => {
-      refetch();
+      updateApplicationLocally(appId, patch);
       if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, ...patch } : null));
     },
-    [refetch, selectedApp?.id],
+    [updateApplicationLocally, selectedApp?.id],
   );
 
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
@@ -135,7 +135,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
         .eq('id', appId);
       if (error) throw error;
       toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
-      refetch();
+      updateApplicationLocally(appId, { status: newStatus });
       if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
     } catch {
       toast.error('Failed to update status');
