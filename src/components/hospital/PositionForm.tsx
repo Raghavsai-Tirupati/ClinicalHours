@@ -49,6 +49,49 @@ export default function PositionForm() {
   const [questions, setQuestions] = useState<QuestionFormData[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+
+  const isArchived = existingPosition?.status === 'archived';
+
+  const handleArchive = useCallback(async () => {
+    if (!positionId) return;
+    setArchiving(true);
+    try {
+      const { error } = await supabase
+        .from('hospital_positions')
+        .update({ status: 'archived', updated_at: new Date().toISOString() })
+        .eq('id', positionId);
+      if (error) throw error;
+      toast.success('Position archived. All applicant data has been preserved.');
+      navigate(basePath);
+    } catch (err: unknown) {
+      console.error('Archive position error:', err);
+      toast.error((err as Error)?.message || 'Failed to archive position');
+    } finally {
+      setArchiving(false);
+      setArchiveDialogOpen(false);
+    }
+  }, [positionId, basePath, navigate]);
+
+  const handleUnarchive = useCallback(async () => {
+    if (!positionId) return;
+    setArchiving(true);
+    try {
+      const { error } = await supabase
+        .from('hospital_positions')
+        .update({ status: 'draft', updated_at: new Date().toISOString() })
+        .eq('id', positionId);
+      if (error) throw error;
+      toast.success('Position restored as draft.');
+      navigate(`${basePath}/positions/${positionId}`);
+    } catch (err: unknown) {
+      console.error('Unarchive position error:', err);
+      toast.error((err as Error)?.message || 'Failed to restore position');
+    } finally {
+      setArchiving(false);
+    }
+  }, [positionId, basePath, navigate]);
 
   // Pre-fill location from opportunity
   useEffect(() => {

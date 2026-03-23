@@ -1,7 +1,7 @@
 // Position system types
 
 export type PositionType = 'volunteer' | 'internship' | 'shadowing' | 'paid' | 'research' | 'other';
-export type PositionStatus = 'draft' | 'active' | 'paused' | 'closed';
+export type PositionStatus = 'draft' | 'active' | 'paused' | 'closed' | 'archived';
 export type QuestionType = 'short_answer' | 'long_answer' | 'multiple_choice' | 'yes_no' | 'file_upload';
 export type ApplicationStatus = 'new' | 'under_review' | 'accepted' | 'rejected' | 'waitlisted';
 
