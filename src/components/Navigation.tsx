@@ -51,6 +51,7 @@ const Navigation = () => {
   const { user, isGuest } = useAuth();
   const { member: hospitalMember } = useHospitalMember();
   const { isPremium } = usePremiumStatus();
+  const { hasApplications } = useHasApplications(user?.id);
 
   // Check if we're on pages that should have transparent nav
   const isHomePage = location.pathname === "/";
