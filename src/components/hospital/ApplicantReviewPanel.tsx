@@ -445,27 +445,10 @@ export default function ApplicantReviewPanel({
         <span>Submitted</span>
         <span>{format(new Date(application.submitted_at), "MMM d, yyyy 'at' h:mm a")}</span>
       </div>
-      {(application.position?.title || roleDescription || roleRequirements) && (
-        <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Role details</p>
-          {application.position?.title && (
-            <p className="text-sm">
-              <span className="text-muted-foreground">Position: </span>
-              <span className="text-foreground font-medium">{application.position.title}</span>
-            </p>
-          )}
-          <div className="space-y-1.5">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Description</p>
-            <p className="text-sm whitespace-pre-wrap text-foreground/90">
-              {roleDescription || 'No description provided.'}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Requirements</p>
-            <p className="text-sm whitespace-pre-wrap text-foreground/90">
-              {roleRequirements || 'No requirements provided.'}
-            </p>
-          </div>
+      {application.position?.title && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border/50 pt-3">
+          <span>Applied for</span>
+          <span className="font-medium text-foreground">{application.position.title}</span>
         </div>
       )}
     </div>
