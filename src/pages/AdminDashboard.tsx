@@ -17,6 +17,7 @@ import {
   Ghost,
   Trash2,
   FilePlus,
+  Copy,
 } from 'lucide-react';
 import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
@@ -29,6 +30,7 @@ import AdminLogosTab from '@/components/admin/AdminLogosTab';
 import GuestSessionsTab from '@/components/admin/GuestSessionsTab';
 import AdminDeletionEventsTab from '@/components/admin/AdminDeletionEventsTab';
 import AdminCreateHospitalPageTab from '@/components/admin/AdminCreateHospitalPageTab';
+import AdminCloneTemplateTab from '@/components/admin/AdminCloneTemplateTab';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -63,7 +65,7 @@ export default function AdminDashboard() {
 
           {/* Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-5 lg:grid-cols-10">
+            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-5 lg:grid-cols-11">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview</span>
@@ -108,6 +110,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="deletions" className="flex items-center gap-2">
                 <Trash2 className="h-4 w-4" />
                 <span className="hidden sm:inline">Deletions</span>
+              </TabsTrigger>
+              <TabsTrigger value="clone" className="flex items-center gap-2">
+                <Copy className="h-4 w-4" />
+                <span className="hidden sm:inline">Clone</span>
               </TabsTrigger>
             </TabsList>
 
@@ -168,6 +174,12 @@ export default function AdminDashboard() {
             <TabsContent value="deletions">
               <TabErrorBoundary tabName="Deletions">
                 <AdminDeletionEventsTab />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            <TabsContent value="clone">
+              <TabErrorBoundary tabName="Clone Template">
+                <AdminCloneTemplateTab />
               </TabErrorBoundary>
             </TabsContent>
           </Tabs>
