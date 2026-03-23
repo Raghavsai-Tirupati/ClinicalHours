@@ -1,0 +1,1 @@
+ALTER TABLE public.student_applications ADD COLUMN IF NOT EXISTS availability_json jsonb DEFAULT NULL;
