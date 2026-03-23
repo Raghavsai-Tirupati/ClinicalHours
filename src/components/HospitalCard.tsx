@@ -31,9 +31,9 @@ export function HospitalCard({
   return (
     <div
       className={[
-        "relative bg-card border cursor-pointer transition-all duration-200",
+        "relative rounded-xl bg-card border cursor-pointer transition-all duration-200 shadow-sm",
         isSelected
-          ? "border-primary bg-primary/5 shadow-md border-l-[3px]"
+          ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary/30"
           : "border-border hover:border-primary/50 hover:shadow-md hover:bg-card/80",
       ].join(" ")}
       onClick={() => onSelect(opportunity.id)}
@@ -48,7 +48,7 @@ export function HospitalCard({
       aria-selected={isSelected}
       aria-label={`View details for ${opportunity.name}`}
     >
-      <div className="p-4">
+      <div className="p-4 md:p-5">
         <div className="flex gap-3">
           <HospitalLogo
             logoUrl={opportunity.logo_url ?? null}

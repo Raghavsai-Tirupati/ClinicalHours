@@ -7,7 +7,6 @@ import {
   Phone,
   Clock,
   Star,
-  ExternalLink,
   Check,
   Plus,
   Loader2,
@@ -34,7 +33,6 @@ interface ActivePosition {
 
 interface HospitalDetailProps {
   opportunity: Opportunity;
-  hospitalAccountId?: string;
   isPremium: boolean;
   isSaved: boolean;
   isSavedLoading: boolean;
@@ -46,7 +44,6 @@ interface HospitalDetailProps {
 
 export function HospitalDetail({
   opportunity,
-  hospitalAccountId,
   isPremium,
   isSaved,
   isSavedLoading,
@@ -91,9 +88,8 @@ export function HospitalDetail({
   }, [opportunity.id]);
 
   return (
-    <div className="flex flex-col bg-card border-l border-border h-full overflow-y-auto">
-      {/* Sticky header */}
-      <div className="flex items-start justify-between p-5 pb-4 border-b border-border sticky top-0 bg-card z-10">
+    <div className="flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden h-auto">
+      <div className="flex items-start justify-between p-5 pb-4 border-b border-border">
         <div className="flex items-start gap-3 flex-1 min-w-0 pr-4">
           <HospitalLogo
             logoUrl={opportunity.logo_url ?? null}
@@ -116,7 +112,7 @@ export function HospitalDetail({
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 hover:bg-muted transition-colors shrink-0"
+          className="p-1.5 rounded-md hover:bg-muted transition-colors shrink-0"
           aria-label="Close detail panel"
         >
           <X className="h-5 w-5" />

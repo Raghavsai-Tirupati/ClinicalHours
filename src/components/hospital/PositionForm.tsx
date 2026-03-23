@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, Trash2, Archive } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -52,48 +52,21 @@ export default function PositionForm() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [archiving, setArchiving] = useState(false);
+  const [positionStatus, setPositionStatus] = useState<PositionStatus>('draft');
 
-  const isArchived = existingPosition?.status === 'archived';
+  const transitioningToArchived =
+    positionStatus === 'archived' && existingPosition?.status !== 'archived';
 
-  const handleArchive = useCallback(async () => {
-    if (!positionId) return;
-    setArchiving(true);
-    try {
-      const { error } = await supabase
-        .from('hospital_positions')
-        .update({ status: 'archived', updated_at: new Date().toISOString() })
-        .eq('id', positionId);
-      if (error) throw error;
-      toast.success('Position archived. All applicant data has been preserved.');
-      navigate(basePath);
-    } catch (err: unknown) {
-      console.error('Archive position error:', err);
-      toast.error((err as Error)?.message || 'Failed to archive position');
-    } finally {
-      setArchiving(false);
-      setArchiveDialogOpen(false);
-    }
-  }, [positionId, basePath, navigate]);
-
-  const handleUnarchive = useCallback(async () => {
-    if (!positionId) return;
-    setArchiving(true);
-    try {
-      const { error } = await supabase
-        .from('hospital_positions')
-        .update({ status: 'draft', updated_at: new Date().toISOString() })
-        .eq('id', positionId);
-      if (error) throw error;
-      toast.success('Position restored as draft.');
-      navigate(`${basePath}/positions/${positionId}`);
-    } catch (err: unknown) {
-      console.error('Unarchive position error:', err);
-      toast.error((err as Error)?.message || 'Failed to restore position');
-    } finally {
-      setArchiving(false);
-    }
-  }, [positionId, basePath, navigate]);
+  const STATUS_OPTIONS: { value: PositionStatus; label: string }[] = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'active', label: 'Active' },
+    { value: 'archived', label: 'Archived' },
+  ];
+  const STATUS_HELPER_TEXT: Record<'draft' | 'active' | 'archived', string> = {
+    draft: 'Not visible to students yet.',
+    active: 'Visible to students and accepting applications.',
+    archived: 'Hidden from students. Existing applicant data is preserved.',
+  };
 
   // Pre-fill location from opportunity
   useEffect(() => {
@@ -116,6 +89,7 @@ export default function PositionForm() {
       setApplicationDeadline(existingPosition.application_deadline || '');
       setSpotsAvailable(existingPosition.spots_available?.toString() || '');
       setAskForAvailability(existingPosition.ask_for_availability !== false);
+      setPositionStatus(existingPosition.status);
     }
   }, [isEdit, existingPosition]);
 
@@ -134,7 +108,7 @@ export default function PositionForm() {
     }
   }, [isEdit, existingQuestions]);
 
-  const handleSave = async (status: PositionStatus) => {
+  const handleSave = useCallback(async () => {
     if (!title.trim()) {
       toast.error('Position title is required');
       return;
@@ -165,7 +139,7 @@ export default function PositionForm() {
         application_deadline: applicationDeadline || null,
         spots_available: spotsAvailable ? parseInt(spotsAvailable) : null,
         ask_for_availability: askForAvailability,
-        status,
+        status: positionStatus,
       };
 
       let savedPositionId = positionId;
@@ -230,9 +204,11 @@ export default function PositionForm() {
       toast.success(
         isEdit
           ? 'Position updated'
-          : status === 'active'
+          : positionStatus === 'active'
             ? 'Position published!'
-            : 'Position saved as draft'
+            : positionStatus === 'archived'
+              ? 'Position archived. All applicant data has been preserved.'
+              : 'Position saved as draft'
       );
       navigate(`${basePath}/positions/${savedPositionId}`);
     } catch (err: unknown) {
@@ -242,7 +218,36 @@ export default function PositionForm() {
       toast.error(msg);
     } finally {
       setSaving(false);
+      setArchiveDialogOpen(false);
     }
+  }, [
+    title,
+    description,
+    pageId,
+    positionStatus,
+    requirements,
+    location,
+    positionType,
+    hoursPerWeek,
+    duration,
+    startDate,
+    applicationDeadline,
+    spotsAvailable,
+    askForAvailability,
+    positionId,
+    isEdit,
+    existingQuestions,
+    questions,
+    navigate,
+    basePath,
+  ]);
+
+  const handleSaveClick = () => {
+    if (transitioningToArchived) {
+      setArchiveDialogOpen(true);
+      return;
+    }
+    void handleSave();
   };
 
   if (isEdit && detailLoading) {
@@ -404,16 +409,8 @@ export default function PositionForm() {
       <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
 
       <div className="flex gap-3 justify-between pt-4">
-        {isEdit && !isArchived && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setArchiveDialogOpen(true)}
-              disabled={saving || archiving}
-            >
-              <Archive className="h-4 w-4 mr-2" />
-              Archive
-            </Button>
+        <div>
+          {isEdit && (
             <Button
               variant="destructive"
               onClick={() => setDeleteDialogOpen(true)}
@@ -422,38 +419,34 @@ export default function PositionForm() {
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
-          </div>
-        )}
-        {isEdit && isArchived && (
-          <Button
-            variant="outline"
-            onClick={handleUnarchive}
-            disabled={archiving}
-          >
-            {archiving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
-            Restore Position
-          </Button>
-        )}
-        <div className="flex gap-3 ml-auto">
-          {!isArchived && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => handleSave('draft')}
-                disabled={saving}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Save as Draft
-              </Button>
-              <Button
-                onClick={() => handleSave('active')}
-                disabled={saving}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                {isEdit ? 'Update Position' : 'Publish Position'}
-              </Button>
-            </>
           )}
+        </div>
+        <div className="flex items-center gap-3 ml-auto">
+          <div className="min-w-[170px]">
+            <Label className="text-xs text-muted-foreground mb-1.5 block">Status</Label>
+            <Select
+              value={positionStatus}
+              onValueChange={(value) => setPositionStatus(value as PositionStatus)}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              {STATUS_HELPER_TEXT[positionStatus as 'draft' | 'active' | 'archived']}
+            </p>
+          </div>
+          <Button onClick={handleSaveClick} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {positionStatus === 'archived' ? 'Save and archive' : 'Save changes'}
+          </Button>
         </div>
       </div>
 
@@ -513,14 +506,14 @@ export default function PositionForm() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)} disabled={archiving}>
+            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
             <Button
-              disabled={archiving}
-              onClick={handleArchive}
+              disabled={saving}
+              onClick={() => void handleSave()}
             >
-              {archiving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Archive
             </Button>
           </DialogFooter>

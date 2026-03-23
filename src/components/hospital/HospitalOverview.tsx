@@ -62,9 +62,14 @@ export default function HospitalOverview() {
   const { hospitalPage, basePath } = useHospitalPageContext();
   const { applications, positions, stats, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [positionStatusFilter, setPositionStatusFilter] = useState<'all' | 'active' | 'draft' | 'archived'>('all');
 
   const activePositionCount = positions.filter((p) => p.status === 'active').length;
   const recentApps = applications.slice(0, 5);
+  const filteredPositions = positions.filter((position) => {
+    if (positionStatusFilter === 'all') return true;
+    return position.status === positionStatusFilter;
+  });
 
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
     setUpdatingId(appId);
@@ -282,13 +287,37 @@ export default function HospitalOverview() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold tracking-tight">Positions at a Glance</h3>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to={`${basePath}/positions/new`}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add Position
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">View</span>
+            <Select
+              value={positionStatusFilter}
+              onValueChange={(value) =>
+                setPositionStatusFilter(value as 'all' | 'active' | 'draft' | 'archived')
+              }
+            >
+              <SelectTrigger className="h-8 w-[150px]">
+                <SelectValue placeholder="All position statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All position statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`${basePath}/positions/new`}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add Position
+              </Link>
+            </Button>
+          </div>
         </div>
+        {!loading && positions.length > 0 && (
+          <p className="text-xs text-muted-foreground mb-3">
+            Showing {filteredPositions.length} of {positions.length} positions
+          </p>
+        )}
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -320,9 +349,19 @@ export default function HospitalOverview() {
               </Button>
             </CardContent>
           </Card>
+        ) : filteredPositions.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center">
+              <Briefcase className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No positions match this status</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Try switching to another status filter.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {positions.map((pos) => {
+            {filteredPositions.map((pos) => {
               const appCount = applications.filter((a) => a.position_id === pos.id).length;
               return (
                 <Link key={pos.id} to={`${basePath}/positions/${pos.id}`} className="group">
