@@ -38,7 +38,7 @@ import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
-import type { ApplicationStatus, StudentApplication } from '@/types/positions';
+import type { StudentApplication } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -412,39 +412,69 @@ export default function EmailPage() {
                     Preview
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-3xl">
-                  <DialogHeader>
+                <DialogContent className="max-w-3xl p-0 overflow-hidden">
+                  <DialogHeader className="sr-only">
                     <DialogTitle>Email preview</DialogTitle>
                   </DialogHeader>
-                  <div className="rounded-xl border border-border bg-[#f6f8fc] p-4">
-                    <div className="mx-auto max-w-2xl rounded-lg border border-border/80 bg-background shadow-sm overflow-hidden">
-                      <div className="border-b border-border/70 px-4 py-3 text-sm space-y-2">
-                        <div className="flex">
-                          <span className="w-16 text-muted-foreground">From</span>
-                          <span>BCS Free Health Clinic &lt;support@clinicalhours.org&gt;</span>
-                        </div>
-                        <div className="flex">
-                          <span className="w-16 text-muted-foreground">To</span>
-                          <span>
-                            {uniqueEmails.size} recipient{uniqueEmails.size === 1 ? '' : 's'}
-                            {uniqueEmails.size > 0 && uniqueEmails.size <= 4 && (
-                              <span className="text-muted-foreground"> ({[...uniqueEmails].join(', ')})</span>
-                            )}
+
+                  {/* Gmail-style chrome */}
+                  <div className="bg-[#f6f8fc] dark:bg-zinc-900 min-h-[420px]">
+                    {/* Top bar */}
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/40">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Email Preview</span>
+                    </div>
+
+                    {/* Subject line */}
+                    <div className="px-6 pt-5 pb-3">
+                      <h3 className="text-lg font-normal text-foreground leading-snug">
+                        {subject.trim() || <span className="text-muted-foreground italic">No subject</span>}
+                      </h3>
+                    </div>
+
+                    {/* Sender row */}
+                    <div className="px-6 pb-4 flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-sm font-semibold text-primary">
+                          {(hospitalPage?.opportunity?.name || 'C')[0].toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-foreground">
+                            {hospitalPage?.opportunity?.name || 'ClinicalHours'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            &lt;{hospitalPage?.gmail_email || 'support@clinicalhours.org'}&gt;
                           </span>
                         </div>
-                        <div className="flex">
-                          <span className="w-16 text-muted-foreground">Subject</span>
-                          <span className="font-medium">
-                            {subject.trim() || <span className="text-muted-foreground italic font-normal">No subject</span>}
-                          </span>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          to{' '}
+                          {uniqueEmails.size <= 3
+                            ? [...uniqueEmails].join(', ')
+                            : `${uniqueEmails.size} recipients`}
                         </div>
                       </div>
-                      <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
-                        <div
-                          className="[&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_a]:text-blue-600 [&_a]:underline"
-                          dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(htmlBody) }}
-                        />
-                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0 mt-1">
+                        {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="mx-6 border-t border-border/40" />
+
+                    {/* Email body */}
+                    <div className="px-6 py-5 max-h-[50vh] overflow-y-auto">
+                      <div
+                        className="text-sm leading-relaxed text-foreground [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-0.5 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold [&_em]:italic [&_s]:line-through"
+                        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(htmlBody) }}
+                      />
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mx-6 border-t border-border/40" />
+                    <div className="px-6 py-3 text-[11px] text-muted-foreground/60">
+                      Sent via ClinicalHours
                     </div>
                   </div>
                 </DialogContent>
