@@ -217,12 +217,41 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: apps, error: appsError } = await supabaseAdmin
       .from("student_applications")
-      .select("id, applicant_name, applicant_email, status, interview_invited_at, hospital_positions!inner(hospital_page_id)")
-      .in("id", validIds)
-      .eq("hospital_positions.hospital_page_id", hospitalPageId);
+      .select("id, position_id, applicant_name, applicant_email, status, interview_invited_at")
+      .in("id", validIds);
 
     if (appsError) {
+      console.error("Failed to fetch selected applications:", appsError);
       throw new Error("Failed to fetch selected applications");
+    }
+
+    const positionIds = [...new Set((apps ?? []).map((app) => app.position_id).filter(Boolean))];
+    if (positionIds.length === 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: "No valid applications were selected" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const { data: allowedPositions, error: allowedPositionsError } = await supabaseAdmin
+      .from("hospital_positions")
+      .select("id")
+      .in("id", positionIds)
+      .eq("hospital_page_id", hospitalPageId);
+
+    if (allowedPositionsError) {
+      console.error("Failed to validate application ownership:", allowedPositionsError);
+      throw new Error("Failed to validate selected applications");
+    }
+
+    const allowedPositionIds = new Set((allowedPositions ?? []).map((position) => position.id));
+    const selectedApps = (apps ?? []).filter((app) => allowedPositionIds.has(app.position_id));
+
+    if (selectedApps.length !== (apps ?? []).length) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Some selected applications do not belong to this clinic" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
     type Recipient = {
