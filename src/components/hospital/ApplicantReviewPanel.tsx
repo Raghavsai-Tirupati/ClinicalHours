@@ -520,7 +520,7 @@ export default function ApplicantReviewPanel({
                 Loading…
               </div>
             ) : contactHistory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No logged contact for this application yet.</p>
+              <p className="text-sm text-muted-foreground">No logged contact yet. Send an email from the Applications tab to log activity here.</p>
             ) : (
               <ul className="space-y-3">
                 {contactHistory.map((entry) => {

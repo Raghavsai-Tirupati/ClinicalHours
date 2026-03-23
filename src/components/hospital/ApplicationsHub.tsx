@@ -530,22 +530,34 @@ export default function ApplicationsHub() {
                             {app.student_profile?.graduation_year ?? '—'}
                           </TableCell>
                           <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                            <Select
-                              value={app.status}
-                              onValueChange={(v) => handleStatusChange(app.id, v as ApplicationStatus)}
-                              disabled={updatingStatus}
-                            >
-                              <SelectTrigger className="h-8 text-xs ml-auto w-[130px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
-                                  <SelectItem key={key} value={key}>
-                                    {label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => navigate(`${basePath}/applicants/${app.id}`)}
+                                aria-label="Open applicant profile"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </Button>
+                              <Select
+                                value={app.status}
+                                onValueChange={(v) => handleStatusChange(app.id, v as ApplicationStatus)}
+                                disabled={updatingStatus}
+                              >
+                                <SelectTrigger className="h-8 text-xs ml-auto w-[130px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </TableCell>
                         </TableRow>
                         {expandedId === app.id && (
