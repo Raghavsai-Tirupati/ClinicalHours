@@ -15,6 +15,7 @@ interface InviteRequest {
   emailType?: "general" | "interview_invite";
   subject?: string;
   body?: string;
+  htmlBody?: string;
   customMessage?: string;
 }
 
@@ -36,6 +37,12 @@ function normalizeEmail(email: string | null | undefined): string | null {
   const trimmed = email.trim().toLowerCase();
   if (!trimmed || !trimmed.includes("@")) return null;
   return trimmed;
+}
+
+function getBodyPreview(input: string, max = 400): string {
+  const cleaned = input.replace(/\s+/g, " ").trim();
+  if (cleaned.length <= max) return cleaned;
+  return `${cleaned.slice(0, max)}…`;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -80,7 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { hospitalPageId, applicationIds, emailType, subject, body, customMessage } = payload;
+    const { hospitalPageId, applicationIds, emailType, subject, body, htmlBody, customMessage } = payload;
     if (!hospitalPageId) {
       return new Response(
         JSON.stringify({ success: false, error: "hospitalPageId is required" }),
@@ -227,12 +234,18 @@ const handler = async (req: Request): Promise<Response> => {
         : "Interview invitation - schedule your slot";
 
       const emailHtml = selectedEmailType === "general"
-        ? `
+        ? ((htmlBody?.trim().length ?? 0) > 0
+          ? `
+          <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; line-height: 1.6; color: #333;">
+            ${htmlBody}
+          </div>
+        `
+          : `
           <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
             <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
             <div style="line-height: 1.6; color: #333;">${formatBodyHtml((body as string).trim())}</div>
           </div>
-        `
+        `)
         : `
           <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
             <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
@@ -304,12 +317,35 @@ const handler = async (req: Request): Promise<Response> => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
+    let activityLogged = true;
+    if (selectedEmailType === "general" && sent > 0) {
+      const { error: activityError } = await supabaseAdmin
+        .from("admin_activity_log")
+        .insert({
+          hospital_page_id: hospitalPageId,
+          actor_email: userEmail,
+          action_type: "email_sent",
+          target_type: "email",
+          metadata: {
+            subject: (subject as string).trim(),
+            recipientCount: sent,
+            applicationIds: validIds,
+            bodyPreview: getBodyPreview((body as string).trim()),
+          },
+        });
+      if (activityError) {
+        activityLogged = false;
+        console.error("Failed to persist admin_activity_log:", activityError.message, activityError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         sent,
         failed,
         total: recipients.size,
+        activityLogged,
         errors: errors.length > 0 ? errors : undefined,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },

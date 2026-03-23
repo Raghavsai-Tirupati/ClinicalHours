@@ -1,8 +1,21 @@
-import { useState, useMemo } from 'react';
-import { Mail, Send, Users, Loader2, Clock, Eye } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import {
+  Bold,
+  Eye,
+  Italic,
+  Link2,
+  List,
+  ListOrdered,
+  Loader2,
+  Mail,
+  Send,
+  Strikethrough,
+  Underline,
+  Users,
+  Clock,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,18 +63,39 @@ function getApplicantName(app: StudentApplication): string {
 
 type FilterMode = 'all' | 'position' | 'status';
 
+const DEFAULT_EMAIL_HTML = '<p><br></p>';
+
+function stripHtml(value: string): string {
+  if (!value) return '';
+  const doc = new DOMParser().parseFromString(value, 'text/html');
+  return doc.body.textContent?.trim() ?? '';
+}
+
+function sanitizeRichHtml(value: string): string {
+  const doc = new DOMParser().parseFromString(value, 'text/html');
+  doc.querySelectorAll('script,style').forEach((node) => node.remove());
+  const all = doc.body.querySelectorAll('*');
+  all.forEach((el) => {
+    Array.from(el.attributes).forEach((attr) => {
+      if (attr.name.toLowerCase().startsWith('on')) el.removeAttribute(attr.name);
+    });
+  });
+  return doc.body.innerHTML || DEFAULT_EMAIL_HTML;
+}
+
 export default function EmailPage() {
   const { hospitalPage } = useHospitalPageContext();
   const { applications, positions, loading: appsLoading } = useAllApplications(hospitalPage?.id);
-  const { entries, loading: logLoading, logActivity, refetch: refetchLog } = useActivityLog(hospitalPage?.id);
+  const { entries, loading: logLoading, refetch: refetchLog } = useActivityLog(hospitalPage?.id);
 
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [filterValue, setFilterValue] = useState<string>('');
   const [manualSelected, setManualSelected] = useState<string[]>([]);
   const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
+  const [htmlBody, setHtmlBody] = useState(DEFAULT_EMAIL_HTML);
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const editorRef = useRef<HTMLDivElement | null>(null);
 
   const filteredRecipients = useMemo(() => {
     if (filterMode === 'all') return applications;
@@ -98,11 +132,28 @@ export default function EmailPage() {
     [entries],
   );
 
+  const plainBody = useMemo(() => stripHtml(htmlBody), [htmlBody]);
+
+  const applyFormat = (command: string, value?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(command, false, value);
+    const current = editorRef.current?.innerHTML ?? DEFAULT_EMAIL_HTML;
+    setHtmlBody(sanitizeRichHtml(current));
+  };
+
+  const setEditorContent = (value: string) => {
+    const sanitized = sanitizeRichHtml(value);
+    setHtmlBody(sanitized);
+    if (editorRef.current && editorRef.current.innerHTML !== sanitized) {
+      editorRef.current.innerHTML = sanitized;
+    }
+  };
+
   const handleSend = async () => {
     if (!hospitalPage?.id) return;
     if (selectedIds.length === 0) { toast.error('Select at least one recipient'); return; }
     if (!subject.trim()) { toast.error('Subject is required'); return; }
-    if (!body.trim()) { toast.error('Message body is required'); return; }
+    if (!plainBody.trim()) { toast.error('Message body is required'); return; }
 
     setSending(true);
     try {
@@ -112,7 +163,8 @@ export default function EmailPage() {
           applicationIds: selectedIds,
           emailType: 'general',
           subject: subject.trim(),
-          body: body.trim(),
+          body: plainBody.trim(),
+          htmlBody: sanitizeRichHtml(htmlBody),
         },
       });
 
@@ -139,24 +191,12 @@ export default function EmailPage() {
         toast.warning('No emails were sent — no valid recipient addresses found for the selected applicants');
       }
 
-      if (sent > 0) {
-        const bodyTrim = body.trim();
-        const logged = await logActivity('email_sent', {
-          targetType: 'email',
-          metadata: {
-            subject: subject.trim(),
-            recipientCount: sent,
-            applicationIds: selectedIds,
-            bodyPreview: bodyTrim.length > 400 ? `${bodyTrim.slice(0, 400)}…` : bodyTrim,
-          },
-        });
-        if (!logged) {
-          toast.warning('Email sent, but the activity log could not be saved. If this persists, contact support.');
-        }
+      if (sent > 0 && data?.activityLogged === false) {
+        toast.warning('Email sent, but the activity log could not be saved. If this persists, contact support.');
       }
 
       setSubject('');
-      setBody('');
+      setEditorContent(DEFAULT_EMAIL_HTML);
       setManualSelected([]);
       refetchLog();
     } catch (err) {
@@ -311,13 +351,51 @@ export default function EmailPage() {
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Message
               </label>
-              <Textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={8}
-                placeholder="Write your message to applicants..."
-                className="resize-none"
-              />
+              <div className="rounded-md border border-input bg-background overflow-hidden">
+                <div className="border-b border-border p-2 flex flex-wrap gap-1">
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => applyFormat('bold')}>
+                    <Bold className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => applyFormat('italic')}>
+                    <Italic className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => applyFormat('underline')}>
+                    <Underline className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => applyFormat('strikeThrough')}>
+                    <Strikethrough className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => applyFormat('insertUnorderedList')}>
+                    <List className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => applyFormat('insertOrderedList')}>
+                    <ListOrdered className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      const url = window.prompt('Paste URL');
+                      if (url?.trim()) applyFormat('createLink', url.trim());
+                    }}
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="min-h-[220px] max-h-[360px] overflow-y-auto p-3 text-sm focus:outline-none [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
+                  onInput={(e) => setHtmlBody(sanitizeRichHtml(e.currentTarget.innerHTML))}
+                  dangerouslySetInnerHTML={{ __html: htmlBody }}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Formatting is preserved in outgoing emails (bold, italic, links, lists, and line breaks).
+              </p>
             </div>
 
             {/* Preview + Send */}
@@ -334,41 +412,39 @@ export default function EmailPage() {
                     Preview
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-lg sm:max-w-xl">
+                <DialogContent className="max-w-3xl">
                   <DialogHeader>
                     <DialogTitle>Email preview</DialogTitle>
                   </DialogHeader>
-                  <p className="text-xs text-muted-foreground">
-                    Approximate appearance for recipients. Line breaks are preserved.
-                  </p>
-                  <div className="rounded-lg border border-border bg-muted/30 overflow-hidden">
-                    <div className="border-b border-border/80 bg-muted/50 px-3 py-2 space-y-1">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">To</p>
-                      <p className="text-sm">
-                        {uniqueEmails.size} recipient{uniqueEmails.size === 1 ? '' : 's'}
-                        {uniqueEmails.size > 0 && uniqueEmails.size <= 5 && (
-                          <span className="text-muted-foreground">
-                            {' '}
-                            ({[...uniqueEmails].join(', ')})
+                  <div className="rounded-xl border border-border bg-[#f6f8fc] p-4">
+                    <div className="mx-auto max-w-2xl rounded-lg border border-border/80 bg-background shadow-sm overflow-hidden">
+                      <div className="border-b border-border/70 px-4 py-3 text-sm space-y-2">
+                        <div className="flex">
+                          <span className="w-16 text-muted-foreground">From</span>
+                          <span>BCS Free Health Clinic &lt;support@clinicalhours.org&gt;</span>
+                        </div>
+                        <div className="flex">
+                          <span className="w-16 text-muted-foreground">To</span>
+                          <span>
+                            {uniqueEmails.size} recipient{uniqueEmails.size === 1 ? '' : 's'}
+                            {uniqueEmails.size > 0 && uniqueEmails.size <= 4 && (
+                              <span className="text-muted-foreground"> ({[...uniqueEmails].join(', ')})</span>
+                            )}
                           </span>
-                        )}
-                        {uniqueEmails.size > 5 && (
-                          <span className="text-muted-foreground"> (addresses hidden — large list)</span>
-                        )}
-                      </p>
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground pt-1">Subject</p>
-                      <p className="text-sm font-medium">
-                        {subject.trim() || (
-                          <span className="text-muted-foreground font-normal italic">No subject</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="bg-background px-3 py-3 max-h-[min(50vh,320px)] overflow-y-auto">
-                      <pre className="text-sm font-sans whitespace-pre-wrap break-words text-foreground">
-                        {body.trim() || (
-                          <span className="text-muted-foreground italic">No message body</span>
-                        )}
-                      </pre>
+                        </div>
+                        <div className="flex">
+                          <span className="w-16 text-muted-foreground">Subject</span>
+                          <span className="font-medium">
+                            {subject.trim() || <span className="text-muted-foreground italic font-normal">No subject</span>}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
+                        <div
+                          className="[&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_a]:text-blue-600 [&_a]:underline"
+                          dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(htmlBody) }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </DialogContent>
