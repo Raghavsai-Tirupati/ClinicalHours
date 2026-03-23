@@ -234,6 +234,7 @@ export default function InterviewsPage() {
           .from('student_applications')
           .update({
             interview_confirmed_at: iso,
+            interview_source: 'manual',
             ...(bumpInterview ? { status: 'interview' as ApplicationStatus } : {}),
           })
           .eq('id', scheduleTarget.id);
@@ -633,8 +634,13 @@ function InterviewApplicantCard({
         </p>
       )}
       {app.interview_confirmed_at && (
-        <p className="text-[11px] text-cyan-300">
+        <p className="text-[11px] text-cyan-300 flex items-center gap-1.5">
           Scheduled {format(new Date(app.interview_confirmed_at), "MMM d, yyyy 'at' p")}
+          {app.interview_source === 'calendly' && (
+            <Badge variant="outline" className="text-[9px] py-0 px-1 border-cyan-400/40 text-cyan-300">
+              Calendly
+            </Badge>
+          )}
         </p>
       )}
     </div>
