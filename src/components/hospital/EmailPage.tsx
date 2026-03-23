@@ -38,7 +38,7 @@ import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
-import type { ApplicationStatus, StudentApplication } from '@/types/positions';
+import type { StudentApplication } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
