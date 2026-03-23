@@ -569,40 +569,15 @@ export default function ApplicationsHub() {
             </Card>
           )}
 
-          <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Email Applicants</DialogTitle>
-                <DialogDescription>
-                  Send an email to {selectedCount} selected applicant
-                  {selectedCount === 1 ? '' : 's'} ({selectedRecipientCount} unique email
-                  {selectedRecipientCount === 1 ? '' : 's'}).
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <Input
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Subject"
-                />
-                <Textarea
-                  value={emailBody}
-                  onChange={(e) => setEmailBody(e.target.value)}
-                  rows={6}
-                  placeholder="Write your message..."
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEmailDialogOpen(false)} disabled={emailSending}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSendEmail} disabled={emailSending} className="gap-1.5">
-                  {emailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                  Send Email
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <RichEmailDialog
+            open={emailDialogOpen}
+            onOpenChange={setEmailDialogOpen}
+            hospitalPageId={hospitalPage?.id || ''}
+            hospitalName={hospitalPage?.opportunity?.name}
+            senderEmail={hospitalPage?.gmail_email}
+            selectedApplicationIds={selectedIds.filter(id => sorted.some(a => a.id === id))}
+            applications={sorted}
+          />
 
           <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
             <DialogContent>
