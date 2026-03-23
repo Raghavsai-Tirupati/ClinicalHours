@@ -17,6 +17,7 @@ import {
   Ghost,
   Trash2,
   FilePlus,
+  Copy,
 } from 'lucide-react';
 import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
@@ -29,6 +30,7 @@ import AdminLogosTab from '@/components/admin/AdminLogosTab';
 import GuestSessionsTab from '@/components/admin/GuestSessionsTab';
 import AdminDeletionEventsTab from '@/components/admin/AdminDeletionEventsTab';
 import AdminCreateHospitalPageTab from '@/components/admin/AdminCreateHospitalPageTab';
+import AdminCloneTemplateTab from '@/components/admin/AdminCloneTemplateTab';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
