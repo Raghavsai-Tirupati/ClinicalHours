@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bold,
   Eye,
@@ -96,6 +96,15 @@ export default function EmailPage() {
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const editorRef = useRef<HTMLDivElement | null>(null);
+
+  // The composer uses a contentEditable div. We keep it effectively uncontrolled so re-renders
+  // don't reset caret/selection while typing (which shows up as "typing backwards").
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = htmlBody;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredRecipients = useMemo(() => {
     if (filterMode === 'all') return applications;
@@ -390,7 +399,6 @@ export default function EmailPage() {
                   suppressContentEditableWarning
                   className="min-h-[220px] max-h-[360px] overflow-y-auto p-3 text-sm focus:outline-none [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
                   onInput={(e) => setHtmlBody(sanitizeRichHtml(e.currentTarget.innerHTML))}
-                  dangerouslySetInnerHTML={{ __html: htmlBody }}
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
