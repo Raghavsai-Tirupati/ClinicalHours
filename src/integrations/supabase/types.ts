@@ -1412,6 +1412,7 @@ export type Database = {
           availability_json: Json | null
           id: string
           interview_invited_at: string | null
+          interview_source: string | null
           notes: string | null
           position_id: string
           reviewed_at: string | null
@@ -1426,6 +1427,7 @@ export type Database = {
           availability_json?: Json | null
           id?: string
           interview_invited_at?: string | null
+          interview_source?: string | null
           notes?: string | null
           position_id: string
           reviewed_at?: string | null
@@ -1440,6 +1442,7 @@ export type Database = {
           availability_json?: Json | null
           id?: string
           interview_invited_at?: string | null
+          interview_source?: string | null
           notes?: string | null
           position_id?: string
           reviewed_at?: string | null
