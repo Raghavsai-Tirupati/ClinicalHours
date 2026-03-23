@@ -486,7 +486,7 @@ export default function ApplicantReviewPanel({
             </Button>
           )}
 
-          <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-2">
+          <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Admin notes</p>
             <Textarea
               value={notes}
@@ -507,39 +507,41 @@ export default function ApplicantReviewPanel({
               {noteSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               Save notes
             </Button>
-          </div>
 
-          <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-              <Flag className="h-3.5 w-3.5 opacity-70" aria-hidden />
-              Contact history
-            </p>
-            {activityLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                Loading…
-              </div>
-            ) : contactHistory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No logged contact yet. Send an email from the Applications tab to log activity here.</p>
-            ) : (
-              <ul className="space-y-3">
-                {contactHistory.map((entry) => {
-                  const EntryIcon = contactHistoryIcon(entry);
-                  return (
-                  <li key={entry.id} className="flex gap-3 text-sm">
-                    <EntryIcon className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden />
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-foreground/90 leading-snug">{contactHistorySummary(entry)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(entry.created_at), "MMM d, yyyy 'at' h:mm a")}
-                      </p>
-                      <p className="text-xs text-muted-foreground/80 break-all">{entry.actor_email}</p>
-                    </div>
-                  </li>
-                  );
-                })}
-              </ul>
-            )}
+            {/* Contact history — inline under notes */}
+            <div className="border-t border-border/40 pt-3 mt-3 space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                <Flag className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                Contact history
+              </p>
+              {activityLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  Loading…
+                </div>
+              ) : contactHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No logged contact yet. Send an email from the Email tab to log activity here.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {contactHistory.map((entry) => {
+                    const EntryIcon = contactHistoryIcon(entry);
+                    return (
+                    <li key={entry.id} className="flex gap-3 text-sm">
+                      <EntryIcon className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden />
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-foreground/90 leading-snug">{contactHistorySummary(entry)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(entry.created_at), "MMM d, yyyy 'at' h:mm a")}
+                          {' · '}
+                          {entry.actor_email}
+                        </p>
+                      </div>
+                    </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
 
           <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-4">
