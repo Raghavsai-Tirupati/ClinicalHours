@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     // Verify position is active
     const { data: position, error: posErr } = await supabaseAdmin
       .from("hospital_positions")
-      .select("id, status, application_deadline, spots_available")
+      .select("id, status, application_deadline, spots_available, ask_for_availability")
       .eq("id", position_id)
       .single();
 
@@ -103,13 +103,14 @@ Deno.serve(async (req) => {
     const applicantName = profileName || metaName || null;
     const applicantEmail = auth.user.email?.trim().toLowerCase() || null;
 
-    const availabilityJson =
+    const requestedAvailability =
       availability !== undefined &&
       availability !== null &&
       typeof availability === "object" &&
       !Array.isArray(availability)
         ? availability as Record<string, unknown>
         : null;
+    const availabilityJson = position.ask_for_availability === false ? null : requestedAvailability;
 
     // Create application
     const { data: app, error: appErr } = await supabaseAdmin

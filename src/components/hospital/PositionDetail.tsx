@@ -144,6 +144,20 @@ export default function PositionDetail() {
                 </CardContent>
               </Card>
             )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Application Flow</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">
+                  Ask for availability:{' '}
+                  <span className="font-medium">
+                    {position.ask_for_availability !== false ? 'Yes' : 'No'}
+                  </span>
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
           {questions.length > 0 && (

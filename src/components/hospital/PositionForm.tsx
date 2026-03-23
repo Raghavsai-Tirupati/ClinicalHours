@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ export default function PositionForm() {
   const [startDate, setStartDate] = useState('');
   const [applicationDeadline, setApplicationDeadline] = useState('');
   const [spotsAvailable, setSpotsAvailable] = useState('');
+  const [askForAvailability, setAskForAvailability] = useState(true);
   const [questions, setQuestions] = useState<QuestionFormData[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -113,6 +115,7 @@ export default function PositionForm() {
       setStartDate(existingPosition.start_date || '');
       setApplicationDeadline(existingPosition.application_deadline || '');
       setSpotsAvailable(existingPosition.spots_available?.toString() || '');
+      setAskForAvailability(existingPosition.ask_for_availability !== false);
     }
   }, [isEdit, existingPosition]);
 
@@ -161,6 +164,7 @@ export default function PositionForm() {
         start_date: startDate || null,
         application_deadline: applicationDeadline || null,
         spots_available: spotsAvailable ? parseInt(spotsAvailable) : null,
+        ask_for_availability: askForAvailability,
         status,
       };
 
@@ -377,6 +381,20 @@ export default function PositionForm() {
                 onChange={(e) => setApplicationDeadline(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
+            <div className="space-y-1">
+              <Label htmlFor="ask-for-availability">Ask for availability?</Label>
+              <p className="text-xs text-muted-foreground">
+                If enabled, applicants complete an availability step (days, preferred time, weekly hours).
+              </p>
+            </div>
+            <Switch
+              id="ask-for-availability"
+              checked={askForAvailability}
+              onCheckedChange={setAskForAvailability}
+            />
           </div>
         </CardContent>
       </Card>

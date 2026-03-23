@@ -18,6 +18,7 @@ export interface HospitalPosition {
   start_date: string | null;
   application_deadline: string | null;
   spots_available: number | null;
+  ask_for_availability: boolean;
   status: PositionStatus;
   created_at: string;
   updated_at: string;
@@ -120,6 +121,7 @@ export interface PositionFormData {
   start_date: string;
   application_deadline: string;
   spots_available: number | null;
+  ask_for_availability: boolean;
   status: PositionStatus;
 }
 

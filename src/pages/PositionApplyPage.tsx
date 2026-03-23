@@ -58,6 +58,11 @@ const STEP_LABELS: Record<StepKey, string> = {
 };
 
 function buildSteps(hasQuestions: boolean): StepKey[] {
+  return hasQuestions ? ['info', 'questions', 'review'] : ['info', 'review'];
+}
+
+function buildStepsWithAvailability(hasQuestions: boolean, askForAvailability: boolean): StepKey[] {
+  if (!askForAvailability) return buildSteps(hasQuestions);
   return hasQuestions
     ? ['info', 'questions', 'availability', 'review']
     : ['info', 'availability', 'review'];
@@ -119,7 +124,11 @@ export default function PositionApplyPage() {
   const [hospitalName, setHospitalName] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const steps = useMemo(() => buildSteps(questions.length > 0), [questions.length]);
+  const askForAvailability = position?.ask_for_availability !== false;
+  const steps = useMemo(
+    () => buildStepsWithAvailability(questions.length > 0, askForAvailability),
+    [questions.length, askForAvailability],
+  );
   const currentStep = steps[stepIndex];
 
   useEffect(() => {
@@ -210,7 +219,7 @@ export default function PositionApplyPage() {
       return true;
     }
     if (currentStep === 'questions') return validateQuestions();
-    if (currentStep === 'availability') {
+    if (currentStep === 'availability' && askForAvailability) {
       if (selectedDays.size === 0) {
         toast.error('Select at least one day you are available.');
         return false;
@@ -218,7 +227,7 @@ export default function PositionApplyPage() {
       return true;
     }
     return true;
-  }, [currentStep, phoneInput, validateQuestions, selectedDays]);
+  }, [currentStep, phoneInput, validateQuestions, selectedDays, askForAvailability]);
 
   const goNext = () => {
     if (!validateCurrentStep()) return;
@@ -255,7 +264,7 @@ export default function PositionApplyPage() {
       return;
     }
     if (!validateQuestions()) return;
-    if (selectedDays.size === 0) {
+    if (askForAvailability && selectedDays.size === 0) {
       toast.error('Select at least one day you are available.');
       return;
     }
@@ -318,7 +327,7 @@ export default function PositionApplyPage() {
         body: {
           position_id: positionId,
           answers: payloadAnswers,
-          availability: availabilityPayload,
+          availability: askForAvailability ? availabilityPayload : null,
         },
       });
 
@@ -898,12 +907,14 @@ export default function PositionApplyPage() {
                   </div>
                 )}
 
-                <div className="pa-form-group">
-                  <div className="pa-if-label" style={{ marginBottom: 12 }}>
-                    Availability
+                {askForAvailability && (
+                  <div className="pa-form-group">
+                    <div className="pa-if-label" style={{ marginBottom: 12 }}>
+                      Availability
+                    </div>
+                    <div className="pa-review-block">{formatAvailabilitySummary(availabilityPayload)}</div>
                   </div>
-                  <div className="pa-review-block">{formatAvailabilitySummary(availabilityPayload)}</div>
-                </div>
+                )}
 
                 <div className="pa-confirm-box">
                   By submitting, you confirm that the information provided is accurate and that you meet the eligibility

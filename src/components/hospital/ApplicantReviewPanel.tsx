@@ -337,22 +337,16 @@ export default function ApplicantReviewPanel({
                 {typeof profile.clinical_hours === 'number' ? profile.clinical_hours : '—'}
               </p>
             </div>
-            {profile.research_experience && (
-              <div className="sm:col-span-2 space-y-0.5">
-                <span className="text-xs text-muted-foreground">Research experience</span>
-                <p className="font-medium whitespace-pre-wrap leading-relaxed">{profile.research_experience}</p>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {formatApplicantAvailability(application.availability_json) && (
-        <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Availability</p>
-          <p className="text-sm text-foreground/90">{formatApplicantAvailability(application.availability_json)}</p>
-        </div>
-      )}
+      <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Availability</p>
+        <p className="text-sm text-foreground/90">
+          {formatApplicantAvailability(application.availability_json) || 'No availability submitted.'}
+        </p>
+      </div>
 
       {resumeUrl && (
         <Button variant="outline" size="sm" className="gap-2" asChild>
