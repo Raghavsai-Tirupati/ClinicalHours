@@ -770,25 +770,63 @@ export default function EmailPage() {
       <Dialog open={!!selectedSentEmailId} onOpenChange={(open) => !open && setSelectedSentEmailId(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Sent Email Recipients</DialogTitle>
+            <DialogTitle>Sent Email Details</DialogTitle>
           </DialogHeader>
           {!selectedSentEmail ? (
             <p className="text-sm text-muted-foreground">This email log entry is no longer available.</p>
-          ) : selectedSentRecipients.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Recipient details were not stored for this email send.
-            </p>
           ) : (
-            <div className="max-h-[360px] overflow-y-auto space-y-2">
-              {selectedSentRecipients.map((recipient) => (
-                <div
-                  key={recipient.id}
-                  className="rounded-md border border-border/50 bg-muted/20 px-3 py-2"
-                >
-                  <p className="text-sm font-medium truncate">{recipient.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{recipient.email || 'No email found'}</p>
-                </div>
-              ))}
+            <div className="space-y-4">
+              {/* Email metadata */}
+              {(() => {
+                const meta = (selectedSentEmail.metadata as Record<string, unknown>) || {};
+                const emailSubject = (meta.subject as string)?.trim() || 'No subject';
+                const bodyPreview = typeof meta.bodyPreview === 'string' ? meta.bodyPreview : null;
+                const recipientCount = (meta.recipientCount as number) || 0;
+                const attachmentCount = typeof meta.attachmentCount === 'number' ? meta.attachmentCount : 0;
+                return (
+                  <>
+                    <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Subject</p>
+                        <p className="text-sm font-medium">{emailSubject}</p>
+                      </div>
+                      {bodyPreview && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
+                          <p className="text-sm text-foreground/80 whitespace-pre-wrap line-clamp-6">{bodyPreview}</p>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground pt-1">
+                        <span>{format(new Date(selectedSentEmail.created_at), "MMM d, yyyy 'at' h:mm a")}</span>
+                        <span>{recipientCount} recipient{recipientCount === 1 ? '' : 's'}</span>
+                        {attachmentCount > 0 && <span>{attachmentCount} attachment{attachmentCount === 1 ? '' : 's'}</span>}
+                        <span>by {selectedSentEmail.actor_email}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recipients</p>
+                      {selectedSentRecipients.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Recipient details were not stored for this email.
+                        </p>
+                      ) : (
+                        <div className="max-h-[280px] overflow-y-auto space-y-2">
+                          {selectedSentRecipients.map((recipient) => (
+                            <div
+                              key={recipient.id}
+                              className="rounded-md border border-border/50 bg-muted/20 px-3 py-2"
+                            >
+                              <p className="text-sm font-medium truncate">{recipient.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{recipient.email || 'No email found'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
         </DialogContent>
