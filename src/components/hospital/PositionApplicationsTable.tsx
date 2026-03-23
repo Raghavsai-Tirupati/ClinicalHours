@@ -131,7 +131,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
     setUpdatingStatus(true);
     try {
       const updatePayload = buildStudentApplicationStatusUpdate(newStatus);
-      const { error, count } = await supabase
+      const { error } = await supabase
         .from('student_applications')
         .update(updatePayload)
         .eq('id', appId)
