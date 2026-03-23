@@ -267,7 +267,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
               </TableHeader>
               <TableBody>
                 {applications.map((app) => (
-                  <TableRow key={app.id} className="cursor-pointer" onClick={() => setSelectedApp(allApplications.find((a) => a.id === app.id) || app)}>
+                  <TableRow key={app.id} className="cursor-pointer" onClick={() => navigate(`${basePath}/applicants/${app.id}`)}>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedApplicationIds.includes(app.id)}
