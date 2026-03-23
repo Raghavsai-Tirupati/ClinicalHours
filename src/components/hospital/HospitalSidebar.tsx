@@ -45,10 +45,11 @@ export default function HospitalSidebar() {
     navigate('/');
   };
 
+  const activeCount = positions.filter(p => p.status === 'active').length;
+
   const navItems = [
     { label: 'Overview', icon: LayoutDashboard, route: basePath },
-    { label: 'Applications', icon: FileText, route: `${basePath}/applications` },
-    { label: 'Positions', icon: Briefcase, route: `${basePath}/positions`, badge: positions.length },
+    { label: 'Positions', icon: Briefcase, route: `${basePath}/positions`, badge: activeCount || positions.length },
     { label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
     { label: 'Email', icon: Mail, route: `${basePath}/email` },
     { label: 'Activity', icon: Activity, route: `${basePath}/activity` },
