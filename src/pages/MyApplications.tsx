@@ -223,12 +223,8 @@ export default function MyApplications() {
   }
 
   async function fetchSlots(applicationId: string) {
-    const { data } = await supabase
-      .from("application_interview_slots")
-      .select("*")
-      .eq("application_id", applicationId)
-      .order("preference_rank");
-    setSlots((data as InterviewSlot[]) || []);
+    // application_interview_slots table not yet created — no-op for now
+    setSlots([]);
   }
 
   function toggleExpand(id: string) {
@@ -307,35 +303,12 @@ export default function MyApplications() {
       return;
     }
     setSubmitting(true);
-    setError(null);
-    supabase
-      .from("application_interview_slots")
-      .insert({
-        application_id: selectedApp.id,
-        slot_start: start.toISOString(),
-        slot_end: end.toISOString(),
-        preference_rank: slots.length + 1,
-      })
-      .then(({ error: err }) => {
-        if (err) {
-          setError(err.message);
-        } else {
-          fetchSlots(selectedApp.id);
-          setSuccess(true);
-          setNewSlotDate(format(addDays(new Date(), 1), "yyyy-MM-dd"));
-          setNewSlotStart("09:00");
-          setNewSlotEnd("10:00");
-        }
-        setSubmitting(false);
-      });
+    setError("Interview scheduling is not yet available.");
+    setSubmitting(false);
   }
 
-  function removeSlot(slotId: string) {
-    supabase
-      .from("application_interview_slots")
-      .delete()
-      .eq("id", slotId)
-      .then(() => selectedApp && fetchSlots(selectedApp.id));
+  function removeSlot(_slotId: string) {
+    // no-op — table not yet created
   }
 
   if (authLoading || loading) {

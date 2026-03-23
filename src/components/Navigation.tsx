@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { useHasApplications } from "@/hooks/useHasApplications";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +51,7 @@ const Navigation = () => {
   const { user, isGuest } = useAuth();
   const { member: hospitalMember } = useHospitalMember();
   const { isPremium } = usePremiumStatus();
+  const { hasApplications } = useHasApplications(user?.id);
 
   // Check if we're on pages that should have transparent nav
   const isHomePage = location.pathname === "/";
@@ -139,7 +141,7 @@ const Navigation = () => {
   const bottomTabs = [
     { name: "Dashboard", path: "/dashboard", icon: Home },
     { name: "Opportunities", path: "/opportunities", icon: MapPin },
-    { name: "Tracker", path: "/my-applications", icon: Sparkles },
+    ...(hasApplications ? [{ name: "Tracker", path: "/my-applications", icon: Sparkles }] : []),
     { name: "Settings", path: "/settings", icon: SettingsIcon },
   ];
 
