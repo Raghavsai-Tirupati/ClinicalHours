@@ -657,6 +657,7 @@ export type Database = {
       hospital_positions: {
         Row: {
           application_deadline: string | null
+          ask_for_availability: boolean
           created_at: string | null
           description: string | null
           duration: string | null
@@ -674,6 +675,7 @@ export type Database = {
         }
         Insert: {
           application_deadline?: string | null
+          ask_for_availability?: boolean
           created_at?: string | null
           description?: string | null
           duration?: string | null
@@ -691,6 +693,7 @@ export type Database = {
         }
         Update: {
           application_deadline?: string | null
+          ask_for_availability?: boolean
           created_at?: string | null
           description?: string | null
           duration?: string | null
