@@ -198,6 +198,7 @@ function AppContent() {
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
+                <Route path="applicants/:applicationId" element={<ApplicantProfilePage />} />
                 <Route path="interviews" element={<InterviewsPage />} />
                 <Route path="email" element={<EmailPage />} />
                 <Route path="activity" element={<ActivityPage />} />
