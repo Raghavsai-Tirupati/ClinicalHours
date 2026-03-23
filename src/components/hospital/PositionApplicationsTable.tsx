@@ -130,16 +130,22 @@ export default function PositionApplicationsTable({ positionId }: Props) {
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
     setUpdatingStatus(true);
     try {
-      const { error } = await supabase
+      const updatePayload = buildStudentApplicationStatusUpdate(newStatus);
+      const { error, count } = await supabase
         .from('student_applications')
-        .update(buildStudentApplicationStatusUpdate(newStatus))
-        .eq('id', appId);
-      if (error) throw error;
+        .update(updatePayload)
+        .eq('id', appId)
+        .select('id');
+      if (error) {
+        console.error('Status update error:', error.message, error.code, error.details);
+        throw error;
+      }
       toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
       updateApplicationLocally(appId, { status: newStatus });
       if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
-    } catch {
-      toast.error('Failed to update status');
+    } catch (err: any) {
+      console.error('Failed to update status:', err);
+      toast.error(err?.message || 'Failed to update status');
     } finally {
       setUpdatingStatus(false);
     }
