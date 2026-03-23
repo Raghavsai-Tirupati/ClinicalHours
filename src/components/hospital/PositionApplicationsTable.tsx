@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, Search, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePositionApplications } from '@/hooks/usePositionApplications';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
+import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
 import ApplicationDetailSheet from './ApplicationDetailSheet';
@@ -117,12 +118,20 @@ export default function PositionApplicationsTable({ positionId }: Props) {
     }
   };
 
+  const handleApplicationPatched = useCallback(
+    (appId: string, patch: Partial<StudentApplication>) => {
+      refetch();
+      if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, ...patch } : null));
+    },
+    [refetch, selectedApp?.id],
+  );
+
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
     setUpdatingStatus(true);
     try {
       const { error } = await supabase
         .from('student_applications')
-        .update({ status: newStatus, reviewed_at: new Date().toISOString() })
+        .update(buildStudentApplicationStatusUpdate(newStatus))
         .eq('id', appId);
       if (error) throw error;
       toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
@@ -315,6 +324,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
         onClose={() => setSelectedApp(null)}
         onStatusChange={handleStatusChange}
         onNoteSaved={refetch}
+        onApplicationPatched={handleApplicationPatched}
       />
 
       {hospitalPage?.id && (

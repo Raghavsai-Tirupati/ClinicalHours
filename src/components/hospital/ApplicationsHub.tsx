@@ -1,8 +1,19 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Search, User, Filter, Loader2, Mail, Calendar, BarChart2, List } from 'lucide-react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Mail,
+  Calendar,
+  BarChart2,
+  List,
+  ArrowDown,
+  ArrowUp,
+} from 'lucide-react';
 import ResponseAnalytics from '@/components/hospital/ResponseAnalytics';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import ApplicationFilterBar from '@/components/hospital/ApplicationFilterBar';
+import ApplicantReviewPanel from '@/components/hospital/ApplicantReviewPanel';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,12 +44,21 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
-import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from '@/types/positions';
-import type { ApplicationStatus, StudentApplication } from '@/types/positions';
-import ApplicationDetailSheet from '@/components/hospital/ApplicationDetailSheet';
+import {
+  applyApplicationFilters,
+  getApplicantSortName,
+  sortApplications,
+  type ApplicationFilterRule,
+  type SortColumn,
+  type SortState,
+} from '@/lib/applicationFilters';
+import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { useAutoMarkApplicationUnderReview } from '@/hooks/useAutoMarkApplicationUnderReview';
+import { APPLICATION_STATUS_LABELS, type ApplicationStatus, type StudentApplication } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { Input } from '@/components/ui/input';
 
 const STATUS_COLORS: Record<string, string> = {
   new: 'bg-blue-500/15 text-blue-400',
@@ -48,38 +68,80 @@ const STATUS_COLORS: Record<string, string> = {
   waitlisted: 'bg-purple-500/15 text-purple-400',
 };
 
-const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
-
-function normalizeDisplayName(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  if (PLACEHOLDER_NAME_REGEX.test(trimmed)) return null;
-  return trimmed;
+function defaultDirectionFor(column: SortColumn): 'asc' | 'desc' {
+  if (column === 'submitted' || column === 'gpa' || column === 'clinical_hours') return 'desc';
+  return 'asc';
 }
 
-function getApplicantName(app: StudentApplication): string {
+function SortableTh({
+  column,
+  label,
+  sort,
+  onSort,
+  className,
+}: {
+  column: SortColumn;
+  label: string;
+  sort: SortState;
+  onSort: (c: SortColumn) => void;
+  className?: string;
+}) {
+  const active = sort.column === column;
   return (
-    normalizeDisplayName(app.applicant_name) ||
-    normalizeDisplayName(app.student_profile?.full_name) ||
-    app.applicant_email?.split('@')[0] ||
-    `Student ${app.student_id.slice(0, 8)}`
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className="inline-flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground transition-colors -ml-1 px-1 py-0.5 rounded"
+      >
+        {label}
+        {active ? (
+          sort.direction === 'asc' ? (
+            <ArrowUp className="h-3.5 w-3.5 text-primary" />
+          ) : (
+            <ArrowDown className="h-3.5 w-3.5 text-primary" />
+          )
+        ) : (
+          <span className="w-3.5 h-3.5 inline-block opacity-0" aria-hidden />
+        )}
+      </button>
+    </TableHead>
   );
 }
 
-type SortOption = 'newest' | 'oldest' | 'name_asc' | 'gpa_high' | 'gpa_low' | 'hours_high' | 'grad_year';
+function ApplicantReviewWhenExpanded({
+  application,
+  onStatusChange,
+  onNoteSaved,
+  onApplicationPatched,
+}: {
+  application: StudentApplication;
+  onStatusChange: (appId: string, status: ApplicationStatus) => void | Promise<void>;
+  onNoteSaved: () => void;
+  onApplicationPatched: (appId: string, patch: Partial<StudentApplication>) => void;
+}) {
+  const autoReviewing = useAutoMarkApplicationUnderReview(application, true, onApplicationPatched);
+  return (
+    <ApplicantReviewPanel
+      application={application}
+      onStatusChange={onStatusChange}
+      onNoteSaved={onNoteSaved}
+      showHeaderAvatar
+      autoReviewing={autoReviewing}
+    />
+  );
+}
 
 export default function ApplicationsHub() {
   const { hospitalPage } = useHospitalPageContext();
   const { applications, positions, stats, loading, refetch } = useAllApplications(hospitalPage?.id);
 
   const [activeTab, setActiveTab] = useState<'applications' | 'analytics'>('applications');
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ApplicationStatus | 'all'>('all');
-  const [positionFilter, setPositionFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [filterRules, setFilterRules] = useState<ApplicationFilterRule[]>([]);
+  const [sortState, setSortState] = useState<SortState | null>(null);
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectedApp, setSelectedApp] = useState<StudentApplication | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -91,57 +153,36 @@ export default function ApplicationsHub() {
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteSending, setInviteSending] = useState(false);
 
-  const filtered = useMemo(() => {
-    let list = [...applications];
+  const effectiveSort: SortState = sortState ?? { column: 'submitted', direction: 'desc' };
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((app) => getApplicantName(app).toLowerCase().includes(q));
-    }
-    if (statusFilter !== 'all') {
-      list = list.filter((app) => app.status === statusFilter);
-    }
-    if (positionFilter !== 'all') {
-      list = list.filter((app) => app.position_id === positionFilter);
-    }
+  const handleSortClick = useCallback((column: SortColumn) => {
+    setSortState((prev) => {
+      const current = prev ?? { column: 'submitted', direction: 'desc' };
+      if (current.column === column) {
+        return { column, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { column, direction: defaultDirectionFor(column) };
+    });
+  }, []);
 
-    switch (sortBy) {
-      case 'oldest':
-        list.sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime());
-        break;
-      case 'name_asc':
-        list.sort((a, b) => getApplicantName(a).localeCompare(getApplicantName(b)));
-        break;
-      case 'gpa_high':
-        list.sort((a, b) => (b.student_profile?.gpa ?? -1) - (a.student_profile?.gpa ?? -1));
-        break;
-      case 'gpa_low':
-        list.sort((a, b) => (a.student_profile?.gpa ?? 99) - (b.student_profile?.gpa ?? 99));
-        break;
-      case 'hours_high':
-        list.sort((a, b) => (b.student_profile?.clinical_hours ?? -1) - (a.student_profile?.clinical_hours ?? -1));
-        break;
-      case 'grad_year':
-        list.sort((a, b) => (a.student_profile?.graduation_year ?? 9999) - (b.student_profile?.graduation_year ?? 9999));
-        break;
-      default:
-        list.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
-    }
-    return list;
-  }, [applications, search, statusFilter, positionFilter, sortBy]);
+  const filtered = useMemo(
+    () => applyApplicationFilters(applications, filterRules),
+    [applications, filterRules],
+  );
 
-  const selectedAllVisible =
-    filtered.length > 0 && filtered.every((app) => selectedIds.includes(app.id));
+  const sorted = useMemo(() => sortApplications(filtered, effectiveSort), [filtered, effectiveSort]);
+
+  const selectedAllVisible = sorted.length > 0 && sorted.every((app) => selectedIds.includes(app.id));
 
   const selectedRecipientCount = useMemo(() => {
     const emails = new Set<string>();
-    for (const app of filtered) {
+    for (const app of sorted) {
       if (!selectedIds.includes(app.id)) continue;
       const email = (app.applicant_email || app.student_profile?.email || '').trim().toLowerCase();
       if (email) emails.add(email);
     }
     return emails.size;
-  }, [filtered, selectedIds]);
+  }, [sorted, selectedIds]);
 
   const toggleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => (checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)));
@@ -149,12 +190,19 @@ export default function ApplicationsHub() {
 
   const toggleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds((prev) => Array.from(new Set([...prev, ...filtered.map((a) => a.id)])));
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...sorted.map((a) => a.id)])));
     } else {
-      const visibleSet = new Set(filtered.map((a) => a.id));
+      const visibleSet = new Set(sorted.map((a) => a.id));
       setSelectedIds((prev) => prev.filter((id) => !visibleSet.has(id)));
     }
   };
+
+  const handleApplicationPatched = useCallback(
+    (_appId: string, _patch: Partial<StudentApplication>) => {
+      refetch();
+    },
+    [refetch],
+  );
 
   const handleStatusChange = useCallback(
     async (appId: string, newStatus: ApplicationStatus) => {
@@ -162,30 +210,40 @@ export default function ApplicationsHub() {
       try {
         const { error } = await supabase
           .from('student_applications')
-          .update({ status: newStatus, reviewed_at: new Date().toISOString() })
+          .update(buildStudentApplicationStatusUpdate(newStatus))
           .eq('id', appId);
         if (error) throw error;
         toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
         refetch();
-        if (selectedApp?.id === appId) {
-          setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
-        }
       } catch {
         toast.error('Failed to update status');
       } finally {
         setUpdatingStatus(false);
       }
     },
-    [refetch, selectedApp?.id],
+    [refetch],
   );
+
+  const handleViewApplicantFromAnalytics = useCallback((applicationId: string) => {
+    setActiveTab('applications');
+    setExpandedId(applicationId);
+    setTimeout(() => {
+      document.getElementById(`applicant-row-${applicationId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  }, []);
 
   const handleSendEmail = async () => {
     if (!hospitalPage?.id || selectedIds.length === 0) return;
-    if (!emailSubject.trim()) { toast.error('Subject is required'); return; }
-    if (!emailBody.trim()) { toast.error('Message body is required'); return; }
+    if (!emailSubject.trim()) {
+      toast.error('Subject is required');
+      return;
+    }
+    if (!emailBody.trim()) {
+      toast.error('Message body is required');
+      return;
+    }
     setEmailSending(true);
     try {
-      // BACKEND: Email delivery requires verified Resend domain. Edge function is wired correctly.
       const { data, error } = await supabase.functions.invoke('send-position-interview-invites', {
         body: {
           hospitalPageId: hospitalPage.id,
@@ -235,7 +293,11 @@ export default function ApplicationsHub() {
     }
   };
 
-  const selectedCount = filtered.filter((a) => selectedIds.includes(a.id)).length;
+  const selectedCount = sorted.filter((a) => selectedIds.includes(a.id)).length;
+
+  const toggleExpand = (appId: string) => {
+    setExpandedId((id) => (id === appId ? null : appId));
+  };
 
   if (loading) {
     return (
@@ -253,14 +315,12 @@ export default function ApplicationsHub() {
 
   return (
     <div className="space-y-6">
-      {/* Header + Tab Switcher */}
       <div>
         <h2 className="text-2xl font-bold">Applications</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          All applications across every position
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">All applications across every position</p>
         <div className="flex gap-1 mt-4 border-b border-border">
           <button
+            type="button"
             onClick={() => setActiveTab('applications')}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'applications'
@@ -272,6 +332,7 @@ export default function ApplicationsHub() {
             Applicants
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('analytics')}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'analytics'
@@ -285,315 +346,268 @@ export default function ApplicationsHub() {
         </div>
       </div>
 
-      {/* Analytics tab */}
       {activeTab === 'analytics' && (
-        <ResponseAnalytics applications={applications} />
+        <ResponseAnalytics applications={applications} onViewApplicant={handleViewApplicantFromAnalytics} />
       )}
 
-      {/* Applications tab */}
-      {activeTab !== 'analytics' && (<>
-
-      {/* Stats */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Badge variant="outline" className="text-sm py-1 px-3">
-          {stats.total} total
-        </Badge>
-        <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.new}`}>{stats.new} new</Badge>
-        <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.under_review}`}>
-          {stats.underReview} reviewing
-        </Badge>
-        <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.accepted}`}>
-          {stats.accepted} accepted
-        </Badge>
-        <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.rejected}`}>
-          {stats.rejected} rejected
-        </Badge>
-      </div>
-
-      {/* Filters */}
-      <Card className="border-border/50 bg-muted/20">
-        <CardContent className="pt-4 pb-4">
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9"
-              />
-            </div>
-            <Select
-              value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as ApplicationStatus | 'all')}
-            >
-              <SelectTrigger className="w-[150px] h-9">
-                <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={positionFilter} onValueChange={setPositionFilter}>
-              <SelectTrigger className="w-[200px] h-9">
-                <SelectValue placeholder="All positions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All positions</SelectItem>
-                {positions.map((pos) => (
-                  <SelectItem key={pos.id} value={pos.id}>
-                    {pos.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-              <SelectTrigger className="w-[170px] h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest first</SelectItem>
-                <SelectItem value="oldest">Oldest first</SelectItem>
-                <SelectItem value="name_asc">Name A–Z</SelectItem>
-                <SelectItem value="gpa_high">GPA: High → Low</SelectItem>
-                <SelectItem value="gpa_low">GPA: Low → High</SelectItem>
-                <SelectItem value="hours_high">Clinical Hours: Most</SelectItem>
-                <SelectItem value="grad_year">Grad Year: Soonest</SelectItem>
-              </SelectContent>
-            </Select>
+      {activeTab === 'applications' && (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant="outline" className="text-sm py-1 px-3">
+              {stats.total} total
+            </Badge>
+            <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.new}`}>{stats.new} new</Badge>
+            <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.under_review}`}>{stats.underReview} reviewing</Badge>
+            <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.accepted}`}>{stats.accepted} accepted</Badge>
+            <Badge className={`text-sm py-1 px-3 ${STATUS_COLORS.rejected}`}>{stats.rejected} rejected</Badge>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Bulk actions */}
-      {selectedCount > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-4 py-3">
-          <Badge variant="outline" className="text-xs">
-            {selectedCount} selected ({selectedRecipientCount} unique emails)
-          </Badge>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={() => setEmailDialogOpen(true)}
-          >
-            <Mail className="h-3.5 w-3.5" />
-            Email
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={() => setInviteDialogOpen(true)}
-          >
-            <Calendar className="h-3.5 w-3.5" />
-            Interview Invite
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
-            Clear
-          </Button>
-        </div>
-      )}
-
-      {/* Table */}
-      {filtered.length === 0 ? (
-        <Card className="border-border/50">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <User className="h-10 w-10 text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground">
-              {applications.length === 0
-                ? 'No applications yet. Applications will appear here once students apply.'
-                : 'No applications match your filters.'}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-border/50 overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[40px]">
-                  <Checkbox
-                    checked={selectedAllVisible}
-                    onCheckedChange={(c) => toggleSelectAll(!!c)}
-                    aria-label="Select all visible"
-                  />
-                </TableHead>
-                <TableHead>Applicant</TableHead>
-                <TableHead>Position</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[160px]">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((app) => (
-                <TableRow
-                  key={app.id}
-                  className="cursor-pointer"
-                  onClick={() => setSelectedApp(app)}
-                >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selectedIds.includes(app.id)}
-                      onCheckedChange={(c) => toggleSelect(app.id, !!c)}
-                      aria-label={`Select ${getApplicantName(app)}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium text-sm">{getApplicantName(app)}</p>
-                      {app.student_profile?.university && (
-                        <p className="text-xs text-muted-foreground">
-                          {app.student_profile.university}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {typeof app.student_profile?.gpa === 'number' && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-medium">
-                            GPA {app.student_profile.gpa.toFixed(2)}
-                          </span>
-                        )}
-                        {typeof app.student_profile?.clinical_hours === 'number' && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-medium">
-                            {app.student_profile.clinical_hours}h clinical
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-sm text-muted-foreground truncate max-w-[180px]">
-                      {app.position?.title || '—'}
-                    </p>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(app.submitted_at), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`text-xs ${STATUS_COLORS[app.status] || ''}`}>
-                      {APPLICATION_STATUS_LABELS[app.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Select
-                      value={app.status}
-                      onValueChange={(v) => handleStatusChange(app.id, v as ApplicationStatus)}
-                      disabled={updatingStatus}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
-                          <SelectItem key={key} value={key}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-
-      {/* Application Detail Sheet */}
-      <ApplicationDetailSheet
-        application={selectedApp}
-        onClose={() => setSelectedApp(null)}
-        onStatusChange={handleStatusChange}
-        onNoteSaved={refetch}
-      />
-
-      {/* Email Dialog */}
-      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Email Applicants</DialogTitle>
-            <DialogDescription>
-              Send an email to {selectedCount} selected applicant
-              {selectedCount === 1 ? '' : 's'} ({selectedRecipientCount} unique email
-              {selectedRecipientCount === 1 ? '' : 's'}).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Input
-              value={emailSubject}
-              onChange={(e) => setEmailSubject(e.target.value)}
-              placeholder="Subject"
-            />
-            <Textarea
-              value={emailBody}
-              onChange={(e) => setEmailBody(e.target.value)}
-              rows={6}
-              placeholder="Write your message..."
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEmailDialogOpen(false)}
-              disabled={emailSending}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSendEmail} disabled={emailSending} className="gap-1.5">
-              {emailSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Mail className="h-4 w-4" />
-              )}
-              Send Email
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Interview Invite Dialog */}
-      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send Interview Invites</DialogTitle>
-            <DialogDescription>
-              Send your interview booking link to {selectedCount} selected applicant
-              {selectedCount === 1 ? '' : 's'}.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={inviteMessage}
-            onChange={(e) => setInviteMessage(e.target.value)}
-            rows={5}
-            placeholder="Optional custom message..."
+          <ApplicationFilterBar
+            hospitalPageId={hospitalPage?.id}
+            rules={filterRules}
+            onRulesChange={setFilterRules}
+            positions={positions}
+            applications={applications}
           />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setInviteDialogOpen(false)}
-              disabled={inviteSending}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSendInvites} disabled={inviteSending} className="gap-1.5">
-              {inviteSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Calendar className="h-4 w-4" />
-              )}
-              Send Invites
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      </>)}
+
+          <p className="text-xs text-muted-foreground">
+            Showing <span className="text-foreground font-medium">{sorted.length}</span> of {applications.length}{' '}
+            applicants after filters. Sort by clicking a column header. Default: newest first.
+          </p>
+
+          {selectedCount > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-4 py-3">
+              <Badge variant="outline" className="text-xs">
+                {selectedCount} selected ({selectedRecipientCount} unique emails)
+              </Badge>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEmailDialogOpen(true)}>
+                <Mail className="h-3.5 w-3.5" />
+                Email
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setInviteDialogOpen(true)}>
+                <Calendar className="h-3.5 w-3.5" />
+                Interview Invite
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
+                Clear
+              </Button>
+            </div>
+          )}
+
+          {sorted.length === 0 ? (
+            <Card className="border-border/50">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <List className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  {applications.length === 0
+                    ? 'No applications yet. Applications will appear here once students apply.'
+                    : 'No applicants match your filters. Adjust or clear filters to see more.'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-border/50 overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-border/60">
+                      <TableHead className="w-[40px]">
+                        <Checkbox
+                          checked={selectedAllVisible}
+                          onCheckedChange={(c) => toggleSelectAll(!!c)}
+                          aria-label="Select all visible"
+                        />
+                      </TableHead>
+                      <TableHead className="w-[36px]" />
+                      <SortableTh column="name" label="Applicant" sort={effectiveSort} onSort={handleSortClick} />
+                      <SortableTh column="university" label="University" sort={effectiveSort} onSort={handleSortClick} className="max-w-[140px]" />
+                      <SortableTh column="position" label="Position" sort={effectiveSort} onSort={handleSortClick} />
+                      <SortableTh column="submitted" label="Submitted" sort={effectiveSort} onSort={handleSortClick} />
+                      <SortableTh column="status" label="Status" sort={effectiveSort} onSort={handleSortClick} />
+                      <SortableTh column="gpa" label="GPA" sort={effectiveSort} onSort={handleSortClick} className="w-[72px]" />
+                      <SortableTh
+                        column="clinical_hours"
+                        label="Clin. h"
+                        sort={effectiveSort}
+                        onSort={handleSortClick}
+                        className="w-[80px]"
+                      />
+                      <SortableTh column="grad_year" label="Grad yr" sort={effectiveSort} onSort={handleSortClick} className="w-[80px]" />
+                      <TableHead className="w-[150px] text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sorted.map((app) => (
+                      <Fragment key={app.id}>
+                        <TableRow
+                          id={`applicant-row-${app.id}`}
+                          className={`border-border/50 ${expandedId === app.id ? 'bg-muted/25' : ''}`}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedIds.includes(app.id)}
+                              onCheckedChange={(c) => toggleSelect(app.id, !!c)}
+                              aria-label={`Select ${getApplicantSortName(app)}`}
+                            />
+                          </TableCell>
+                          <TableCell className="p-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={() => toggleExpand(app.id)}
+                              aria-expanded={expandedId === app.id}
+                              aria-label={expandedId === app.id ? 'Collapse' : 'Expand applicant'}
+                            >
+                              {expandedId === app.id ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell>
+                            <button
+                              type="button"
+                              className="text-left w-full"
+                              onClick={() => toggleExpand(app.id)}
+                            >
+                              <p className="font-medium text-sm">{getApplicantSortName(app)}</p>
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-[140px]">
+                            <span className="truncate block">{app.student_profile?.university || '—'}</span>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-[160px]">
+                            <span className="truncate block">{app.position?.title || '—'}</span>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                            {format(new Date(app.submitted_at), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`text-xs ${STATUS_COLORS[app.status] || ''}`}>
+                              {APPLICATION_STATUS_LABELS[app.status]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm tabular-nums">
+                            {typeof app.student_profile?.gpa === 'number' ? app.student_profile.gpa.toFixed(2) : '—'}
+                          </TableCell>
+                          <TableCell className="text-sm tabular-nums">
+                            {typeof app.student_profile?.clinical_hours === 'number'
+                              ? app.student_profile.clinical_hours
+                              : '—'}
+                          </TableCell>
+                          <TableCell className="text-sm tabular-nums">
+                            {app.student_profile?.graduation_year ?? '—'}
+                          </TableCell>
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={app.status}
+                              onValueChange={(v) => handleStatusChange(app.id, v as ApplicationStatus)}
+                              disabled={updatingStatus}
+                            >
+                              <SelectTrigger className="h-8 text-xs ml-auto w-[130px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
+                                  <SelectItem key={key} value={key}>
+                                    {label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                        {expandedId === app.id && (
+                          <TableRow className="border-border/50 bg-muted/15 hover:bg-muted/15">
+                            <TableCell colSpan={11} className="p-0 border-l-2 border-l-primary/40">
+                              <div className="px-4 py-5 sm:px-6 max-w-3xl">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+                                  Applicant review
+                                </p>
+                                <ApplicantReviewWhenExpanded
+                                  application={app}
+                                  onStatusChange={handleStatusChange}
+                                  onNoteSaved={refetch}
+                                  onApplicationPatched={handleApplicationPatched}
+                                />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          )}
+
+          <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Email Applicants</DialogTitle>
+                <DialogDescription>
+                  Send an email to {selectedCount} selected applicant
+                  {selectedCount === 1 ? '' : 's'} ({selectedRecipientCount} unique email
+                  {selectedRecipientCount === 1 ? '' : 's'}).
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <Input
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Subject"
+                />
+                <Textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  rows={6}
+                  placeholder="Write your message..."
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEmailDialogOpen(false)} disabled={emailSending}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSendEmail} disabled={emailSending} className="gap-1.5">
+                  {emailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  Send Email
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Send Interview Invites</DialogTitle>
+                <DialogDescription>
+                  Send your interview booking link to {selectedCount} selected applicant
+                  {selectedCount === 1 ? '' : 's'}.
+                </DialogDescription>
+              </DialogHeader>
+              <Textarea
+                value={inviteMessage}
+                onChange={(e) => setInviteMessage(e.target.value)}
+                rows={5}
+                placeholder="Optional custom message..."
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setInviteDialogOpen(false)} disabled={inviteSending}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSendInvites} disabled={inviteSending} className="gap-1.5">
+                  {inviteSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
+                  Send Invites
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }

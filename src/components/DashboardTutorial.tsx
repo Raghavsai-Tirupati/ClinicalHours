@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 interface DashboardTutorialProps {
   mode: "guest" | "account";
   tutorialKey: string;
-  hasExperience: boolean;
   hasTrackedOpportunities: boolean;
   onComplete?: () => Promise<void> | void;
 }
@@ -13,7 +12,6 @@ interface DashboardTutorialProps {
 export function DashboardTutorial({
   mode,
   tutorialKey,
-  hasExperience,
   hasTrackedOpportunities,
   onComplete,
 }: DashboardTutorialProps) {
@@ -56,8 +54,8 @@ export function DashboardTutorial({
   const goToOpportunities = () => navigate("/opportunities");
   const goToHourTracker = () => navigate("/hours");
 
-  // When the user has no experience logged yet, focus on finding a place first.
-  if (!hasExperience) {
+  // "New here" only when they have not saved any opportunities to the tracker yet.
+  if (!hasTrackedOpportunities) {
     return (
       <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="space-y-1">

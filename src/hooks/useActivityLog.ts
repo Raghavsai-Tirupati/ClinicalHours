@@ -40,20 +40,21 @@ export function useActivityLog(hospitalPageId: string | undefined) {
     async (
       actionType: ActivityActionType,
       opts?: { targetType?: string; targetId?: string; metadata?: Record<string, unknown> }
-    ) => {
-      if (!hospitalPageId || !user?.email) return;
-      try {
-        await supabase.from('admin_activity_log').insert({
-          hospital_page_id: hospitalPageId,
-          actor_email: user.email,
-          action_type: actionType,
-          target_type: opts?.targetType ?? null,
-          target_id: opts?.targetId ?? null,
-          metadata: opts?.metadata ?? {},
-        });
-      } catch (err) {
-        console.error('Failed to log activity:', err);
+    ): Promise<boolean> => {
+      if (!hospitalPageId || !user?.email) return false;
+      const { error } = await supabase.from('admin_activity_log').insert({
+        hospital_page_id: hospitalPageId,
+        actor_email: user.email,
+        action_type: actionType,
+        target_type: opts?.targetType ?? null,
+        target_id: opts?.targetId ?? null,
+        metadata: opts?.metadata ?? {},
+      });
+      if (error) {
+        console.error('Failed to log activity:', error.message, error);
+        return false;
       }
+      return true;
     },
     [hospitalPageId, user?.email]
   );

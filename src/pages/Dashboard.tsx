@@ -635,7 +635,6 @@ const Dashboard = () => {
     [localLogs]
   );
   const totalHours = opportunities.reduce((s, o) => s + o.hoursLogged, 0) + localTrackerHours;
-  const hasExperience = totalHours > 0;
   const hasTrackedOpportunities = opportunities.length > 0;
   const guestTutorialVisible = isGuest && shouldShowGuestTutorial(getGuestSessionId());
   const accountTutorialVisible = Boolean(user && !isGuest && !dashboardTutorialComplete);
@@ -782,7 +781,6 @@ const Dashboard = () => {
             <DashboardTutorial
               mode={guestTutorialVisible ? "guest" : "account"}
               tutorialKey={guestTutorialVisible ? (getGuestSessionId() || user?.id || "guest") : (user?.id || "account")}
-              hasExperience={hasExperience}
               hasTrackedOpportunities={hasTrackedOpportunities}
               onComplete={async () => {
                 if (user && !isGuest) {

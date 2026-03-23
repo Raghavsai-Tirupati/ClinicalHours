@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Mail, Send, Users, Loader2, Clock } from 'lucide-react';
+import { Mail, Send, Users, Loader2, Clock, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +14,13 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
 import { useActivityLog } from '@/hooks/useActivityLog';
@@ -21,7 +28,7 @@ import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 
@@ -54,6 +61,7 @@ export default function EmailPage() {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const filteredRecipients = useMemo(() => {
     if (filterMode === 'all') return applications;
@@ -131,14 +139,21 @@ export default function EmailPage() {
         toast.warning('No emails were sent — no valid recipient addresses found for the selected applicants');
       }
 
-      await logActivity('email_sent', {
-        targetType: 'email',
-        metadata: {
-          subject: subject.trim(),
-          recipientCount: sent,
-          applicationIds: selectedIds,
-        },
-      });
+      if (sent > 0) {
+        const bodyTrim = body.trim();
+        const logged = await logActivity('email_sent', {
+          targetType: 'email',
+          metadata: {
+            subject: subject.trim(),
+            recipientCount: sent,
+            applicationIds: selectedIds,
+            bodyPreview: bodyTrim.length > 400 ? `${bodyTrim.slice(0, 400)}…` : bodyTrim,
+          },
+        });
+        if (!logged) {
+          toast.warning('Email sent, but the activity log could not be saved. If this persists, contact support.');
+        }
+      }
 
       setSubject('');
       setBody('');
@@ -305,19 +320,72 @@ export default function EmailPage() {
               />
             </div>
 
-            {/* Send */}
-            <Button
-              onClick={handleSend}
-              disabled={sending || selectedIds.length === 0}
-              className="gap-1.5"
-            >
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              Send Email
-            </Button>
+            {/* Preview + Send */}
+            <div className="flex flex-wrap gap-2">
+              <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={selectedIds.length === 0}
+                    className="gap-1.5"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg sm:max-w-xl">
+                  <DialogHeader>
+                    <DialogTitle>Email preview</DialogTitle>
+                  </DialogHeader>
+                  <p className="text-xs text-muted-foreground">
+                    Approximate appearance for recipients. Line breaks are preserved.
+                  </p>
+                  <div className="rounded-lg border border-border bg-muted/30 overflow-hidden">
+                    <div className="border-b border-border/80 bg-muted/50 px-3 py-2 space-y-1">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">To</p>
+                      <p className="text-sm">
+                        {uniqueEmails.size} recipient{uniqueEmails.size === 1 ? '' : 's'}
+                        {uniqueEmails.size > 0 && uniqueEmails.size <= 5 && (
+                          <span className="text-muted-foreground">
+                            {' '}
+                            ({[...uniqueEmails].join(', ')})
+                          </span>
+                        )}
+                        {uniqueEmails.size > 5 && (
+                          <span className="text-muted-foreground"> (addresses hidden — large list)</span>
+                        )}
+                      </p>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground pt-1">Subject</p>
+                      <p className="text-sm font-medium">
+                        {subject.trim() || (
+                          <span className="text-muted-foreground font-normal italic">No subject</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="bg-background px-3 py-3 max-h-[min(50vh,320px)] overflow-y-auto">
+                      <pre className="text-sm font-sans whitespace-pre-wrap break-words text-foreground">
+                        {body.trim() || (
+                          <span className="text-muted-foreground italic">No message body</span>
+                        )}
+                      </pre>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button
+                onClick={handleSend}
+                disabled={sending || selectedIds.length === 0}
+                className="gap-1.5"
+              >
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Send Email
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -350,12 +418,18 @@ export default function EmailPage() {
                   const meta = entry.metadata as Record<string, unknown>;
                   const emailSubject = (meta.subject as string) || 'No subject';
                   const recipientCount = (meta.recipientCount as number) || 0;
+                  const bodyPreview = typeof meta.bodyPreview === 'string' ? meta.bodyPreview : '';
                   return (
                     <div
                       key={entry.id}
                       className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1"
                     >
                       <p className="text-sm font-medium truncate">{emailSubject}</p>
+                      {bodyPreview ? (
+                        <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                          {bodyPreview}
+                        </p>
+                      ) : null}
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Badge variant="outline" className="text-[10px] py-0">
                           {recipientCount} recipient{recipientCount === 1 ? '' : 's'}

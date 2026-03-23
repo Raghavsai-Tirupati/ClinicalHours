@@ -14,6 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
+import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from '@/types/positions';
 import type { ApplicationStatus, PositionStatus } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,7 +69,7 @@ export default function HospitalOverview() {
     try {
       const { error } = await supabase
         .from('student_applications')
-        .update({ status: newStatus, reviewed_at: new Date().toISOString() })
+        .update(buildStudentApplicationStatusUpdate(newStatus))
         .eq('id', appId);
 
       if (error) throw error;
