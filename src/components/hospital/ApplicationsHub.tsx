@@ -530,7 +530,7 @@ export default function ApplicationsHub() {
                                 <ApplicantReviewWhenExpanded
                                   application={app}
                                   onStatusChange={handleStatusChange}
-                                  onNoteSaved={refetch}
+                                  onNoteSaved={() => updateApplicationLocally(app.id, {})}
                                   onApplicationPatched={handleApplicationPatched}
                                 />
                               </div>
