@@ -39,7 +39,7 @@ export default function PositionDetail() {
   if (error || !position) {
     return (
       <div className="text-center py-20">
-        <p className="text-muted-foreground">{error || 'Position not found'}</p>
+        <p className="text-muted-foreground">{error === 'Applications for this position have closed.' || error === 'This position is no longer accepting applications.' ? 'Position not found or failed to load.' : (error || 'Position not found')}</p>
       </div>
     );
   }
