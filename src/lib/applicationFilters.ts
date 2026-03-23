@@ -14,7 +14,6 @@ export type ApplicationFilterRule =
   | { id: string; type: 'university'; mode: TextMatchMode; value: string }
   | { id: string; type: 'major'; mode: TextMatchMode; value: string }
   | { id: string; type: 'prior_clinical'; value: boolean }
-  | { id: string; type: 'research_experience'; value: boolean }
   | { id: string; type: 'applicant_name'; mode: TextMatchMode; value: string }
   | { id: string; type: 'keyword_all'; value: string }
   | { id: string; type: 'question_keyword'; questionId: string; value: string }
@@ -134,11 +133,6 @@ export function applicationMatchesRule(app: StudentApplication, rule: Applicatio
     case 'prior_clinical': {
       const h = p?.clinical_hours;
       const has = h != null && typeof h === 'number' && h > 0;
-      return rule.value ? has : !has;
-    }
-    case 'research_experience': {
-      const r = (p?.research_experience || '').trim();
-      const has = r.length > 0;
       return rule.value ? has : !has;
     }
     case 'applicant_name':
@@ -273,7 +267,6 @@ export const ADD_FILTER_OPTIONS: { id: string; label: string; group: string }[] 
   { id: 'gpa', label: 'GPA', group: 'Profile' },
   { id: 'clinical_hours', label: 'Clinical hours (profile)', group: 'Profile' },
   { id: 'prior_clinical', label: 'Prior clinical hours (yes/no)', group: 'Profile' },
-  { id: 'research_experience', label: 'Research experience (yes/no)', group: 'Profile' },
   { id: 'grad_year', label: 'Graduation year', group: 'Profile' },
   { id: 'university', label: 'University', group: 'Profile' },
   { id: 'major', label: 'Major', group: 'Profile' },
@@ -310,8 +303,6 @@ export function createDefaultRule(fieldId: string, questionId?: string): Applica
       return { id, type: 'clinical_hours', op: 'gte', value: 50 };
     case 'prior_clinical':
       return { id, type: 'prior_clinical', value: true };
-    case 'research_experience':
-      return { id, type: 'research_experience', value: true };
     case 'grad_year':
       return { id, type: 'grad_year', op: 'eq', value: new Date().getFullYear() + 1 };
     case 'university':

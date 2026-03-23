@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +19,15 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface Opportunity {
   id: string;
+  opportunityId: string;
   name: string;
   type: string;
   website: string;
@@ -38,14 +42,10 @@ interface HourEntry {
   id: string;
   date: string;
   hours: number;
-  note: string;
+  note: string | null;
 }
 
-interface ReflectionEntry {
-  id: string;
-  date: string;
-  text: string;
-}
+type ReflectionEntry = HourEntry & { text: string };
 
 interface ChecklistItem {
   id: string;
@@ -80,35 +80,6 @@ function getDefaultChecklist(status: string): ChecklistItem[] {
   return [];
 }
 
-// ─── Mock existing data ──────────────────────────────────────────────────
-
-function getMockHours(oppId: string): HourEntry[] {
-  if (oppId === "1")
-    return [
-      { id: "h1", date: "2026-02-10", hours: 8, note: "Shadowed Dr. Patel in cardiology" },
-      { id: "h2", date: "2026-02-07", hours: 6, note: "Observed rounds in ICU" },
-      { id: "h3", date: "2026-02-03", hours: 4, note: "Clinic orientation" },
-    ];
-  if (oppId === "4")
-    return [
-      { id: "h4", date: "2026-01-20", hours: 10, note: "Full day shift" },
-      { id: "h5", date: "2026-01-15", hours: 8, note: "Evening shift" },
-    ];
-  return [];
-}
-
-function getMockReflections(oppId: string): ReflectionEntry[] {
-  if (oppId === "1")
-    return [
-      { id: "r1", date: "2026-02-10", text: "Today I observed a complex cardiac surgery. The attending explained each step with patience." },
-    ];
-  if (oppId === "4")
-    return [
-      { id: "r2", date: "2026-02-05", text: "Worked with underserved patients in the free clinic today. Moments like these remind me why access to healthcare matters." },
-    ];
-  return [];
-}
-
 // ─── Component ───────────────────────────────────────────────────────────
 
 interface OpportunityDialogProps {
@@ -116,6 +87,7 @@ interface OpportunityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultTab?: string;
+  onDataChanged?: () => void;
 }
 
 export default function OpportunityDialog({
@@ -123,17 +95,19 @@ export default function OpportunityDialog({
   open,
   onOpenChange,
   defaultTab = "overview",
+  onDataChanged,
 }: OpportunityDialogProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const opp = opportunity;
   const isApplicationFlow =
     opp?.status === "Interviewing" ||
     opp?.status === "Applied" ||
     opp?.status === "Saved";
 
-  // ─── Local state for each tab ──────────────────────────────────────────
   const [hours, setHours] = useState<HourEntry[]>([]);
-  const [reflections, setReflections] = useState<ReflectionEntry[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [loadingEntries, setLoadingEntries] = useState(false);
 
   // New entry forms
   const [newHoursDate, setNewHoursDate] = useState("");
@@ -144,51 +118,141 @@ export default function OpportunityDialog({
 
   const [newChecklistItem, setNewChecklistItem] = useState("");
 
-  // Refresh data when opp changes
-  const [loadedOppId, setLoadedOppId] = useState<string | null>(null);
-  if (opp && opp.id !== loadedOppId) {
-    setLoadedOppId(opp.id);
-    setHours(getMockHours(opp.id));
-    setReflections(getMockReflections(opp.id));
+  useEffect(() => {
+    if (!open || !opp || !user) return;
+
+    let isMounted = true;
+    const loadEntries = async () => {
+      setLoadingEntries(true);
+      const { data, error } = await supabase
+        .from("experience_entries")
+        .select("id, entry_date, hours, moment")
+        .eq("user_id", user.id)
+        .eq("opportunity_id", opp.opportunityId)
+        .order("entry_date", { ascending: false });
+
+      if (!isMounted) return;
+      if (error) {
+        toast({
+          title: "Couldn't load entries",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        const mapped: HourEntry[] = (data || []).map((row) => ({
+          id: row.id,
+          date: row.entry_date,
+          hours: Number(row.hours) || 0,
+          note: row.moment,
+        }));
+        setHours(mapped);
+      }
+      setLoadingEntries(false);
+    };
+
     setChecklist(getDefaultChecklist(opp.status));
-    setNewHoursDate("");
+    setNewHoursDate(new Date().toISOString().split("T")[0]);
     setNewHoursAmount("");
     setNewHoursNote("");
     setNewReflectionText("");
     setNewChecklistItem("");
-  }
+    loadEntries();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [open, opp, user, toast]);
 
   if (!opp) return null;
 
   // ─── Handlers ──────────────────────────────────────────────────────────
 
-  const addHourEntry = () => {
-    if (!newHoursDate || !newHoursAmount) return;
+  const addHourEntry = async () => {
+    if (!opp || !user || !newHoursDate || !newHoursAmount) return;
+    const parsedHours = Number(newHoursAmount);
+    if (!Number.isFinite(parsedHours) || parsedHours <= 0) return;
+
+    const { data, error } = await supabase
+      .from("experience_entries")
+      .insert({
+        user_id: user.id,
+        opportunity_id: opp.opportunityId,
+        entry_date: newHoursDate,
+        hours: parsedHours,
+        moment: newHoursNote.trim() || null,
+      })
+      .select("id, entry_date, hours, moment")
+      .single();
+
+    if (error || !data) {
+      toast({
+        title: "Couldn't save hour entry",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const entry: HourEntry = {
-      id: `h-${Date.now()}`,
-      date: newHoursDate,
-      hours: parseFloat(newHoursAmount),
-      note: newHoursNote,
+      id: data.id,
+      date: data.entry_date,
+      hours: Number(data.hours) || 0,
+      note: data.moment,
     };
     setHours((prev) => [entry, ...prev]);
-    setNewHoursDate("");
     setNewHoursAmount("");
     setNewHoursNote("");
+    onDataChanged?.();
   };
 
-  const removeHourEntry = (id: string) => {
+  const removeHourEntry = async (id: string) => {
+    const { error } = await supabase.from("experience_entries").delete().eq("id", id);
+    if (error) {
+      toast({
+        title: "Couldn't delete entry",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
     setHours((prev) => prev.filter((h) => h.id !== id));
+    onDataChanged?.();
   };
 
-  const addReflection = () => {
-    if (!newReflectionText.trim()) return;
-    const entry: ReflectionEntry = {
-      id: `r-${Date.now()}`,
-      date: new Date().toISOString().split("T")[0],
-      text: newReflectionText,
-    };
-    setReflections((prev) => [entry, ...prev]);
+  const addReflection = async () => {
+    if (!opp || !user || !newReflectionText.trim()) return;
+    const today = new Date().toISOString().split("T")[0];
+    const { data, error } = await supabase
+      .from("experience_entries")
+      .insert({
+        user_id: user.id,
+        opportunity_id: opp.opportunityId,
+        entry_date: today,
+        hours: 0,
+        moment: newReflectionText.trim(),
+      })
+      .select("id, entry_date, hours, moment")
+      .single();
+
+    if (error || !data) {
+      toast({
+        title: "Couldn't save reflection",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setHours((prev) => [
+      {
+        id: data.id,
+        date: data.entry_date,
+        hours: Number(data.hours) || 0,
+        note: data.moment,
+      },
+      ...prev,
+    ]);
     setNewReflectionText("");
+    onDataChanged?.();
   };
 
   const toggleChecklistItem = (id: string) => {
@@ -212,6 +276,12 @@ export default function OpportunityDialog({
 
   const completedCount = checklist.filter((c) => c.checked).length;
   const totalHoursLogged = hours.reduce((s, h) => s + h.hours, 0);
+  const reflections: ReflectionEntry[] = hours
+    .filter((h) => Boolean(h.note?.trim()))
+    .map((h) => ({
+      ...h,
+      text: h.note || "",
+    }));
 
   // ─── Choose which tab to show first ────────────────────────────────────
   const resolvedDefault =
@@ -394,7 +464,9 @@ export default function OpportunityDialog({
             </div>
 
             {/* Existing entries */}
-            {hours.length > 0 && (
+            {loadingEntries ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Loading entries...</p>
+            ) : hours.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">
                   Previous Entries ({totalHoursLogged}h total)
@@ -431,7 +503,7 @@ export default function OpportunityDialog({
               </div>
             )}
 
-            {hours.length === 0 && (
+            {!loadingEntries && hours.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 No hours logged yet. Add your first entry above.
               </p>

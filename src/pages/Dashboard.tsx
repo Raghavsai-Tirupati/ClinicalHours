@@ -373,6 +373,7 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [dashboardTutorialComplete, setDashboardTutorialComplete] = useState(true);
   const [dashboardApplications, setDashboardApplications] = useState<DashboardApplication[]>([]);
+  const [dashboardRefreshTick, setDashboardRefreshTick] = useState(0);
 
   const recentDashboardApplications = useMemo(() => {
     const sorted = [...dashboardApplications].sort(
@@ -598,7 +599,7 @@ const Dashboard = () => {
     }
 
     fetchDashboardData();
-  }, [user, isGuest, toast, localLogs, localReflections]);
+  }, [user, isGuest, toast, localLogs, localReflections, dashboardRefreshTick]);
 
   /** Guard: prompt sign-in for guest actions */
   const requireAuth = (action: string): boolean => {
@@ -942,6 +943,7 @@ const Dashboard = () => {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         defaultTab={dialogTab}
+        onDataChanged={() => setDashboardRefreshTick((prev) => prev + 1)}
       />
     </div>
   );

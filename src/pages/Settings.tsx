@@ -9,7 +9,6 @@ import CinematicLayout from "@/components/layout/CinematicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { UserProfileBadge } from "@/components/UserProfileBadge";
@@ -603,7 +602,7 @@ const Settings = () => {
                       <div>
                         <CardTitle className="text-base">Profile</CardTitle>
                         <CardDescription className="text-xs mt-0.5">
-                          Name, school, bio, resume, and contact info
+                          Name, school, resume, and contact info
                         </CardDescription>
                       </div>
                     </div>
@@ -890,78 +889,6 @@ const Settings = () => {
                         }
                         placeholder="e.g., Traditional, Post-Bacc, Career Changer"
                         maxLength={100}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Professional Information */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Professional Information</h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="bio">Bio</Label>
-                      <Textarea
-                        id="bio"
-                        value={profile.bio}
-                        onChange={(e) =>
-                          setProfile({ ...profile, bio: e.target.value.slice(0, 2000) })
-                        }
-                        placeholder="Tell us about yourself..."
-                        rows={4}
-                        maxLength={2000}
-                      />
-                      <p className="text-xs text-muted-foreground text-right">
-                        {profile.bio.length}/2000 characters
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="career_goals">Career Goals</Label>
-                      <Textarea
-                        id="career_goals"
-                        value={profile.career_goals}
-                        onChange={(e) =>
-                          setProfile({ ...profile, career_goals: e.target.value.slice(0, 2000) })
-                        }
-                        placeholder="What are your medical career aspirations?"
-                        rows={3}
-                        maxLength={2000}
-                      />
-                      <p className="text-xs text-muted-foreground text-right">
-                        {profile.career_goals.length}/2000 characters
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="research_experience">Research Experience</Label>
-                      <Textarea
-                        id="research_experience"
-                        value={profile.research_experience}
-                        onChange={(e) =>
-                          setProfile({
-                            ...profile,
-                            research_experience: e.target.value.slice(0, 2000),
-                          })
-                        }
-                        placeholder="Describe your research experience..."
-                        rows={3}
-                        maxLength={2000}
-                      />
-                      <p className="text-xs text-muted-foreground text-right">
-                        {profile.research_experience.length}/2000 characters
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="linkedin_url">LinkedIn URL</Label>
-                      <Input
-                        id="linkedin_url"
-                        type="url"
-                        value={profile.linkedin_url}
-                        onChange={(e) =>
-                          setProfile({ ...profile, linkedin_url: e.target.value.slice(0, 500) })
-                        }
-                        placeholder="https://linkedin.com/in/yourprofile"
-                        maxLength={500}
                       />
                     </div>
                   </div>

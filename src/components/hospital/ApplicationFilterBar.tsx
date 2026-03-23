@@ -210,7 +210,6 @@ export default function ApplicationFilterBar({
           </div>
         );
       case 'prior_clinical':
-      case 'research_experience':
         return (
           <Select
             value={r.value ? 'yes' : 'no'}
@@ -326,8 +325,6 @@ export default function ApplicationFilterBar({
         return 'Major';
       case 'prior_clinical':
         return 'Prior clinical';
-      case 'research_experience':
-        return 'Research exp.';
       case 'applicant_name':
         return 'Applicant name';
       case 'keyword_all':

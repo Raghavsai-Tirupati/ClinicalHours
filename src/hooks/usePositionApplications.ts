@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { StudentApplication, ApplicationStatus } from '@/types/positions';
+import type { StudentApplication, ApplicationStatus, HospitalPosition } from '@/types/positions';
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 
@@ -89,6 +89,14 @@ export function usePositionApplications(positionId: string | undefined) {
 
     setLoading(true);
     try {
+      const { data: positionData, error: positionError } = await supabase
+        .from('hospital_positions')
+        .select('*')
+        .eq('id', positionId)
+        .maybeSingle();
+      if (positionError) throw positionError;
+      const position = (positionData as HospitalPosition | null) ?? null;
+
       const { data, error } = await supabase
         .from('student_applications')
         .select('*')
@@ -99,6 +107,9 @@ export function usePositionApplications(positionId: string | undefined) {
 
       const apps = (data || []) as StudentApplication[];
       const appIds = apps.map((a) => a.id);
+      apps.forEach((app) => {
+        app.position = position ?? undefined;
+      });
 
       if (apps.length > 0) {
         const studentIds = apps.map((a) => a.student_id);
