@@ -343,6 +343,8 @@ export default function PositionApplicationsTable({ positionId }: Props) {
             open={inviteDialogOpen}
             onOpenChange={setInviteDialogOpen}
             hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.opportunity?.name}
+            bookingUrl={hospitalPage.interview_booking_url ?? ''}
             selectedApplicationIds={selectedApplicationIds}
             applications={applications}
           />
