@@ -158,8 +158,6 @@ export default function ApplicantReviewPanel({
   const initial = name.charAt(0).toUpperCase();
   const profile = application.student_profile;
   const availabilitySummary = formatApplicantAvailability(application.availability_json);
-  const roleDescription = application.position?.description?.trim() || null;
-  const roleRequirements = application.position?.requirements?.trim() || null;
 
   return (
     <div className="space-y-5">
