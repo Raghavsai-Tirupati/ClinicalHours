@@ -639,6 +639,9 @@ export type Database = {
         Row: {
           admin_email: string
           claimed_at: string | null
+          clone_version: number | null
+          cloned_at: string | null
+          cloned_from_page_id: string | null
           created_at: string
           created_by: string | null
           gmail_connected_at: string | null
@@ -648,10 +651,14 @@ export type Database = {
           id: string
           interview_booking_url: string | null
           is_claimed: boolean
+          is_showcase: boolean
         }
         Insert: {
           admin_email: string
           claimed_at?: string | null
+          clone_version?: number | null
+          cloned_at?: string | null
+          cloned_from_page_id?: string | null
           created_at?: string
           created_by?: string | null
           gmail_connected_at?: string | null
@@ -661,10 +668,14 @@ export type Database = {
           id?: string
           interview_booking_url?: string | null
           is_claimed?: boolean
+          is_showcase?: boolean
         }
         Update: {
           admin_email?: string
           claimed_at?: string | null
+          clone_version?: number | null
+          cloned_at?: string | null
+          cloned_from_page_id?: string | null
           created_at?: string
           created_by?: string | null
           gmail_connected_at?: string | null
@@ -674,8 +685,16 @@ export type Database = {
           id?: string
           interview_booking_url?: string | null
           is_claimed?: boolean
+          is_showcase?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "hospital_pages_cloned_from_page_id_fkey"
+            columns: ["cloned_from_page_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hospital_pages_hospital_id_fkey"
             columns: ["hospital_id"]
