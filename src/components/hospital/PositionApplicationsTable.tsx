@@ -15,7 +15,6 @@ import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
-import ApplicationDetailSheet from './ApplicationDetailSheet';
 import EmailDialog from './EmailDialog';
 import InterviewInviteDialog from './InterviewInviteDialog';
 
