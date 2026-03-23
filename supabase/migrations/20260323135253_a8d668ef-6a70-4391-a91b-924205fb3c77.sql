@@ -1,0 +1,2 @@
+ALTER TABLE public.hospital_positions DROP CONSTRAINT IF EXISTS hospital_positions_status_check;
+ALTER TABLE public.hospital_positions ADD CONSTRAINT hospital_positions_status_check CHECK (status IN ('active', 'paused', 'closed', 'draft', 'archived'));
