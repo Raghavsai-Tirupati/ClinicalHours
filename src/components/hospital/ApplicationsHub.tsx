@@ -198,10 +198,10 @@ export default function ApplicationsHub() {
   };
 
   const handleApplicationPatched = useCallback(
-    (_appId: string, _patch: Partial<StudentApplication>) => {
-      refetch();
+    (appId: string, patch: Partial<StudentApplication>) => {
+      updateApplicationLocally(appId, patch);
     },
-    [refetch],
+    [updateApplicationLocally],
   );
 
   const handleStatusChange = useCallback(
@@ -214,14 +214,14 @@ export default function ApplicationsHub() {
           .eq('id', appId);
         if (error) throw error;
         toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
-        refetch();
+        updateApplicationLocally(appId, { status: newStatus });
       } catch {
         toast.error('Failed to update status');
       } finally {
         setUpdatingStatus(false);
       }
     },
-    [refetch],
+    [updateApplicationLocally],
   );
 
   const handleViewApplicantFromAnalytics = useCallback((applicationId: string) => {

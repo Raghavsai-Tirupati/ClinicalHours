@@ -58,7 +58,7 @@ function getApplicantName(app: {
 
 export default function HospitalOverview() {
   const { hospitalPage, basePath } = useHospitalPageContext();
-  const { applications, positions, stats, loading, refetch } = useAllApplications(hospitalPage?.id);
+  const { applications, positions, stats, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const activePositionCount = positions.filter((p) => p.status === 'active').length;
@@ -74,7 +74,7 @@ export default function HospitalOverview() {
 
       if (error) throw error;
       toast.success(`Status updated to ${APPLICATION_STATUS_LABELS[newStatus]}`);
-      refetch();
+      updateApplicationLocally(appId, { status: newStatus });
     } catch {
       toast.error('Failed to update status');
     } finally {
