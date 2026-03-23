@@ -173,7 +173,8 @@ export default function HospitalDashboard() {
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
 
-  const isBcsPilot = member?.hospitalName?.toLowerCase().includes("bcs free health clinic") ?? false;
+  // Per-clinic scheduling is now available to all clinics (BCS pilot restriction removed)
+  const isBcsPilot = true;
 
   useEffect(() => {
     if (member) {
@@ -386,7 +387,7 @@ export default function HospitalDashboard() {
   }
 
   async function handleDeleteOpportunity(opp: OpportunityWithApps) {
-    if (!member || !isBcsPilot) return;
+    if (!member) return;
     if (member.role !== "owner" && member.role !== "admin") {
       toast.error("Only hospital owners and admins can delete opportunities.");
       return;
