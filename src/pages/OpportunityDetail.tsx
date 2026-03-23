@@ -22,6 +22,7 @@ import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
 import HospitalLogo from "@/components/HospitalLogo";
+import { isPositionDeadlinePassed } from '@/lib/positionAvailability';
 import { POSITION_TYPE_LABELS } from "@/types/positions";
 import type { PositionType } from "@/types/positions";
 
@@ -208,7 +209,11 @@ const OpportunityDetail = () => {
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
-      setActivePositions((positions as ActivePosition[]) || []);
+      const openPositions = ((positions as ActivePosition[]) || []).filter(
+        (pos) => !isPositionDeadlinePassed(pos.application_deadline),
+      );
+
+      setActivePositions(openPositions);
     };
     fetchPositions();
   }, [opportunity?.id]);
