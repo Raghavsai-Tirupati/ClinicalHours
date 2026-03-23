@@ -30,6 +30,7 @@ const normalizeDisplayName = (value: string | null | undefined): string | null =
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   new: 'bg-blue-500/15 text-blue-400',
   under_review: 'bg-yellow-500/15 text-yellow-400',
+  interview: 'bg-amber-500/15 text-amber-400',
   accepted: 'bg-green-500/15 text-green-400',
   rejected: 'bg-red-500/15 text-red-400',
   waitlisted: 'bg-purple-500/15 text-purple-400',
