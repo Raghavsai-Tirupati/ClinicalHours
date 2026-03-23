@@ -18,15 +18,8 @@ import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
 import type { PositionStatus } from '@/types/positions';
-import { format } from 'date-fns';
 
-const STATUS_COLORS: Record<PositionStatus, string> = {
-  active: 'bg-green-500/15 text-green-400 border-green-500/30',
-  draft: 'bg-muted text-muted-foreground border-border',
-  paused: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  closed: 'bg-red-500/15 text-red-400 border-red-500/30',
-  archived: 'bg-muted text-muted-foreground/60 border-border opacity-60',
-};
+const STATUS_DOT
 
 const STATUS_DOT: Record<PositionStatus, string> = {
   active: 'bg-green-400',
