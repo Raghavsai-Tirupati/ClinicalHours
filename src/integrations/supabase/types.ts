@@ -1411,6 +1411,7 @@ export type Database = {
           applicant_name: string | null
           availability_json: Json | null
           id: string
+          interview_confirmed_at: string | null
           interview_invited_at: string | null
           interview_source: string | null
           notes: string | null
@@ -1426,6 +1427,7 @@ export type Database = {
           applicant_name?: string | null
           availability_json?: Json | null
           id?: string
+          interview_confirmed_at?: string | null
           interview_invited_at?: string | null
           interview_source?: string | null
           notes?: string | null
@@ -1441,6 +1443,7 @@ export type Database = {
           applicant_name?: string | null
           availability_json?: Json | null
           id?: string
+          interview_confirmed_at?: string | null
           interview_invited_at?: string | null
           interview_source?: string | null
           notes?: string | null
@@ -1836,6 +1839,7 @@ export type Database = {
         Args: { p_application_id: string }
         Returns: undefined
       }
+      is_super_admin: { Args: never; Returns: boolean }
       link_opportunity_to_hospital: {
         Args: { p_hospital_id: string; p_opportunity_id: string }
         Returns: undefined
