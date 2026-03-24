@@ -697,8 +697,16 @@ export function AdminActivityTab() {
     return () => clearInterval(interval);
   }, [fetchEvents]);
 
+  // Session IDs that have at least one authenticated event — these are NOT guests
+  const authenticatedSessionIds = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach((e) => { if (e.user_id) set.add(e.session_id); });
+    return set;
+  }, [events]);
+
   // Stable per-day guest labels (Guest #1, #2, ...) based on first
   // time we see a session on that calendar day, in chronological order.
+  // Exclude sessions that also have authenticated events (overlap).
   const guestLabelBySessionAndDate = useMemo(() => {
     const byDateCount = new Map<string, number>();
     const map = new Map<string, string>();
@@ -707,7 +715,9 @@ export function AdminActivityTab() {
     );
     sorted.forEach((e) => {
       if (e.user_id) return;
-      const dateKey = e.created_at.slice(0, 10); // yyyy-mm-dd
+      // Skip if this session also has authenticated events
+      if (authenticatedSessionIds.has(e.session_id)) return;
+      const dateKey = e.created_at.slice(0, 10);
       const compositeKey = `${dateKey}:${e.session_id}`;
       if (map.has(compositeKey)) return;
       const next = (byDateCount.get(dateKey) ?? 0) + 1;
@@ -715,7 +725,7 @@ export function AdminActivityTab() {
       map.set(compositeKey, `Guest #${next}`);
     });
     return map;
-  }, [events]);
+  }, [events, authenticatedSessionIds]);
 
   const getGuestLabelForEvent = useCallback(
     (e: TrackingEvent): string => {
