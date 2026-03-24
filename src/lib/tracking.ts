@@ -5,13 +5,71 @@
  * Uses fire-and-forget pattern to avoid blocking the UI.
  */
 
-// Session ID storage key (reuse existing guest session ID if available)
+// Session ID storage key — separate from guest session ID to avoid overlap
 const TRACKING_SESSION_KEY = "clinicalhours_tracking_session_id";
 const GUEST_SESSION_KEY = "clinicalhours_guest_session_id";
 
 // Debounce tracking to prevent rapid duplicate events
 let lastPageView: { url: string; time: number } | null = null;
 const PAGE_VIEW_DEBOUNCE_MS = 1000;
+
+// Track whether the current session has been "upgraded" to authenticated
+let _cachedAuthSessionId: string | null = null;
+
+/**
+ * Get or create tracking session ID.
+ * 
+ * IMPORTANT: Once a user authenticates we generate a NEW session ID so that
+ * the same session_id is never shared between guest (user_id=null) and
+ * authenticated (user_id!=null) tracking events. This prevents guest session
+ * counts from being inflated by authenticated page views.
+ */
+export function getTrackingSessionId(isAuthenticated = false): string {
+  try {
+    // If the user is authenticated, use a dedicated auth session id
+    if (isAuthenticated) {
+      if (_cachedAuthSessionId) return _cachedAuthSessionId;
+
+      // Check if we already stored one
+      const stored = localStorage.getItem(TRACKING_SESSION_KEY + "_auth");
+      if (stored) {
+        _cachedAuthSessionId = stored;
+        return stored;
+      }
+
+      // Generate a fresh one (distinct from any guest session)
+      const newId = generateUUID();
+      localStorage.setItem(TRACKING_SESSION_KEY + "_auth", newId);
+      _cachedAuthSessionId = newId;
+      return newId;
+    }
+
+    // Guest / unauthenticated: use guest session ID if available
+    const guestSessionId = localStorage.getItem(GUEST_SESSION_KEY);
+    if (guestSessionId) return guestSessionId;
+
+    // Fallback to generic tracking session
+    let trackingSessionId = localStorage.getItem(TRACKING_SESSION_KEY);
+    if (trackingSessionId) return trackingSessionId;
+
+    trackingSessionId = generateUUID();
+    localStorage.setItem(TRACKING_SESSION_KEY, trackingSessionId);
+    return trackingSessionId;
+  } catch {
+    return generateUUID();
+  }
+}
+
+/**
+ * Call when a user logs out to reset the auth tracking session,
+ * so the next anonymous browsing gets a fresh guest session id.
+ */
+export function resetAuthTrackingSession(): void {
+  _cachedAuthSessionId = null;
+  try {
+    localStorage.removeItem(TRACKING_SESSION_KEY + "_auth");
+  } catch { /* ignore */ }
+}
 
 /**
  * Generate a UUID v4
@@ -22,34 +80,6 @@ function generateUUID(): string {
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
-}
-
-/**
- * Get or create tracking session ID
- * Reuses guest session ID if available for consistency
- */
-export function getTrackingSessionId(): string {
-  try {
-    // First check if there's a guest session ID
-    const guestSessionId = localStorage.getItem(GUEST_SESSION_KEY);
-    if (guestSessionId) {
-      return guestSessionId;
-    }
-
-    // Then check for existing tracking session
-    let trackingSessionId = localStorage.getItem(TRACKING_SESSION_KEY);
-    if (trackingSessionId) {
-      return trackingSessionId;
-    }
-
-    // Create new session ID
-    trackingSessionId = generateUUID();
-    localStorage.setItem(TRACKING_SESSION_KEY, trackingSessionId);
-    return trackingSessionId;
-  } catch {
-    // localStorage not available, generate ephemeral session ID
-    return generateUUID();
-  }
 }
 
 /**
@@ -111,7 +141,7 @@ export async function trackEvent(
     return;
   }
 
-  const sessionId = getTrackingSessionId();
+  const sessionId = getTrackingSessionId(!!userId);
   const pageUrl = window.location.pathname + window.location.search;
   const referrerUrl = document.referrer || undefined;
   const deviceInfo = getDeviceInfo();
