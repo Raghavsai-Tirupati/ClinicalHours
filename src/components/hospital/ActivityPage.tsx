@@ -33,7 +33,12 @@ const ACTION_CONFIG: Record<
   interview_invited: {
     icon: Calendar,
     color: 'text-yellow-400 bg-yellow-500/15',
-    label: () => 'Sent interview invite',
+    label: (meta) => {
+      const count = (meta.recipientCount as number) || 0;
+      return count > 1
+        ? `Sent interview invites to ${count} applicants`
+        : 'Sent interview invite';
+    },
   },
   position_created: {
     icon: Briefcase,
