@@ -68,6 +68,8 @@ interface Reflection {
 }
 
 interface EnrichedLog extends ActivityLog {
+  source: "local" | "supabase";
+  rawId: string;
   reflection?: Reflection | null;
 }
 
@@ -97,10 +99,13 @@ function StatCard({ icon: Icon, label, value, color }: {
   );
 }
 
-function LogForm({ onSubmit, onClose, canReflect }: {
+function LogForm({ onSubmit, onClose, canReflect, trackedOpportunities = [], selectedOpportunityId = "", onSelectedOpportunityChange }: {
   onSubmit: (log: Partial<ActivityLog>, addReflection: boolean) => void;
   onClose: () => void;
   canReflect?: boolean;
+  trackedOpportunities?: Array<{ id: string; name: string }>;
+  selectedOpportunityId?: string;
+  onSelectedOpportunityChange?: (id: string) => void;
 }) {
   const [activityType, setActivityType] = useState<ActivityType>("shadowing");
   const [orgName, setOrgName] = useState("");
@@ -130,6 +135,21 @@ function LogForm({ onSubmit, onClose, canReflect }: {
           <Input className="mt-1.5" placeholder="e.g., Houston Methodist" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
         </div>
       </div>
+      {trackedOpportunities.length > 0 && (
+        <div>
+          <Label>Tracked Opportunity (for dashboard sync)</Label>
+          <Select value={selectedOpportunityId} onValueChange={(v) => onSelectedOpportunityChange?.(v)}>
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Select a tracked opportunity" />
+            </SelectTrigger>
+            <SelectContent>
+              {trackedOpportunities.map((opp) => (
+                <SelectItem key={opp.id} value={opp.id}>{opp.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <Label>Date</Label>
@@ -222,8 +242,75 @@ const HourTrackerContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
+  const [trackedOpportunities, setTrackedOpportunities] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState<string>("");
 
-  function loadLogs() {
+  async function loadLogs() {
+    if (user) {
+      const { data, error } = await supabase
+        .from("experience_entries")
+        .select(`
+          id,
+          opportunity_id,
+          entry_date,
+          hours,
+          moment,
+          opportunities:opportunity_id (name)
+        `)
+        .eq("user_id", user.id)
+        .order("entry_date", { ascending: false });
+
+      if (error) {
+        toast({
+          title: "Couldn't load journal entries",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+        setLogs([]);
+        return;
+      }
+
+      const supabaseLogs: EnrichedLog[] = (data || []).map((row) => {
+        const oppName = (row.opportunities as { name?: string } | null)?.name || "Tracked Opportunity";
+        const reflectionText = row.moment || "";
+        const reflection: Reflection | null = reflectionText
+          ? {
+              id: `supabase-ref-${row.id}`,
+              user_id: user.id,
+              activity_log_id: `supabase-${row.id}`,
+              what_happened: reflectionText,
+              what_stood_out: null,
+              what_learned: null,
+              is_meaningful: false,
+              competency_tags: [],
+              created_at: row.entry_date,
+            }
+          : null;
+
+        return {
+          id: `supabase-${row.id}`,
+          rawId: row.id,
+          source: "supabase",
+          user_id: user.id,
+          organization_id: row.opportunity_id,
+          custom_organization_name: oppName,
+          activity_type: "shadowing",
+          session_date: row.entry_date,
+          hours: Number(row.hours) || 0,
+          supervisor_name: null,
+          supervisor_title: null,
+          department: null,
+          specialty_area: null,
+          notes: reflectionText || null,
+          created_at: row.entry_date,
+          reflection,
+        };
+      });
+
+      setLogs(supabaseLogs);
+      return;
+    }
+
     const allLogs = localSelect<ActivityLog>(TABLES.ACTIVITY_LOGS);
     const allReflections = localSelect<Reflection>(TABLES.REFLECTIONS);
     const reflMap = new Map<string, Reflection>();
@@ -231,65 +318,106 @@ const HourTrackerContent = () => {
 
     const enriched: EnrichedLog[] = allLogs.map((log) => ({
       ...log,
+      source: "local",
+      rawId: log.id,
       reflection: reflMap.get(log.id) || null,
     }));
     setLogs(enriched);
   }
 
   useEffect(() => {
-    loadLogs();
-  }, []);
+    void loadLogs();
+  }, [user]);
+
+  useEffect(() => {
+    async function loadTracked() {
+      if (!user) {
+        setTrackedOpportunities([]);
+        setSelectedOpportunityId("");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("saved_opportunities")
+        .select(`
+          opportunity_id,
+          opportunities!inner(name)
+        `)
+        .eq("user_id", user.id);
+
+      if (error) return;
+
+      const mapped = (data || []).map((row) => ({
+        id: row.opportunity_id,
+        name: (row.opportunities as { name?: string } | null)?.name || "Tracked Opportunity",
+      }));
+
+      setTrackedOpportunities(mapped);
+      if (mapped.length > 0 && !selectedOpportunityId) {
+        setSelectedOpportunityId(mapped[0].id);
+      }
+    }
+
+    void loadTracked();
+  }, [user, selectedOpportunityId]);
 
   const handleLogSubmit = async (logData: Partial<ActivityLog>, addReflection: boolean) => {
-    const newLog = localInsert<Partial<ActivityLog>>(TABLES.ACTIVITY_LOGS, {
-      user_id: user?.id,
-      activity_type: logData.activity_type || "other",
-      custom_organization_name: logData.custom_organization_name,
-      organization_id: null,
-      session_date: logData.session_date || new Date().toISOString().split("T")[0],
-      hours: logData.hours || 0,
-      supervisor_name: logData.supervisor_name,
-      supervisor_title: null,
-      department: logData.department,
-      specialty_area: null,
-      notes: logData.notes,
-    });
-
-    // Also write to experience_entries in Supabase so it shows on the existing dashboard
     if (user) {
-      try {
-        // experience_entries requires an opportunity_id. We'll skip the Supabase write
-        // if we don't have one — the dashboard will read from both sources.
-        // For now, just write to the first saved opportunity if available.
-        const { data: savedOpp } = await supabase
-          .from("saved_opportunities")
-          .select("opportunity_id")
-          .eq("user_id", user.id)
-          .limit(1)
-          .single();
-
-        if (savedOpp?.opportunity_id) {
-          await supabase.from("experience_entries").insert({
-            user_id: user.id,
-            opportunity_id: savedOpp.opportunity_id,
-            entry_date: logData.session_date || new Date().toISOString().split("T")[0],
-            hours: logData.hours || 0,
-            moment: logData.notes || null,
-          });
-        }
-      } catch {
-        // Non-critical — local store is the primary source
+      if (!selectedOpportunityId) {
+        toast({
+          title: "Select a tracked opportunity",
+          description: "Choose where this journal entry should be tracked.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      const { data, error } = await supabase
+        .from("experience_entries")
+        .insert({
+          user_id: user.id,
+          opportunity_id: selectedOpportunityId,
+          entry_date: logData.session_date || new Date().toISOString().split("T")[0],
+          hours: logData.hours || 0,
+          moment: logData.notes || null,
+        })
+        .select("id")
+        .single();
+
+      if (error || !data) {
+        toast({
+          title: "Couldn't save journal entry",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setPendingLogId(`supabase-${data.id}`);
+    } else {
+      const newLog = localInsert<Partial<ActivityLog>>(TABLES.ACTIVITY_LOGS, {
+        user_id: user?.id,
+        activity_type: logData.activity_type || "other",
+        custom_organization_name: logData.custom_organization_name,
+        organization_id: null,
+        session_date: logData.session_date || new Date().toISOString().split("T")[0],
+        hours: logData.hours || 0,
+        supervisor_name: logData.supervisor_name,
+        supervisor_title: null,
+        department: logData.department,
+        specialty_area: null,
+        notes: logData.notes,
+      });
+      setPendingLogId(newLog.id);
     }
 
     setShowLogDialog(false);
     toast({ title: "Hours logged!" });
 
     if (addReflection) {
-      setPendingLogId(newLog.id);
       setShowReflectionDialog(true);
     } else {
-      loadLogs();
+      await loadLogs();
     }
   };
 
@@ -301,20 +429,45 @@ const HourTrackerContent = () => {
   }) => {
     if (!pendingLogId) return;
 
-    localInsert<Partial<Reflection>>(TABLES.REFLECTIONS, {
-      user_id: user?.id,
-      activity_log_id: pendingLogId,
-      what_happened: data.what_happened,
-      what_stood_out: data.what_stood_out,
-      what_learned: data.what_learned,
-      is_meaningful: data.is_meaningful,
-      competency_tags: [],
-    });
+    const run = async () => {
+      if (pendingLogId.startsWith("supabase-") && user) {
+        const entryId = pendingLogId.replace("supabase-", "");
+        const combinedReflection = [data.what_happened, data.what_stood_out, data.what_learned]
+          .filter(Boolean)
+          .join(" — ");
 
-    setShowReflectionDialog(false);
-    setPendingLogId(null);
-    toast({ title: "Reflection saved!" });
-    loadLogs();
+        const { error } = await supabase
+          .from("experience_entries")
+          .update({ moment: combinedReflection || null })
+          .eq("id", entryId);
+
+        if (error) {
+          toast({
+            title: "Couldn't save reflection",
+            description: "Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        localInsert<Partial<Reflection>>(TABLES.REFLECTIONS, {
+          user_id: user?.id,
+          activity_log_id: pendingLogId,
+          what_happened: data.what_happened,
+          what_stood_out: data.what_stood_out,
+          what_learned: data.what_learned,
+          is_meaningful: data.is_meaningful,
+          competency_tags: [],
+        });
+      }
+
+      setShowReflectionDialog(false);
+      setPendingLogId(null);
+      toast({ title: "Reflection saved!" });
+      await loadLogs();
+    };
+
+    void run();
   };
 
   const summaries = useMemo<ActivitySummary[]>(() => {
@@ -425,6 +578,11 @@ const HourTrackerContent = () => {
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground text-sm truncate">{log.custom_organization_name || "Unnamed Organization"}</span>
                     <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{ACTIVITY_TYPE_LABELS[log.activity_type]}</span>
+                    {log.source === "supabase" && (
+                      <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-xs text-blue-300 border border-blue-500/20">
+                        Synced to tracked opportunity
+                      </span>
+                    )}
                     {log.reflection?.is_meaningful && <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400">Meaningful</span>}
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -468,14 +626,21 @@ const HourTrackerContent = () => {
       <Dialog open={showLogDialog} onOpenChange={setShowLogDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Log Hours</DialogTitle></DialogHeader>
-          <LogForm onSubmit={handleLogSubmit} onClose={() => setShowLogDialog(false)} canReflect={isPremium} />
+          <LogForm
+            onSubmit={handleLogSubmit}
+            onClose={() => setShowLogDialog(false)}
+            canReflect={isPremium}
+            trackedOpportunities={trackedOpportunities}
+            selectedOpportunityId={selectedOpportunityId}
+            onSelectedOpportunityChange={setSelectedOpportunityId}
+          />
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showReflectionDialog} onOpenChange={(open) => { setShowReflectionDialog(open); if (!open) { setPendingLogId(null); loadLogs(); } }}>
+      <Dialog open={showReflectionDialog} onOpenChange={(open) => { setShowReflectionDialog(open); if (!open) { setPendingLogId(null); void loadLogs(); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Quick Reflection</DialogTitle></DialogHeader>
-          <ReflectionForm onSubmit={handleReflectionSubmit} onClose={() => { setShowReflectionDialog(false); setPendingLogId(null); loadLogs(); }} />
+          <ReflectionForm onSubmit={handleReflectionSubmit} onClose={() => { setShowReflectionDialog(false); setPendingLogId(null); void loadLogs(); }} />
         </DialogContent>
       </Dialog>
     </div>

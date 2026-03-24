@@ -56,6 +56,31 @@ Implement empty states, loading skeletons, and toasts for success/errors. Keep m
 
 ---
 
+## Migration prompt (if you have the old Applications tab)
+
+If your Lovable dashboard still has a separate "Applications" sidebar item, paste this to migrate:
+
+```
+Remove the Applications tab from the sidebar. Migrate the applicant workspace into Positions:
+
+1. Sidebar: Remove "Applications" — keep Overview, Positions, Interviews, Email, Activity, New Position, Settings, Log Out.
+
+2. Positions page: Add two tabs — "Positions" (list/kanban of positions) and "All Applicants".
+
+3. All Applicants tab: Move the full applicant workspace here. Include:
+   - Advanced filter bar with "Add filter" dropdown, "Presets", and rules (status, position, GPA, clinical hours, graduation year, university, major, etc.)
+   - Sortable applicant table with columns: Applicant, University, Position, Submitted, Status, GPA, Clinical hours, Grad yr, Actions
+   - Sub-tabs or toggles for: Applicants table | Kanban Board | Response Analytics
+   - Bulk select, Email selected, Interview invite
+   - Status pills (total, new, reviewing, interview, accepted, rejected)
+
+4. Redirect: If /applications exists, redirect it to /positions (or /positions?tab=applicants).
+
+5. Links: Update any "All applications" links to point to Positions with the All Applicants tab (e.g. /positions?tab=applicants).
+```
+
+---
+
 ## Super-admin (clinicalhours.org@gmail.com)
 
 The email `clinicalhours.org@gmail.com` is a super-admin: full read/write access to every clinic's dashboard and data.

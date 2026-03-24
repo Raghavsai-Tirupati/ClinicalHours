@@ -140,14 +140,10 @@ export default function InterviewsPage() {
     }
   };
 
-  const pendingReview = useMemo(
-    () =>
-      applications.filter(
-        (app) =>
-          app.status === 'new' ||
-          (app.status === 'under_review' && !app.interview_invited_at) ||
-          (app.status === 'waitlisted' && !app.interview_invited_at),
-      ),
+  const completedStatuses: ApplicationStatus[] = ['accepted', 'rejected', 'waitlisted'];
+
+  const completed = useMemo(
+    () => applications.filter((app) => completedStatuses.includes(app.status)),
     [applications],
   );
 
@@ -155,15 +151,20 @@ export default function InterviewsPage() {
     () =>
       applications.filter(
         (app) =>
-          app.status !== 'accepted' &&
-          app.status !== 'rejected' &&
-          (app.status === 'interview' || !!app.interview_invited_at),
+          !completedStatuses.includes(app.status) &&
+          (app.status === 'interview' || !!app.interview_confirmed_at),
       ),
     [applications],
   );
 
-  const completed = useMemo(
-    () => applications.filter((app) => app.status === 'accepted' || app.status === 'rejected'),
+  const pendingReview = useMemo(
+    () =>
+      applications.filter(
+        (app) =>
+          !completedStatuses.includes(app.status) &&
+          app.status !== 'interview' &&
+          !app.interview_confirmed_at,
+      ),
     [applications],
   );
 
@@ -355,7 +356,7 @@ export default function InterviewsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{completed.length}</div>
-            <p className="text-xs text-muted-foreground">Accepted or rejected</p>
+            <p className="text-xs text-muted-foreground">Accepted, rejected, or waitlisted</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
@@ -400,7 +401,7 @@ export default function InterviewsPage() {
 
       <InterviewSection
         title="Completed"
-        description="Final outcomes — you can reopen to under review if you need to reverse a decision"
+        description="Final outcomes — accepted, rejected, and waitlisted applicants"
         icon={<CheckCircle className="h-4 w-4 text-green-400" />}
         applicants={completed}
         emptyText="No completed applications yet."
