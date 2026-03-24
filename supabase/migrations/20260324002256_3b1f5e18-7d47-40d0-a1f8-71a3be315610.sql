@@ -1,0 +1,1 @@
+ALTER TABLE public.hospital_accounts ALTER COLUMN account_status SET DEFAULT 'pending';
