@@ -12,6 +12,7 @@ import {
   Strikethrough,
   Underline,
   Users,
+  Clock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,10 +36,12 @@ import {
 } from '@/components/ui/dialog';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
+import { useActivityLog } from '@/hooks/useActivityLog';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { StudentApplication } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { format, formatDistanceToNow } from 'date-fns';
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 
@@ -104,6 +107,7 @@ function escapeHtml(unsafe: string): string {
 export default function EmailPage() {
   const { hospitalPage } = useHospitalPageContext();
   const { applications, positions, loading: appsLoading } = useAllApplications(hospitalPage?.id);
+  const { entries, loading: logLoading, refetch: refetchLog } = useActivityLog(hospitalPage?.id);
 
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [filterValue, setFilterValue] = useState<string>('');
@@ -113,6 +117,7 @@ export default function EmailPage() {
   const [attachments, setAttachments] = useState<Array<{ name: string; url: string }>>([]);
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedSentEmailId, setSelectedSentEmailId] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
 
   const draftKey = useMemo(() => {
@@ -200,6 +205,36 @@ export default function EmailPage() {
       checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id),
     );
   };
+
+  const sentEmails = useMemo(
+    () => entries.filter((e) => e.action_type === 'email_sent'),
+    [entries],
+  );
+
+  const applicationsById = useMemo(() => {
+    const map = new Map<string, StudentApplication>();
+    applications.forEach((app) => map.set(app.id, app));
+    return map;
+  }, [applications]);
+
+  const selectedSentEmail = useMemo(
+    () => sentEmails.find((entry) => entry.id === selectedSentEmailId) ?? null,
+    [sentEmails, selectedSentEmailId],
+  );
+
+  const selectedSentRecipients = useMemo(() => {
+    if (!selectedSentEmail) return [] as Array<{ id: string; name: string; email: string }>;
+    const meta = (selectedSentEmail.metadata as Record<string, unknown>) || {};
+    const ids = parseMetadataApplicationIds(meta);
+    return ids
+      .map((id) => {
+        const app = applicationsById.get(id);
+        if (!app) return null;
+        const email = (app.applicant_email || app.student_profile?.email || '').trim();
+        return { id, name: getApplicantName(app), email };
+      })
+      .filter((row): row is { id: string; name: string; email: string } => !!row);
+  }, [selectedSentEmail, applicationsById]);
 
   const plainBody = useMemo(() => stripHtml(htmlBody), [htmlBody]);
 
@@ -316,11 +351,16 @@ export default function EmailPage() {
         toast.warning('No emails were sent — no valid recipient addresses found for the selected applicants');
       }
 
+      if (sent > 0 && data?.activityLogged === false) {
+        toast.warning('Email sent, but the activity log could not be saved. If this persists, contact support.');
+      }
+
       setSubject('');
       setEditorContent(DEFAULT_EMAIL_HTML);
       setManualSelected([]);
       setAttachments([]);
       if (draftKey) localStorage.removeItem(draftKey);
+      refetchLog();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to send emails';
       console.error('[EmailPage] send error:', err);
@@ -354,7 +394,7 @@ export default function EmailPage() {
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Compose Section */}
-        <Card className="border-border/50 lg:col-span-5">
+        <Card className="border-border/50 lg:col-span-3">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
@@ -657,7 +697,140 @@ export default function EmailPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Sent Emails Log */}
+        <Card className="border-border/50 lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              Sent Emails
+            </CardTitle>
+            <CardDescription className="text-xs">Recent email activity</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {logLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 rounded-lg" />
+                ))}
+              </div>
+            ) : sentEmails.length === 0 ? (
+              <div className="flex flex-col items-center py-10 text-center">
+                <Mail className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No emails sent yet. Compose your first email above.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                {sentEmails.map((entry) => {
+                  const meta = entry.metadata as Record<string, unknown>;
+                  const emailSubject = (meta.subject as string) || 'No subject';
+                  const recipientCount = (meta.recipientCount as number) || 0;
+                  const bodyPreview = typeof meta.bodyPreview === 'string' ? meta.bodyPreview : '';
+                  const hasRecipients = parseMetadataApplicationIds(meta).length > 0;
+                  return (
+                    <button
+                      type="button"
+                      key={entry.id}
+                      onClick={() => setSelectedSentEmailId(entry.id)}
+                      className="w-full text-left rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1 transition hover:bg-muted/35"
+                    >
+                      <p className="text-sm font-medium truncate">{emailSubject}</p>
+                      {bodyPreview ? (
+                        <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                          {bodyPreview}
+                        </p>
+                      ) : null}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline" className="text-[10px] py-0">
+                          {recipientCount} recipient{recipientCount === 1 ? '' : 's'}
+                        </Badge>
+                        <span>
+                          {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        by {entry.actor_email}
+                      </p>
+                      {hasRecipients ? (
+                        <p className="text-[11px] text-primary">Click to view recipients</p>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">Recipient details unavailable</p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      <Dialog open={!!selectedSentEmailId} onOpenChange={(open) => !open && setSelectedSentEmailId(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Sent Email Details</DialogTitle>
+          </DialogHeader>
+          {!selectedSentEmail ? (
+            <p className="text-sm text-muted-foreground">This email log entry is no longer available.</p>
+          ) : (
+            <div className="space-y-4">
+              {/* Email metadata */}
+              {(() => {
+                const meta = (selectedSentEmail.metadata as Record<string, unknown>) || {};
+                const emailSubject = (meta.subject as string)?.trim() || 'No subject';
+                const bodyPreview = typeof meta.bodyPreview === 'string' ? meta.bodyPreview : null;
+                const recipientCount = (meta.recipientCount as number) || 0;
+                const attachmentCount = typeof meta.attachmentCount === 'number' ? meta.attachmentCount : 0;
+                return (
+                  <>
+                    <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Subject</p>
+                        <p className="text-sm font-medium">{emailSubject}</p>
+                      </div>
+                      {bodyPreview && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
+                          <p className="text-sm text-foreground/80 whitespace-pre-wrap line-clamp-6">{bodyPreview}</p>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground pt-1">
+                        <span>{format(new Date(selectedSentEmail.created_at), "MMM d, yyyy 'at' h:mm a")}</span>
+                        <span>{recipientCount} recipient{recipientCount === 1 ? '' : 's'}</span>
+                        {attachmentCount > 0 && <span>{attachmentCount} attachment{attachmentCount === 1 ? '' : 's'}</span>}
+                        <span>by {selectedSentEmail.actor_email}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recipients</p>
+                      {selectedSentRecipients.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Recipient details were not stored for this email.
+                        </p>
+                      ) : (
+                        <div className="max-h-[280px] overflow-y-auto space-y-2">
+                          {selectedSentRecipients.map((recipient) => (
+                            <div
+                              key={recipient.id}
+                              className="rounded-md border border-border/50 bg-muted/20 px-3 py-2"
+                            >
+                              <p className="text-sm font-medium truncate">{recipient.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{recipient.email || 'No email found'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
