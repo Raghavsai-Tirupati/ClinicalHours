@@ -141,7 +141,7 @@ export async function trackEvent(
     return;
   }
 
-  const sessionId = getTrackingSessionId();
+  const sessionId = getTrackingSessionId(!!userId);
   const pageUrl = window.location.pathname + window.location.search;
   const referrerUrl = document.referrer || undefined;
   const deviceInfo = getDeviceInfo();
