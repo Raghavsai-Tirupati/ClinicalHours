@@ -645,12 +645,12 @@ export default function ApplicationFilterBar({
           {rules.map((r) => (
             <li
               key={r.id}
-              className="flex flex-wrap items-start gap-2 rounded-lg border border-border/40 bg-background/40 px-3 py-2"
+              className="flex flex-col gap-2 rounded-lg border border-border/40 bg-background/40 px-3 py-2 sm:flex-row sm:items-start sm:gap-2"
             >
-              <span className="text-xs font-medium text-muted-foreground shrink-0 pt-1.5 w-[120px] sm:w-[140px]">
+              <span className="w-full shrink-0 pt-0.5 text-xs font-medium text-muted-foreground sm:w-[140px] sm:pt-1.5 break-words">
                 {ruleLabel(r)}
               </span>
-              <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">{renderRuleEditor(r)}</div>
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">{renderRuleEditor(r)}</div>
               <Button
                 type="button"
                 variant="ghost"

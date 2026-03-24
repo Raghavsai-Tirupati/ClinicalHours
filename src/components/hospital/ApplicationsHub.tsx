@@ -327,16 +327,16 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">{embeddedInPositions ? 'All Applicants' : 'Applications'}</h2>
-        <p className="text-sm text-muted-foreground mt-1">
+      <div className="min-w-0">
+        <h2 className="text-2xl font-bold break-words">{embeddedInPositions ? 'All Applicants' : 'Applications'}</h2>
+        <p className="text-sm text-muted-foreground mt-1 break-words text-pretty">
           {embeddedInPositions ? 'Applicants across all positions' : 'All applications across every position'}
         </p>
-        <div className="flex gap-1 mt-4 border-b border-border">
+        <div className="-mx-1 mt-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border px-1 pb-px [-webkit-overflow-scrolling:touch]">
           <button
             type="button"
             onClick={() => setActiveTab('applications')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors sm:px-4 ${
               activeTab === 'applications'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -348,7 +348,7 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
           <button
             type="button"
             onClick={() => setActiveTab('kanban')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors sm:px-4 ${
               activeTab === 'kanban'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -360,7 +360,7 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors sm:px-4 ${
               activeTab === 'analytics'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -405,14 +405,14 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
             applications={applications}
           />
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground text-pretty break-words">
             Showing <span className="text-foreground font-medium">{sorted.length}</span> of {applications.length}{' '}
             applicants after filters. Sort by clicking a column header. Default: newest first.
           </p>
 
           {selectedCount > 0 && (
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-4 py-3">
-              <Badge variant="outline" className="text-xs">
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-3 sm:px-4">
+              <Badge variant="outline" className="max-w-full whitespace-normal text-xs leading-snug">
                 {selectedCount} selected ({selectedRecipientCount} unique emails)
               </Badge>
               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEmailDialogOpen(true)}>
@@ -442,8 +442,8 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
             </Card>
           ) : (
             <Card className="border-border/50 overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
+              <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                <Table className="min-w-[720px]">
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-border/60">
                       <TableHead className="w-[40px]">
@@ -502,26 +502,26 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
                               )}
                             </Button>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="max-w-[200px]">
                             <button
                               type="button"
-                              className="text-left w-full"
+                              className="w-full text-left"
                               onClick={() => toggleExpand(app.id)}
                             >
-                              <p className="font-medium text-sm">{getApplicantSortName(app)}</p>
+                              <p className="text-sm font-medium break-words">{getApplicantSortName(app)}</p>
                             </button>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground max-w-[140px]">
-                            <span className="truncate block">{app.student_profile?.university || '—'}</span>
+                          <TableCell className="max-w-[140px] text-sm text-muted-foreground">
+                            <span className="block break-words leading-snug">{app.student_profile?.university || '—'}</span>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground max-w-[160px]">
-                            <span className="truncate block">{app.position?.title || '—'}</span>
+                          <TableCell className="max-w-[180px] text-sm text-muted-foreground">
+                            <span className="block break-words leading-snug">{app.position?.title || '—'}</span>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                             {format(new Date(app.submitted_at), 'MMM d, yyyy')}
                           </TableCell>
                           <TableCell>
-                            <Badge className={`text-xs ${STATUS_COLORS[app.status] || ''}`}>
+                            <Badge className={`max-w-[140px] whitespace-normal text-xs leading-snug ${STATUS_COLORS[app.status] || ''}`}>
                               {APPLICATION_STATUS_LABELS[app.status]}
                             </Badge>
                           </TableCell>
@@ -570,7 +570,7 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
                         {expandedId === app.id && (
                           <TableRow className="border-border/50 bg-muted/15 hover:bg-muted/15">
                             <TableCell colSpan={11} className="p-0 border-l-2 border-l-primary/40">
-                              <div className="px-4 py-5 sm:px-6 max-w-3xl">
+                              <div className="max-w-3xl px-3 py-5 sm:px-6">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
                                   Applicant review
                                 </p>

@@ -165,12 +165,15 @@ const Navigation = () => {
   return (
     <>
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBackground} ${borderStyle} border-b backdrop-blur-sm bg-opacity-95`}>
-        <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between h-20">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="flex h-20 min-w-0 items-center justify-between gap-2">
             {/* Logo */}
-            <Link to="/" className={`flex items-center gap-2 text-xl tracking-tight font-heading ${logoColor}`}>
-              <img src={logo} alt="ClinicalHours" className="h-8 w-8 object-contain" />
-              <span>
+            <Link
+              to="/"
+              className={`flex min-w-0 max-w-[65vw] items-center gap-2 text-lg tracking-tight font-heading sm:max-w-none sm:text-xl ${logoColor}`}
+            >
+              <img src={logo} alt="ClinicalHours" className="h-8 w-8 shrink-0 object-contain" />
+              <span className="min-w-0 truncate sm:overflow-visible sm:text-clip sm:whitespace-normal">
                 <span className="font-normal">Clinical</span>
                 <span className="font-bold">Hours</span>
               </span>

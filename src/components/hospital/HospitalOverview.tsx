@@ -92,14 +92,14 @@ export default function HospitalOverview() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Overview</h2>
-          <p className="text-muted-foreground text-sm mt-1">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-bold tracking-tight break-words">Overview</h2>
+          <p className="text-muted-foreground text-sm mt-1 text-pretty break-words">
             Manage positions, review applications, and track progress
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full shrink-0 sm:w-auto">
           <Link to={`${basePath}/positions/new`}>
             <Plus className="h-4 w-4 mr-2" />
             New Position
@@ -193,15 +193,15 @@ export default function HospitalOverview() {
 
       {/* Recent Applications */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <CardTitle>Recent Applications</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1 text-pretty break-words">
               Latest submissions across all positions
             </p>
           </div>
           {applications.length > 5 && (
-            <Button variant="ghost" size="sm" asChild>
+            <Button variant="ghost" size="sm" className="shrink-0 self-start sm:self-center" asChild>
               <Link to={`${basePath}/positions`}>
                 View All
                 <ArrowRight className="h-4 w-4 ml-1" />
@@ -239,22 +239,28 @@ export default function HospitalOverview() {
                 return (
                   <div
                     key={app.id}
-                    className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/30"
+                    className="flex flex-col gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/30 sm:flex-row sm:items-center sm:gap-4"
                   >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase">
-                      {displayName.charAt(0)}
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase">
+                        {displayName.charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium break-words">{displayName}</p>
+                        <p className="text-xs text-muted-foreground break-words">{positionTitle}</p>
+                        <span className="mt-1 text-xs text-muted-foreground sm:hidden">
+                          {format(new Date(app.submitted_at), 'MMM d')}
+                        </span>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{displayName}</p>
-                      <p className="text-xs text-muted-foreground truncate">{positionTitle}</p>
-                    </div>
+                    <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
                     <Badge
                       variant="secondary"
-                      className={`shrink-0 text-[11px] ${STATUS_COLORS[app.status]}`}
+                      className={`max-w-full whitespace-normal text-[11px] leading-snug ${STATUS_COLORS[app.status]}`}
                     >
                       {APPLICATION_STATUS_LABELS[app.status]}
                     </Badge>
-                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">
+                    <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
                       {format(new Date(app.submitted_at), 'MMM d')}
                     </span>
                     <Select
@@ -262,7 +268,7 @@ export default function HospitalOverview() {
                       onValueChange={(val) => handleStatusChange(app.id, val as ApplicationStatus)}
                       disabled={updatingId === app.id}
                     >
-                      <SelectTrigger className="h-7 w-[120px] shrink-0 text-xs">
+                      <SelectTrigger className="h-9 min-w-[8.5rem] flex-1 text-xs sm:h-7 sm:w-[120px] sm:flex-initial">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -275,6 +281,7 @@ export default function HospitalOverview() {
                         )}
                       </SelectContent>
                     </Select>
+                    </div>
                   </div>
                 );
               })}
@@ -284,28 +291,30 @@ export default function HospitalOverview() {
       </Card>
 
       {/* Positions at a Glance */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold tracking-tight">Positions at a Glance</h3>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">View</span>
-            <Select
-              value={positionStatusFilter}
-              onValueChange={(value) =>
-                setPositionStatusFilter(value as 'all' | 'active' | 'draft' | 'archived')
-              }
-            >
-              <SelectTrigger className="h-8 w-[150px]">
-                <SelectValue placeholder="All position statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All position statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="ghost" size="sm" asChild>
+      <div className="min-w-0">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-lg font-semibold tracking-tight break-words">Positions at a Glance</h3>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">View</span>
+              <Select
+                value={positionStatusFilter}
+                onValueChange={(value) =>
+                  setPositionStatusFilter(value as 'all' | 'active' | 'draft' | 'archived')
+                }
+              >
+                <SelectTrigger className="h-8 min-w-0 flex-1 sm:w-[150px] sm:flex-initial">
+                  <SelectValue placeholder="All position statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All position statuses</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="ghost" size="sm" className="w-full shrink-0 sm:w-auto" asChild>
               <Link to={`${basePath}/positions/new`}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add Position
@@ -367,8 +376,8 @@ export default function HospitalOverview() {
                 <Link key={pos.id} to={`${basePath}/positions/${pos.id}`} className="group">
                   <Card className="transition-colors group-hover:border-primary/40">
                     <CardContent className="pt-6">
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <h4 className="text-sm font-semibold truncate">{pos.title}</h4>
+                      <div className="mb-3 flex items-start justify-between gap-2">
+                        <h4 className="line-clamp-2 text-sm font-semibold break-words">{pos.title}</h4>
                         <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 mb-4">

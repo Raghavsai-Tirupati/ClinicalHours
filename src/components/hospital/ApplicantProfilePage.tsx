@@ -385,8 +385,8 @@ export default function ApplicantProfilePage() {
   })?.answer_file_url || null;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <Button variant="ghost" size="sm" className="gap-2 -ml-2" onClick={() => navigate(-1)}>
+    <div className="mx-auto max-w-4xl min-w-0 space-y-6">
+      <Button variant="ghost" size="sm" className="-ml-2 gap-2" onClick={() => navigate(-1)}>
         <ArrowLeft className="h-4 w-4" />
         Back
       </Button>
@@ -397,16 +397,17 @@ export default function ApplicantProfilePage() {
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xl font-semibold">
               {initial}
             </div>
-            <div className="flex-1 min-w-0 space-y-1">
-              <h1 className="text-xl font-bold truncate">{name}</h1>
-              {email && <p className="text-sm text-muted-foreground truncate">{email}</p>}
-              <div className="flex items-center gap-3 flex-wrap pt-1">
+            <div className="min-w-0 flex-1 space-y-1">
+              <h1 className="text-xl font-bold break-words">{name}</h1>
+              {email && <p className="break-all text-sm text-muted-foreground">{email}</p>}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Badge className={`text-xs ${STATUS_COLORS[application.status]}`}>
                   {APPLICATION_STATUS_LABELS[application.status]}
                 </Badge>
                 {application.position?.title && (
-                  <span className="text-xs text-muted-foreground">
-                    Applied for <span className="font-medium text-foreground">{application.position.title}</span>
+                  <span className="text-xs text-muted-foreground break-words">
+                    Applied for{' '}
+                    <span className="font-medium text-foreground">{application.position.title}</span>
                   </span>
                 )}
                 <span className="text-xs text-muted-foreground">

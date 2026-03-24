@@ -9,6 +9,7 @@ import {
   Settings,
   LogOut,
   Plus,
+  Shield,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -30,7 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function HospitalSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { hospitalPage, basePath } = useHospitalPageContext();
+  const { hospitalPage, basePath, isSuperAdmin } = useHospitalPageContext();
   const { positions } = usePositions(hospitalPage?.id);
 
   const isActive = (route: string) => {
@@ -110,6 +111,16 @@ export default function HospitalSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          {isSuperAdmin && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Site admin">
+                <Link to="/admin">
+                  <Shield className="h-4 w-4" />
+                  <span>Site admin</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild

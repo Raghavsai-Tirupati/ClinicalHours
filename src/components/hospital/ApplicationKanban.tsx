@@ -69,7 +69,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col min-w-[280px] w-[280px] lg:w-auto lg:flex-1 rounded-lg border ${bgColor} ${
+      className={`flex min-h-[120px] w-[min(280px,92vw)] shrink-0 flex-col rounded-lg border sm:min-w-[280px] sm:w-[280px] lg:w-auto lg:min-w-0 lg:flex-1 ${bgColor} ${
         isOver ? 'ring-2 ring-primary/50' : ''
       } transition-all`}
     >
@@ -130,13 +130,13 @@ function KanbanCard({
           <div className="flex-1 min-w-0 space-y-1.5">
             <div className="flex items-center gap-1.5">
               <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="text-sm font-medium truncate">
+              <span className="line-clamp-2 text-sm font-medium break-words">
                 {getApplicantName(application)}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground truncate">
+              <span className="break-all text-xs text-muted-foreground">
                 {getApplicantEmail(application) || '—'}
               </span>
             </div>
@@ -148,7 +148,7 @@ function KanbanCard({
             </div>
             <div className="flex items-center gap-1.5">
               <Briefcase className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground truncate">
+              <span className="line-clamp-2 text-xs text-muted-foreground break-words">
                 {application.position?.title || '—'}
               </span>
             </div>
@@ -180,13 +180,13 @@ function KanbanCardOverlay({ application }: { application: StudentApplication })
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center gap-1.5">
             <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-sm font-medium truncate">
+            <span className="line-clamp-2 text-sm font-medium break-words">
               {getApplicantName(application)}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <Briefcase className="h-3 w-3 text-muted-foreground shrink-0" />
-            <span className="text-xs text-muted-foreground truncate">
+            <span className="line-clamp-2 text-xs text-muted-foreground break-words">
               {application.position?.title || '—'}
             </span>
           </div>
