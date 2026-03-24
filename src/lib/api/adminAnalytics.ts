@@ -49,8 +49,15 @@ export async function fetchAdminActivityFeed(
     }
   }
 
+  // Identify session_ids that also have authenticated events
+  const authenticatedSessionIds = new Set<string>();
+  rows.forEach((row) => {
+    if (row.user_id) authenticatedSessionIds.add(row.session_id);
+  });
+
   // Generate stable, per-day guest labels based on session_id,
   // using chronological order so the earliest guest of the day is #1.
+  // Exclude sessions that also have authenticated events (overlap).
   const guestCountByDate = new Map<string, number>();
   const guestLabelBySessionAndDate = new Map<string, string>();
 
@@ -60,7 +67,9 @@ export async function fetchAdminActivityFeed(
 
   for (const row of rowsSortedChronologically) {
     if (row.user_id) continue;
-    const dateKey = row.created_at.slice(0, 10); // yyyy-mm-dd
+    // Skip sessions that also have authenticated events
+    if (authenticatedSessionIds.has(row.session_id)) continue;
+    const dateKey = row.created_at.slice(0, 10);
     const sessionId = (row.session_id as string | null) ?? "unknown";
     const compositeKey = `${dateKey}:${sessionId}`;
 
