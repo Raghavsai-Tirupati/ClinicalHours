@@ -135,13 +135,22 @@ export function useHospitalPageByUser() {
         const p = page as any;
         const opp = p.opportunities;
         setPageId(page.id);
+
+        // Auto-claim unclaimed pages when the hospital admin logs in
+        if (!page.is_claimed) {
+          await supabase
+            .from('hospital_pages')
+            .update({ is_claimed: true, claimed_at: new Date().toISOString() })
+            .eq('id', page.id);
+        }
+
         setHospitalPage({
           id: page.id,
           hospital_id: page.hospital_id,
           admin_email: page.admin_email,
           interview_booking_url: page.interview_booking_url ?? null,
-          is_claimed: page.is_claimed,
-          claimed_at: page.claimed_at,
+          is_claimed: true, // always true after login
+          claimed_at: page.claimed_at ?? new Date().toISOString(),
           created_at: page.created_at,
           created_by: page.created_by,
           gmail_email: p.gmail_email ?? null,
