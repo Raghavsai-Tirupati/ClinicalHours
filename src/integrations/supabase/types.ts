@@ -652,6 +652,7 @@ export type Database = {
           interview_booking_url: string | null
           is_claimed: boolean
           is_showcase: boolean
+          page_status: string
         }
         Insert: {
           admin_email: string
@@ -669,6 +670,7 @@ export type Database = {
           interview_booking_url?: string | null
           is_claimed?: boolean
           is_showcase?: boolean
+          page_status?: string
         }
         Update: {
           admin_email?: string
@@ -686,6 +688,7 @@ export type Database = {
           interview_booking_url?: string | null
           is_claimed?: boolean
           is_showcase?: boolean
+          page_status?: string
         }
         Relationships: [
           {

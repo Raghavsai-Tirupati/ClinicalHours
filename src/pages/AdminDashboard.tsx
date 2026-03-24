@@ -15,9 +15,6 @@ import {
   Radio,
   ImageIcon,
   Ghost,
-  Trash2,
-  FilePlus,
-  Copy,
 } from 'lucide-react';
 import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
@@ -28,9 +25,6 @@ import AdminToolsTab from '@/components/admin/AdminToolsTab';
 import { AdminActivityTab } from '@/components/admin/AdminActivityTab';
 import AdminLogosTab from '@/components/admin/AdminLogosTab';
 import GuestSessionsTab from '@/components/admin/GuestSessionsTab';
-import AdminDeletionEventsTab from '@/components/admin/AdminDeletionEventsTab';
-import AdminCreateHospitalPageTab from '@/components/admin/AdminCreateHospitalPageTab';
-import AdminCloneTemplateTab from '@/components/admin/AdminCloneTemplateTab';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -63,9 +57,9 @@ export default function AdminDashboard() {
             </Badge>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs — consolidated from 11 → 8 */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-5 lg:grid-cols-11">
+            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-8">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview</span>
@@ -95,10 +89,6 @@ export default function AdminDashboard() {
                 <ImageIcon className="h-4 w-4" />
                 <span className="hidden sm:inline">Logos</span>
               </TabsTrigger>
-              <TabsTrigger value="pages" className="flex items-center gap-2">
-                <FilePlus className="h-4 w-4" />
-                <span className="hidden sm:inline">Pages</span>
-              </TabsTrigger>
               <TabsTrigger value="guest-sessions" className="flex items-center gap-2">
                 <Ghost className="h-4 w-4" />
                 <span className="hidden sm:inline">Guests</span>
@@ -106,14 +96,6 @@ export default function AdminDashboard() {
               <TabsTrigger value="activity" className="flex items-center gap-2">
                 <Radio className="h-4 w-4" />
                 <span className="hidden sm:inline">Activity</span>
-              </TabsTrigger>
-              <TabsTrigger value="deletions" className="flex items-center gap-2">
-                <Trash2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Deletions</span>
-              </TabsTrigger>
-              <TabsTrigger value="clone" className="flex items-center gap-2">
-                <Copy className="h-4 w-4" />
-                <span className="hidden sm:inline">Clone</span>
               </TabsTrigger>
             </TabsList>
 
@@ -153,12 +135,6 @@ export default function AdminDashboard() {
               </TabErrorBoundary>
             </TabsContent>
 
-            <TabsContent value="pages">
-              <TabErrorBoundary tabName="Hospital Pages">
-                <AdminCreateHospitalPageTab />
-              </TabErrorBoundary>
-            </TabsContent>
-
             <TabsContent value="guest-sessions">
               <TabErrorBoundary tabName="Guest Sessions">
                 <GuestSessionsTab />
@@ -168,18 +144,6 @@ export default function AdminDashboard() {
             <TabsContent value="activity">
               <TabErrorBoundary tabName="Activity">
                 <AdminActivityTab />
-              </TabErrorBoundary>
-            </TabsContent>
-
-            <TabsContent value="deletions">
-              <TabErrorBoundary tabName="Deletions">
-                <AdminDeletionEventsTab />
-              </TabErrorBoundary>
-            </TabsContent>
-
-            <TabsContent value="clone">
-              <TabErrorBoundary tabName="Clone Template">
-                <AdminCloneTemplateTab />
               </TabErrorBoundary>
             </TabsContent>
           </Tabs>
