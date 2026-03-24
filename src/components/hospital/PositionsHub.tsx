@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Briefcase,
-  Users,
   Plus,
   ArrowRight,
   Search,
@@ -15,14 +14,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
 import { supabase } from '@/integrations/supabase/client';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
 import type { HospitalPosition, PositionStatus } from '@/types/positions';
 import { toast } from 'sonner';
-import ApplicationsHub from './ApplicationsHub';
 
 
 const STATUS_DOT: Record<PositionStatus, string> = {
@@ -44,9 +41,6 @@ const KANBAN_COLUMNS = [
 
 export default function PositionsHub() {
   const { hospitalPage, basePath } = useHospitalPageContext();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') === 'applicants' ? 'applicants' : 'positions';
   const { applications, positions, loading } = useAllApplications(hospitalPage?.id);
   const [search, setSearch] = useState('');
   const [localPositions, setLocalPositions] = useState<HospitalPosition[]>([]);
@@ -164,30 +158,6 @@ export default function PositionsHub() {
         </Button>
       </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => {
-          const params = new URLSearchParams(searchParams);
-          if (v === 'applicants') params.set('tab', 'applicants');
-          else params.delete('tab');
-          navigate(`${basePath}/positions${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
-        }}
-        className="w-full"
-      >
-        <TabsList>
-          <TabsTrigger value="positions" className="gap-2">
-            <Briefcase className="h-4 w-4" />
-            Positions
-          </TabsTrigger>
-          <TabsTrigger value="applicants" className="gap-2">
-            <Users className="h-4 w-4" />
-            All Applicants
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="applicants" className="mt-6">
-          <ApplicationsHub embeddedInPositions />
-        </TabsContent>
-        <TabsContent value="positions" className="mt-6">
       {/* Search */}
       {positions.length > 0 && (
         <div className="relative max-w-sm">
@@ -367,8 +337,6 @@ export default function PositionsHub() {
           </div>
         </>
       )}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Briefcase,
+  Users,
   Calendar,
   Mail,
   Activity,
@@ -49,6 +50,7 @@ export default function HospitalSidebar() {
   const navItems = [
     { label: 'Overview', icon: LayoutDashboard, route: basePath },
     { label: 'Positions', icon: Briefcase, route: `${basePath}/positions`, badge: activeCount || positions.length },
+    { label: 'Applicants', icon: Users, route: `${basePath}/applications` },
     { label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
     { label: 'Email', icon: Mail, route: `${basePath}/email` },
     { label: 'Activity', icon: Activity, route: `${basePath}/activity` },

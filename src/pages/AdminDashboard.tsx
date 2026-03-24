@@ -15,6 +15,7 @@ import {
   Radio,
   ImageIcon,
   Ghost,
+  Crown,
 } from 'lucide-react';
 import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
@@ -25,6 +26,7 @@ import AdminToolsTab from '@/components/admin/AdminToolsTab';
 import { AdminActivityTab } from '@/components/admin/AdminActivityTab';
 import AdminLogosTab from '@/components/admin/AdminLogosTab';
 import GuestSessionsTab from '@/components/admin/GuestSessionsTab';
+import AdminPremiumTab from '@/components/admin/AdminPremiumTab';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -57,9 +59,9 @@ export default function AdminDashboard() {
             </Badge>
           </div>
 
-          {/* Tabs — consolidated from 11 → 8 */}
+          {/* Tabs — consolidated admin tools */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-8">
+            <TabsList className="grid w-full grid-cols-2 gap-1 sm:grid-cols-5 lg:grid-cols-9">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview</span>
@@ -92,6 +94,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="guest-sessions" className="flex items-center gap-2">
                 <Ghost className="h-4 w-4" />
                 <span className="hidden sm:inline">Guests</span>
+              </TabsTrigger>
+              <TabsTrigger value="premium" className="flex items-center gap-2">
+                <Crown className="h-4 w-4" />
+                <span className="hidden sm:inline">Premium</span>
               </TabsTrigger>
               <TabsTrigger value="activity" className="flex items-center gap-2">
                 <Radio className="h-4 w-4" />
@@ -138,6 +144,12 @@ export default function AdminDashboard() {
             <TabsContent value="guest-sessions">
               <TabErrorBoundary tabName="Guest Sessions">
                 <GuestSessionsTab />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            <TabsContent value="premium">
+              <TabErrorBoundary tabName="Premium">
+                <AdminPremiumTab />
               </TabErrorBoundary>
             </TabsContent>
 
