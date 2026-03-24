@@ -595,7 +595,7 @@ export function AdminActivityTab() {
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
   const [viewMode, setViewMode] = useState<ViewMode>("timeline");
-  const [timeRange, setTimeRange] = useState<TimeRange>("today");
+  const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const [userFilter, setUserFilter] = useState<UserFilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState<string[]>([]);
