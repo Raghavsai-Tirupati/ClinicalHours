@@ -14,8 +14,8 @@
   --pa-accent-dim: rgba(139, 92, 246, 0.15);
   --pa-accent-border: rgba(139, 92, 246, 0.4);
   --pa-danger: #e05a4e;
-  --pa-font-display: "Lora", Georgia, serif;
-  --pa-font-body: "DM Sans", system-ui, sans-serif;
+  --pa-font-display: var(--font-heading);
+  --pa-font-body: var(--font-sans);
   --pa-r: 10px;
 
   background: var(--pa-bg);
@@ -646,6 +646,23 @@
   font-size: 13px;
   color: var(--pa-text-2);
   line-height: 1.6;
+}
+
+.pa-detail-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--pa-text-2);
+  white-space: pre-wrap;
+}
+
+.pa-detail-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--pa-text-2);
+}
+
+.pa-detail-list li {
+  margin: 0 0 0.35rem 0;
 }
 
 .pa-success-wrap {

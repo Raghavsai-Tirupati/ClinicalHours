@@ -20,7 +20,6 @@ import { useProfileComplete } from '@/hooks/useProfileComplete';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
 import type { ApplicationAvailability, PositionQuestion } from '@/types/positions';
 
-import '@fontsource/lora/400.css';
 import './position-apply.css';
 
 type StepKey = 'info' | 'questions' | 'availability' | 'review';
@@ -92,6 +91,14 @@ function formatAvailabilitySummary(a: ApplicationAvailability): string {
   return parts.join(' · ') || '—';
 }
 
+function parseRequirements(requirements: string | null): string[] {
+  if (!requirements) return [];
+  return requirements
+    .split(/\r?\n|;/g)
+    .map((item) => item.trim().replace(/^[\-\u2022*]\s*/, ''))
+    .filter(Boolean);
+}
+
 export default function PositionApplyPage() {
   const { positionId } = useParams<{ positionId: string }>();
   const navigate = useNavigate();
@@ -132,6 +139,7 @@ export default function PositionApplyPage() {
     [questions.length, askForAvailability],
   );
   const currentStep = steps[stepIndex];
+  const requirementItems = useMemo(() => parseRequirements(position?.requirements ?? null), [position?.requirements]);
 
   useEffect(() => {
     if (!user) return;
@@ -688,6 +696,33 @@ export default function PositionApplyPage() {
           {/* Step: Your info */}
           {currentStep === 'info' && (
             <>
+              {(position.description || requirementItems.length > 0) && (
+                <div className="pa-section-card">
+                  <div className="pa-section-head">
+                    <h2>About this opportunity</h2>
+                    <p>Details provided by the organization.</p>
+                  </div>
+                  <div className="pa-section-body">
+                    {position.description && (
+                      <div className="pa-form-group">
+                        <div className="pa-if-label">Description</div>
+                        <p className="pa-detail-text">{position.description}</p>
+                      </div>
+                    )}
+                    {requirementItems.length > 0 && (
+                      <div className="pa-form-group">
+                        <div className="pa-if-label">Requirements</div>
+                        <ul className="pa-detail-list">
+                          {requirementItems.map((item, idx) => (
+                            <li key={`${item}-${idx}`}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="pa-section-card">
                 <div className="pa-section-head">
                   <h2>Your information</h2>
