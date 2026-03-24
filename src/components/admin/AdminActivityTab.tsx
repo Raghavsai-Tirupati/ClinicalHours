@@ -654,7 +654,19 @@ export function AdminActivityTab() {
         }
 
         // Fetch guest sessions for guest session IDs
-        const guestSessionIds = [...new Set(raw.filter((e) => !e.user_id).map((e) => e.session_id))];
+        // First, identify session_ids that also have authenticated events (overlap)
+        const authenticatedSessionIds = new Set(
+          raw.filter((e) => e.user_id).map((e) => e.session_id)
+        );
+
+        // Only fetch guest sessions for IDs that are purely guest (no overlap)
+        const guestSessionIds = [
+          ...new Set(
+            raw
+              .filter((e) => !e.user_id && !authenticatedSessionIds.has(e.session_id))
+              .map((e) => e.session_id)
+          ),
+        ];
         if (guestSessionIds.length > 0) {
           const { data: guestData } = await supabase
             .from("guest_sessions")
