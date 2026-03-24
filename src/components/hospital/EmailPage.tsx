@@ -484,9 +484,9 @@ export default function EmailPage() {
                         onCheckedChange={(c) => toggleManual(app.id, !!c)}
                         className="h-3.5 w-3.5"
                       />
-                      <span className="truncate">
+                      <span className="min-w-0 break-words">
                         {getApplicantName(app)}
-                        <span className="text-muted-foreground ml-1">
+                        <span className="text-muted-foreground ml-1 break-all">
                           ({app.applicant_email || app.student_profile?.email || 'no email'})
                         </span>
                       </span>
@@ -540,7 +540,7 @@ export default function EmailPage() {
                         className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background px-3 py-2"
                       >
                         <div className="min-w-0">
-                          <p className="text-xs font-medium truncate">{a.name}</p>
+                          <p className="break-words text-xs font-medium">{a.name}</p>
                         </div>
                         <button
                           type="button"
@@ -736,7 +736,7 @@ export default function EmailPage() {
                       onClick={() => setSelectedSentEmailId(entry.id)}
                       className="w-full text-left rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1 transition hover:bg-muted/35"
                     >
-                      <p className="text-sm font-medium truncate">{emailSubject}</p>
+                      <p className="break-words text-sm font-medium">{emailSubject}</p>
                       {bodyPreview ? (
                         <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
                           {bodyPreview}
@@ -817,8 +817,8 @@ export default function EmailPage() {
                               key={recipient.id}
                               className="rounded-md border border-border/50 bg-muted/20 px-3 py-2"
                             >
-                              <p className="text-sm font-medium truncate">{recipient.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">{recipient.email || 'No email found'}</p>
+                              <p className="break-words text-sm font-medium">{recipient.name}</p>
+                              <p className="break-all text-xs text-muted-foreground">{recipient.email || 'No email found'}</p>
                             </div>
                           ))}
                         </div>

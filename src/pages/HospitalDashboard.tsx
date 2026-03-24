@@ -899,7 +899,7 @@ export default function HospitalDashboard() {
                             <td className="px-4 py-3 hidden sm:table-cell">
                               <div className="flex items-center gap-1 text-muted-foreground">
                                 <MapPin className="h-3 w-3" />
-                                <span className="truncate max-w-[200px]">{opp.location}</span>
+                                <span className="max-w-[min(100%,12rem)] break-words sm:max-w-[200px]">{opp.location}</span>
                               </div>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">

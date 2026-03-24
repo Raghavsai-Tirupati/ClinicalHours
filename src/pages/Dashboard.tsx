@@ -216,10 +216,10 @@ function OpportunityCard({
             size="sm"
           />
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-base font-medium text-foreground">
+            <h3 className="line-clamp-2 break-words text-base font-medium text-foreground">
               {opp.name}
             </h3>
-            <p className="mt-0.5 text-sm text-muted-foreground">{opp.location}</p>
+            <p className="mt-0.5 break-words text-sm text-muted-foreground">{opp.location}</p>
           </div>
         </div>
 
@@ -853,7 +853,7 @@ const Dashboard = () => {
                       <div key={app.id} className="rounded-lg border border-border bg-card p-4">
                         <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
                           <Building2 className="h-3.5 w-3.5" />
-                          <span className="truncate">{app.hospital_name}</span>
+                          <span className="min-w-0 break-words">{app.hospital_name}</span>
                         </div>
                         <p className="font-medium text-foreground">{app.position_title}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">

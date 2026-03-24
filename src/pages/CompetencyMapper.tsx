@@ -34,7 +34,7 @@ function CompetencyCell({ name, count, onClick }: { name: string; count: number;
 
   return (
     <button onClick={onClick} className={`rounded-lg border p-3 text-left transition-colors hover:opacity-80 ${color}`}>
-      <p className="text-xs font-medium truncate">{name}</p>
+      <p className="break-words text-xs font-medium">{name}</p>
       <p className="text-lg font-bold mt-0.5">{count}</p>
       <p className="text-[10px] opacity-70">reflection{count !== 1 ? "s" : ""}</p>
     </button>

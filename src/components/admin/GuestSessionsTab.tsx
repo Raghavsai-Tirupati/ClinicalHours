@@ -217,7 +217,7 @@ function TopListCard({
         ) : (
           items.slice(0, 5).map((item) => (
             <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
-              <span className="truncate text-muted-foreground">{item.label}</span>
+              <span className="min-w-0 flex-1 break-words text-muted-foreground">{item.label}</span>
               <span className="font-medium tabular-nums">{item.count}</span>
             </div>
           ))
@@ -335,7 +335,7 @@ function SessionDetailDialog({
                       <div className="flex flex-wrap gap-2">
                         {session.pageSequence.map((page, index) => (
                           <Badge key={`${page}-${index}`} variant="outline" className="max-w-full">
-                            <span className="truncate">{getPageName(page)}</span>
+                            <span className="break-words text-left">{getPageName(page)}</span>
                           </Badge>
                         ))}
                       </div>
@@ -893,7 +893,7 @@ export default function GuestSessionsTab() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-lg border border-border overflow-hidden">
+              <div className="rounded-lg border border-border overflow-x-auto overflow-x-auto-touch">
                 <ScrollArea className="w-full">
                   <div className="min-w-[1100px]">
                     <Table>

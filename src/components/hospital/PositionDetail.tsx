@@ -45,7 +45,7 @@ export default function PositionDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {position.status !== 'active' && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           This position is <span className="font-medium">{position.status}</span> — it is not shown to students.
@@ -61,15 +61,15 @@ export default function PositionDetail() {
       )}
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h2 className="text-2xl font-bold">{position.title}</h2>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+            <h2 className="text-2xl font-bold break-words">{position.title}</h2>
             <Badge className={STATUS_COLORS[position.status]}>
               {position.status}
             </Badge>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
             <Badge variant="outline" className="text-xs">
               {POSITION_TYPE_LABELS[position.position_type] || position.position_type}
             </Badge>
@@ -93,7 +93,7 @@ export default function PositionDetail() {
             )}
           </div>
         </div>
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline" size="sm" className="shrink-0 self-start">
           <Link to={`${basePath}/positions/${position.id}/edit`}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit
@@ -103,7 +103,7 @@ export default function PositionDetail() {
 
       {/* Tabs: Applicants, Analytics, Settings */}
       <Tabs defaultValue="applicants">
-        <TabsList>
+        <TabsList className="inline-flex h-auto min-h-10 w-full max-w-full flex-wrap gap-1 bg-muted p-1 sm:h-10 sm:flex-nowrap">
           <TabsTrigger value="applicants" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Applicants

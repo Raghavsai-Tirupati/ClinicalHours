@@ -171,22 +171,22 @@ export default function ResponseAnalytics({ applications, onViewApplicant }: Pro
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-6 rounded-xl border border-border bg-card px-5 py-4">
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
         <div>
           <p className="text-2xl font-bold text-foreground">{applications.length}</p>
           <p className="text-xs text-muted-foreground">Total applicants</p>
         </div>
-        <div className="h-8 w-px bg-border" />
+        <div className="hidden h-8 w-px bg-border sm:block" />
         <div>
           <p className="text-2xl font-bold text-foreground">{totalRespondents}</p>
           <p className="text-xs text-muted-foreground">With custom responses</p>
         </div>
-        <div className="h-8 w-px bg-border" />
+        <div className="hidden h-8 w-px bg-border sm:block" />
         <div>
           <p className="text-2xl font-bold text-foreground">{summaries.length}</p>
           <p className="text-xs text-muted-foreground">Questions</p>
         </div>
-        <p className="text-xs text-muted-foreground max-w-md ml-auto">
+        <p className="text-xs text-muted-foreground sm:max-w-md sm:ml-auto">
           Click a response segment to see which applicants chose it — useful for comparing cohorts side by side.
         </p>
       </div>
@@ -224,7 +224,7 @@ export default function ResponseAnalytics({ applications, onViewApplicant }: Pro
                               <Square className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             )
                           ) : null}
-                          <span className="text-foreground truncate">{label}</span>
+                          <span className="min-w-0 break-words text-foreground">{label}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0 text-muted-foreground">
                           <span>
@@ -254,7 +254,7 @@ export default function ResponseAnalytics({ applications, onViewApplicant }: Pro
                   <div className="flex items-center gap-2 text-sm min-w-0">
                     <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="text-muted-foreground shrink-0">{f.applicant}</span>
-                    <span className="text-foreground truncate">{f.label}</span>
+                    <span className="min-w-0 break-words text-foreground">{f.label}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
@@ -328,8 +328,8 @@ export default function ResponseAnalytics({ applications, onViewApplicant }: Pro
                   className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-muted/20 px-3 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{applicantLabel(app)}</p>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-sm font-medium break-words">{applicantLabel(app)}</p>
+                    <p className="break-all text-xs text-muted-foreground">
                       {app.applicant_email || app.student_profile?.email || '—'}
                     </p>
                   </div>

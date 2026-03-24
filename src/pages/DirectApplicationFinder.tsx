@@ -140,7 +140,7 @@ const DirectApplicationFinderContent = () => {
                         <span className="text-sm font-medium text-foreground">{link.label}</span>
                         <ConfidenceBadge confidence={link.confidence} />
                       </div>
-                      <p className="text-xs text-muted-foreground truncate">{link.url}</p>
+                      <p className="break-all text-xs text-muted-foreground">{link.url}</p>
                       {link.note && (
                         <p className="text-xs text-muted-foreground mt-1 italic">{link.note}</p>
                       )}

@@ -483,7 +483,7 @@ export default function ApplicationFilterBar({
         const label = questionMeta.find((q) => q.id === r.questionId)?.text || 'Question';
         return (
           <div className="flex flex-col gap-1 min-w-0">
-            <span className="text-[10px] text-muted-foreground truncate max-w-[240px]" title={label}>
+            <span className="line-clamp-2 min-w-0 max-w-[240px] break-words text-[10px] text-muted-foreground" title={label}>
               {label}
             </span>
             <Input
@@ -499,7 +499,7 @@ export default function ApplicationFilterBar({
         const label = questionMeta.find((q) => q.id === r.questionId)?.text || 'Question';
         return (
           <div className="flex flex-col gap-1 min-w-0">
-            <span className="text-[10px] text-muted-foreground truncate max-w-[240px]" title={label}>
+            <span className="line-clamp-2 min-w-0 max-w-[240px] break-words text-[10px] text-muted-foreground" title={label}>
               {label}
             </span>
             <Input
@@ -736,7 +736,7 @@ export default function ApplicationFilterBar({
                                 : addQuestionAnswer(opt.questionId)
                           }
                         >
-                          <span className="truncate">{opt.label}</span>
+                          <span className="line-clamp-2 min-w-0 break-words text-left">{opt.label}</span>
                         </Button>
                         <Button
                           type="button"
@@ -775,7 +775,7 @@ export default function ApplicationFilterBar({
                                 : addQuestionAnswer(opt.questionId)
                           }
                         >
-                          <span className="truncate">{opt.label}</span>
+                          <span className="line-clamp-2 min-w-0 break-words text-left">{opt.label}</span>
                         </Button>
                         <Button
                           type="button"
@@ -813,7 +813,7 @@ export default function ApplicationFilterBar({
                             className="justify-start h-9 text-sm flex-1 min-w-0"
                             onClick={() => addField(o.id)}
                           >
-                            <span className="truncate">{o.label}</span>
+                            <span className="line-clamp-2 min-w-0 break-words text-left">{o.label}</span>
                           </Button>
                           <Button
                             type="button"

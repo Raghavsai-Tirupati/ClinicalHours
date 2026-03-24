@@ -697,7 +697,7 @@ function InfoField({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-0.5 min-w-0">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <p className="font-medium truncate">{value}</p>
+      <p className="break-words font-medium">{value}</p>
     </div>
   );
 }

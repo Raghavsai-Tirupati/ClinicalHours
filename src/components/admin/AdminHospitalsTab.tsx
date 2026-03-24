@@ -412,8 +412,8 @@ function HospitalPagesSection() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
+          <div className="border rounded-lg overflow-x-auto overflow-x-auto-touch">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Hospital</TableHead>
@@ -447,9 +447,9 @@ function HospitalPagesSection() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-0 max-w-[12rem] break-all sm:max-w-none">
                         <div className="flex items-center gap-1 text-sm">
-                          <Mail className="h-3 w-3 text-muted-foreground" />
+                          <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
                           {page.admin_email}
                         </div>
                       </TableCell>
@@ -678,8 +678,8 @@ function HospitalAccountsSection() {
             </Button>
           </div>
         </div>
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
+        <div className="border rounded-lg overflow-x-auto overflow-x-auto-touch">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Hospital</TableHead>
@@ -708,9 +708,9 @@ function HospitalAccountsSection() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-0 max-w-[14rem] break-all sm:max-w-none">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm"><Mail className="h-3 w-3 text-muted-foreground" />{h.contact_email}</div>
+                        <div className="flex items-center gap-1 text-sm"><Mail className="h-3 w-3 shrink-0 text-muted-foreground" />{h.contact_email}</div>
                         {h.contact_phone && <div className="flex items-center gap-1 text-sm text-muted-foreground"><Phone className="h-3 w-3" />{h.contact_phone}</div>}
                       </div>
                     </TableCell>
@@ -748,7 +748,7 @@ function HospitalAccountsSection() {
               <div className="bg-muted/30 rounded-xl p-4 space-y-2 mb-6">
                 {selectedHospital.contact_phone && <div className="flex items-center gap-2 text-sm"><Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" /><span>{selectedHospital.contact_phone}</span></div>}
                 {selectedHospital.address && <div className="flex items-center gap-2 text-sm"><MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" /><span>{selectedHospital.address}</span></div>}
-                {selectedHospital.website && <div className="flex items-center gap-2 text-sm"><Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" /><a href={selectedHospital.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">{selectedHospital.website}</a></div>}
+                {selectedHospital.website && <div className="flex items-start gap-2 text-sm min-w-0"><Globe className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" /><a href={selectedHospital.website} target="_blank" rel="noopener noreferrer" className="min-w-0 break-all text-primary hover:underline">{selectedHospital.website}</a></div>}
                 {selectedHospital.description && <p className="text-sm text-muted-foreground mt-2">{selectedHospital.description}</p>}
                 <div className="flex items-center gap-4 pt-2 text-xs text-muted-foreground">
                   <span>Registered: {format(new Date(selectedHospital.created_at), 'MMM d, yyyy')}</span>
@@ -776,7 +776,7 @@ function HospitalAccountsSection() {
                     {drawerOpportunities.map((opp) => (
                       <div key={opp.id} className="bg-card border border-border rounded-lg p-3 flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{opp.name}</p>
+                          <p className="break-words font-medium text-sm">{opp.name}</p>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <Badge variant="outline" className="text-xs capitalize">{opp.type}</Badge>
                             <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{opp.location}</span>
@@ -798,8 +798,8 @@ function HospitalAccountsSection() {
                 ) : drawerApplicants.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">No applicants yet</p>
                 ) : (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
+                  <div className="border rounded-lg overflow-x-auto overflow-x-auto-touch">
+                    <Table className="min-w-[560px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
@@ -812,9 +812,9 @@ function HospitalAccountsSection() {
                       <TableBody>
                         {drawerApplicants.slice(0, 50).map((a) => (
                           <TableRow key={`${a.source}-${a.id}`}>
-                            <TableCell className="font-medium">{a.name}</TableCell>
-                            <TableCell><a href={`mailto:${a.email}`} className="text-primary hover:underline flex items-center gap-1"><Mail className="h-3 w-3" />{a.email}</a></TableCell>
-                            <TableCell className="text-sm text-muted-foreground max-w-[120px] truncate" title={a.opportunityName}>{a.opportunityName}</TableCell>
+                            <TableCell className="min-w-0 font-medium break-words">{a.name}</TableCell>
+                            <TableCell className="min-w-0"><a href={`mailto:${a.email}`} className="break-all text-primary hover:underline flex items-start gap-1"><Mail className="h-3 w-3 shrink-0 mt-0.5" />{a.email}</a></TableCell>
+                            <TableCell className="min-w-0 break-words text-sm text-muted-foreground" title={a.opportunityName}>{a.opportunityName}</TableCell>
                             <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{format(new Date(a.appliedAt), 'MMM d, yyyy')}</TableCell>
                             <TableCell><Badge variant="outline" className="text-xs">{a.status}</Badge></TableCell>
                           </TableRow>

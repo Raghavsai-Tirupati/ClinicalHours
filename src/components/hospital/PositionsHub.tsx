@@ -144,14 +144,14 @@ export default function PositionsHub() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-2xl font-bold tracking-tight">Positions</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Manage positions and review applicants
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="shrink-0 self-start sm:self-auto">
           <Link to={`${basePath}/positions/new`}>
             <Plus className="h-4 w-4 mr-2" />
             New Position
@@ -206,7 +206,7 @@ export default function PositionsHub() {
               <strong className="font-semibold">Archived</strong> to update its status.
             </div>
           )}
-          <div className="grid gap-4 xl:grid-cols-3">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-3">
           {positionsByColumn.map((column) => (
             <div
               key={column.key}
@@ -290,7 +290,7 @@ export default function PositionsHub() {
                               </div>
 
                               {/* Title */}
-                              <h3 className="text-sm font-semibold truncate mb-2 group-hover/link:text-primary transition-colors">
+                              <h3 className="mb-2 line-clamp-3 break-words text-sm font-semibold group-hover/link:text-primary transition-colors">
                                 {pos.title}
                               </h3>
 

@@ -352,7 +352,7 @@ export default function MyApplications() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <span className="text-sm text-muted-foreground truncate">
+                              <span className="break-words text-sm text-muted-foreground">
                                 {app.hospital_name}
                               </span>
                             </div>

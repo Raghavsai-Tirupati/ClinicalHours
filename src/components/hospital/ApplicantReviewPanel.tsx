@@ -298,8 +298,8 @@ export default function ApplicantReviewPanel({
             {initial}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-semibold">{name}</p>
-            {email && <p className="truncate text-sm text-muted-foreground">{email}</p>}
+            <p className="break-words text-base font-semibold">{name}</p>
+            {email && <p className="break-all text-sm text-muted-foreground">{email}</p>}
             <div className="mt-2">
               <Badge className={`text-xs ${STATUS_COLORS[application.status]}`}>
                 {APPLICATION_STATUS_LABELS[application.status]}

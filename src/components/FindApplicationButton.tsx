@@ -202,11 +202,11 @@ export function FindApplicationButton({
       href={top.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted/60 transition-colors max-w-xs"
+      className="inline-flex min-w-0 max-w-xs items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted/60 transition-colors"
       title={top.label}
     >
       <ConfidenceIcon confidence={top.confidence} />
-      <span className="truncate">{top.label}</span>
+      <span className="line-clamp-2 min-w-0 flex-1 break-words">{top.label}</span>
       <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
     </a>
   );

@@ -254,7 +254,7 @@ function EventRow({
           </Badge>
         )
       )}
-      <span className="text-xs text-foreground/90 flex-1 min-w-0 truncate">{description}</span>
+      <span className="line-clamp-2 min-w-0 flex-1 break-words text-xs text-foreground/90">{description}</span>
       <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 tabular-nums">
         {format(new Date(event.created_at), "HH:mm:ss")}
       </span>
@@ -450,11 +450,11 @@ function UserJourneyCard({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div>
                 <p className="text-muted-foreground">University</p>
-                <p className="font-medium truncate">{profile.university || "Not set"}</p>
+                <p className="break-words font-medium">{profile.university || "Not set"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Major</p>
-                <p className="font-medium truncate">{profile.major || "Not set"}</p>
+                <p className="break-words font-medium">{profile.major || "Not set"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Joined</p>
@@ -485,7 +485,7 @@ function UserJourneyCard({
         </Card>
         <Card className="bg-muted/30">
           <CardContent className="py-3 px-4">
-            <p className="text-sm font-medium truncate">
+            <p className="break-words text-sm font-medium">
               {firstSeen ? formatDistanceToNow(new Date(firstSeen), { addSuffix: true }) : "—"}
             </p>
             <p className="text-[11px] text-muted-foreground">First Seen</p>
@@ -501,7 +501,7 @@ function UserJourneyCard({
         ) : (
           <Card className="bg-muted/30">
             <CardContent className="py-3 px-4">
-              <p className="text-sm font-medium truncate">
+              <p className="break-words text-sm font-medium">
                 {guestSession ? format(new Date(guestSession.created_at), "MMM d HH:mm") : "—"}
               </p>
               <p className="text-[11px] text-muted-foreground">Session Start</p>
@@ -541,7 +541,7 @@ function UserJourneyCard({
                   <div key={opp.id} className="flex items-center justify-between text-xs py-1.5 border-b border-border/30 last:border-0">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {opp.type && <Badge variant="outline" className="text-[10px] shrink-0">{opp.type}</Badge>}
-                      <span className="truncate">{opp.name}</span>
+                      <span className="min-w-0 break-words">{opp.name}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {opp.applied && <Badge variant="outline" className="text-[10px] bg-yellow-500/10 text-yellow-400 border-yellow-500/20">Applied</Badge>}
@@ -1008,7 +1008,7 @@ export function AdminActivityTab() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                        <p className="line-clamp-2 break-words text-sm font-medium text-foreground">{user.name}</p>
                         {user.pages.includes("Premium") && (
                           <Badge
                             variant="outline"
@@ -1021,7 +1021,7 @@ export function AdminActivityTab() {
                           <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-400">Converted</Badge>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground truncate">
+                      <p className="line-clamp-2 break-words text-[11px] text-muted-foreground">
                         {user.pages.slice(0, 4).join(" → ")}
                         {user.pages.length > 4 && ` +${user.pages.length - 4}`}
                       </p>

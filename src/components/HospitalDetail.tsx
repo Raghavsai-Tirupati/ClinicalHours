@@ -152,7 +152,7 @@ export function HospitalDetail({
                   className="flex items-center justify-between gap-2 p-3 border border-border rounded-md bg-muted/30"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{pos.title}</p>
+                    <p className="break-words text-sm font-medium">{pos.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
                       <span>{POSITION_TYPE_LABELS[pos.position_type]}</span>
                       {pos.hours_per_week != null && (
@@ -199,24 +199,24 @@ export function HospitalDetail({
             </p>
             <div className="space-y-2">
               {opportunity.website && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex min-w-0 items-center gap-2 text-sm">
                   <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                   <a
                     href={opportunity.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline truncate"
+                    className="min-w-0 break-all text-primary hover:underline"
                   >
                     {opportunity.website}
                   </a>
                 </div>
               )}
               {opportunity.email && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex min-w-0 items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                   <a
                     href={`mailto:${opportunity.email}`}
-                    className="text-primary hover:underline truncate"
+                    className="min-w-0 break-all text-primary hover:underline"
                   >
                     {opportunity.email}
                   </a>

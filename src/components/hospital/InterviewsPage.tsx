@@ -544,8 +544,8 @@ function InterviewApplicantCard({
           {initial}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium truncate">{name}</p>
-          {email && <p className="text-xs text-muted-foreground truncate">{email}</p>}
+          <p className="break-words text-sm font-medium">{name}</p>
+          {email && <p className="break-all text-xs text-muted-foreground">{email}</p>}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -621,7 +621,9 @@ function InterviewApplicantCard({
           {APPLICATION_STATUS_LABELS[app.status]}
         </Badge>
         {app.position?.title && (
-          <span className="text-muted-foreground truncate max-w-[140px]">{app.position.title}</span>
+          <span className="min-w-0 max-w-full break-words text-muted-foreground sm:max-w-[min(100%,14rem)]">
+            {app.position.title}
+          </span>
         )}
         {legacy && (
           <Badge variant="outline" className="text-[10px] py-0">

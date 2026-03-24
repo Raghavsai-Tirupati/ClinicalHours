@@ -576,7 +576,7 @@ const HourTrackerContent = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground text-sm truncate">{log.custom_organization_name || "Unnamed Organization"}</span>
+                    <span className="break-words font-medium text-foreground text-sm">{log.custom_organization_name || "Unnamed Organization"}</span>
                     <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{ACTIVITY_TYPE_LABELS[log.activity_type]}</span>
                     {log.source === "supabase" && (
                       <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-xs text-blue-300 border border-blue-500/20">

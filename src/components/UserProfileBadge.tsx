@@ -29,9 +29,9 @@ export function UserProfileBadge({
           <User className="h-3.5 w-3.5 text-primary" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium truncate">{fullName || "Anonymous"}</p>
+          <p className="line-clamp-2 break-words text-sm font-medium">{fullName || "Anonymous"}</p>
           {hasDetails && (
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="line-clamp-2 break-words text-xs text-muted-foreground">
               {[
                 university,
                 major,

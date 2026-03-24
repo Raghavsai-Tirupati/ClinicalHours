@@ -243,7 +243,7 @@ export default function AdminPendingApprovalsTab({ onPendingCountChange }: Admin
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <p className="font-semibold text-foreground truncate">
+                      <p className="break-words font-semibold text-foreground">
                         {hospital.hospital_name}
                       </p>
                     </div>
@@ -259,7 +259,7 @@ export default function AdminPendingApprovalsTab({ onPendingCountChange }: Admin
                             href={hospital.website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary hover:underline truncate"
+                            className="min-w-0 break-all text-primary hover:underline"
                           >
                             {hospital.website}
                           </a>
@@ -345,7 +345,7 @@ export default function AdminPendingApprovalsTab({ onPendingCountChange }: Admin
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-sm truncate">{h.hospital_name}</p>
+                        <p className="break-words font-medium text-sm">{h.hospital_name}</p>
                         <Badge
                           variant={h.account_status === 'approved' ? 'default' : 'destructive'}
                           className="text-xs flex-shrink-0"

@@ -65,8 +65,8 @@ export default function HospitalSidebar() {
             {hospitalPage?.opportunity.name?.charAt(0) || 'H'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{hospitalPage?.opportunity.name}</p>
-            <p className="truncate text-xs text-muted-foreground">Admin Dashboard</p>
+            <p className="line-clamp-2 break-words text-sm font-semibold">{hospitalPage?.opportunity.name}</p>
+            <p className="text-xs text-muted-foreground">Admin Dashboard</p>
           </div>
         </div>
       </SidebarHeader>

@@ -254,7 +254,7 @@ export default function AdminPremiumTab() {
                         ) : (
                           <User className="h-4 w-4 text-blue-400 shrink-0" />
                         )}
-                        <span className="text-sm truncate">{viewer.label}</span>
+                        <span className="min-w-0 break-words text-sm">{viewer.label}</span>
                       </div>
                       <span className="text-[11px] text-muted-foreground shrink-0">
                         {formatDistanceToNow(new Date(viewer.lastSeen), { addSuffix: true })}
@@ -284,7 +284,7 @@ export default function AdminPremiumTab() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="text-sm truncate">{user.name}</span>
+                          <span className="min-w-0 break-words text-sm">{user.name}</span>
                         </div>
                         {sourceBadge(user.source)}
                       </div>
