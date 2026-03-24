@@ -739,7 +739,7 @@ export function AdminActivityTab() {
   const filteredEvents = useMemo(() => {
     let result = events;
     if (userFilter === "authenticated") result = result.filter((e) => e.user_id);
-    else if (userFilter === "guests") result = result.filter((e) => !e.user_id);
+    else if (userFilter === "guests") result = result.filter((e) => !e.user_id && !authenticatedSessionIds.has(e.session_id));
     if (eventTypeFilter.length > 0) result = result.filter((e) => eventTypeFilter.includes(e.event_type));
     if (premiumOnly) {
       result = result.filter((e) => getPageName(e.page_url) === "Premium");
