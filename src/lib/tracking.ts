@@ -9,6 +9,10 @@
 const TRACKING_SESSION_KEY = "clinicalhours_tracking_session_id";
 const GUEST_SESSION_KEY = "clinicalhours_guest_session_id";
 
+// Debounce tracking to prevent rapid duplicate events
+let lastPageView: { url: string; time: number } | null = null;
+const PAGE_VIEW_DEBOUNCE_MS = 1000;
+
 // Track whether the current session has been "upgraded" to authenticated
 let _cachedAuthSessionId: string | null = null;
 
