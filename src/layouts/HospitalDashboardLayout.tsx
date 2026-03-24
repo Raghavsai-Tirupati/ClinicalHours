@@ -72,7 +72,9 @@ export default function HospitalDashboardLayout() {
   // Check if user email matches admin_email (or super-admin)
   const userEmail = user.email?.toLowerCase();
   const adminEmail = hospitalPage.admin_email.toLowerCase();
-  if (!isSuperAdmin(user.email) && userEmail !== adminEmail) {
+  const isSuper = isSuperAdmin(user.email);
+
+  if (!isSuper && userEmail !== adminEmail) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
@@ -83,6 +85,34 @@ export default function HospitalDashboardLayout() {
             </CardTitle>
             <CardDescription>
               You don't have permission to manage this hospital page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate('/')} variant="outline" className="w-full">
+              Return Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Block non-super-admin access to paused/archived pages
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pageStatus = (hospitalPage as any).page_status ?? 'active';
+  if (!isSuper && pageStatus !== 'active') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Dashboard Unavailable
+            </CardTitle>
+            <CardDescription>
+              {pageStatus === 'paused'
+                ? 'Your hospital dashboard has been temporarily paused by the platform administrator. Please contact support for more information.'
+                : 'Your hospital dashboard has been archived. Please contact support for more information.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
