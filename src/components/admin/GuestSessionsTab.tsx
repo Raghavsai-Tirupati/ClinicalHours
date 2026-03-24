@@ -458,6 +458,7 @@ export default function GuestSessionsTab() {
         if (data.length < PAGE_SIZE) break;
       }
 
+      // Fetch tracking events that have NO user_id (guest-only)
       const events: TrackingEvent[] = [];
       for (let offset = 0; ; offset += PAGE_SIZE) {
         const { data, error: eventError } = await supabase
@@ -476,8 +477,30 @@ export default function GuestSessionsTab() {
         if (data.length < PAGE_SIZE) break;
       }
 
-      setGuestSessions(sessions);
-      setTrackingEvents(events);
+      // Exclude sessions that also have authenticated events (session_id overlap)
+      // Fetch distinct session_ids that have user_id set
+      const authenticatedSessionIds = new Set<string>();
+      for (let offset = 0; ; offset += PAGE_SIZE) {
+        const { data, error: authEvError } = await supabase
+          .from("tracking_events")
+          .select("session_id")
+          .not("user_id", "is", null)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        if (authEvError) throw authEvError;
+        if (!data?.length) break;
+
+        data.forEach((row: { session_id: string }) => authenticatedSessionIds.add(row.session_id));
+        if (data.length < PAGE_SIZE) break;
+      }
+
+      // Filter out guest events whose session_id also appears in authenticated events
+      const pureGuestEvents = events.filter(e => !authenticatedSessionIds.has(e.session_id));
+      const pureGuestSessions = sessions.filter(s => !authenticatedSessionIds.has(s.session_id));
+
+      setGuestSessions(pureGuestSessions);
+      setTrackingEvents(pureGuestEvents);
     } catch (fetchError) {
       console.error("Error fetching guest sessions:", fetchError);
       const message = fetchError instanceof Error ? fetchError.message : "Failed to load guest sessions";
