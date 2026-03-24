@@ -356,7 +356,7 @@ export default function ApplicationKanban({
   );
 
   return (
-    <div className="relative">
+    <div className="relative pr-14 lg:pr-0">
       {summariesLoading && (
         <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" />
@@ -371,7 +371,7 @@ export default function ApplicationKanban({
         onDragEnd={handleDragEnd}
       >
         {/* Desktop: side-by-side, Mobile: horizontal scroll */}
-        <ScrollArea className="w-full">
+        <ScrollArea className="w-full pr-2">
           <div className="flex gap-3 pb-4 lg:grid lg:grid-cols-5 lg:gap-3 min-w-max lg:min-w-0">
             {KANBAN_COLUMNS.map((col) => (
               <KanbanColumn
