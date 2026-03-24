@@ -22,7 +22,7 @@ export function useHospitalPage(pageId: string | undefined) {
         .from('hospital_pages')
         .select(`
           id, hospital_id, admin_email, interview_booking_url, is_claimed, claimed_at, created_at, created_by,
-          gmail_email, gmail_connected_at,
+          gmail_email, gmail_connected_at, page_status,
           opportunities:hospital_id (id, name, location, type, website, logo_url, description)
         `)
         .eq('id', pageId)
