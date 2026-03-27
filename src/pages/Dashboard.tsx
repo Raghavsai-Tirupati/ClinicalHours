@@ -961,7 +961,7 @@ const Dashboard = () => {
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {reflections.map((r) => (
-                      <ReflectionBlock key={r.id} reflection={r} />
+                      <ReflectionBlock key={r.id} reflection={r} onDelete={handleDeleteReflection} />
                     ))}
                   </div>
                 )}
