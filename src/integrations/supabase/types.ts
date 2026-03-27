@@ -1120,7 +1120,6 @@ export type Database = {
           onboarding_complete: boolean | null
           phone: string | null
           pre_med_track: string | null
-          premium_source: Database["public"]["Enums"]["premium_source"] | null
           premium_expires_at: string | null
           research_experience: string | null
           resume_url: string | null
@@ -1149,7 +1148,6 @@ export type Database = {
           onboarding_complete?: boolean | null
           phone?: string | null
           pre_med_track?: string | null
-          premium_source?: Database["public"]["Enums"]["premium_source"] | null
           premium_expires_at?: string | null
           research_experience?: string | null
           resume_url?: string | null
@@ -1178,7 +1176,6 @@ export type Database = {
           onboarding_complete?: boolean | null
           phone?: string | null
           pre_med_track?: string | null
-          premium_source?: Database["public"]["Enums"]["premium_source"] | null
           premium_expires_at?: string | null
           research_experience?: string | null
           resume_url?: string | null
@@ -1885,7 +1882,6 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       hospital_role: "owner" | "admin" | "viewer"
       opportunity_type: "hospital" | "clinic" | "hospice" | "emt" | "volunteer"
-      premium_source: "paid" | "promo_code" | "directly_added"
       votable_type: "question" | "answer"
     }
     CompositeTypes: {
@@ -2018,7 +2014,6 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       hospital_role: ["owner", "admin", "viewer"],
       opportunity_type: ["hospital", "clinic", "hospice", "emt", "volunteer"],
-      premium_source: ["paid", "promo_code", "directly_added"],
       votable_type: ["question", "answer"],
     },
   },

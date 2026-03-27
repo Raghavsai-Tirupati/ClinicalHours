@@ -216,7 +216,7 @@ const Opportunities = () => {
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
             <h1 className="text-4xl font-bold mb-4 scroll-mt-28">
-              Clinical Opportunities Near You
+              Find Clinical Opportunities Near You
             </h1>
             <p className="text-lg text-muted-foreground">
               Discover clinical opportunities sorted by distance from your location.
