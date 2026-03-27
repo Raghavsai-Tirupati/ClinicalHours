@@ -625,6 +625,17 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [user, isGuest, toast, localLogs, localReflections, dashboardRefreshTick]);
 
+  const handleDeleteReflection = async (entryId: string) => {
+    if (!user) return;
+    const { error } = await supabase.from("experience_entries").delete().eq("id", entryId).eq("user_id", user.id);
+    if (error) {
+      toast({ title: "Failed to delete reflection", variant: "destructive" });
+      return;
+    }
+    setReflections((prev) => prev.filter((r) => r.id !== entryId));
+    toast({ title: "Reflection deleted" });
+  };
+
   /** Guard: prompt sign-in for guest actions */
   const requireAuth = (action: string): boolean => {
     if (isGuest || !user) {
