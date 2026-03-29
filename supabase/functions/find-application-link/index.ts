@@ -115,8 +115,10 @@ async function storeResults(
   await db.from("application_links").insert(rows);
 }
 
-// ── Approach 1: Probe common volunteer/application URL patterns ───────────────
-const VOLUNTEER_PATHS = [
+// ── Approach 1: Probe common URL patterns on the hospital website ─────────────
+
+const PROBE_PATHS = [
+  // Original volunteer paths (keep all existing)
   "/volunteer",
   "/volunteers",
   "/volunteer-services",
@@ -135,14 +137,91 @@ const VOLUNTEER_PATHS = [
   "/clinical-shadowing",
   "/for-volunteers",
   "/departments/volunteer-services",
+  // ── New: expanded volunteer / get-involved paths ─────────────────
+  "/volunteer/apply",
+  "/volunteer/application",
+  "/volunteer-program",
+  "/volunteer-programs",
+  "/volunteer-resources",
+  "/ways-to-give/volunteer",
+  "/support/volunteer",
+  "/careers/volunteer",
+  "/join/volunteer",
+  "/join-us",
+  "/join-us/volunteer",
+  "/join-our-team",
+  "/get-involved/volunteering",
+  "/get-involved/clinical-volunteering",
+  "/community/get-involved",
+  "/community-programs/volunteer",
+  "/patients-visitors/volunteer",
+  "/about-us/volunteer",
+  "/about/volunteering",
+  // ── New: shadowing / observership paths ──────────────────────────
+  "/shadow/apply",
+  "/shadowing/apply",
+  "/shadowing-program",
+  "/observer",
+  "/observership",
+  "/observer-program",
+  "/observership-program",
+  "/clinical-observation",
+  "/clinical-observer",
+  "/student-shadowing",
+  "/physician-shadowing",
+  "/medical-shadowing",
+  "/shadow-program",
+  "/shadow-a-doctor",
+  "/education/shadowing",
+  "/education/observer",
+  "/education/observership",
+  "/gme/observership",
+  "/medical-education/observership",
+  // ── New: internship / student program paths ──────────────────────
+  "/internship",
+  "/internships",
+  "/internship/apply",
+  "/student-programs",
+  "/student-opportunities",
+  "/student-services",
+  "/clinical-internship",
+  "/education/students",
+  "/education/student-programs",
+  "/careers/internships",
+  "/careers/students",
+  "/research/opportunities",
+  "/research/volunteer",
+  "/clinical-experience",
+  "/clinical-rotations",
+  "/practicum",
+  "/externship",
+  "/prehealth",
+  "/pre-health",
+  "/pre-med",
 ];
 
+/** Known external volunteer management platforms — recognized as high confidence */
+const EXTERNAL_PLATFORMS: Record<string, string> = {
+  "volgistics.com": "Volgistics",
+  "volunteerhub.com": "VolunteerHub",
+  "betterimpact.com": "Better Impact",
+  "galaxydigital.com": "Galaxy Digital",
+  "cervistech.com": "Cervis",
+  "volunteerlocal.com": "VolunteerLocal",
+  "signup.com": "SignUp.com",
+  "handsonconnect.org": "HandsOn Connect",
+  "initlive.com": "InitLive",
+  "givepulse.com": "GivePulse",
+  "samaritan.com": "Samaritan",
+  "ivolunteer.com": "iVolunteer",
+};
+
 function pathConfidence(path: string): "high" | "medium" {
-  const high = ["application", "apply", "shadow", "clinical"];
+  const high = ["application", "apply", "shadow", "clinical", "observer", "intern"];
   return high.some((s) => path.includes(s)) ? "high" : "medium";
 }
 
-async function probeVolunteerUrls(websiteHint: string): Promise<LinkResult[]> {
+async function probeUrls(websiteHint: string): Promise<LinkResult[]> {
   let origin: string;
   try {
     origin = new URL(websiteHint).origin;
@@ -150,7 +229,7 @@ async function probeVolunteerUrls(websiteHint: string): Promise<LinkResult[]> {
     return [];
   }
 
-  const probes = VOLUNTEER_PATHS.map(async (path): Promise<LinkResult | null> => {
+  const probes = PROBE_PATHS.map(async (path): Promise<LinkResult | null> => {
     const fullUrl = `${origin}${path}`;
     try {
       const res = await fetch(fullUrl, {
@@ -160,10 +239,15 @@ async function probeVolunteerUrls(websiteHint: string): Promise<LinkResult[]> {
         headers: { "User-Agent": "ClinicalHours-Bot/1.0" },
       });
       if (res.ok) {
+        // Check if redirect landed on an external volunteer platform
+        const finalUrl = res.url || fullUrl;
+        const platformLabel = detectPlatform(finalUrl);
         return {
-          url: res.url || fullUrl,
-          confidence: pathConfidence(path),
-          label: `Volunteer Page (${path})`,
+          url: finalUrl,
+          confidence: platformLabel ? "high" : pathConfidence(path),
+          label: platformLabel
+            ? `${platformLabel} Application Portal`
+            : `Volunteer Page (${path})`,
         };
       }
     } catch { /* timeout or network error — skip */ }
@@ -177,8 +261,45 @@ async function probeVolunteerUrls(websiteHint: string): Promise<LinkResult[]> {
 }
 
 // ── Approach 2: Serper.dev — real Google results (optional) ──────────────────
-// Sign up free at serper.dev (2 500 free queries). Set secret: SERPER_API_KEY
-async function serperSearch(query: string): Promise<LinkResult[]> {
+
+/** Signals used for confidence scoring of Serper results */
+const HIGH_SIGNALS = [
+  "apply", "application", "volunteer", "signup", "sign-up", "sign up",
+  "register", "form", "shadow", "shadowing", "observer", "observership",
+  "intern", "internship", "practicum", "externship", "enroll",
+];
+const MED_SIGNALS = [
+  "volunteer", "opportunity", "join", "community", "program", "clinical",
+  "student", "pre-med", "pre-health", "prehealth", "education",
+  "get involved", "get-involved", "research",
+];
+
+function scoreResult(url: string, title: string, snippet: string): "high" | "medium" | "low" {
+  const urlL = url.toLowerCase();
+  const titleL = title.toLowerCase();
+  const snippetL = snippet.toLowerCase();
+
+  // External platform URL = automatic high
+  if (detectPlatform(url)) return "high";
+
+  const isHighUrl = HIGH_SIGNALS.some((s) => urlL.includes(s));
+  const isHighTitle = HIGH_SIGNALS.some((s) => titleL.includes(s) || snippetL.includes(s));
+
+  if (isHighUrl && isHighTitle) return "high";
+  if (isHighUrl || isHighTitle) return "medium";
+  if (MED_SIGNALS.some((s) => titleL.includes(s) || urlL.includes(s))) return "medium";
+  return "low";
+}
+
+function detectPlatform(url: string): string | null {
+  const lower = url.toLowerCase();
+  for (const [domain, name] of Object.entries(EXTERNAL_PLATFORMS)) {
+    if (lower.includes(domain)) return name;
+  }
+  return null;
+}
+
+async function serperSearch(query: string, num = 5): Promise<LinkResult[]> {
   const apiKey = Deno.env.get("SERPER_API_KEY");
   if (!apiKey) return [];
 
@@ -186,7 +307,7 @@ async function serperSearch(query: string): Promise<LinkResult[]> {
     const res = await fetch("https://google.serper.dev/search", {
       method: "POST",
       headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ q: query, num: 5 }),
+      body: JSON.stringify({ q: query, num }),
       signal: AbortSignal.timeout(6000),
     });
     if (!res.ok) return [];
@@ -196,25 +317,92 @@ async function serperSearch(query: string): Promise<LinkResult[]> {
       const url = item.link ?? "";
       if (!url) return null;
 
-      const urlLower = url.toLowerCase();
-      const titleLower = (item.title ?? "").toLowerCase();
-      const snippetLower = (item.snippet ?? "").toLowerCase();
+      const title = item.title ?? "";
+      const snippet = item.snippet ?? "";
+      const confidence = scoreResult(url, title, snippet);
+      const platformLabel = detectPlatform(url);
 
-      const highSignals = ["apply", "application", "volunteer", "signup", "sign-up", "register", "form", "shadow"];
-      const medSignals = ["volunteer", "opportunity", "join", "community", "program", "clinical"];
-
-      const isHighUrl = highSignals.some((s) => urlLower.includes(s));
-      const isHighTitle = highSignals.some((s) => titleLower.includes(s) || snippetLower.includes(s));
-
-      let confidence: "high" | "medium" | "low" = "low";
-      if (isHighUrl && isHighTitle) confidence = "high";
-      else if (isHighUrl || isHighTitle) confidence = "medium";
-      else if (medSignals.some((s) => titleLower.includes(s) || urlLower.includes(s))) confidence = "medium";
-
-      return { url, confidence, label: item.title ?? url, note: (item.snippet as string | undefined)?.slice(0, 120) } satisfies LinkResult;
+      return {
+        url,
+        confidence,
+        label: platformLabel ? `${platformLabel}: ${title}` : title || url,
+        note: snippet?.slice(0, 140) || undefined,
+      } satisfies LinkResult;
     }).filter(Boolean) as LinkResult[];
   } catch {
     return [];
+  }
+}
+
+/**
+ * Run multiple Serper queries in parallel to cover different program types.
+ * Uses 3 queries per search instead of 1, each fetching 4 results.
+ * Total API cost: ~3 queries per hospital (vs 1 before).
+ */
+async function multiSerperSearch(name: string): Promise<LinkResult[]> {
+  const queries = [
+    // Original query (keep)
+    `${name} volunteer application`,
+    // Shadowing / observer — the biggest gap in the old approach
+    `${name} shadowing OR observer program apply`,
+    // Internship / student clinical — covers research, practicum, etc.
+    `${name} clinical internship OR student program application`,
+  ];
+
+  const results = await Promise.all(
+    queries.map((q) => serperSearch(q, 4)),
+  );
+
+  return results.flat();
+}
+
+/**
+ * If no websiteHint is provided, try to discover the hospital's website
+ * using Serper so we can still probe URL paths.
+ */
+async function discoverWebsite(name: string): Promise<string | null> {
+  const apiKey = Deno.env.get("SERPER_API_KEY");
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ q: `${name} official website`, num: 3 }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    // Try the knowledge graph first (most accurate)
+    const kg = data.knowledgeGraph;
+    if (kg?.website) return kg.website;
+
+    // Fall back to first organic result that looks like the hospital's own domain
+    const nameParts = name.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter((w: string) => w.length > 2);
+    for (const item of data.organic ?? []) {
+      const url = item.link ?? "";
+      if (!url) continue;
+      try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        // Skip aggregator / directory sites
+        const skipDomains = [
+          "yelp.com", "healthgrades.com", "zocdoc.com", "google.com",
+          "facebook.com", "twitter.com", "instagram.com", "linkedin.com",
+          "wikipedia.org", "npidb.org", "npiprofile.com", "cms.gov",
+          "indeed.com", "glassdoor.com", "bbb.org", "mapquest.com",
+        ];
+        if (skipDomains.some((d) => hostname.includes(d))) continue;
+
+        // Check that at least one meaningful word from the name appears in the domain
+        if (nameParts.some((w: string) => hostname.includes(w))) {
+          return new URL(url).origin;
+        }
+      } catch { continue; }
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -345,10 +533,21 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // ── 3. Live search (probe + serper) ────────────────────────────────────
+    // ── 3. Live search ─────────────────────────────────────────────────────
+
+    // If no website hint, try to discover it via Serper (costs 1 extra query)
+    let probeOrigin = hint;
+    if (!probeOrigin) {
+      probeOrigin = await discoverWebsite(name);
+      if (probeOrigin) {
+        console.log(`Discovered website for "${name}": ${probeOrigin}`);
+      }
+    }
+
+    // Run path probing + multi-query Serper in parallel
     const [probeResults, serperResults] = await Promise.all([
-      hint ? probeVolunteerUrls(hint) : Promise.resolve([]),
-      serperSearch(`${name} volunteer application`),
+      probeOrigin ? probeUrls(probeOrigin) : Promise.resolve([]),
+      multiSerperSearch(name),
     ]);
 
     // Merge & deduplicate by normalised URL
@@ -359,7 +558,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (!seenUrls.has(key)) {
         seenUrls.add(key);
         links.push(r);
-        if (links.length >= 6) break;
+        if (links.length >= 8) break;
       }
     }
 
@@ -367,8 +566,10 @@ const handler = async (req: Request): Promise<Response> => {
     const order = { high: 0, medium: 1, low: 2 };
     links.sort((a, b) => order[a.confidence] - order[b.confidence]);
 
+    console.log(`Live search for "${name}" — ${probeResults.length} probed, ${serperResults.length} serper → ${links.length} deduped`);
+
     // ── 4. Persist results (fire-and-forget — don't block the response) ────
-    storeResults(db, name, hint, links).catch((e) =>
+    storeResults(db, name, hint ?? probeOrigin, links).catch((e) =>
       console.error("Failed to cache application_links:", e)
     );
 

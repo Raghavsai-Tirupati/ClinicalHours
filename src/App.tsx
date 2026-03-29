@@ -71,6 +71,8 @@ const EmailPage = lazyRetry(() => import("./components/hospital/EmailPage"));
 const EmailCommunication = lazyRetry(() => import("./components/clinic-dashboard/email-communication/EmailCommunication"));
 const ActivityPage = lazyRetry(() => import("./components/hospital/ActivityPage"));
 const VolunteerManagement = lazyRetry(() => import("./components/clinic-dashboard/volunteer-management/VolunteerManagement"));
+const WaitlistModule = lazyRetry(() => import("./components/clinic-dashboard/waitlist/WaitlistModule"));
+const WaitlistPage = lazyRetry(() => import("./components/waitlist/WaitlistPage"));
 const ClinicOnboard = lazyRetry(() => import("./pages/ClinicOnboard"));
 const PositionApplyPage = lazyRetry(() => import("./pages/PositionApplyPage"));
 const HospitalDashboardRedirect = lazyRetry(() => import("./components/HospitalDashboardRedirect"));
@@ -181,6 +183,7 @@ function AppContent() {
                 <Route path="email" element={<EmailCommunication />} />
                 <Route path="activity" element={<ActivityPage />} />
                 <Route path="team" element={<VolunteerManagement />} />
+                <Route path="waitlist" element={<WaitlistModule />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
               </Route>
               <Route
@@ -207,8 +210,11 @@ function AppContent() {
                 <Route path="email" element={<EmailCommunication />} />
                 <Route path="activity" element={<ActivityPage />} />
                 <Route path="team" element={<VolunteerManagement />} />
+                <Route path="waitlist" element={<WaitlistModule />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
               </Route>
+              {/* Public waitlist form */}
+              <Route path="/waitlist/:slug" element={<WaitlistPage />} />
               {/* Existing staff onboarding link */}
               <Route path="/clinic-onboard/:clinicId" element={<ClinicOnboard />} />
               {/* Student application form for a position */}

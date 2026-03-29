@@ -1,0 +1,93 @@
+/* Scoped waitlist form — mirrors position-apply dark theme */
+.wl-root {
+  --pa-bg: #0f0f0f;
+  --pa-surface: #181818;
+  --pa-surface-2: #202020;
+  --pa-surface-3: #282828;
+  --pa-border: rgba(255, 255, 255, 0.07);
+  --pa-border-hover: rgba(255, 255, 255, 0.14);
+  --pa-text-1: #f0ede8;
+  --pa-text-2: #9b9890;
+  --pa-text-3: #5a5855;
+  --pa-accent: #8b5cf6;
+  --pa-accent-dim: rgba(139, 92, 246, 0.15);
+  --pa-accent-border: rgba(139, 92, 246, 0.4);
+  --pa-danger: #e05a4e;
+  --pa-info: #3b82f6;
+  --pa-info-dim: rgba(59, 130, 246, 0.12);
+  --pa-info-border: rgba(59, 130, 246, 0.35);
+  --pa-font-display: var(--font-heading);
+  --pa-font-body: var(--font-sans);
+  --pa-r: 10px;
+
+  background: var(--pa-bg);
+  color: var(--pa-text-1);
+  font-family: var(--pa-font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.wl-root *,
+.wl-root *::before,
+.wl-root *::after {
+  box-sizing: border-box;
+}
+
+.wl-disclaimer {
+  border-radius: 7px;
+  border: 1px solid var(--pa-info-border);
+  background: var(--pa-info-dim);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.wl-disclaimer svg {
+  flex-shrink: 0;
+  color: var(--pa-info);
+  margin-top: 2px;
+}
+.wl-disclaimer-text h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pa-info);
+}
+.wl-disclaimer-text p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--pa-text-2);
+}
+
+.wl-closed-wrap {
+  text-align: center;
+  padding: 80px 24px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.wl-closed-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--pa-surface-2);
+  border: 1px solid var(--pa-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+.wl-closed-title {
+  font-family: var(--pa-font-display);
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+.wl-closed-body {
+  font-size: 14px;
+  color: var(--pa-text-2);
+  max-width: 380px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
