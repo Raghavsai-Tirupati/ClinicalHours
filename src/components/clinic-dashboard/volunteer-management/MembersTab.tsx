@@ -8,11 +8,14 @@ import {
   X,
   UserPlus,
   Loader2,
+  Mail,
+  Filter,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -31,6 +34,8 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import type { ClinicMember, ClinicRole, MemberStatus, OnboardingSource } from './types';
 import { MEMBER_STATUS_LABELS, MEMBER_STATUS_COLORS } from './types';
+import { useEmailTemplates } from '../email-communication/hooks';
+import BulkEmailDialog from '../email-communication/BulkEmailDialog';
 
 type SortField = 'full_name' | 'join_date' | 'hours_logged' | 'status';
 type SortDir = 'asc' | 'desc';
@@ -59,8 +64,32 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
     onboarding_source: 'new_applicant' as OnboardingSource,
   });
 
+  // ── Selection & Bulk Email ────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [filterRole, setFilterRole] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const { templates } = useEmailTemplates(clinicId);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const filteredMembers = useMemo(() => {
+    return members.filter((m) => {
+      if (filterRole !== 'all' && (m.role_id || 'none') !== filterRole) return false;
+      if (filterStatus !== 'all' && m.status !== filterStatus) return false;
+      return true;
+    });
+  }, [members, filterRole, filterStatus]);
+
   const sorted = useMemo(() => {
-    return [...members].sort((a, b) => {
+    return [...filteredMembers].sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1;
       switch (sortField) {
         case 'full_name':
@@ -75,7 +104,20 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
           return 0;
       }
     });
-  }, [members, sortField, sortDir]);
+  }, [filteredMembers, sortField, sortDir]);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === sorted.length && sorted.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sorted.map((m) => m.id)));
+    }
+  };
+
+  const selectedMembers = useMemo(
+    () => members.filter((m) => selectedIds.has(m.id)),
+    [members, selectedIds],
+  );
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -191,16 +233,69 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{members.length} member{members.length !== 1 ? 's' : ''}</p>
-        <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5">
-          <UserPlus className="h-4 w-4" />
-          Add Member
-        </Button>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-sm text-muted-foreground">{filteredMembers.length} member{filteredMembers.length !== 1 ? 's' : ''}{filteredMembers.length !== members.length ? ` (of ${members.length})` : ''}</p>
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setBulkEmailOpen(true)} className="gap-1.5">
+                <Mail className="h-4 w-4" />
+                Send Email ({selectedIds.size})
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5">
+              <UserPlus className="h-4 w-4" />
+              Add Member
+            </Button>
+          </div>
+        </div>
+
+        {/* Filter bar */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <Select value={filterRole} onValueChange={(v) => { setFilterRole(v); setSelectedIds(new Set()); }}>
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectValue placeholder="All Roles" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="none">No Role</SelectItem>
+              {roles.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
+                    {r.role_name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setSelectedIds(new Set()); }}>
+            <SelectTrigger className="h-8 w-[130px] text-xs">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {Object.entries(MEMBER_STATUS_LABELS).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(filterRole !== 'all' || filterStatus !== 'all') && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs px-2"
+              onClick={() => { setFilterRole('all'); setFilterStatus('all'); setSelectedIds(new Set()); }}
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
-      {members.length === 0 ? (
+      {filteredMembers.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center">
           <UserPlus className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">No members yet. Add your first team member.</p>
@@ -210,6 +305,13 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
+                <th className="p-3 w-10">
+                  <Checkbox
+                    checked={sorted.length > 0 && selectedIds.size === sorted.length}
+                    onCheckedChange={toggleSelectAll}
+                    className="h-3.5 w-3.5"
+                  />
+                </th>
                 <th className="text-left p-3"><SortHeader field="full_name" label="Name" /></th>
                 <th className="text-left p-3 hidden sm:table-cell">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role</span>
@@ -233,6 +335,15 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
                     className="border-b border-border/50 hover:bg-muted/10 transition-colors"
                     style={role ? { borderLeftWidth: 3, borderLeftColor: role.color } : undefined}
                   >
+                    {/* Checkbox */}
+                    <td className="p-3 w-10">
+                      <Checkbox
+                        checked={selectedIds.has(m.id)}
+                        onCheckedChange={() => toggleSelect(m.id)}
+                        className="h-3.5 w-3.5"
+                      />
+                    </td>
+
                     {/* Name */}
                     <td className="p-3">
                       {isEditing ? (
@@ -433,6 +544,19 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Email Dialog */}
+      <BulkEmailDialog
+        open={bulkEmailOpen}
+        onOpenChange={setBulkEmailOpen}
+        clinicId={clinicId}
+        selectedMembers={selectedMembers}
+        roles={roles}
+        templates={templates}
+        onSent={() => {
+          setSelectedIds(new Set());
+        }}
+      />
     </div>
   );
 }

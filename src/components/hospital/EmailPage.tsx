@@ -104,7 +104,11 @@ function escapeHtml(unsafe: string): string {
     .replace(/'/g, '&#039;');
 }
 
-export default function EmailPage() {
+interface EmailPageProps {
+  hideHeader?: boolean;
+}
+
+export default function EmailPage({ hideHeader }: EmailPageProps = {}) {
   const { hospitalPage } = useHospitalPageContext();
   const { applications, positions, loading: appsLoading } = useAllApplications(hospitalPage?.id);
   const { entries, loading: logLoading, refetch: refetchLog } = useActivityLog(hospitalPage?.id);
@@ -385,12 +389,14 @@ export default function EmailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold">Email</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Compose and send emails to applicants
-        </p>
-      </div>
+      {!hideHeader && (
+        <div>
+          <h2 className="text-2xl font-bold">Email</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Compose and send emails to applicants
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Compose Section */}

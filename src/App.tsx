@@ -68,6 +68,7 @@ const PositionsHub = lazyRetry(() => import("./components/hospital/PositionsHub"
 const ApplicationsHub = lazyRetry(() => import("./components/hospital/ApplicationsHub"));
 const InterviewsPage = lazyRetry(() => import("./components/hospital/InterviewsPage"));
 const EmailPage = lazyRetry(() => import("./components/hospital/EmailPage"));
+const EmailCommunication = lazyRetry(() => import("./components/clinic-dashboard/email-communication/EmailCommunication"));
 const ActivityPage = lazyRetry(() => import("./components/hospital/ActivityPage"));
 const VolunteerManagement = lazyRetry(() => import("./components/clinic-dashboard/volunteer-management/VolunteerManagement"));
 const ClinicOnboard = lazyRetry(() => import("./pages/ClinicOnboard"));
@@ -177,7 +178,7 @@ function AppContent() {
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
                 <Route path="applicants/:applicationId" element={<ApplicantProfilePage />} />
                 <Route path="interviews" element={<InterviewsPage />} />
-                <Route path="email" element={<EmailPage />} />
+                <Route path="email" element={<EmailCommunication />} />
                 <Route path="activity" element={<ActivityPage />} />
                 <Route path="team" element={<VolunteerManagement />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
@@ -203,7 +204,7 @@ function AppContent() {
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
                 <Route path="applicants/:applicationId" element={<ApplicantProfilePage />} />
                 <Route path="interviews" element={<InterviewsPage />} />
-                <Route path="email" element={<EmailPage />} />
+                <Route path="email" element={<EmailCommunication />} />
                 <Route path="activity" element={<ActivityPage />} />
                 <Route path="team" element={<VolunteerManagement />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
