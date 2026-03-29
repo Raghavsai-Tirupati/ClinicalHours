@@ -529,6 +529,47 @@ export type Database = {
           },
         ]
       }
+      feature_flags: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          description: string | null
+          enabled: boolean
+          flag_key: string
+          id: string
+          metadata: Json | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          flag_key: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          flag_key?: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_flags_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guest_sessions: {
         Row: {
           converted_to_user_id: string | null
@@ -1844,6 +1885,113 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      waitlist_settings: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          is_open: boolean
+          slug: string
+          updated_at: string
+          welcome_message: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          slug: string
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          slug?: string
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waitlist_submissions: {
+        Row: {
+          availability_json: Json | null
+          clinic_id: string
+          converted_at: string | null
+          converted_to_application_id: string | null
+          email: string
+          full_name: string
+          gpa: number | null
+          graduation_year: number | null
+          id: string
+          major: string | null
+          message: string | null
+          phone: string | null
+          role_interest: string | null
+          submitted_at: string
+          university: string | null
+        }
+        Insert: {
+          availability_json?: Json | null
+          clinic_id: string
+          converted_at?: string | null
+          converted_to_application_id?: string | null
+          email: string
+          full_name: string
+          gpa?: number | null
+          graduation_year?: number | null
+          id?: string
+          major?: string | null
+          message?: string | null
+          phone?: string | null
+          role_interest?: string | null
+          submitted_at?: string
+          university?: string | null
+        }
+        Update: {
+          availability_json?: Json | null
+          clinic_id?: string
+          converted_at?: string | null
+          converted_to_application_id?: string | null
+          email?: string
+          full_name?: string
+          gpa?: number | null
+          graduation_year?: number | null
+          id?: string
+          major?: string | null
+          message?: string | null
+          phone?: string | null
+          role_interest?: string | null
+          submitted_at?: string
+          university?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_submissions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_submissions_converted_to_application_id_fkey"
+            columns: ["converted_to_application_id"]
+            isOneToOne: false
+            referencedRelation: "student_applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
