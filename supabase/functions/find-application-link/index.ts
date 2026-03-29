@@ -260,6 +260,63 @@ async function probeUrls(websiteHint: string): Promise<LinkResult[]> {
     .map((r) => r.value);
 }
 
+// ── Relevance filtering ──────────────────────────────────────────────────────
+
+/** Words too generic to use for matching (would match any hospital) */
+const STOP_WORDS = new Set([
+  "the", "of", "and", "at", "in", "for", "a", "an", "to",
+  "hospital", "medical", "center", "clinic", "health", "healthcare",
+  "community", "regional", "general", "memorial", "national",
+  "university", "system", "group", "services", "care", "inc",
+  "llc", "foundation", "network", "county", "city", "state",
+]);
+
+/**
+ * Extract meaningful words from the organization name for relevance matching.
+ * Strips generic medical terms so we match on the distinctive part of the name.
+ * e.g. "BCS Free Health Clinic" → ["bcs", "free"]
+ *      "Houston Methodist Hospital" → ["houston", "methodist"]
+ */
+function extractNameTokens(name: string): string[] {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .split(/\s+/)
+    .filter((w) => w.length > 1 && !STOP_WORDS.has(w));
+}
+
+/**
+ * Check if a Serper result is actually about the searched organization.
+ * Requires at least one distinctive name token to appear in the URL, title, or snippet.
+ * External volunteer platforms (Volgistics etc.) pass automatically since they're
+ * linked from the org's own page.
+ */
+function isRelevantResult(
+  url: string,
+  title: string,
+  snippet: string,
+  nameTokens: string[],
+  websiteHost: string | null,
+): boolean {
+  // External volunteer platform = always relevant (user searched → Google returned it)
+  if (detectPlatform(url)) return true;
+
+  // If we know the hospital's website, results from that domain are relevant
+  if (websiteHost) {
+    try {
+      const resultHost = new URL(url).hostname.toLowerCase();
+      if (resultHost === websiteHost || resultHost.endsWith(`.${websiteHost}`)) {
+        return true;
+      }
+    } catch { /* ignore */ }
+  }
+
+  // Otherwise require at least one distinctive name token in the result
+  if (nameTokens.length === 0) return true; // no tokens extracted — can't filter
+  const haystack = `${url} ${title} ${snippet}`.toLowerCase();
+  return nameTokens.some((token) => haystack.includes(token));
+}
+
 // ── Approach 2: Serper.dev — real Google results (optional) ──────────────────
 
 /** Signals used for confidence scoring of Serper results */
@@ -299,7 +356,12 @@ function detectPlatform(url: string): string | null {
   return null;
 }
 
-async function serperSearch(query: string, num = 5): Promise<LinkResult[]> {
+async function serperSearch(
+  query: string,
+  num = 5,
+  nameTokens: string[] = [],
+  websiteHost: string | null = null,
+): Promise<LinkResult[]> {
   const apiKey = Deno.env.get("SERPER_API_KEY");
   if (!apiKey) return [];
 
@@ -319,6 +381,12 @@ async function serperSearch(query: string, num = 5): Promise<LinkResult[]> {
 
       const title = item.title ?? "";
       const snippet = item.snippet ?? "";
+
+      // ── Relevance gate: drop results about other organizations ──
+      if (!isRelevantResult(url, title, snippet, nameTokens, websiteHost)) {
+        return null;
+      }
+
       const confidence = scoreResult(url, title, snippet);
       const platformLabel = detectPlatform(url);
 
@@ -338,8 +406,13 @@ async function serperSearch(query: string, num = 5): Promise<LinkResult[]> {
  * Run multiple Serper queries in parallel to cover different program types.
  * Uses 3 queries per search instead of 1, each fetching 4 results.
  * Total API cost: ~3 queries per hospital (vs 1 before).
+ * Passes nameTokens and websiteHost to each query for relevance filtering.
  */
-async function multiSerperSearch(name: string): Promise<LinkResult[]> {
+async function multiSerperSearch(
+  name: string,
+  nameTokens: string[],
+  websiteHost: string | null,
+): Promise<LinkResult[]> {
   const queries = [
     // Original query (keep)
     `${name} volunteer application`,
@@ -350,7 +423,7 @@ async function multiSerperSearch(name: string): Promise<LinkResult[]> {
   ];
 
   const results = await Promise.all(
-    queries.map((q) => serperSearch(q, 4)),
+    queries.map((q) => serperSearch(q, 4, nameTokens, websiteHost)),
   );
 
   return results.flat();
@@ -544,10 +617,17 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Extract distinctive name tokens for relevance filtering
+    const nameTokens = extractNameTokens(name);
+    let websiteHost: string | null = null;
+    if (probeOrigin) {
+      try { websiteHost = new URL(probeOrigin).hostname.toLowerCase(); } catch { /* ignore */ }
+    }
+
     // Run path probing + multi-query Serper in parallel
     const [probeResults, serperResults] = await Promise.all([
       probeOrigin ? probeUrls(probeOrigin) : Promise.resolve([]),
-      multiSerperSearch(name),
+      multiSerperSearch(name, nameTokens, websiteHost),
     ]);
 
     // Merge & deduplicate by normalised URL
