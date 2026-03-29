@@ -5,7 +5,6 @@ import {
   Users,
   Calendar,
   Mail,
-  Users,
   Settings,
   LogOut,
   Plus,
