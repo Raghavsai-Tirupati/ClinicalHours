@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeFunctionWithCSRF } from "@/lib/api/interceptor";
+import { getCSRFToken } from "@/lib/csrf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,11 @@ const ResetPassword = () => {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Warm CSRF cookie before submit (reset-password edge function requires X-CSRF-Token).
+  useEffect(() => {
+    if (token) void getCSRFToken();
+  }, [token]);
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -37,12 +43,19 @@ const ResetPassword = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("reset-password", {
+      const { data, error } = await invokeFunctionWithCSRF("reset-password", {
         body: { token, newPassword: password },
       });
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) throw new Error(error.message);
+      if (
+        data &&
+        typeof data === "object" &&
+        "error" in data &&
+        data.error
+      ) {
+        throw new Error(String(data.error));
+      }
 
       setStatus("success");
       toast.success("Password reset successfully!");

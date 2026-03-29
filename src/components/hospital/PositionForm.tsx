@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, Trash2, Archive } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -33,7 +32,8 @@ export default function PositionForm() {
   const isEdit = !!positionId;
 
   const { position: existingPosition, questions: existingQuestions, loading: detailLoading } = usePositionDetail(
-    isEdit ? positionId : undefined
+    isEdit ? positionId : undefined,
+    { adminMode: true },
   );
 
   const [saving, setSaving] = useState(false);
@@ -52,48 +52,21 @@ export default function PositionForm() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [archiving, setArchiving] = useState(false);
+  const [positionStatus, setPositionStatus] = useState<PositionStatus>('draft');
 
-  const isArchived = existingPosition?.status === 'archived';
+  const transitioningToArchived =
+    positionStatus === 'archived' && existingPosition?.status !== 'archived';
 
-  const handleArchive = useCallback(async () => {
-    if (!positionId) return;
-    setArchiving(true);
-    try {
-      const { error } = await supabase
-        .from('hospital_positions')
-        .update({ status: 'archived', updated_at: new Date().toISOString() })
-        .eq('id', positionId);
-      if (error) throw error;
-      toast.success('Position archived. All applicant data has been preserved.');
-      navigate(basePath);
-    } catch (err: unknown) {
-      console.error('Archive position error:', err);
-      toast.error((err as Error)?.message || 'Failed to archive position');
-    } finally {
-      setArchiving(false);
-      setArchiveDialogOpen(false);
-    }
-  }, [positionId, basePath, navigate]);
-
-  const handleUnarchive = useCallback(async () => {
-    if (!positionId) return;
-    setArchiving(true);
-    try {
-      const { error } = await supabase
-        .from('hospital_positions')
-        .update({ status: 'draft', updated_at: new Date().toISOString() })
-        .eq('id', positionId);
-      if (error) throw error;
-      toast.success('Position restored as draft.');
-      navigate(`${basePath}/positions/${positionId}`);
-    } catch (err: unknown) {
-      console.error('Unarchive position error:', err);
-      toast.error((err as Error)?.message || 'Failed to restore position');
-    } finally {
-      setArchiving(false);
-    }
-  }, [positionId, basePath, navigate]);
+  const STATUS_OPTIONS: { value: PositionStatus; label: string }[] = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'active', label: 'Active' },
+    { value: 'archived', label: 'Archived' },
+  ];
+  const STATUS_HELPER_TEXT: Record<'draft' | 'active' | 'archived', string> = {
+    draft: 'Not visible to students yet.',
+    active: 'Visible to students and accepting applications.',
+    archived: 'Hidden from students. Existing applicant data is preserved.',
+  };
 
   // Pre-fill location from opportunity
   useEffect(() => {
@@ -116,6 +89,7 @@ export default function PositionForm() {
       setApplicationDeadline(existingPosition.application_deadline || '');
       setSpotsAvailable(existingPosition.spots_available?.toString() || '');
       setAskForAvailability(existingPosition.ask_for_availability !== false);
+      setPositionStatus(existingPosition.status);
     }
   }, [isEdit, existingPosition]);
 
@@ -134,7 +108,7 @@ export default function PositionForm() {
     }
   }, [isEdit, existingQuestions]);
 
-  const handleSave = async (status: PositionStatus) => {
+  const handleSave = useCallback(async () => {
     if (!title.trim()) {
       toast.error('Position title is required');
       return;
@@ -165,7 +139,7 @@ export default function PositionForm() {
         application_deadline: applicationDeadline || null,
         spots_available: spotsAvailable ? parseInt(spotsAvailable) : null,
         ask_for_availability: askForAvailability,
-        status,
+        status: positionStatus,
       };
 
       let savedPositionId = positionId;
@@ -230,9 +204,11 @@ export default function PositionForm() {
       toast.success(
         isEdit
           ? 'Position updated'
-          : status === 'active'
+          : positionStatus === 'active'
             ? 'Position published!'
-            : 'Position saved as draft'
+            : positionStatus === 'archived'
+              ? 'Position archived. All applicant data has been preserved.'
+              : 'Position saved as draft'
       );
       navigate(`${basePath}/positions/${savedPositionId}`);
     } catch (err: unknown) {
@@ -242,7 +218,36 @@ export default function PositionForm() {
       toast.error(msg);
     } finally {
       setSaving(false);
+      setArchiveDialogOpen(false);
     }
+  }, [
+    title,
+    description,
+    pageId,
+    positionStatus,
+    requirements,
+    location,
+    positionType,
+    hoursPerWeek,
+    duration,
+    startDate,
+    applicationDeadline,
+    spotsAvailable,
+    askForAvailability,
+    positionId,
+    isEdit,
+    existingQuestions,
+    questions,
+    navigate,
+    basePath,
+  ]);
+
+  const handleSaveClick = () => {
+    if (transitioningToArchived) {
+      setArchiveDialogOpen(true);
+      return;
+    }
+    void handleSave();
   };
 
   if (isEdit && detailLoading) {
@@ -254,7 +259,7 @@ export default function PositionForm() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-6xl w-full space-y-6">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -268,152 +273,154 @@ export default function PositionForm() {
         </h2>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Position Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              placeholder="e.g. Medical Assistant Intern"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
-              placeholder="What does this role involve?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="requirements">Requirements</Label>
-            <Textarea
-              id="requirements"
-              placeholder="Qualifications, certifications, year in school, etc."
-              value={requirements}
-              onChange={(e) => setRequirements(e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
+        <Card className="2xl:col-span-8">
+          <CardHeader>
+            <CardTitle>Position Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
+              <Label htmlFor="title">Title *</Label>
               <Input
-                id="location"
-                placeholder="City, State"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                id="title"
+                placeholder="e.g. Medical Assistant Intern"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Position Type</Label>
-              <Select value={positionType} onValueChange={(v) => setPositionType(v as PositionType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(POSITION_TYPE_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="hours">Hours per Week</Label>
-              <Input
-                id="hours"
-                type="number"
-                placeholder="e.g. 10"
-                value={hoursPerWeek}
-                onChange={(e) => setHoursPerWeek(e.target.value)}
+              <Label htmlFor="description">Description *</Label>
+              <Textarea
+                id="description"
+                placeholder="What does this role involve?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="duration">Duration</Label>
-              <Input
-                id="duration"
-                placeholder="e.g. 3 months"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
+              <Label htmlFor="requirements">Requirements</Label>
+              <Textarea
+                id="requirements"
+                placeholder="Qualifications, certifications, year in school, etc."
+                value={requirements}
+                onChange={(e) => setRequirements(e.target.value)}
+                rows={3}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="spots">Spots Available</Label>
-              <Input
-                id="spots"
-                type="number"
-                placeholder="e.g. 5"
-                value={spotsAvailable}
-                onChange={(e) => setSpotsAvailable(e.target.value)}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  placeholder="City, State"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Position Type</Label>
+                <Select value={positionType} onValueChange={(v) => setPositionType(v as PositionType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(POSITION_TYPE_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="hours">Hours per Week</Label>
+                <Input
+                  id="hours"
+                  type="number"
+                  placeholder="e.g. 10"
+                  value={hoursPerWeek}
+                  onChange={(e) => setHoursPerWeek(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration</Label>
+                <Input
+                  id="duration"
+                  placeholder="e.g. 3 months"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="spots">Spots Available</Label>
+                <Input
+                  id="spots"
+                  type="number"
+                  placeholder="e.g. 5"
+                  value={spotsAvailable}
+                  onChange={(e) => setSpotsAvailable(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deadline">Application Deadline</Label>
+                <Input
+                  id="deadline"
+                  type="date"
+                  value={applicationDeadline}
+                  onChange={(e) => setApplicationDeadline(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
+              <div className="space-y-1">
+                <Label htmlFor="ask-for-availability">Ask for availability?</Label>
+                <p className="text-xs text-muted-foreground">
+                  If enabled, applicants complete an availability step (days, preferred time, weekly hours).
+                </p>
+              </div>
+              <Switch
+                id="ask-for-availability"
+                checked={askForAvailability}
+                onCheckedChange={setAskForAvailability}
               />
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="deadline">Application Deadline</Label>
-              <Input
-                id="deadline"
-                type="date"
-                value={applicationDeadline}
-                onChange={(e) => setApplicationDeadline(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
-            <div className="space-y-1">
-              <Label htmlFor="ask-for-availability">Ask for availability?</Label>
-              <p className="text-xs text-muted-foreground">
-                If enabled, applicants complete an availability step (days, preferred time, weekly hours).
-              </p>
-            </div>
-            <Switch
-              id="ask-for-availability"
-              checked={askForAvailability}
-              onCheckedChange={setAskForAvailability}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
+        <Card className="2xl:col-span-4 h-fit">
+          <CardHeader className="pb-3">
+            <CardTitle>Custom Application Questions</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Build and organize the form students complete for this position.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="flex gap-3 justify-between pt-4">
-        {isEdit && !isArchived && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setArchiveDialogOpen(true)}
-              disabled={saving || archiving}
-            >
-              <Archive className="h-4 w-4 mr-2" />
-              Archive
-            </Button>
+        <div>
+          {isEdit && (
             <Button
               variant="destructive"
               onClick={() => setDeleteDialogOpen(true)}
@@ -422,38 +429,34 @@ export default function PositionForm() {
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
-          </div>
-        )}
-        {isEdit && isArchived && (
-          <Button
-            variant="outline"
-            onClick={handleUnarchive}
-            disabled={archiving}
-          >
-            {archiving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
-            Restore Position
-          </Button>
-        )}
-        <div className="flex gap-3 ml-auto">
-          {!isArchived && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => handleSave('draft')}
-                disabled={saving}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Save as Draft
-              </Button>
-              <Button
-                onClick={() => handleSave('active')}
-                disabled={saving}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                {isEdit ? 'Update Position' : 'Publish Position'}
-              </Button>
-            </>
           )}
+        </div>
+        <div className="flex items-center gap-3 ml-auto">
+          <div className="min-w-[170px]">
+            <Label className="text-xs text-muted-foreground mb-1.5 block">Status</Label>
+            <Select
+              value={positionStatus}
+              onValueChange={(value) => setPositionStatus(value as PositionStatus)}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              {STATUS_HELPER_TEXT[positionStatus as 'draft' | 'active' | 'archived']}
+            </p>
+          </div>
+          <Button onClick={handleSaveClick} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {positionStatus === 'archived' ? 'Save and archive' : 'Save changes'}
+          </Button>
         </div>
       </div>
 
@@ -513,14 +516,14 @@ export default function PositionForm() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)} disabled={archiving}>
+            <Button variant="outline" onClick={() => setArchiveDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
             <Button
-              disabled={archiving}
-              onClick={handleArchive}
+              disabled={saving}
+              onClick={() => void handleSave()}
             >
-              {archiving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Archive
             </Button>
           </DialogFooter>

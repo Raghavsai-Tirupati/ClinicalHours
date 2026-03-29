@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, Search, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -14,7 +15,6 @@ import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
-import ApplicationDetailSheet from './ApplicationDetailSheet';
 import EmailDialog from './EmailDialog';
 import InterviewInviteDialog from './InterviewInviteDialog';
 
@@ -30,6 +30,7 @@ const normalizeDisplayName = (value: string | null | undefined): string | null =
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   new: 'bg-blue-500/15 text-blue-400',
   under_review: 'bg-yellow-500/15 text-yellow-400',
+  interview: 'bg-amber-500/15 text-amber-400',
   accepted: 'bg-green-500/15 text-green-400',
   rejected: 'bg-red-500/15 text-red-400',
   waitlisted: 'bg-purple-500/15 text-purple-400',
@@ -41,10 +42,11 @@ interface Props {
 
 export default function PositionApplicationsTable({ positionId }: Props) {
   const { hospitalPage } = useHospitalPageContext();
-  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, refetch, updateApplicationLocally } =
+  const navigate = useNavigate();
+  const { basePath } = useHospitalPageContext();
+  const { applications, allApplications, loading, statusFilter, setStatusFilter, searchTerm, setSearchTerm, sortBy, setSortBy, updateApplicationLocally } =
     usePositionApplications(positionId);
 
-  const [selectedApp, setSelectedApp] = useState<StudentApplication | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
   const [bookingUrlInput, setBookingUrlInput] = useState('');
@@ -118,27 +120,23 @@ export default function PositionApplicationsTable({ positionId }: Props) {
     }
   };
 
-  const handleApplicationPatched = useCallback(
-    (appId: string, patch: Partial<StudentApplication>) => {
-      updateApplicationLocally(appId, patch);
-      if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, ...patch } : null));
-    },
-    [updateApplicationLocally, selectedApp?.id],
-  );
-
   const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
     setUpdatingStatus(true);
     try {
+      const updatePayload = buildStudentApplicationStatusUpdate(newStatus);
       const { error } = await supabase
         .from('student_applications')
-        .update(buildStudentApplicationStatusUpdate(newStatus))
+        .update(updatePayload)
         .eq('id', appId);
-      if (error) throw error;
+      if (error) {
+        console.error('Status update error:', error.message, error.code, error.details);
+        throw error;
+      }
       toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
       updateApplicationLocally(appId, { status: newStatus });
-      if (selectedApp?.id === appId) setSelectedApp((prev) => (prev ? { ...prev, status: newStatus } : null));
-    } catch {
-      toast.error('Failed to update status');
+    } catch (err: any) {
+      console.error('Failed to update status:', err);
+      toast.error(err?.message || 'Failed to update status');
     } finally {
       setUpdatingStatus(false);
     }
@@ -164,23 +162,25 @@ export default function PositionApplicationsTable({ positionId }: Props) {
               {bookingSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save link'}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground text-pretty break-words">
             Save your Calendly / booking link, then select applicants and send interview invites.
           </p>
         </div>
 
         {/* Stats bar */}
-        <div className="flex items-center gap-3 text-sm flex-wrap">
-          <span className="font-medium">
-            {totalCount} application{totalCount !== 1 ? 's' : ''}
-          </span>
-          {newCount > 0 && <Badge className="bg-blue-500/15 text-blue-400 text-xs">{newCount} new</Badge>}
-          {selectedCount > 0 && (
-            <Badge variant="outline" className="text-xs">
-              {selectedCount} selected ({selectedRecipientCount} unique)
-            </Badge>
-          )}
-          <div className="flex items-center gap-2 ml-auto">
+        <div className="flex flex-col gap-3 text-sm sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-medium break-words">
+              {totalCount} application{totalCount !== 1 ? 's' : ''}
+            </span>
+            {newCount > 0 && <Badge className="bg-blue-500/15 text-blue-400 text-xs">{newCount} new</Badge>}
+            {selectedCount > 0 && (
+              <Badge variant="outline" className="max-w-full whitespace-normal text-xs leading-snug">
+                {selectedCount} selected ({selectedRecipientCount} unique)
+              </Badge>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             <Button size="sm" variant="outline" disabled={selectedCount === 0} onClick={() => setEmailDialogOpen(true)}>
               Email selected
             </Button>
@@ -196,13 +196,13 @@ export default function PositionApplicationsTable({ positionId }: Props) {
         </div>
 
         {/* Filters */}
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 max-w-xs">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <div className="relative min-w-0 flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search by name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 h-9" />
           </div>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ApplicationStatus | 'all')}>
-            <SelectTrigger className="w-[150px] h-9">
+            <SelectTrigger className="h-9 w-full sm:w-[150px]">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -215,7 +215,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
             </SelectContent>
           </Select>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-            <SelectTrigger className="w-[220px] h-9">
+            <SelectTrigger className="h-9 w-full sm:w-[220px]">
               <SelectValue placeholder="Sort applications" />
             </SelectTrigger>
             <SelectContent>
@@ -230,7 +230,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
           </Select>
         </div>
         {sortBy === 'resume_readiness_desc' && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground text-pretty break-words">
             Resume profile ranking considers uploaded resumes, GPA, clinical hours, and experience depth from application responses.
           </p>
         )}
@@ -246,8 +246,9 @@ export default function PositionApplicationsTable({ positionId }: Props) {
             <p className="text-sm text-muted-foreground">{totalCount === 0 ? 'No applications yet' : 'No matching applications'}</p>
           </div>
         ) : (
-          <div className="border border-border/50 rounded-lg overflow-hidden">
-            <Table>
+          <div className="overflow-hidden rounded-lg border border-border/50">
+            <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+            <Table className="min-w-[560px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[40px]">
@@ -261,7 +262,7 @@ export default function PositionApplicationsTable({ positionId }: Props) {
               </TableHeader>
               <TableBody>
                 {applications.map((app) => (
-                  <TableRow key={app.id} className="cursor-pointer" onClick={() => setSelectedApp(allApplications.find((a) => a.id === app.id) || app)}>
+                  <TableRow key={app.id} className="cursor-pointer" onClick={() => navigate(`${basePath}/applicants/${app.id}`)}>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedApplicationIds.includes(app.id)}
@@ -269,10 +270,12 @@ export default function PositionApplicationsTable({ positionId }: Props) {
                         aria-label={`Select ${getApplicantName(app)}`}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[220px]">
                       <div>
-                        <p className="font-medium text-sm">{getApplicantName(app)}</p>
-                        {app.student_profile?.university && <p className="text-xs text-muted-foreground">{app.student_profile.university}</p>}
+                        <p className="text-sm font-medium break-words">{getApplicantName(app)}</p>
+                        {app.student_profile?.university && (
+                          <p className="text-xs text-muted-foreground break-words">{app.student_profile.university}</p>
+                        )}
                         <div className="mt-1 flex flex-wrap gap-1">
                           {typeof app.student_profile?.gpa === 'number' && (
                             <Badge variant="outline" className="text-[10px] py-0">
@@ -294,9 +297,13 @@ export default function PositionApplicationsTable({ positionId }: Props) {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{format(new Date(app.submitted_at), 'MMM d, yyyy')}</TableCell>
                     <TableCell>
-                      <Badge className={`text-xs ${STATUS_COLORS[app.status]}`}>{APPLICATION_STATUS_LABELS[app.status]}</Badge>
+                      <Badge
+                        className={`max-w-[9rem] whitespace-normal text-xs leading-snug ${STATUS_COLORS[app.status]}`}
+                      >
+                        {APPLICATION_STATUS_LABELS[app.status]}
+                      </Badge>
                     </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="min-w-[140px]" onClick={(e) => e.stopPropagation()}>
                       <Select value={app.status} onValueChange={(v) => handleStatusChange(app.id, v as ApplicationStatus)} disabled={updatingStatus}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
@@ -314,18 +321,12 @@ export default function PositionApplicationsTable({ positionId }: Props) {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         )}
       </div>
 
       {/* Sub-components */}
-      <ApplicationDetailSheet
-        application={selectedApp}
-        onClose={() => setSelectedApp(null)}
-        onStatusChange={handleStatusChange}
-        onNoteSaved={refetch}
-        onApplicationPatched={handleApplicationPatched}
-      />
 
       {hospitalPage?.id && (
         <>
@@ -333,6 +334,8 @@ export default function PositionApplicationsTable({ positionId }: Props) {
             open={emailDialogOpen}
             onOpenChange={setEmailDialogOpen}
             hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.opportunity?.name}
+            senderEmail={hospitalPage.gmail_email}
             selectedApplicationIds={selectedApplicationIds}
             applications={applications}
           />
@@ -340,6 +343,8 @@ export default function PositionApplicationsTable({ positionId }: Props) {
             open={inviteDialogOpen}
             onOpenChange={setInviteDialogOpen}
             hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.opportunity?.name}
+            bookingUrl={hospitalPage.interview_booking_url ?? ''}
             selectedApplicationIds={selectedApplicationIds}
             applications={applications}
           />

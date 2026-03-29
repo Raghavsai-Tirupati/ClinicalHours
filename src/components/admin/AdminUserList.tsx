@@ -172,8 +172,8 @@ export default function AdminUserList() {
         </div>
 
         {/* Users Table */}
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
+        <div className="border rounded-lg overflow-x-auto overflow-x-auto-touch">
+          <Table className="min-w-[720px]">
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
@@ -201,10 +201,10 @@ export default function AdminUserList() {
               ) : (
                 users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell>
+                    <TableCell className="min-w-0 max-w-[14rem] sm:max-w-none">
                       <div>
-                        <p className="font-medium">{user.full_name}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <p className="font-medium break-words">{user.full_name}</p>
+                        <p className="break-all text-sm text-muted-foreground">{user.email}</p>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -225,13 +225,13 @@ export default function AdminUserList() {
                         {user.university && (
                           <div className="flex items-center gap-1 text-sm">
                             <GraduationCap className="h-3 w-3 text-muted-foreground" />
-                            <span className="truncate max-w-[150px]" title={user.university}>
+                            <span className="break-words" title={user.university}>
                               {user.university}
                             </span>
                           </div>
                         )}
                         {user.major && (
-                          <p className="text-sm text-muted-foreground truncate max-w-[150px]" title={user.major}>
+                          <p className="break-words text-sm text-muted-foreground" title={user.major}>
                             {user.major}
                           </p>
                         )}

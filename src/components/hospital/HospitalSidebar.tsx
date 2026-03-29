@@ -2,13 +2,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Briefcase,
-  FileText,
+  Users,
   Calendar,
   Mail,
   Users,
   Settings,
   LogOut,
   Plus,
+  Shield,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -30,7 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function HospitalSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { hospitalPage, basePath } = useHospitalPageContext();
+  const { hospitalPage, basePath, isSuperAdmin } = useHospitalPageContext();
   const { positions } = usePositions(hospitalPage?.id);
 
   const isActive = (route: string) => {
@@ -45,10 +46,12 @@ export default function HospitalSidebar() {
     navigate('/');
   };
 
+  const activeCount = positions.filter(p => p.status === 'active').length;
+
   const navItems = [
     { label: 'Overview', icon: LayoutDashboard, route: basePath },
-    { label: 'Applications', icon: FileText, route: `${basePath}/applications` },
-    { label: 'Positions', icon: Briefcase, route: `${basePath}/positions`, badge: positions.length },
+    { label: 'Positions', icon: Briefcase, route: `${basePath}/positions`, badge: activeCount || positions.length },
+    { label: 'Applicants', icon: Users, route: `${basePath}/applications` },
     { label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
     { label: 'Email', icon: Mail, route: `${basePath}/email` },
     { label: 'Team', icon: Users, route: `${basePath}/team` },
@@ -62,8 +65,8 @@ export default function HospitalSidebar() {
             {hospitalPage?.opportunity.name?.charAt(0) || 'H'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{hospitalPage?.opportunity.name}</p>
-            <p className="truncate text-xs text-muted-foreground">Admin Dashboard</p>
+            <p className="line-clamp-2 break-words text-sm font-semibold">{hospitalPage?.opportunity.name}</p>
+            <p className="text-xs text-muted-foreground">Admin Dashboard</p>
           </div>
         </div>
       </SidebarHeader>
@@ -108,6 +111,16 @@ export default function HospitalSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          {isSuperAdmin && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Site admin">
+                <Link to="/admin">
+                  <Shield className="h-4 w-4" />
+                  <span>Site admin</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild

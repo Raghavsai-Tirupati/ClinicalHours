@@ -217,7 +217,7 @@ function TopListCard({
         ) : (
           items.slice(0, 5).map((item) => (
             <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
-              <span className="truncate text-muted-foreground">{item.label}</span>
+              <span className="min-w-0 flex-1 break-words text-muted-foreground">{item.label}</span>
               <span className="font-medium tabular-nums">{item.count}</span>
             </div>
           ))
@@ -335,7 +335,7 @@ function SessionDetailDialog({
                       <div className="flex flex-wrap gap-2">
                         {session.pageSequence.map((page, index) => (
                           <Badge key={`${page}-${index}`} variant="outline" className="max-w-full">
-                            <span className="truncate">{getPageName(page)}</span>
+                            <span className="break-words text-left">{getPageName(page)}</span>
                           </Badge>
                         ))}
                       </div>
@@ -458,6 +458,7 @@ export default function GuestSessionsTab() {
         if (data.length < PAGE_SIZE) break;
       }
 
+      // Fetch tracking events that have NO user_id (guest-only)
       const events: TrackingEvent[] = [];
       for (let offset = 0; ; offset += PAGE_SIZE) {
         const { data, error: eventError } = await supabase
@@ -476,8 +477,30 @@ export default function GuestSessionsTab() {
         if (data.length < PAGE_SIZE) break;
       }
 
-      setGuestSessions(sessions);
-      setTrackingEvents(events);
+      // Exclude sessions that also have authenticated events (session_id overlap)
+      // Fetch distinct session_ids that have user_id set
+      const authenticatedSessionIds = new Set<string>();
+      for (let offset = 0; ; offset += PAGE_SIZE) {
+        const { data, error: authEvError } = await supabase
+          .from("tracking_events")
+          .select("session_id")
+          .not("user_id", "is", null)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        if (authEvError) throw authEvError;
+        if (!data?.length) break;
+
+        data.forEach((row: { session_id: string }) => authenticatedSessionIds.add(row.session_id));
+        if (data.length < PAGE_SIZE) break;
+      }
+
+      // Filter out guest events whose session_id also appears in authenticated events
+      const pureGuestEvents = events.filter(e => !authenticatedSessionIds.has(e.session_id));
+      const pureGuestSessions = sessions.filter(s => !authenticatedSessionIds.has(s.session_id));
+
+      setGuestSessions(pureGuestSessions);
+      setTrackingEvents(pureGuestEvents);
     } catch (fetchError) {
       console.error("Error fetching guest sessions:", fetchError);
       const message = fetchError instanceof Error ? fetchError.message : "Failed to load guest sessions";
@@ -870,7 +893,7 @@ export default function GuestSessionsTab() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-lg border border-border overflow-hidden">
+              <div className="rounded-lg border border-border overflow-x-auto overflow-x-auto-touch">
                 <ScrollArea className="w-full">
                   <div className="min-w-[1100px]">
                     <Table>

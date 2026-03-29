@@ -96,7 +96,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
             const [legacyAppsRes, legacyQsRes] = await Promise.all([
               supabase
                 .from('hospital_applications')
-                .select('id, account_id, applicant_name, applicant_email, status, submitted_at, student_id, opportunity_id')
+                .select('id, account_id, applicant_name, applicant_email, status, submitted_at, student_id, opportunity_id, interview_confirmed_at')
                 .eq('account_id', accountData.id)
                 .order('submitted_at', { ascending: false }),
               supabase
@@ -159,6 +159,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
                 notes: null,
                 applicant_name: normalizeDisplayName(ha.applicant_name) ?? undefined,
                 applicant_email: ha.applicant_email ?? undefined,
+                interview_confirmed_at: ha.interview_confirmed_at ?? null,
                 answers: answersByAppId.get(ha.id) || [],
                 _isLegacy: true,
               } as StudentApplication & { _isLegacy?: boolean }));

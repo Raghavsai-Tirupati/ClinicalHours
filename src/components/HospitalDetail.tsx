@@ -7,7 +7,6 @@ import {
   Phone,
   Clock,
   Star,
-  ExternalLink,
   Check,
   Plus,
   Loader2,
@@ -20,6 +19,7 @@ import { Opportunity } from "@/types";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
 import HospitalLogo from "@/components/HospitalLogo";
 import { supabase } from "@/integrations/supabase/client";
+import { isPositionDeadlinePassed } from '@/lib/positionAvailability';
 import { POSITION_TYPE_LABELS } from "@/types/positions";
 import type { PositionType } from "@/types/positions";
 
@@ -34,7 +34,6 @@ interface ActivePosition {
 
 interface HospitalDetailProps {
   opportunity: Opportunity;
-  hospitalAccountId?: string;
   isPremium: boolean;
   isSaved: boolean;
   isSavedLoading: boolean;
@@ -46,7 +45,6 @@ interface HospitalDetailProps {
 
 export function HospitalDetail({
   opportunity,
-  hospitalAccountId,
   isPremium,
   isSaved,
   isSavedLoading,
@@ -84,16 +82,19 @@ export function HospitalDetail({
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
-      setActivePositions((positions as ActivePosition[]) || []);
+      const openPositions = ((positions as ActivePosition[]) || []).filter(
+        (pos) => !isPositionDeadlinePassed(pos.application_deadline),
+      );
+
+      setActivePositions(openPositions);
     };
 
     fetchPositions();
   }, [opportunity.id]);
 
   return (
-    <div className="flex flex-col bg-card border-l border-border h-full overflow-y-auto">
-      {/* Sticky header */}
-      <div className="flex items-start justify-between p-5 pb-4 border-b border-border sticky top-0 bg-card z-10">
+    <div className="flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden h-auto">
+      <div className="flex items-start justify-between p-5 pb-4 border-b border-border">
         <div className="flex items-start gap-3 flex-1 min-w-0 pr-4">
           <HospitalLogo
             logoUrl={opportunity.logo_url ?? null}
@@ -116,7 +117,7 @@ export function HospitalDetail({
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 hover:bg-muted transition-colors shrink-0"
+          className="p-1.5 rounded-md hover:bg-muted transition-colors shrink-0"
           aria-label="Close detail panel"
         >
           <X className="h-5 w-5" />
@@ -151,7 +152,7 @@ export function HospitalDetail({
                   className="flex items-center justify-between gap-2 p-3 border border-border rounded-md bg-muted/30"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{pos.title}</p>
+                    <p className="break-words text-sm font-medium">{pos.title}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
                       <span>{POSITION_TYPE_LABELS[pos.position_type]}</span>
                       {pos.hours_per_week != null && (
@@ -198,24 +199,24 @@ export function HospitalDetail({
             </p>
             <div className="space-y-2">
               {opportunity.website && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex min-w-0 items-center gap-2 text-sm">
                   <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                   <a
                     href={opportunity.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline truncate"
+                    className="min-w-0 break-all text-primary hover:underline"
                   >
                     {opportunity.website}
                   </a>
                 </div>
               )}
               {opportunity.email && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex min-w-0 items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                   <a
                     href={`mailto:${opportunity.email}`}
-                    className="text-primary hover:underline truncate"
+                    className="min-w-0 break-all text-primary hover:underline"
                   >
                     {opportunity.email}
                   </a>

@@ -4,11 +4,6 @@ import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fetchAdminActivityFeed, ActivityEvent } from "@/lib/api/adminAnalytics";
 
-function truncate(str: string, maxLen: number): string {
-  if (str.length <= maxLen) return str;
-  return str.slice(0, maxLen - 3) + "...";
-}
-
 function EventRow({ event }: { event: ActivityEvent }) {
   return (
     <div className="flex items-start gap-3 py-2 px-3 hover:bg-muted/40 rounded-md transition-colors">
@@ -21,8 +16,8 @@ function EventRow({ event }: { event: ActivityEvent }) {
       <span className="text-xs font-mono text-foreground/90 shrink-0">
         {event.action}
       </span>
-      <span className="text-xs text-muted-foreground truncate min-w-0">
-        {truncate(event.target, 60)}
+      <span className="line-clamp-3 min-w-0 flex-1 break-words text-xs text-muted-foreground">
+        {event.target}
       </span>
     </div>
   );

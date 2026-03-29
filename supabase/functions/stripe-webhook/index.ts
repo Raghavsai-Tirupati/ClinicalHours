@@ -66,6 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
             is_premium: true,
             stripe_subscription_id: subscriptionId,
             premium_expires_at: null, // Active subscription — no expiry
+            premium_source: "paid",
           })
           .eq("id", profile.id);
 
@@ -97,7 +98,10 @@ const handler = async (req: Request): Promise<Response> => {
           const expiresAt = new Date(subscription.current_period_end * 1000).toISOString();
           const { error: updateError } = await supabaseAdmin
             .from("profiles")
-            .update({ premium_expires_at: expiresAt })
+            .update({
+              premium_expires_at: expiresAt,
+              premium_source: "paid",
+            })
             .eq("id", profile.id);
 
           if (updateError) {
@@ -113,6 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
               is_premium: false,
               stripe_subscription_id: null,
               premium_expires_at: null,
+              premium_source: null,
             })
             .eq("id", profile.id);
 
@@ -129,6 +134,7 @@ const handler = async (req: Request): Promise<Response> => {
               is_premium: true,
               stripe_subscription_id: subscription.id,
               premium_expires_at: null,
+              premium_source: "paid",
             })
             .eq("id", profile.id);
 
@@ -162,6 +168,7 @@ const handler = async (req: Request): Promise<Response> => {
             is_premium: false,
             stripe_subscription_id: null,
             premium_expires_at: null,
+            premium_source: null,
           })
           .eq("id", profile.id);
 

@@ -438,7 +438,7 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                             <div key={review.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="text-xs">{review.opportunity_type}</Badge>
-                                <span className="truncate max-w-[200px]">{review.opportunity_name}</span>
+                                <span className="max-w-[min(100%,12rem)] break-words sm:max-w-[200px]">{review.opportunity_name}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <div className="flex items-center">
@@ -510,13 +510,13 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                       <CardContent className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">University</span>
-                          <span className="text-right max-w-[200px] truncate" title={user.university || ''}>
+                          <span className="max-w-[min(100%,12rem)] break-words text-right sm:max-w-[200px]" title={user.university || ''}>
                             {user.university || 'Not provided'}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Major</span>
-                          <span className="text-right max-w-[200px] truncate" title={user.major || ''}>
+                          <span className="max-w-[min(100%,12rem)] break-words text-right sm:max-w-[200px]" title={user.major || ''}>
                             {user.major || 'Not provided'}
                           </span>
                         </div>
@@ -658,9 +658,9 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                             <div key={opp.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 <Badge variant="outline" className="text-xs shrink-0">{opp.type}</Badge>
-                                <span className="truncate">{opp.name}</span>
+                                <span className="break-words">{opp.name}</span>
                                 {opp.location && (
-                                  <span className="text-xs text-muted-foreground truncate hidden sm:inline">
+                                  <span className="hidden break-words text-xs text-muted-foreground sm:inline">
                                     ({opp.location})
                                   </span>
                                 )}
@@ -706,7 +706,7 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                             <div key={entry.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 <Badge variant="outline" className="text-xs shrink-0">{entry.opportunity_type}</Badge>
-                                <span className="truncate">{entry.opportunity_name}</span>
+                                <span className="break-words">{entry.opportunity_name}</span>
                               </div>
                               <div className="flex items-center gap-3 shrink-0">
                                 <span className="font-semibold text-primary">{entry.hours} hrs</span>

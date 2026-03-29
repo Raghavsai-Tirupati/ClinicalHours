@@ -844,8 +844,8 @@ const Auth = () => {
                     {selectedOpportunity ? (
                       <div className="flex items-center gap-2 p-2.5 bg-background rounded-md border border-border">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{selectedOpportunity.name}</p>
-                          <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                          <p className="break-words text-sm font-medium">{selectedOpportunity.name}</p>
+                          <p className="flex items-start gap-1 break-words text-xs text-muted-foreground">
                             <MapPin className="h-3 w-3 shrink-0" />
                             {selectedOpportunity.location}
                           </p>
@@ -906,9 +906,9 @@ const Auth = () => {
                                   setHospitalSearchQuery("");
                                 }}
                               >
-                                <p className="text-sm font-medium truncate">{opp.name}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                <p className="break-words text-sm font-medium">{opp.name}</p>
+                                <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                  <span className="flex min-w-0 flex-1 items-start gap-1 break-words text-xs text-muted-foreground">
                                     <MapPin className="h-3 w-3 shrink-0" />
                                     {opp.location}
                                   </span>

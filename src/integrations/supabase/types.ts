@@ -38,6 +38,44 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_activity_log: {
+        Row: {
+          action_type: string
+          actor_email: string
+          created_at: string
+          hospital_page_id: string | null
+          id: string
+          metadata: Json | null
+          target_type: string | null
+        }
+        Insert: {
+          action_type: string
+          actor_email: string
+          created_at?: string
+          hospital_page_id?: string | null
+          id?: string
+          metadata?: Json | null
+          target_type?: string | null
+        }
+        Update: {
+          action_type?: string
+          actor_email?: string
+          created_at?: string
+          hospital_page_id?: string | null
+          id?: string
+          metadata?: Json | null
+          target_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_activity_log_hospital_page_id_fkey"
+            columns: ["hospital_page_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_answers: {
         Row: {
           answer_file_url: string | null
@@ -601,6 +639,9 @@ export type Database = {
         Row: {
           admin_email: string
           claimed_at: string | null
+          clone_version: number | null
+          cloned_at: string | null
+          cloned_from_page_id: string | null
           created_at: string
           created_by: string | null
           gmail_connected_at: string | null
@@ -610,10 +651,15 @@ export type Database = {
           id: string
           interview_booking_url: string | null
           is_claimed: boolean
+          is_showcase: boolean
+          page_status: string
         }
         Insert: {
           admin_email: string
           claimed_at?: string | null
+          clone_version?: number | null
+          cloned_at?: string | null
+          cloned_from_page_id?: string | null
           created_at?: string
           created_by?: string | null
           gmail_connected_at?: string | null
@@ -623,10 +669,15 @@ export type Database = {
           id?: string
           interview_booking_url?: string | null
           is_claimed?: boolean
+          is_showcase?: boolean
+          page_status?: string
         }
         Update: {
           admin_email?: string
           claimed_at?: string | null
+          clone_version?: number | null
+          cloned_at?: string | null
+          cloned_from_page_id?: string | null
           created_at?: string
           created_by?: string | null
           gmail_connected_at?: string | null
@@ -636,8 +687,17 @@ export type Database = {
           id?: string
           interview_booking_url?: string | null
           is_claimed?: boolean
+          is_showcase?: boolean
+          page_status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "hospital_pages_cloned_from_page_id_fkey"
+            columns: ["cloned_from_page_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hospital_pages_hospital_id_fkey"
             columns: ["hospital_id"]
@@ -1352,7 +1412,11 @@ export type Database = {
         Row: {
           applicant_email: string | null
           applicant_name: string | null
+          availability_json: Json | null
           id: string
+          interview_confirmed_at: string | null
+          interview_invited_at: string | null
+          interview_source: string | null
           notes: string | null
           position_id: string
           reviewed_at: string | null
@@ -1364,7 +1428,11 @@ export type Database = {
         Insert: {
           applicant_email?: string | null
           applicant_name?: string | null
+          availability_json?: Json | null
           id?: string
+          interview_confirmed_at?: string | null
+          interview_invited_at?: string | null
+          interview_source?: string | null
           notes?: string | null
           position_id: string
           reviewed_at?: string | null
@@ -1376,7 +1444,11 @@ export type Database = {
         Update: {
           applicant_email?: string | null
           applicant_name?: string | null
+          availability_json?: Json | null
           id?: string
+          interview_confirmed_at?: string | null
+          interview_invited_at?: string | null
+          interview_source?: string | null
           notes?: string | null
           position_id?: string
           reviewed_at?: string | null
@@ -1770,6 +1842,7 @@ export type Database = {
         Args: { p_application_id: string }
         Returns: undefined
       }
+      is_super_admin: { Args: never; Returns: boolean }
       link_opportunity_to_hospital: {
         Args: { p_hospital_id: string; p_opportunity_id: string }
         Returns: undefined

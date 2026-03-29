@@ -197,8 +197,8 @@ export default function AdminDuplicateHospitals() {
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="overflow-x-auto">
-                  <Table>
+                <div className="overflow-x-auto overflow-x-auto-touch">
+                  <Table className="min-w-[640px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-12">Keep</TableHead>

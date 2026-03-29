@@ -145,6 +145,7 @@ const statusColors: Record<OpportunityStatus, string> = {
 const applicationStatusColors: Record<ApplicationStatus, string> = {
   new: "bg-blue-500/10 text-blue-300 border-blue-500/30",
   under_review: "bg-amber-500/10 text-amber-300 border-amber-500/30",
+  interview: "bg-yellow-500/10 text-yellow-300 border-yellow-500/30",
   accepted: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
   rejected: "bg-red-500/10 text-red-300 border-red-500/30",
   waitlisted: "bg-purple-500/10 text-purple-300 border-purple-500/30",
@@ -215,10 +216,10 @@ function OpportunityCard({
             size="sm"
           />
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-base font-medium text-foreground">
+            <h3 className="line-clamp-2 break-words text-base font-medium text-foreground">
               {opp.name}
             </h3>
-            <p className="mt-0.5 text-sm text-muted-foreground">{opp.location}</p>
+            <p className="mt-0.5 break-words text-sm text-muted-foreground">{opp.location}</p>
           </div>
         </div>
 
@@ -338,9 +339,11 @@ function OpportunityCard({
   );
 }
 
-function ReflectionBlock({ reflection }: { reflection: Reflection }) {
+function ReflectionBlock({ reflection, onDelete }: { reflection: Reflection; onDelete: (id: string) => void }) {
+  const [confirming, setConfirming] = useState(false);
+
   return (
-    <div className="rounded-lg border border-border bg-card p-5">
+    <div className="group rounded-lg border border-border bg-card p-5 relative">
       <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
         <Quote className="h-3.5 w-3.5 text-primary/60" />
         <span className="font-medium text-foreground/80">
@@ -354,6 +357,27 @@ function ReflectionBlock({ reflection }: { reflection: Reflection }) {
             year: "numeric",
           })}
         </time>
+        <div className="ml-auto">
+          {confirming ? (
+            <div className="flex items-center gap-1">
+              <Button variant="destructive" size="sm" className="h-6 px-2 text-xs" onClick={() => onDelete(reflection.id)}>
+                Delete
+              </Button>
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setConfirming(false)}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => setConfirming(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+            </Button>
+          )}
+        </div>
       </div>
       <p className="text-sm leading-relaxed text-muted-foreground">
         {reflection.text}
@@ -600,6 +624,17 @@ const Dashboard = () => {
 
     fetchDashboardData();
   }, [user, isGuest, toast, localLogs, localReflections, dashboardRefreshTick]);
+
+  const handleDeleteReflection = async (entryId: string) => {
+    if (!user) return;
+    const { error } = await supabase.from("experience_entries").delete().eq("id", entryId).eq("user_id", user.id);
+    if (error) {
+      toast({ title: "Failed to delete reflection", variant: "destructive" });
+      return;
+    }
+    setReflections((prev) => prev.filter((r) => r.id !== entryId));
+    toast({ title: "Reflection deleted" });
+  };
 
   /** Guard: prompt sign-in for guest actions */
   const requireAuth = (action: string): boolean => {
@@ -852,7 +887,7 @@ const Dashboard = () => {
                       <div key={app.id} className="rounded-lg border border-border bg-card p-4">
                         <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
                           <Building2 className="h-3.5 w-3.5" />
-                          <span className="truncate">{app.hospital_name}</span>
+                          <span className="min-w-0 break-words">{app.hospital_name}</span>
                         </div>
                         <p className="font-medium text-foreground">{app.position_title}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -926,7 +961,7 @@ const Dashboard = () => {
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {reflections.map((r) => (
-                      <ReflectionBlock key={r.id} reflection={r} />
+                      <ReflectionBlock key={r.id} reflection={r} onDelete={handleDeleteReflection} />
                     ))}
                   </div>
                 )}

@@ -35,7 +35,6 @@ const Opportunities = () => {
   const [savedOpportunityIds, setSavedOpportunityIds] = useState<Set<string>>(new Set());
   const [savedLoading, setSavedLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
-  const [hospitalAccountMap, setHospitalAccountMap] = useState<Map<string, string>>(new Map());
   const [directApplyIds, setDirectApplyIds] = useState<Set<string>>(new Set());
   const [guestGateOpen, setGuestGateOpen] = useState(false);
   const [verificationGateOpen, setVerificationGateOpen] = useState(false);
@@ -65,15 +64,6 @@ const Opportunities = () => {
   if (selectedOpportunity) lastSelectedRef.current = selectedOpportunity;
   const displayedOpportunity = selectedOpportunity ?? lastSelectedRef.current;
 
-  const detailPanelRef = useRef<HTMLDivElement>(null);
-
-  // Scroll detail panel to top when selection changes
-  useEffect(() => {
-    if (selectedId && detailPanelRef.current) {
-      detailPanelRef.current.scrollTop = 0;
-    }
-  }, [selectedId]);
-
   // Fetch saved opportunities
   useEffect(() => {
     const fetchSavedOpportunities = async () => {
@@ -95,28 +85,6 @@ const Opportunities = () => {
     };
     fetchSavedOpportunities();
   }, [user, isReady]);
-
-  // Batch-fetch hospital accounts
-  useEffect(() => {
-    const hospitalIds = opportunities
-      .map((o) => o.hospital_id)
-      .filter((id): id is string => !!id);
-    if (hospitalIds.length === 0) {
-      setHospitalAccountMap(new Map());
-      return;
-    }
-    supabase
-      .from("hospital_accounts")
-      .select("id, hospital_id")
-      .in("hospital_id", hospitalIds)
-      .then(({ data }) => {
-        const map = new Map<string, string>();
-        (data || []).forEach((acc) => {
-          if (acc.hospital_id) map.set(acc.hospital_id, acc.id);
-        });
-        setHospitalAccountMap(map);
-      });
-  }, [opportunities]);
 
   // Batch-fetch which hospitals have active positions (for Direct Apply badge)
   useEffect(() => {
@@ -229,9 +197,6 @@ const Opportunities = () => {
   const detailProps = displayedOpportunity
     ? {
         opportunity: displayedOpportunity,
-        hospitalAccountId: displayedOpportunity.hospital_id
-          ? hospitalAccountMap.get(displayedOpportunity.hospital_id)
-          : undefined,
         isPremium,
         isSaved: savedOpportunityIds.has(displayedOpportunity.id),
         isSavedLoading: savedLoading,
@@ -247,11 +212,11 @@ const Opportunities = () => {
       <Navigation />
 
       {/* ── Header + Search / Filter ─────────────────────────────────── */}
-      <div className="container mx-auto px-4 pt-28 pb-4">
+      <div className="container mx-auto px-4 pt-28 pb-6">
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
             <h1 className="text-4xl font-bold mb-4 scroll-mt-28">
-              Clinical Opportunities Near You
+              Find Clinical Opportunities Near You
             </h1>
             <p className="text-lg text-muted-foreground">
               Discover clinical opportunities sorted by distance from your location.
@@ -326,15 +291,12 @@ const Opportunities = () => {
         </div>
       ) : (
         /* ── Split Layout ──────────────────────────────────────────── */
-        <div className="flex-1 min-h-0 container mx-auto px-4">
-          <div
-            className="flex max-w-6xl mx-auto overflow-hidden"
-            style={{ height: "calc(100vh - 310px)", minHeight: "420px" }}
-          >
+        <div className="flex-1 container mx-auto px-4 pb-8">
+          <div className="flex max-w-6xl mx-auto items-start gap-5 lg:gap-6">
             {/* ── Left: Hospital list ─────────────────────────────── */}
             <div
               className={cn(
-                "overflow-y-auto transition-all duration-300 ease-in-out w-full",
+                "transition-all duration-300 ease-in-out w-full",
                 isDetailOpen && "md:w-[45%] lg:w-[40%]",
               )}
             >
@@ -387,10 +349,9 @@ const Opportunities = () => {
 
             {/* ── Right: Detail panel (tablet + desktop) ──────────── */}
             <div
-              ref={detailPanelRef}
               className={cn(
-                "hidden md:block transition-all duration-300 ease-in-out overflow-y-auto overflow-x-hidden",
-                isDetailOpen ? "md:w-[55%] lg:w-[60%]" : "w-0",
+                "hidden md:block transition-all duration-300 ease-in-out overflow-x-hidden",
+                isDetailOpen ? "md:w-[55%] lg:w-[60%] opacity-100" : "w-0 opacity-0 pointer-events-none",
               )}
             >
               {detailProps && <HospitalDetail {...detailProps} />}

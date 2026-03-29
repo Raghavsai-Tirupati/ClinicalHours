@@ -203,7 +203,7 @@ const AMCASGeneratorContent = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium text-foreground text-sm">{draft.organization_name || "Unnamed"}</span>
-                    {draft.amcas_category && <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground truncate max-w-[200px]">{draft.amcas_category}</span>}
+                    {draft.amcas_category && <span className="inline-flex max-w-full items-center break-words rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{draft.amcas_category}</span>}
                     {draft.is_most_meaningful && <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-400"><Star className="h-3 w-3" /> Most Meaningful</span>}
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">

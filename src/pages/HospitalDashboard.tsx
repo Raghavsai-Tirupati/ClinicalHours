@@ -173,7 +173,8 @@ export default function HospitalDashboard() {
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
 
-  const isBcsPilot = member?.hospitalName?.toLowerCase().includes("bcs free health clinic") ?? false;
+  // Per-clinic scheduling is now available to all clinics (BCS pilot restriction removed)
+  const isBcsPilot = true;
 
   useEffect(() => {
     if (member) {
@@ -386,7 +387,7 @@ export default function HospitalDashboard() {
   }
 
   async function handleDeleteOpportunity(opp: OpportunityWithApps) {
-    if (!member || !isBcsPilot) return;
+    if (!member) return;
     if (member.role !== "owner" && member.role !== "admin") {
       toast.error("Only hospital owners and admins can delete opportunities.");
       return;
@@ -898,7 +899,7 @@ export default function HospitalDashboard() {
                             <td className="px-4 py-3 hidden sm:table-cell">
                               <div className="flex items-center gap-1 text-muted-foreground">
                                 <MapPin className="h-3 w-3" />
-                                <span className="truncate max-w-[200px]">{opp.location}</span>
+                                <span className="max-w-[min(100%,12rem)] break-words sm:max-w-[200px]">{opp.location}</span>
                               </div>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">

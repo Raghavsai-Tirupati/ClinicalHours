@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bold,
   Eye,
@@ -41,7 +41,7 @@ import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { StudentApplication } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 
@@ -61,9 +61,21 @@ function getApplicantName(app: StudentApplication): string {
   );
 }
 
+function parseMetadataApplicationIds(meta: Record<string, unknown> | null | undefined): string[] {
+  if (!meta) return [];
+  const raw = meta.applicationIds;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((v): v is string => typeof v === 'string' && v.length > 0);
+}
+
 type FilterMode = 'all' | 'position' | 'status';
 
 const DEFAULT_EMAIL_HTML = '<p><br></p>';
+const DEFAULT_EMAIL_DRAFT = {
+  subject: '',
+  htmlBody: DEFAULT_EMAIL_HTML,
+  attachments: [] as Array<{ name: string; url: string }>,
+};
 
 function stripHtml(value: string): string {
   if (!value) return '';
@@ -83,6 +95,15 @@ function sanitizeRichHtml(value: string): string {
   return doc.body.innerHTML || DEFAULT_EMAIL_HTML;
 }
 
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export default function EmailPage() {
   const { hospitalPage } = useHospitalPageContext();
   const { applications, positions, loading: appsLoading } = useAllApplications(hospitalPage?.id);
@@ -93,9 +114,67 @@ export default function EmailPage() {
   const [manualSelected, setManualSelected] = useState<string[]>([]);
   const [subject, setSubject] = useState('');
   const [htmlBody, setHtmlBody] = useState(DEFAULT_EMAIL_HTML);
+  const [attachments, setAttachments] = useState<Array<{ name: string; url: string }>>([]);
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedSentEmailId, setSelectedSentEmailId] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
+
+  const draftKey = useMemo(() => {
+    if (!hospitalPage?.id) return null;
+    return `email_draft:${hospitalPage.id}`;
+  }, [hospitalPage?.id]);
+
+  // The composer uses a contentEditable div. We keep it effectively uncontrolled so re-renders
+  // don't reset caret/selection while typing (which shows up as "typing backwards").
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = htmlBody;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load draft (autosave) when hospital page changes.
+  useEffect(() => {
+    if (!draftKey) return;
+    const raw = localStorage.getItem(draftKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as typeof DEFAULT_EMAIL_DRAFT;
+      if (typeof parsed.subject === 'string') setSubject(parsed.subject);
+      if (typeof parsed.htmlBody === 'string') setEditorContent(parsed.htmlBody);
+      if (Array.isArray(parsed.attachments)) {
+        setAttachments(
+          parsed.attachments
+            .filter((a) => a && typeof a.name === 'string' && typeof a.url === 'string')
+            .map((a) => ({ name: a.name, url: a.url })),
+        );
+      }
+    } catch {
+      // ignore corrupted drafts
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Autosave draft while typing (debounced).
+  useEffect(() => {
+    if (!draftKey) return;
+    const handle = window.setTimeout(() => {
+      const shouldClear =
+        subject.trim().length === 0 &&
+        htmlBody === DEFAULT_EMAIL_HTML &&
+        attachments.length === 0;
+
+      if (shouldClear) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+
+      const draft = { subject, htmlBody, attachments };
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+    }, 400);
+    return () => window.clearTimeout(handle);
+  }, [draftKey, subject, htmlBody, attachments]);
 
   const filteredRecipients = useMemo(() => {
     if (filterMode === 'all') return applications;
@@ -132,7 +211,56 @@ export default function EmailPage() {
     [entries],
   );
 
+  const applicationsById = useMemo(() => {
+    const map = new Map<string, StudentApplication>();
+    applications.forEach((app) => map.set(app.id, app));
+    return map;
+  }, [applications]);
+
+  const selectedSentEmail = useMemo(
+    () => sentEmails.find((entry) => entry.id === selectedSentEmailId) ?? null,
+    [sentEmails, selectedSentEmailId],
+  );
+
+  const selectedSentRecipients = useMemo(() => {
+    if (!selectedSentEmail) return [] as Array<{ id: string; name: string; email: string }>;
+    const meta = (selectedSentEmail.metadata as Record<string, unknown>) || {};
+    const ids = parseMetadataApplicationIds(meta);
+    return ids
+      .map((id) => {
+        const app = applicationsById.get(id);
+        if (!app) return null;
+        const email = (app.applicant_email || app.student_profile?.email || '').trim();
+        return { id, name: getApplicantName(app), email };
+      })
+      .filter((row): row is { id: string; name: string; email: string } => !!row);
+  }, [selectedSentEmail, applicationsById]);
+
   const plainBody = useMemo(() => stripHtml(htmlBody), [htmlBody]);
+
+  const attachmentsPreviewHtml = useMemo(() => {
+    if (attachments.length === 0) return '';
+    const itemsHtml = attachments
+      .map(
+        (a) => `
+          <li>
+            <a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer">
+              ${escapeHtml(a.name)}
+            </a>
+          </li>
+        `,
+      )
+      .join('');
+
+    return `
+      <div style="margin-top:16px;">
+        <p style="margin:0 0 8px 0; font-size:13px; color:#555;">Attachments</p>
+        <ul style="margin:0; padding-left:18px;">${itemsHtml}</ul>
+      </div>
+    `;
+  }, [attachments]);
+
+  const previewHtml = useMemo(() => sanitizeRichHtml(htmlBody) + attachmentsPreviewHtml, [htmlBody, attachmentsPreviewHtml]);
 
   const applyFormat = (command: string, value?: string) => {
     editorRef.current?.focus();
@@ -148,6 +276,37 @@ export default function EmailPage() {
       editorRef.current.innerHTML = sanitized;
     }
   };
+
+  async function handleFileAttachments(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    if (!hospitalPage?.id) return;
+
+    const fileArr = Array.from(files);
+    const uploaded: Array<{ name: string; url: string }> = [];
+
+    for (const file of fileArr) {
+      try {
+        const safeName = file.name.replace(/[^\w.\- ]+/g, '_');
+        const storageFileName = `email-attachments/${hospitalPage.id}/${Date.now()}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage.from('resumes').upload(storageFileName, file);
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage.from('resumes').getPublicUrl(storageFileName);
+        const publicUrl = publicUrlData?.publicUrl;
+        if (!publicUrl) throw new Error('Could not create public URL');
+
+        uploaded.push({ name: safeName, url: publicUrl });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to upload file';
+        toast.error(msg);
+      }
+    }
+
+    if (uploaded.length > 0) {
+      setAttachments((prev) => [...prev, ...uploaded]);
+    }
+  }
 
   const handleSend = async () => {
     if (!hospitalPage?.id) return;
@@ -165,6 +324,7 @@ export default function EmailPage() {
           subject: subject.trim(),
           body: plainBody.trim(),
           htmlBody: sanitizeRichHtml(htmlBody),
+          attachments: attachments.map((a) => ({ fileName: a.name, publicUrl: a.url })),
         },
       });
 
@@ -198,6 +358,8 @@ export default function EmailPage() {
       setSubject('');
       setEditorContent(DEFAULT_EMAIL_HTML);
       setManualSelected([]);
+      setAttachments([]);
+      if (draftKey) localStorage.removeItem(draftKey);
       refetchLog();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to send emails';
@@ -322,9 +484,9 @@ export default function EmailPage() {
                         onCheckedChange={(c) => toggleManual(app.id, !!c)}
                         className="h-3.5 w-3.5"
                       />
-                      <span className="truncate">
+                      <span className="min-w-0 break-words">
                         {getApplicantName(app)}
-                        <span className="text-muted-foreground ml-1">
+                        <span className="text-muted-foreground ml-1 break-all">
                           ({app.applicant_email || app.student_profile?.email || 'no email'})
                         </span>
                       </span>
@@ -351,6 +513,48 @@ export default function EmailPage() {
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Message
               </label>
+
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Attach files
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Uploaded files are included as download links in the email.
+                    </div>
+                  </div>
+                  <Input
+                    type="file"
+                    multiple
+                    className="w-full sm:w-auto"
+                    onChange={(e) => handleFileAttachments(e.target.files)}
+                  />
+                </div>
+
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    {attachments.map((a) => (
+                      <div
+                        key={a.url}
+                        className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-background px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="break-words text-xs font-medium">{a.name}</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setAttachments((prev) => prev.filter((x) => x.url !== a.url))}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-md border border-input bg-background overflow-hidden">
                 <div className="border-b border-border p-2 flex flex-wrap gap-1">
                   <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => applyFormat('bold')}>
@@ -390,7 +594,6 @@ export default function EmailPage() {
                   suppressContentEditableWarning
                   className="min-h-[220px] max-h-[360px] overflow-y-auto p-3 text-sm focus:outline-none [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
                   onInput={(e) => setHtmlBody(sanitizeRichHtml(e.currentTarget.innerHTML))}
-                  dangerouslySetInnerHTML={{ __html: htmlBody }}
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
@@ -467,7 +670,7 @@ export default function EmailPage() {
                     <div className="px-6 py-5 max-h-[50vh] overflow-y-auto">
                       <div
                         className="text-sm leading-relaxed text-foreground [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-0.5 [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold [&_em]:italic [&_s]:line-through"
-                        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(htmlBody) }}
+                        dangerouslySetInnerHTML={{ __html: previewHtml }}
                       />
                     </div>
 
@@ -525,12 +728,15 @@ export default function EmailPage() {
                   const emailSubject = (meta.subject as string) || 'No subject';
                   const recipientCount = (meta.recipientCount as number) || 0;
                   const bodyPreview = typeof meta.bodyPreview === 'string' ? meta.bodyPreview : '';
+                  const hasRecipients = parseMetadataApplicationIds(meta).length > 0;
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={entry.id}
-                      className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1"
+                      onClick={() => setSelectedSentEmailId(entry.id)}
+                      className="w-full text-left rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1 transition hover:bg-muted/35"
                     >
-                      <p className="text-sm font-medium truncate">{emailSubject}</p>
+                      <p className="break-words text-sm font-medium">{emailSubject}</p>
                       {bodyPreview ? (
                         <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
                           {bodyPreview}
@@ -547,7 +753,12 @@ export default function EmailPage() {
                       <p className="text-[11px] text-muted-foreground">
                         by {entry.actor_email}
                       </p>
-                    </div>
+                      {hasRecipients ? (
+                        <p className="text-[11px] text-primary">Click to view recipients</p>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">Recipient details unavailable</p>
+                      )}
+                    </button>
                   );
                 })}
               </div>
@@ -555,6 +766,71 @@ export default function EmailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!selectedSentEmailId} onOpenChange={(open) => !open && setSelectedSentEmailId(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Sent Email Details</DialogTitle>
+          </DialogHeader>
+          {!selectedSentEmail ? (
+            <p className="text-sm text-muted-foreground">This email log entry is no longer available.</p>
+          ) : (
+            <div className="space-y-4">
+              {/* Email metadata */}
+              {(() => {
+                const meta = (selectedSentEmail.metadata as Record<string, unknown>) || {};
+                const emailSubject = (meta.subject as string)?.trim() || 'No subject';
+                const bodyPreview = typeof meta.bodyPreview === 'string' ? meta.bodyPreview : null;
+                const recipientCount = (meta.recipientCount as number) || 0;
+                const attachmentCount = typeof meta.attachmentCount === 'number' ? meta.attachmentCount : 0;
+                return (
+                  <>
+                    <div className="rounded-lg border border-border/50 bg-muted/20 p-4 space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Subject</p>
+                        <p className="text-sm font-medium">{emailSubject}</p>
+                      </div>
+                      {bodyPreview && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
+                          <p className="text-sm text-foreground/80 whitespace-pre-wrap line-clamp-6">{bodyPreview}</p>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground pt-1">
+                        <span>{format(new Date(selectedSentEmail.created_at), "MMM d, yyyy 'at' h:mm a")}</span>
+                        <span>{recipientCount} recipient{recipientCount === 1 ? '' : 's'}</span>
+                        {attachmentCount > 0 && <span>{attachmentCount} attachment{attachmentCount === 1 ? '' : 's'}</span>}
+                        <span>by {selectedSentEmail.actor_email}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recipients</p>
+                      {selectedSentRecipients.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Recipient details were not stored for this email.
+                        </p>
+                      ) : (
+                        <div className="max-h-[280px] overflow-y-auto space-y-2">
+                          {selectedSentRecipients.map((recipient) => (
+                            <div
+                              key={recipient.id}
+                              className="rounded-md border border-border/50 bg-muted/20 px-3 py-2"
+                            >
+                              <p className="break-words text-sm font-medium">{recipient.name}</p>
+                              <p className="break-all text-xs text-muted-foreground">{recipient.email || 'No email found'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

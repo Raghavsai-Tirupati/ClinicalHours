@@ -18,7 +18,7 @@ import HospitalSidebar from '@/components/hospital/HospitalSidebar';
 export default function HospitalDashboardNew() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { hospitalPage, loading, error, refetch } = useHospitalPageByUser();
+  const { hospitalPage, loading, error, refetch, allPages, isSuperAdmin } = useHospitalPageByUser();
 
   if (authLoading || loading) {
     return (
@@ -77,13 +77,13 @@ export default function HospitalDashboardNew() {
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
-      <HospitalPageContext.Provider value={{ hospitalPage, loading, error, refetch, basePath: '/hospital-dashboard' }}>
+      <HospitalPageContext.Provider value={{ hospitalPage, loading, error, refetch, basePath: '/hospital-dashboard', allPages, isSuperAdmin }}>
         <SidebarProvider>
-          <div className="flex min-h-screen w-full">
+          <div className="flex min-h-screen w-full min-w-0">
             <HospitalSidebar />
             <SidebarInset>
               <HospitalTopBar />
-              <main className="flex-1 p-6">
+              <main className="flex-1 min-w-0 p-3 pb-8 sm:p-6 sm:pb-6">
                 <Outlet />
               </main>
             </SidebarInset>

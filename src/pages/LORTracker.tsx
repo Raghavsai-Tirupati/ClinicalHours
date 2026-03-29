@@ -195,8 +195,8 @@ const LORTrackerContent = () => {
                 <div className="space-y-2">
                   {stageContacts.map((c) => (
                     <div key={c.id} className="rounded-lg border border-border bg-card p-3">
-                      <p className="text-xs font-medium text-foreground truncate">{c.recommender_name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{c.institution || ""}</p>
+                      <p className="break-words text-xs font-medium text-foreground">{c.recommender_name}</p>
+                      <p className="break-words text-[10px] text-muted-foreground">{c.institution || ""}</p>
                       <div className="mt-1.5"><StarRating value={c.strength_score} /></div>
                     </div>
                   ))}

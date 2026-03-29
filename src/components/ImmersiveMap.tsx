@@ -781,7 +781,7 @@ const ImmersiveMap = () => {
                 {/* Top row: name + close */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-white font-semibold text-[15px] leading-snug truncate">
+                    <h3 className="line-clamp-3 break-words text-[15px] font-semibold leading-snug text-white">
                       {selectedFeature.name || 'Unknown'}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
@@ -810,7 +810,7 @@ const ImmersiveMap = () => {
                   {selectedFeature.location && (
                     <div className="flex items-center gap-2 text-white/45">
                       <MapPin className="w-3.5 h-3.5 shrink-0 text-white/30" />
-                      <span className="text-xs truncate">{selectedFeature.location}</span>
+                      <span className="break-words text-xs">{selectedFeature.location}</span>
                     </div>
                   )}
                   {selectedFeature.hours_required && (

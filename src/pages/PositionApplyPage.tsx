@@ -10,15 +10,16 @@ import {
   ChevronLeft,
   Check,
 } from 'lucide-react';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { isPositionDeadlinePassed } from '@/lib/positionAvailability';
 import { useAuth } from '@/hooks/useAuth';
 import { usePositionDetail } from '@/hooks/usePositionDetail';
 import { useProfileComplete } from '@/hooks/useProfileComplete';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
 import type { ApplicationAvailability, PositionQuestion } from '@/types/positions';
 
-import '@fontsource/lora/400.css';
 import './position-apply.css';
 
 type StepKey = 'info' | 'questions' | 'availability' | 'review';
@@ -90,6 +91,14 @@ function formatAvailabilitySummary(a: ApplicationAvailability): string {
   return parts.join(' · ') || '—';
 }
 
+function parseRequirements(requirements: string | null): string[] {
+  if (!requirements) return [];
+  return requirements
+    .split(/\r?\n|;/g)
+    .map((item) => item.trim().replace(/^[\-\u2022*]\s*/, ''))
+    .filter(Boolean);
+}
+
 export default function PositionApplyPage() {
   const { positionId } = useParams<{ positionId: string }>();
   const navigate = useNavigate();
@@ -130,6 +139,7 @@ export default function PositionApplyPage() {
     [questions.length, askForAvailability],
   );
   const currentStep = steps[stepIndex];
+  const requirementItems = useMemo(() => parseRequirements(position?.requirements ?? null), [position?.requirements]);
 
   useEffect(() => {
     if (!user) return;
@@ -340,11 +350,25 @@ export default function PositionApplyPage() {
 
       setSubmitted(true);
     } catch (err) {
-      if (err && typeof err === 'object' && 'message' in err) {
-        toast.error(String((err as { message: unknown }).message));
-      } else {
-        toast.error('Failed to submit application');
+      let message = 'Failed to submit application';
+
+      if (err instanceof FunctionsHttpError) {
+        try {
+          const payload = await err.context.json();
+          if (payload?.error && typeof payload.error === 'string') {
+            message = payload.error;
+          } else if (err.message) {
+            message = err.message;
+          }
+        } catch {
+          message = err.message || message;
+        }
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        message = String((err as { message: unknown }).message);
       }
+
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -511,6 +535,34 @@ export default function PositionApplyPage() {
     );
   }
 
+  if (position.status !== 'active' || isPositionDeadlinePassed(position.application_deadline)) {
+    return layout(
+      <div className="pa-page flex min-h-[60vh] flex-col items-center justify-center text-center">
+        <div className="pa-section-card w-full max-w-2xl">
+          <div className="pa-section-head">
+            <h2>Applications are closed</h2>
+            <p>This position is no longer accepting submissions.</p>
+          </div>
+          <div className="pa-section-body">
+            <p className="pa-sub">
+              {position.application_deadline
+                ? `The deadline passed on ${new Date(position.application_deadline).toLocaleDateString()}.`
+                : 'Please return to the opportunities page to explore currently open positions.'}
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link to="/opportunities" className="pa-btn pa-btn-primary">
+                Browse open positions
+              </Link>
+              <Link to="/dashboard" className="pa-btn">
+                Back to dashboard
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>,
+    );
+  }
+
   if (submitted) {
     return layout(
       <>
@@ -644,6 +696,33 @@ export default function PositionApplyPage() {
           {/* Step: Your info */}
           {currentStep === 'info' && (
             <>
+              {(position.description || requirementItems.length > 0) && (
+                <div className="pa-section-card">
+                  <div className="pa-section-head">
+                    <h2>About this opportunity</h2>
+                    <p>Details provided by the organization.</p>
+                  </div>
+                  <div className="pa-section-body">
+                    {position.description && (
+                      <div className="pa-form-group">
+                        <div className="pa-if-label">Description</div>
+                        <p className="pa-detail-text">{position.description}</p>
+                      </div>
+                    )}
+                    {requirementItems.length > 0 && (
+                      <div className="pa-form-group">
+                        <div className="pa-if-label">Requirements</div>
+                        <ul className="pa-detail-list">
+                          {requirementItems.map((item, idx) => (
+                            <li key={`${item}-${idx}`}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="pa-section-card">
                 <div className="pa-section-head">
                   <h2>Your information</h2>

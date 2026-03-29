@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   Loader2,
   Mail,
   Calendar,
@@ -12,6 +14,7 @@ import {
   ArrowUp,
 } from 'lucide-react';
 import ResponseAnalytics from '@/components/hospital/ResponseAnalytics';
+import RichEmailDialog from '@/components/hospital/RichEmailDialog';
 import ApplicationFilterBar from '@/components/hospital/ApplicationFilterBar';
 import ApplicantReviewPanel from '@/components/hospital/ApplicantReviewPanel';
 import ApplicationKanban from '@/components/hospital/ApplicationKanban';
@@ -135,8 +138,14 @@ function ApplicantReviewWhenExpanded({
   );
 }
 
-export default function ApplicationsHub() {
-  const { hospitalPage } = useHospitalPageContext();
+interface ApplicationsHubProps {
+  /** When true, shows "All Applicants" header for use under Positions tab */
+  embeddedInPositions?: boolean;
+}
+
+export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHubProps = {}) {
+  const navigate = useNavigate();
+  const { hospitalPage, basePath } = useHospitalPageContext();
   const { applications, positions, stats, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
 
   const [activeTab, setActiveTab] = useState<'applications' | 'kanban' | 'analytics'>('applications');
@@ -318,14 +327,16 @@ export default function ApplicationsHub() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Applications</h2>
-        <p className="text-sm text-muted-foreground mt-1">All applications across every position</p>
-        <div className="flex gap-1 mt-4 border-b border-border">
+      <div className="min-w-0">
+        <h2 className="text-2xl font-bold break-words">{embeddedInPositions ? 'All Applicants' : 'Applications'}</h2>
+        <p className="text-sm text-muted-foreground mt-1 break-words text-pretty">
+          {embeddedInPositions ? 'Applicants across all positions' : 'All applications across every position'}
+        </p>
+        <div className="-mx-1 mt-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border px-1 pb-px [-webkit-overflow-scrolling:touch]">
           <button
             type="button"
             onClick={() => setActiveTab('applications')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors sm:px-4 ${
               activeTab === 'applications'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -337,7 +348,7 @@ export default function ApplicationsHub() {
           <button
             type="button"
             onClick={() => setActiveTab('kanban')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors sm:px-4 ${
               activeTab === 'kanban'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -349,7 +360,7 @@ export default function ApplicationsHub() {
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors sm:px-4 ${
               activeTab === 'analytics'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -394,14 +405,14 @@ export default function ApplicationsHub() {
             applications={applications}
           />
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground text-pretty break-words">
             Showing <span className="text-foreground font-medium">{sorted.length}</span> of {applications.length}{' '}
             applicants after filters. Sort by clicking a column header. Default: newest first.
           </p>
 
           {selectedCount > 0 && (
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-4 py-3">
-              <Badge variant="outline" className="text-xs">
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-3 sm:px-4">
+              <Badge variant="outline" className="max-w-full whitespace-normal text-xs leading-snug">
                 {selectedCount} selected ({selectedRecipientCount} unique emails)
               </Badge>
               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEmailDialogOpen(true)}>
@@ -431,8 +442,8 @@ export default function ApplicationsHub() {
             </Card>
           ) : (
             <Card className="border-border/50 overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
+              <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                <Table className="min-w-[720px]">
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-border/60">
                       <TableHead className="w-[40px]">
@@ -491,26 +502,26 @@ export default function ApplicationsHub() {
                               )}
                             </Button>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="max-w-[200px]">
                             <button
                               type="button"
-                              className="text-left w-full"
+                              className="w-full text-left"
                               onClick={() => toggleExpand(app.id)}
                             >
-                              <p className="font-medium text-sm">{getApplicantSortName(app)}</p>
+                              <p className="text-sm font-medium break-words">{getApplicantSortName(app)}</p>
                             </button>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground max-w-[140px]">
-                            <span className="truncate block">{app.student_profile?.university || '—'}</span>
+                          <TableCell className="max-w-[140px] text-sm text-muted-foreground">
+                            <span className="block break-words leading-snug">{app.student_profile?.university || '—'}</span>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground max-w-[160px]">
-                            <span className="truncate block">{app.position?.title || '—'}</span>
+                          <TableCell className="max-w-[180px] text-sm text-muted-foreground">
+                            <span className="block break-words leading-snug">{app.position?.title || '—'}</span>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                             {format(new Date(app.submitted_at), 'MMM d, yyyy')}
                           </TableCell>
                           <TableCell>
-                            <Badge className={`text-xs ${STATUS_COLORS[app.status] || ''}`}>
+                            <Badge className={`max-w-[140px] whitespace-normal text-xs leading-snug ${STATUS_COLORS[app.status] || ''}`}>
                               {APPLICATION_STATUS_LABELS[app.status]}
                             </Badge>
                           </TableCell>
@@ -526,28 +537,40 @@ export default function ApplicationsHub() {
                             {app.student_profile?.graduation_year ?? '—'}
                           </TableCell>
                           <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                            <Select
-                              value={app.status}
-                              onValueChange={(v) => handleStatusChange(app.id, v as ApplicationStatus)}
-                              disabled={updatingStatus}
-                            >
-                              <SelectTrigger className="h-8 text-xs ml-auto w-[130px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
-                                  <SelectItem key={key} value={key}>
-                                    {label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => navigate(`${basePath}/applicants/${app.id}`)}
+                                aria-label="Open applicant profile"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </Button>
+                              <Select
+                                value={app.status}
+                                onValueChange={(v) => handleStatusChange(app.id, v as ApplicationStatus)}
+                                disabled={updatingStatus}
+                              >
+                                <SelectTrigger className="h-8 text-xs ml-auto w-[130px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </TableCell>
                         </TableRow>
                         {expandedId === app.id && (
                           <TableRow className="border-border/50 bg-muted/15 hover:bg-muted/15">
                             <TableCell colSpan={11} className="p-0 border-l-2 border-l-primary/40">
-                              <div className="px-4 py-5 sm:px-6 max-w-3xl">
+                              <div className="max-w-3xl px-3 py-5 sm:px-6">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
                                   Applicant review
                                 </p>
@@ -569,40 +592,15 @@ export default function ApplicationsHub() {
             </Card>
           )}
 
-          <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Email Applicants</DialogTitle>
-                <DialogDescription>
-                  Send an email to {selectedCount} selected applicant
-                  {selectedCount === 1 ? '' : 's'} ({selectedRecipientCount} unique email
-                  {selectedRecipientCount === 1 ? '' : 's'}).
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <Input
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Subject"
-                />
-                <Textarea
-                  value={emailBody}
-                  onChange={(e) => setEmailBody(e.target.value)}
-                  rows={6}
-                  placeholder="Write your message..."
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEmailDialogOpen(false)} disabled={emailSending}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSendEmail} disabled={emailSending} className="gap-1.5">
-                  {emailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                  Send Email
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <RichEmailDialog
+            open={emailDialogOpen}
+            onOpenChange={setEmailDialogOpen}
+            hospitalPageId={hospitalPage?.id || ''}
+            hospitalName={hospitalPage?.opportunity?.name}
+            senderEmail={hospitalPage?.gmail_email}
+            selectedApplicationIds={selectedIds.filter(id => sorted.some(a => a.id === id))}
+            applications={sorted}
+          />
 
           <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
             <DialogContent>

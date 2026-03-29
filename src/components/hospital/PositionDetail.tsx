@@ -1,15 +1,18 @@
 import { Link, useParams } from 'react-router-dom';
-import { Loader2, Pencil, Users, Clock, MapPin, Calendar } from 'lucide-react';
+import { Loader2, Pencil, Users, Clock, MapPin, Calendar, BarChart2, Settings2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { usePositionDetail } from '@/hooks/usePositionDetail';
+import { usePositionApplications } from '@/hooks/usePositionApplications';
 import PositionApplicationsTable from './PositionApplicationsTable';
-import { POSITION_TYPE_LABELS, APPLICATION_STATUS_LABELS } from '@/types/positions';
+import ResponseAnalytics from './ResponseAnalytics';
+import { POSITION_TYPE_LABELS } from '@/types/positions';
 import type { PositionStatus } from '@/types/positions';
 import { format } from 'date-fns';
+import { isPositionDeadlinePassed } from '@/lib/positionAvailability';
 
 const STATUS_COLORS: Record<PositionStatus, string> = {
   active: 'bg-green-500/15 text-green-700 border-green-500/30',
@@ -22,7 +25,8 @@ const STATUS_COLORS: Record<PositionStatus, string> = {
 export default function PositionDetail() {
   const { positionId } = useParams<{ positionId: string }>();
   const { basePath } = useHospitalPageContext();
-  const { position, questions, loading, error } = usePositionDetail(positionId);
+  const { position, questions, loading, error } = usePositionDetail(positionId, { adminMode: true });
+  const { allApplications } = usePositionApplications(positionId || '');
 
   if (loading) {
     return (
@@ -35,28 +39,40 @@ export default function PositionDetail() {
   if (error || !position) {
     return (
       <div className="text-center py-20">
-        <p className="text-muted-foreground">{error || 'Position not found'}</p>
+        <p className="text-muted-foreground">{error === 'Applications for this position have closed.' || error === 'This position is no longer accepting applications.' ? 'Position not found or failed to load.' : (error || 'Position not found')}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
+      {position.status !== 'active' && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          This position is <span className="font-medium">{position.status}</span> — it is not shown to students.
+          You can still review applicants, edit, or move it between columns from the Positions board.
+        </div>
+      )}
+
+      {position.status === 'active' && isPositionDeadlinePassed(position.application_deadline) && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          The application deadline has passed. New students may not be able to apply until you extend the deadline
+          or change status.
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h2 className="text-2xl font-bold">{position.title}</h2>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+            <h2 className="text-2xl font-bold break-words">{position.title}</h2>
             <Badge className={STATUS_COLORS[position.status]}>
               {position.status}
             </Badge>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Badge variant="outline" className="text-xs">
-                {POSITION_TYPE_LABELS[position.position_type] || position.position_type}
-              </Badge>
-            </span>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+            <Badge variant="outline" className="text-xs">
+              {POSITION_TYPE_LABELS[position.position_type] || position.position_type}
+            </Badge>
             {position.location && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
@@ -77,7 +93,7 @@ export default function PositionDetail() {
             )}
           </div>
         </div>
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline" size="sm" className="shrink-0 self-start">
           <Link to={`${basePath}/positions/${position.id}/edit`}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit
@@ -85,21 +101,34 @@ export default function PositionDetail() {
         </Button>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="applications">
-        <TabsList>
-          <TabsTrigger value="applications" className="flex items-center gap-2">
+      {/* Tabs: Applicants, Analytics, Settings */}
+      <Tabs defaultValue="applicants">
+        <TabsList className="inline-flex h-auto min-h-10 w-full max-w-full flex-wrap gap-1 bg-muted p-1 sm:h-10 sm:flex-nowrap">
+          <TabsTrigger value="applicants" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Applications
+            Applicants
           </TabsTrigger>
-          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart2 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings2 className="h-4 w-4" />
+            Details
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="applications" className="mt-4">
+        <TabsContent value="applicants" className="mt-4">
           <PositionApplicationsTable positionId={position.id} />
         </TabsContent>
 
-        <TabsContent value="details" className="mt-4">
+        <TabsContent value="analytics" className="mt-4">
+          <ResponseAnalytics
+            applications={allApplications}
+          />
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-4">
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
