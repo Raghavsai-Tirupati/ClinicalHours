@@ -5,7 +5,7 @@ import {
   FileText,
   Calendar,
   Mail,
-  Activity,
+  Users,
   Settings,
   LogOut,
   Plus,
@@ -51,7 +51,7 @@ export default function HospitalSidebar() {
     { label: 'Positions', icon: Briefcase, route: `${basePath}/positions`, badge: positions.length },
     { label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
     { label: 'Email', icon: Mail, route: `${basePath}/email` },
-    { label: 'Activity', icon: Activity, route: `${basePath}/activity` },
+    { label: 'Team', icon: Users, route: `${basePath}/team` },
   ];
 
   return (

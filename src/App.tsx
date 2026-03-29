@@ -67,6 +67,8 @@ const ApplicationsHub = lazyRetry(() => import("./components/hospital/Applicatio
 const InterviewsPage = lazyRetry(() => import("./components/hospital/InterviewsPage"));
 const EmailPage = lazyRetry(() => import("./components/hospital/EmailPage"));
 const ActivityPage = lazyRetry(() => import("./components/hospital/ActivityPage"));
+const VolunteerManagement = lazyRetry(() => import("./components/clinic-dashboard/volunteer-management/VolunteerManagement"));
+const ClinicOnboard = lazyRetry(() => import("./pages/ClinicOnboard"));
 const PositionApplyPage = lazyRetry(() => import("./pages/PositionApplyPage"));
 const HospitalDashboardRedirect = lazyRetry(() => import("./components/HospitalDashboardRedirect"));
 
@@ -174,6 +176,7 @@ function AppContent() {
                 <Route path="interviews" element={<InterviewsPage />} />
                 <Route path="email" element={<EmailPage />} />
                 <Route path="activity" element={<ActivityPage />} />
+                <Route path="team" element={<VolunteerManagement />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
               </Route>
               <Route
@@ -198,8 +201,11 @@ function AppContent() {
                 <Route path="interviews" element={<InterviewsPage />} />
                 <Route path="email" element={<EmailPage />} />
                 <Route path="activity" element={<ActivityPage />} />
+                <Route path="team" element={<VolunteerManagement />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
               </Route>
+              {/* Existing staff onboarding link */}
+              <Route path="/clinic-onboard/:clinicId" element={<ClinicOnboard />} />
               {/* Student application form for a position */}
               <Route path="/apply/:positionId" element={<PositionApplyPage />} />
               {/* Premium features */}
