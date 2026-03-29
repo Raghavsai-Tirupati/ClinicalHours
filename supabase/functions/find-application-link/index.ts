@@ -286,10 +286,29 @@ function extractNameTokens(name: string): string[] {
 }
 
 /**
+ * Check if a URL belongs to the hospital's own domain (or a subdomain of it).
+ */
+function isSameDomain(url: string, websiteHost: string): boolean {
+  try {
+    const resultHost = new URL(url).hostname.toLowerCase();
+    // Exact match or subdomain (e.g. volunteer.hospital.org matches hospital.org)
+    return resultHost === websiteHost || resultHost.endsWith(`.${websiteHost}`);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Check if a Serper result is actually about the searched organization.
- * Requires at least one distinctive name token to appear in the URL, title, or snippet.
- * External volunteer platforms (Volgistics etc.) pass automatically since they're
- * linked from the org's own page.
+ *
+ * Strategy (from most to least trusted):
+ *  1. Result is from the hospital's own domain → always relevant
+ *  2. Result is from a known external volunteer platform → always relevant
+ *  3. Result is from another domain → require name-based relevance proof
+ *
+ * For (3), we check that the org name appears meaningfully in the result.
+ * If we have a known domain, we're stricter with off-domain results to avoid
+ * pulling in pages from other hospitals that rank for similar keywords.
  */
 function isRelevantResult(
   url: string,
@@ -298,22 +317,26 @@ function isRelevantResult(
   nameTokens: string[],
   websiteHost: string | null,
 ): boolean {
-  // External volunteer platform = always relevant (user searched → Google returned it)
+  // 1. Same domain = definitely relevant
+  if (websiteHost && isSameDomain(url, websiteHost)) return true;
+
+  // 2. External volunteer platform = relevant (Google linked it to this org's query)
   if (detectPlatform(url)) return true;
 
-  // If we know the hospital's website, results from that domain are relevant
+  // 3. Off-domain result — need name-based proof
+  if (nameTokens.length === 0) return true; // can't filter without tokens
+
+  const haystack = `${url} ${title} ${snippet}`.toLowerCase();
+
   if (websiteHost) {
-    try {
-      const resultHost = new URL(url).hostname.toLowerCase();
-      if (resultHost === websiteHost || resultHost.endsWith(`.${websiteHost}`)) {
-        return true;
-      }
-    } catch { /* ignore */ }
+    // We KNOW the hospital's domain, so off-domain results need strong proof:
+    // require at least 2 tokens to match, or 1 token that's 5+ chars (distinctive)
+    const matchCount = nameTokens.filter((t) => haystack.includes(t)).length;
+    const hasDistinctiveMatch = nameTokens.some((t) => t.length >= 5 && haystack.includes(t));
+    return matchCount >= 2 || hasDistinctiveMatch;
   }
 
-  // Otherwise require at least one distinctive name token in the result
-  if (nameTokens.length === 0) return true; // no tokens extracted — can't filter
-  const haystack = `${url} ${title} ${snippet}`.toLowerCase();
+  // No known domain — lighter check: any name token match
   return nameTokens.some((token) => haystack.includes(token));
 }
 
@@ -331,7 +354,12 @@ const MED_SIGNALS = [
   "get involved", "get-involved", "research",
 ];
 
-function scoreResult(url: string, title: string, snippet: string): "high" | "medium" | "low" {
+function scoreResult(
+  url: string,
+  title: string,
+  snippet: string,
+  websiteHost: string | null = null,
+): "high" | "medium" | "low" {
   const urlL = url.toLowerCase();
   const titleL = title.toLowerCase();
   const snippetL = snippet.toLowerCase();
@@ -342,7 +370,12 @@ function scoreResult(url: string, title: string, snippet: string): "high" | "med
   const isHighUrl = HIGH_SIGNALS.some((s) => urlL.includes(s));
   const isHighTitle = HIGH_SIGNALS.some((s) => titleL.includes(s) || snippetL.includes(s));
 
+  // Same-domain results get a confidence boost — we know they're the right org
+  const onOwnDomain = websiteHost ? isSameDomain(url, websiteHost) : false;
+
+  if (onOwnDomain && (isHighUrl || isHighTitle)) return "high";
   if (isHighUrl && isHighTitle) return "high";
+  if (onOwnDomain) return "medium"; // own domain but no strong signal — still medium
   if (isHighUrl || isHighTitle) return "medium";
   if (MED_SIGNALS.some((s) => titleL.includes(s) || urlL.includes(s))) return "medium";
   return "low";
@@ -387,7 +420,7 @@ async function serperSearch(
         return null;
       }
 
-      const confidence = scoreResult(url, title, snippet);
+      const confidence = scoreResult(url, title, snippet, websiteHost);
       const platformLabel = detectPlatform(url);
 
       return {
@@ -404,8 +437,12 @@ async function serperSearch(
 
 /**
  * Run multiple Serper queries in parallel to cover different program types.
- * Uses 3 queries per search instead of 1, each fetching 4 results.
- * Total API cost: ~3 queries per hospital (vs 1 before).
+ *
+ * When we have the hospital's domain (from the DB or discovery), we add a
+ * targeted `site:domain.com` query that searches ONLY within their website.
+ * This is the most reliable way to find their specific volunteer/application
+ * pages without pulling in results from other hospitals.
+ *
  * Passes nameTokens and websiteHost to each query for relevance filtering.
  */
 async function multiSerperSearch(
@@ -413,14 +450,30 @@ async function multiSerperSearch(
   nameTokens: string[],
   websiteHost: string | null,
 ): Promise<LinkResult[]> {
-  const queries = [
-    // Original query (keep)
+  const queries: string[] = [];
+
+  if (websiteHost) {
+    // Targeted site-scoped search — ONLY returns pages from this hospital's domain.
+    // This is the single most effective query: finds volunteer, shadow, intern pages
+    // on their own site without any cross-contamination from other hospitals.
+    queries.push(
+      `site:${websiteHost} volunteer OR shadow OR apply OR intern OR observer OR student`,
+    );
+  }
+
+  // Broader web queries (still useful for external platforms like Volgistics,
+  // and when the hospital has no website or the site search returns nothing)
+  queries.push(
     `${name} volunteer application`,
-    // Shadowing / observer — the biggest gap in the old approach
     `${name} shadowing OR observer program apply`,
-    // Internship / student clinical — covers research, practicum, etc.
-    `${name} clinical internship OR student program application`,
-  ];
+  );
+
+  // Only add the 3rd broad query if we don't have a site query (to save API calls)
+  if (!websiteHost) {
+    queries.push(
+      `${name} clinical internship OR student program application`,
+    );
+  }
 
   const results = await Promise.all(
     queries.map((q) => serperSearch(q, 4, nameTokens, websiteHost)),
