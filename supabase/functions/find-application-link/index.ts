@@ -29,8 +29,8 @@ interface LinkResult {
 
 // ── DB cache helpers ──────────────────────────────────────────────────────────
 
-const CACHE_TTL_DAYS = 30;      // fresh result — reuse for 30 days
-const NO_RESULT_TTL_DAYS = 7;   // negative cache — retry after 7 days
+const CACHE_TTL_DAYS = 14;      // fresh result — reuse for 14 days
+const NO_RESULT_TTL_DAYS = 3;   // negative cache — retry after 3 days
 
 // deno-lint-ignore no-explicit-any
 type DbClient = any;
