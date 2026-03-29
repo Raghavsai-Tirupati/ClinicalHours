@@ -23,6 +23,7 @@ import { usePositionDetail } from '@/hooks/usePositionDetail';
 import PositionQuestionsEditor from './PositionQuestionsEditor';
 import type { PositionType, PositionStatus, QuestionFormData } from '@/types/positions';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
+import { Badge } from '@/components/ui/badge';
 
 export default function PositionForm() {
   const navigate = useNavigate();
@@ -49,6 +50,8 @@ export default function PositionForm() {
   const [spotsAvailable, setSpotsAvailable] = useState('');
   const [askForAvailability, setAskForAvailability] = useState(true);
   const [questions, setQuestions] = useState<QuestionFormData[]>([]);
+  const [matchKeywords, setMatchKeywords] = useState<string[]>([]);
+  const [keywordInput, setKeywordInput] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -89,6 +92,7 @@ export default function PositionForm() {
       setApplicationDeadline(existingPosition.application_deadline || '');
       setSpotsAvailable(existingPosition.spots_available?.toString() || '');
       setAskForAvailability(existingPosition.ask_for_availability !== false);
+      setMatchKeywords(existingPosition.match_keywords || []);
       setPositionStatus(existingPosition.status);
     }
   }, [isEdit, existingPosition]);
@@ -139,6 +143,7 @@ export default function PositionForm() {
         application_deadline: applicationDeadline || null,
         spots_available: spotsAvailable ? parseInt(spotsAvailable) : null,
         ask_for_availability: askForAvailability,
+        match_keywords: matchKeywords.filter(Boolean),
         status: positionStatus,
       };
 
@@ -234,6 +239,7 @@ export default function PositionForm() {
     applicationDeadline,
     spotsAvailable,
     askForAvailability,
+    matchKeywords,
     positionId,
     isEdit,
     existingQuestions,
@@ -401,6 +407,60 @@ export default function PositionForm() {
                 checked={askForAvailability}
                 onCheckedChange={setAskForAvailability}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Resume Match Keywords (ATS)</Label>
+              <p className="text-xs text-muted-foreground">
+                Add keywords to auto-score applicants' resumes. Each applicant gets a 0–100 match percentage.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. CPR, clinical research, EMR…"
+                  value={keywordInput}
+                  onChange={(e) => setKeywordInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const kw = keywordInput.trim();
+                      if (kw && !matchKeywords.includes(kw)) {
+                        setMatchKeywords((prev) => [...prev, kw]);
+                        setKeywordInput('');
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => {
+                    const kw = keywordInput.trim();
+                    if (kw && !matchKeywords.includes(kw)) {
+                      setMatchKeywords((prev) => [...prev, kw]);
+                      setKeywordInput('');
+                    }
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+              {matchKeywords.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {matchKeywords.map((kw, i) => (
+                    <Badge
+                      key={i}
+                      variant="outline"
+                      className="gap-1.5 text-xs cursor-pointer hover:bg-destructive/10 hover:border-destructive/40 transition-colors"
+                      onClick={() => setMatchKeywords((prev) => prev.filter((_, j) => j !== i))}
+                    >
+                      {kw}
+                      <span className="opacity-50">×</span>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

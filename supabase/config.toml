@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.send-clinic-bulk-email]
 verify_jwt = false
+
+[functions.score-resume-match]
+verify_jwt = false

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import SchedulingQuestionsConfig from '@/components/clinic-dashboard/applications/SchedulingQuestionsConfig';
 
 function GoogleLogo({ className }: { className?: string }) {
   return (
@@ -233,6 +234,9 @@ export default function HospitalSettings() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Scheduling questions config */}
+      <SchedulingQuestionsConfig clinicId={hospitalPage.id} />
     </div>
   );
 }

@@ -29,7 +29,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
-import type { ApplicationAvailability, ApplicationStatus, StudentApplication } from '@/types/positions';
+import type { ApplicationAvailability, ApplicationDocument, ApplicationStatus, SchedulingAnswer, StudentApplication } from '@/types/positions';
+import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
+import SchedulingAnswersView from '@/components/clinic-dashboard/applications/SchedulingAnswersView';
+import ResumeScoreBadge from '@/components/clinic-dashboard/applications/ResumeScoreBadge';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -177,6 +180,8 @@ export default function ApplicantProfilePage() {
   const [activityLog, setActivityLog] = useState<ActivityEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
   const [otherApps, setOtherApps] = useState<OtherPositionApp[]>([]);
+  const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
+  const [schedulingAnswers, setSchedulingAnswers] = useState<SchedulingAnswer[]>([]);
 
   useEffect(() => {
     if (!applicationId) return;
@@ -237,6 +242,36 @@ export default function ApplicantProfilePage() {
           created_at: row.created_at as string,
           question: Array.isArray(row.question) ? row.question[0] : row.question,
         }));
+
+        // Fetch uploaded documents
+        const { data: docRows } = await supabase
+          .from('application_documents')
+          .select('*')
+          .eq('application_id', applicationId)
+          .order('created_at', { ascending: true });
+        if (!cancelled) setDocuments((docRows || []) as ApplicationDocument[]);
+
+        // Fetch scheduling answers
+        const { data: schedRows } = await supabase
+          .from('scheduling_answers')
+          .select(`
+            id, application_id, question_id, answer_text, answer_options, created_at,
+            question:clinic_scheduling_questions(id, question_text, question_type, is_required, display_order)
+          `)
+          .eq('application_id', applicationId);
+        if (!cancelled) {
+          setSchedulingAnswers(
+            (schedRows || []).map((row: any) => ({
+              id: row.id,
+              application_id: row.application_id,
+              question_id: row.question_id,
+              answer_text: row.answer_text,
+              answer_options: row.answer_options,
+              created_at: row.created_at,
+              question: Array.isArray(row.question) ? row.question[0] : row.question,
+            }))
+          );
+        }
 
         if (hospitalPage?.id) {
           const { data: positions } = await supabase
@@ -404,6 +439,9 @@ export default function ApplicantProfilePage() {
                 <Badge className={`text-xs ${STATUS_COLORS[application.status]}`}>
                   {APPLICATION_STATUS_LABELS[application.status]}
                 </Badge>
+                {application.resume_match_score != null && (
+                  <ResumeScoreBadge score={application.resume_match_score} size="md" />
+                )}
                 {application.position?.title && (
                   <span className="text-xs text-muted-foreground break-words">
                     Applied for{' '}
@@ -587,6 +625,12 @@ export default function ApplicantProfilePage() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          <ApplicantDocuments documents={documents} />
+
+          {schedulingAnswers.length > 0 && (
+            <SchedulingAnswersView answers={schedulingAnswers} />
           )}
 
           <Card className="border-border/50">

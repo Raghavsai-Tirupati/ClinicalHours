@@ -33,7 +33,8 @@ export type SortColumn =
   | 'gpa'
   | 'clinical_hours'
   | 'grad_year'
-  | 'university';
+  | 'university'
+  | 'resume_score';
 
 export interface SortState {
   column: SortColumn;
@@ -215,6 +216,8 @@ export function sortApplications(
         return app.student_profile?.graduation_year ?? (dir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
       case 'university':
         return (app.student_profile?.university || '').toLowerCase();
+      case 'resume_score':
+        return app.resume_match_score ?? (dir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
       case 'submitted':
       default:
         return new Date(app.submitted_at).getTime();

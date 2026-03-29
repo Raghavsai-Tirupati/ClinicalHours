@@ -18,11 +18,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePositionDetail } from '@/hooks/usePositionDetail';
 import { useProfileComplete } from '@/hooks/useProfileComplete';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
-import type { ApplicationAvailability, PositionQuestion } from '@/types/positions';
+import type { ApplicationAvailability, ClinicSchedulingQuestion, PositionQuestion } from '@/types/positions';
+import DocumentUpload from '@/components/application/DocumentUpload';
+import type { PendingDocument } from '@/components/application/DocumentUpload';
+import SchedulingQuestionsForm from '@/components/application/SchedulingQuestionsForm';
 
 import './position-apply.css';
 
-type StepKey = 'info' | 'questions' | 'availability' | 'review';
+type StepKey = 'info' | 'questions' | 'documents' | 'availability' | 'review';
 
 const LONG_ANSWER_MAX = 2000;
 
@@ -54,19 +57,18 @@ const COMMITMENT_OPTIONS = [
 const STEP_LABELS: Record<StepKey, string> = {
   info: 'Your info',
   questions: 'Questions',
+  documents: 'Documents',
   availability: 'Availability',
   review: 'Review',
 };
 
-function buildSteps(hasQuestions: boolean): StepKey[] {
-  return hasQuestions ? ['info', 'questions', 'review'] : ['info', 'review'];
-}
-
 function buildStepsWithAvailability(hasQuestions: boolean, askForAvailability: boolean): StepKey[] {
-  if (!askForAvailability) return buildSteps(hasQuestions);
-  return hasQuestions
-    ? ['info', 'questions', 'availability', 'review']
-    : ['info', 'availability', 'review'];
+  const steps: StepKey[] = ['info'];
+  if (hasQuestions) steps.push('questions');
+  steps.push('documents');
+  if (askForAvailability) steps.push('availability');
+  steps.push('review');
+  return steps;
 }
 
 function formatAvailabilitySummary(a: ApplicationAvailability): string {
@@ -120,6 +122,13 @@ export default function PositionApplyPage() {
   const [fileAnswers, setFileAnswers] = useState<Record<string, File>>({});
   const [fileNames, setFileNames] = useState<Record<string, string>>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Document uploads
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
+
+  // Scheduling questions (clinic-configured)
+  const [schedulingQuestions, setSchedulingQuestions] = useState<ClinicSchedulingQuestion[]>([]);
+  const [schedulingAnswers, setSchedulingAnswers] = useState<Record<string, string>>({});
 
   const [phoneInput, setPhoneInput] = useState('');
   const [selectedDays, setSelectedDays] = useState<Set<string>>(() => new Set());
@@ -176,6 +185,14 @@ export default function PositionApplyPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const opp = (data as any)?.opportunities;
       if (opp?.name) setHospitalName(opp.name);
+
+      // Fetch clinic scheduling questions
+      const { data: schedQs } = await supabase
+        .from('clinic_scheduling_questions')
+        .select('*')
+        .eq('clinic_id', position.hospital_page_id)
+        .order('display_order', { ascending: true });
+      if (schedQs) setSchedulingQuestions(schedQs as ClinicSchedulingQuestion[]);
     })();
   }, [position]);
 
@@ -229,6 +246,16 @@ export default function PositionApplyPage() {
       return true;
     }
     if (currentStep === 'questions') return validateQuestions();
+    if (currentStep === 'documents') {
+      // Validate required scheduling questions
+      for (const q of schedulingQuestions) {
+        if (q.is_required && !schedulingAnswers[q.id]?.trim()) {
+          toast.error(`Please answer: "${q.question_text}"`);
+          return false;
+        }
+      }
+      return true;
+    }
     if (currentStep === 'availability' && askForAvailability) {
       if (selectedDays.size === 0) {
         toast.error('Select at least one day you are available.');
@@ -237,7 +264,7 @@ export default function PositionApplyPage() {
       return true;
     }
     return true;
-  }, [currentStep, phoneInput, validateQuestions, selectedDays, askForAvailability]);
+  }, [currentStep, phoneInput, validateQuestions, selectedDays, askForAvailability, schedulingQuestions, schedulingAnswers]);
 
   const goNext = () => {
     if (!validateCurrentStep()) return;
@@ -277,6 +304,13 @@ export default function PositionApplyPage() {
     if (askForAvailability && selectedDays.size === 0) {
       toast.error('Select at least one day you are available.');
       return;
+    }
+    // Validate required scheduling questions
+    for (const sq of schedulingQuestions) {
+      if (sq.is_required && !schedulingAnswers[sq.id]?.trim()) {
+        toast.error(`Please answer: "${sq.question_text}"`);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -346,6 +380,58 @@ export default function PositionApplyPage() {
       }
       if (data?.error) {
         throw new Error(data.error);
+      }
+
+      const applicationId = data?.id;
+
+      // Upload documents to storage and save metadata
+      if (applicationId && pendingDocuments.length > 0) {
+        for (const doc of pendingDocuments) {
+          const ext = doc.fileName.split('.').pop() || 'dat';
+          const storagePath = `position-applications/${user.id}/${positionId}/docs/${Date.now()}-${doc.id}.${ext}`;
+
+          const { error: upErr } = await supabase.storage
+            .from('resumes')
+            .upload(storagePath, doc.file, { upsert: false });
+
+          if (upErr) {
+            console.error('Doc upload error:', upErr);
+            continue; // don't fail whole submission for a doc
+          }
+
+          const { data: urlData } = supabase.storage.from('resumes').getPublicUrl(storagePath);
+
+          await supabase.from('application_documents').insert({
+            application_id: applicationId,
+            student_id: user.id,
+            file_name: doc.fileName,
+            file_url: urlData.publicUrl,
+            file_type: doc.fileType,
+            file_size_bytes: doc.fileSizeBytes,
+          });
+        }
+      }
+
+      // Save scheduling answers
+      if (applicationId && schedulingQuestions.length > 0) {
+        const schedAnswerRows = schedulingQuestions
+          .filter((q) => schedulingAnswers[q.id]?.trim())
+          .map((q) => ({
+            application_id: applicationId,
+            question_id: q.id,
+            answer_text: schedulingAnswers[q.id]?.trim() || null,
+          }));
+
+        if (schedAnswerRows.length > 0) {
+          await supabase.from('scheduling_answers').insert(schedAnswerRows);
+        }
+      }
+
+      // Trigger resume scoring in background (fire and forget)
+      if (applicationId) {
+        supabase.functions.invoke('score-resume-match', {
+          body: { application_id: applicationId },
+        }).catch(() => {}); // non-blocking
       }
 
       setSubmitted(true);
@@ -816,6 +902,38 @@ export default function PositionApplyPage() {
             </div>
           )}
 
+          {/* Step: Documents */}
+          {currentStep === 'documents' && (
+            <>
+              <div className="pa-section-card">
+                <div className="pa-section-head">
+                  <h2>Upload documents</h2>
+                  <p>
+                    Attach your resume, CV, certifications, references, or other supporting documents.
+                    These are optional but strongly recommended.
+                  </p>
+                </div>
+                <div className="pa-section-body">
+                  <DocumentUpload
+                    documents={pendingDocuments}
+                    onChange={setPendingDocuments}
+                    maxFiles={5}
+                  />
+                </div>
+              </div>
+
+              {schedulingQuestions.length > 0 && (
+                <SchedulingQuestionsForm
+                  questions={schedulingQuestions}
+                  answers={schedulingAnswers}
+                  onAnswerChange={(qId, val) =>
+                    setSchedulingAnswers((prev) => ({ ...prev, [qId]: val }))
+                  }
+                />
+              )}
+            </>
+          )}
+
           {/* Step: Availability */}
           {currentStep === 'availability' && (
             <div className="pa-section-card">
@@ -982,6 +1100,42 @@ export default function PositionApplyPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {pendingDocuments.length > 0 && (
+                  <div className="pa-form-group">
+                    <div className="pa-if-label" style={{ marginBottom: 12 }}>
+                      Documents ({pendingDocuments.length})
+                    </div>
+                    <div className="space-y-2 rounded-md border border-[var(--pa-border)] bg-[var(--pa-surface-2)] p-4">
+                      {pendingDocuments.map((doc) => (
+                        <div key={doc.id} className="text-sm flex items-center gap-2">
+                          <span className="text-[var(--pa-text-3)] text-xs uppercase">{doc.fileType}</span>
+                          <span className="text-[var(--pa-text-1)]">{doc.fileName}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {schedulingQuestions.length > 0 && schedulingQuestions.some((q) => schedulingAnswers[q.id]?.trim()) && (
+                  <div className="pa-form-group">
+                    <div className="pa-if-label" style={{ marginBottom: 12 }}>
+                      Scheduling responses
+                    </div>
+                    <div className="space-y-3 rounded-md border border-[var(--pa-border)] bg-[var(--pa-surface-2)] p-4">
+                      {schedulingQuestions.map((q) => {
+                        const val = schedulingAnswers[q.id]?.trim();
+                        if (!val) return null;
+                        return (
+                          <div key={q.id} className="text-sm">
+                            <div className="text-[var(--pa-text-3)]">{q.question_text}</div>
+                            <div className="mt-1 text-[var(--pa-text-1)]">{val}</div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

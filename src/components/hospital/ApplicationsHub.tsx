@@ -64,6 +64,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
+import ResumeScoreBadge from '@/components/clinic-dashboard/applications/ResumeScoreBadge';
 
 const STATUS_COLORS: Record<string, string> = {
   new: 'bg-blue-500/15 text-blue-400',
@@ -75,7 +76,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function defaultDirectionFor(column: SortColumn): 'asc' | 'desc' {
-  if (column === 'submitted' || column === 'gpa' || column === 'clinical_hours') return 'desc';
+  if (column === 'submitted' || column === 'gpa' || column === 'clinical_hours' || column === 'resume_score') return 'desc';
   return 'asc';
 }
 
@@ -468,6 +469,7 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
                         className="w-[80px]"
                       />
                       <SortableTh column="grad_year" label="Grad yr" sort={effectiveSort} onSort={handleSortClick} className="w-[80px]" />
+                      <SortableTh column="resume_score" label="Match" sort={effectiveSort} onSort={handleSortClick} className="w-[72px]" />
                       <TableHead className="w-[150px] text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -536,6 +538,9 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
                           <TableCell className="text-sm tabular-nums">
                             {app.student_profile?.graduation_year ?? '—'}
                           </TableCell>
+                          <TableCell>
+                            <ResumeScoreBadge score={app.resume_match_score} />
+                          </TableCell>
                           <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
                               <Button
@@ -569,7 +574,7 @@ export default function ApplicationsHub({ embeddedInPositions }: ApplicationsHub
                         </TableRow>
                         {expandedId === app.id && (
                           <TableRow className="border-border/50 bg-muted/15 hover:bg-muted/15">
-                            <TableCell colSpan={11} className="p-0 border-l-2 border-l-primary/40">
+                            <TableCell colSpan={12} className="p-0 border-l-2 border-l-primary/40">
                               <div className="max-w-3xl px-3 py-5 sm:px-6">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
                                   Applicant review

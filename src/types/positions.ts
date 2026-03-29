@@ -19,6 +19,7 @@ export interface HospitalPosition {
   application_deadline: string | null;
   spots_available: number | null;
   ask_for_availability: boolean;
+  match_keywords?: string[];
   status: PositionStatus;
   created_at: string;
   updated_at: string;
@@ -59,7 +60,10 @@ export interface StudentApplication {
   interview_confirmed_at?: string | null;
   interview_source?: string | null;
   ai_summary?: string | null;
+  resume_match_score?: number | null;
+  resume_text?: string | null;
   // Joined data
+  documents?: ApplicationDocument[];
   position?: HospitalPosition;
   student_profile?: {
     full_name: string | null;
@@ -86,6 +90,51 @@ export interface ApplicationAnswer {
   created_at: string;
   // Joined
   question?: Pick<PositionQuestion, 'id' | 'question_text' | 'question_type' | 'is_required' | 'display_order'>;
+}
+
+export interface ApplicationDocument {
+  id: string;
+  application_id: string;
+  student_id: string;
+  file_name: string;
+  file_url: string;
+  file_type: 'resume' | 'cv' | 'certification' | 'reference' | 'transcript' | 'other';
+  file_size_bytes: number | null;
+  created_at: string;
+}
+
+export type DocumentFileType = ApplicationDocument['file_type'];
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentFileType, string> = {
+  resume: 'Resume',
+  cv: 'CV',
+  certification: 'Certification',
+  reference: 'Reference',
+  transcript: 'Transcript',
+  other: 'Other',
+};
+
+export interface ClinicSchedulingQuestion {
+  id: string;
+  clinic_id: string;
+  question_text: string;
+  question_type: 'short_answer' | 'long_answer' | 'multiple_choice' | 'yes_no';
+  is_required: boolean;
+  options: string[] | null;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SchedulingAnswer {
+  id: string;
+  application_id: string;
+  question_id: string;
+  answer_text: string | null;
+  answer_options: string[] | null;
+  created_at: string;
+  // Joined
+  question?: Pick<ClinicSchedulingQuestion, 'id' | 'question_text' | 'question_type' | 'is_required' | 'display_order'>;
 }
 
 export interface HospitalPageWithOpportunity {
