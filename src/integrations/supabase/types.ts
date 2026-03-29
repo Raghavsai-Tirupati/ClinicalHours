@@ -265,6 +265,104 @@ export type Database = {
         }
         Relationships: []
       }
+      email_send_logs: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          recipient_count: number
+          recipient_emails: string[]
+          sent_by: string
+          status: string
+          subject: string
+          template_id: string | null
+          template_name: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          recipient_count?: number
+          recipient_emails?: string[]
+          sent_by: string
+          status?: string
+          subject: string
+          template_id?: string | null
+          template_name?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          recipient_count?: number
+          recipient_emails?: string[]
+          sent_by?: string
+          status?: string
+          subject?: string
+          template_id?: string | null
+          template_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_send_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_send_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          body: string
+          category: string
+          clinic_id: string
+          created_at: string
+          id: string
+          name: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          category: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          name: string
+          subject?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_verification_tokens: {
         Row: {
           created_at: string | null
