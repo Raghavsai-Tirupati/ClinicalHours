@@ -121,6 +121,47 @@ export type Database = {
           },
         ]
       }
+      application_documents: {
+        Row: {
+          application_id: string
+          created_at: string
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string
+          file_url: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          file_name: string
+          file_size_bytes?: number | null
+          file_type?: string
+          file_url: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "student_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_links: {
         Row: {
           application_url: string | null
@@ -213,6 +254,50 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities_with_ratings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_scheduling_questions: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_required: boolean
+          options: Json | null
+          question_text: string
+          question_type: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_required?: boolean
+          options?: Json | null
+          question_text: string
+          question_type?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_required?: boolean
+          options?: Json | null
+          question_text?: string
+          question_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_scheduling_questions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
             referencedColumns: ["id"]
           },
         ]
@@ -823,6 +908,7 @@ export type Database = {
           hours_per_week: number | null
           id: string
           location: string | null
+          match_keywords: string[] | null
           position_type: string | null
           requirements: string | null
           spots_available: number | null
@@ -841,6 +927,7 @@ export type Database = {
           hours_per_week?: number | null
           id?: string
           location?: string | null
+          match_keywords?: string[] | null
           position_type?: string | null
           requirements?: string | null
           spots_available?: number | null
@@ -859,6 +946,7 @@ export type Database = {
           hours_per_week?: number | null
           id?: string
           location?: string | null
+          match_keywords?: string[] | null
           position_type?: string | null
           requirements?: string | null
           spots_available?: number | null
@@ -1506,6 +1594,48 @@ export type Database = {
           },
         ]
       }
+      scheduling_answers: {
+        Row: {
+          answer_options: Json | null
+          answer_text: string | null
+          application_id: string
+          created_at: string
+          id: string
+          question_id: string
+        }
+        Insert: {
+          answer_options?: Json | null
+          answer_text?: string | null
+          application_id: string
+          created_at?: string
+          id?: string
+          question_id: string
+        }
+        Update: {
+          answer_options?: Json | null
+          answer_text?: string | null
+          application_id?: string
+          created_at?: string
+          id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduling_answers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "student_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduling_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_scheduling_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_applications: {
         Row: {
           applicant_email: string | null
@@ -1517,6 +1647,8 @@ export type Database = {
           interview_source: string | null
           notes: string | null
           position_id: string
+          resume_match_score: number | null
+          resume_text: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string | null
@@ -1533,6 +1665,8 @@ export type Database = {
           interview_source?: string | null
           notes?: string | null
           position_id: string
+          resume_match_score?: number | null
+          resume_text?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string | null
@@ -1549,6 +1683,8 @@ export type Database = {
           interview_source?: string | null
           notes?: string | null
           position_id?: string
+          resume_match_score?: number | null
+          resume_text?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string | null
