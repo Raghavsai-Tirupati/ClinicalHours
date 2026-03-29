@@ -33,7 +33,7 @@ export default function ClinicOnboard() {
         .eq('id', clinicId)
         .single();
       if (data) {
-        const opp = data.opportunities as { name: string } | null;
+        const opp = data.opportunities as unknown as { name: string } | null;
         setClinicName(opp?.name || 'Unknown Clinic');
       }
       setLoadingClinic(false);
