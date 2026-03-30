@@ -23,13 +23,13 @@ CREATE POLICY "Clinic admins can manage roles"
   USING (
     clinic_id IN (
       SELECT id FROM hospital_pages
-      WHERE admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE admin_email = auth.jwt()->>'email'
     )
   )
   WITH CHECK (
     clinic_id IN (
       SELECT id FROM hospital_pages
-      WHERE admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE admin_email = auth.jwt()->>'email'
     )
   );
 
@@ -73,13 +73,13 @@ CREATE POLICY "Clinic admins can manage members"
   USING (
     clinic_id IN (
       SELECT id FROM hospital_pages
-      WHERE admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE admin_email = auth.jwt()->>'email'
     )
   )
   WITH CHECK (
     clinic_id IN (
       SELECT id FROM hospital_pages
-      WHERE admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE admin_email = auth.jwt()->>'email'
     )
   );
 
@@ -131,13 +131,13 @@ CREATE POLICY "Clinic admins can manage onboarding steps"
   USING (
     clinic_id IN (
       SELECT id FROM hospital_pages
-      WHERE admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE admin_email = auth.jwt()->>'email'
     )
   )
   WITH CHECK (
     clinic_id IN (
       SELECT id FROM hospital_pages
-      WHERE admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE admin_email = auth.jwt()->>'email'
     )
   );
 
@@ -174,14 +174,14 @@ CREATE POLICY "Clinic admins can manage onboarding progress"
     member_id IN (
       SELECT cm.id FROM clinic_members cm
       JOIN hospital_pages hp ON hp.id = cm.clinic_id
-      WHERE hp.admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE hp.admin_email = auth.jwt()->>'email'
     )
   )
   WITH CHECK (
     member_id IN (
       SELECT cm.id FROM clinic_members cm
       JOIN hospital_pages hp ON hp.id = cm.clinic_id
-      WHERE hp.admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE hp.admin_email = auth.jwt()->>'email'
     )
   );
 
@@ -224,13 +224,13 @@ CREATE POLICY "Clinic admins can manage files"
   USING (
     clinic_id IN (
       SELECT id FROM hospital_pages
-      WHERE admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE admin_email = auth.jwt()->>'email'
     )
   )
   WITH CHECK (
     clinic_id IN (
       SELECT id FROM hospital_pages
-      WHERE admin_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      WHERE admin_email = auth.jwt()->>'email'
     )
   );
 
