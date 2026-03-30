@@ -260,37 +260,37 @@ export type Database = {
       }
       clinic_files: {
         Row: {
-          id: string
           clinic_id: string
-          member_id: string | null
+          created_at: string
           file_name: string
           file_path: string
           file_size: number | null
+          id: string
+          member_id: string | null
           mime_type: string | null
           uploaded_by: string | null
-          created_at: string
         }
         Insert: {
-          id?: string
           clinic_id: string
-          member_id?: string | null
+          created_at?: string
           file_name: string
           file_path: string
           file_size?: number | null
+          id?: string
+          member_id?: string | null
           mime_type?: string | null
           uploaded_by?: string | null
-          created_at?: string
         }
         Update: {
-          id?: string
           clinic_id?: string
-          member_id?: string | null
+          created_at?: string
           file_name?: string
           file_path?: string
           file_size?: number | null
+          id?: string
+          member_id?: string | null
           mime_type?: string | null
           uploaded_by?: string | null
-          created_at?: string
         }
         Relationships: [
           {
@@ -311,52 +311,52 @@ export type Database = {
       }
       clinic_members: {
         Row: {
-          id: string
           clinic_id: string
-          user_id: string | null
-          full_name: string
+          created_at: string
           email: string | null
+          full_name: string
+          hours_logged: number
+          id: string
+          join_date: string
+          notes: string | null
+          onboarding_source: string
           phone: string | null
           role_id: string | null
           status: string
-          onboarding_source: string
-          hours_logged: number
-          join_date: string
-          notes: string | null
-          created_at: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
-          id?: string
           clinic_id: string
-          user_id?: string | null
-          full_name: string
+          created_at?: string
           email?: string | null
+          full_name: string
+          hours_logged?: number
+          id?: string
+          join_date?: string
+          notes?: string | null
+          onboarding_source?: string
           phone?: string | null
           role_id?: string | null
           status?: string
-          onboarding_source?: string
-          hours_logged?: number
-          join_date?: string
-          notes?: string | null
-          created_at?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
-          id?: string
           clinic_id?: string
-          user_id?: string | null
-          full_name?: string
+          created_at?: string
           email?: string | null
+          full_name?: string
+          hours_logged?: number
+          id?: string
+          join_date?: string
+          notes?: string | null
+          onboarding_source?: string
           phone?: string | null
           role_id?: string | null
           status?: string
-          onboarding_source?: string
-          hours_logged?: number
-          join_date?: string
-          notes?: string | null
-          created_at?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -377,28 +377,28 @@ export type Database = {
       }
       clinic_roles: {
         Row: {
-          id: string
           clinic_id: string
-          role_name: string
           color: string
-          sort_order: number
           created_at: string
+          id: string
+          role_name: string
+          sort_order: number
         }
         Insert: {
-          id?: string
           clinic_id: string
-          role_name: string
           color?: string
-          sort_order?: number
           created_at?: string
+          id?: string
+          role_name: string
+          sort_order?: number
         }
         Update: {
-          id?: string
           clinic_id?: string
-          role_name?: string
           color?: string
-          sort_order?: number
           created_at?: string
+          id?: string
+          role_name?: string
+          sort_order?: number
         }
         Relationships: [
           {
@@ -677,6 +677,47 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities_with_ratings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_flags: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          description: string | null
+          enabled: boolean
+          flag_key: string
+          id: string
+          metadata: Json | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          flag_key: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          flag_key?: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_flags_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
             referencedColumns: ["id"]
           },
         ]
@@ -1224,30 +1265,30 @@ export type Database = {
       }
       onboarding_progress: {
         Row: {
+          completed_at: string | null
           id: string
           member_id: string
-          step_id: string
-          status: string
           notes: string | null
-          completed_at: string | null
+          status: string
+          step_id: string
           updated_at: string
         }
         Insert: {
+          completed_at?: string | null
           id?: string
           member_id: string
-          step_id: string
-          status?: string
           notes?: string | null
-          completed_at?: string | null
+          status?: string
+          step_id: string
           updated_at?: string
         }
         Update: {
+          completed_at?: string | null
           id?: string
           member_id?: string
-          step_id?: string
-          status?: string
           notes?: string | null
-          completed_at?: string | null
+          status?: string
+          step_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -1269,28 +1310,28 @@ export type Database = {
       }
       onboarding_steps: {
         Row: {
-          id: string
           clinic_id: string
-          step_name: string
-          description: string | null
-          sort_order: number
           created_at: string
+          description: string | null
+          id: string
+          sort_order: number
+          step_name: string
         }
         Insert: {
-          id?: string
           clinic_id: string
-          step_name: string
-          description?: string | null
-          sort_order?: number
           created_at?: string
+          description?: string | null
+          id?: string
+          sort_order?: number
+          step_name: string
         }
         Update: {
-          id?: string
           clinic_id?: string
-          step_name?: string
-          description?: string | null
-          sort_order?: number
           created_at?: string
+          description?: string | null
+          id?: string
+          sort_order?: number
+          step_name?: string
         }
         Relationships: [
           {
@@ -2076,6 +2117,113 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      waitlist_settings: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          is_open: boolean
+          slug: string
+          updated_at: string
+          welcome_message: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          slug: string
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          slug?: string
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waitlist_submissions: {
+        Row: {
+          availability_json: Json | null
+          clinic_id: string
+          converted_at: string | null
+          converted_to_application_id: string | null
+          email: string
+          full_name: string
+          gpa: number | null
+          graduation_year: number | null
+          id: string
+          major: string | null
+          message: string | null
+          phone: string | null
+          role_interest: string | null
+          submitted_at: string
+          university: string | null
+        }
+        Insert: {
+          availability_json?: Json | null
+          clinic_id: string
+          converted_at?: string | null
+          converted_to_application_id?: string | null
+          email: string
+          full_name: string
+          gpa?: number | null
+          graduation_year?: number | null
+          id?: string
+          major?: string | null
+          message?: string | null
+          phone?: string | null
+          role_interest?: string | null
+          submitted_at?: string
+          university?: string | null
+        }
+        Update: {
+          availability_json?: Json | null
+          clinic_id?: string
+          converted_at?: string | null
+          converted_to_application_id?: string | null
+          email?: string
+          full_name?: string
+          gpa?: number | null
+          graduation_year?: number | null
+          id?: string
+          major?: string | null
+          message?: string | null
+          phone?: string | null
+          role_interest?: string | null
+          submitted_at?: string
+          university?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_submissions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_submissions_converted_to_application_id_fkey"
+            columns: ["converted_to_application_id"]
+            isOneToOne: false
+            referencedRelation: "student_applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
