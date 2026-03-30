@@ -10,14 +10,22 @@ import FileSystem from './FileSystem';
 
 export default function VolunteerManagement() {
   const { hospitalPage } = useHospitalPageContext();
-  const clinicId = hospitalPage?.id;
+  const rawId = hospitalPage?.id;
+  // virtual- IDs are placeholders when the hospital page hasn't been provisioned yet
+  const clinicId = rawId && !rawId.startsWith('virtual-') ? rawId : undefined;
 
   const { roles, loading: rolesLoading, refetch: refetchRoles, seedDefaults: seedRoleDefaults } = useClinicRoles(clinicId);
   const { members, loading: membersLoading, refetch: refetchMembers } = useClinicMembers(clinicId);
 
   const [activeTab, setActiveTab] = useState('members');
 
-  if (!clinicId) return null;
+  if (!clinicId) return (
+    <div className="rounded-lg border border-dashed border-border p-12 text-center">
+      <p className="text-sm text-muted-foreground">
+        Volunteer management is not available yet. Please reload the page or contact support if this persists.
+      </p>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

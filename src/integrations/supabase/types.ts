@@ -258,6 +258,158 @@ export type Database = {
           },
         ]
       }
+      clinic_files: {
+        Row: {
+          id: string
+          clinic_id: string
+          member_id: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          mime_type: string | null
+          uploaded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          member_id?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          mime_type?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          member_id?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          mime_type?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_files_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_files_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_members: {
+        Row: {
+          id: string
+          clinic_id: string
+          user_id: string | null
+          full_name: string
+          email: string | null
+          phone: string | null
+          role_id: string | null
+          status: string
+          onboarding_source: string
+          hours_logged: number
+          join_date: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          user_id?: string | null
+          full_name: string
+          email?: string | null
+          phone?: string | null
+          role_id?: string | null
+          status?: string
+          onboarding_source?: string
+          hours_logged?: number
+          join_date?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          user_id?: string | null
+          full_name?: string
+          email?: string | null
+          phone?: string | null
+          role_id?: string | null
+          status?: string
+          onboarding_source?: string
+          hours_logged?: number
+          join_date?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_members_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_roles: {
+        Row: {
+          id: string
+          clinic_id: string
+          role_name: string
+          color: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          role_name: string
+          color?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          role_name?: string
+          color?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_roles_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_scheduling_questions: {
         Row: {
           clinic_id: string
@@ -1069,6 +1221,86 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      onboarding_progress: {
+        Row: {
+          id: string
+          member_id: string
+          step_id: string
+          status: string
+          notes: string | null
+          completed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          member_id: string
+          step_id: string
+          status?: string
+          notes?: string | null
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          member_id?: string
+          step_id?: string
+          status?: string
+          notes?: string | null
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_progress_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_steps: {
+        Row: {
+          id: string
+          clinic_id: string
+          step_name: string
+          description: string | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          step_name: string
+          description?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          step_name?: string
+          description?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_steps_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       opportunities: {
         Row: {
@@ -2098,6 +2330,14 @@ export type Database = {
           p_max_hour?: number
         }
         Returns: Json
+      }
+      seed_default_clinic_roles: {
+        Args: { p_clinic_id: string }
+        Returns: undefined
+      }
+      seed_default_onboarding_steps: {
+        Args: { p_clinic_id: string }
+        Returns: undefined
       }
       submit_guest_hospital_application: {
         Args: {
