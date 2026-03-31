@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { localSelect, TABLES } from "@/lib/localStore";
 import { DashboardTutorial } from "@/components/DashboardTutorial";
 import { getGuestSessionId } from "@/hooks/useAuth";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { shouldShowGuestTutorial } from "@/lib/dashboardTutorial";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ import {
   ArrowRight,
   Loader2,
   Building2,
-  Stethoscope,
+  Sparkles,
   ExternalLink,
 } from "lucide-react";
 import HospitalLogo from "@/components/HospitalLogo";
@@ -390,6 +391,7 @@ function ReflectionBlock({ reflection, onDelete }: { reflection: Reflection; onD
 
 const Dashboard = () => {
   const { user, isGuest } = useAuth();
+  const { isPremium } = usePremiumStatus();
   const { toast } = useToast();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [reflections, setReflections] = useState<Reflection[]>([]);
@@ -756,60 +758,26 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* ─── Featured: BCS Free Health Clinic ───────────── */}
-        <section
-          className="mt-6 rounded-xl border border-emerald-500/35 bg-emerald-500/[0.07] backdrop-blur-sm overflow-hidden"
-          aria-labelledby="dashboard-bcs-feature-heading"
-        >
-          <div className="px-5 py-5 sm:px-6 sm:py-6 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-            <div className="flex gap-4 min-w-0">
-              <div className="shrink-0 flex h-11 w-11 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
-                <Stethoscope className="h-5 w-5 text-emerald-400" aria-hidden />
+        {/* ─── Premium Upsell (non-premium only) ───────────── */}
+        {!isGuest && user && !isPremium && (
+          <div className="mt-6">
+            <Link
+              to="/premium"
+              className="group flex items-center justify-between gap-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] backdrop-blur-sm px-5 py-4 hover:bg-amber-500/[0.1] transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10">
+                  <Sparkles className="h-5 w-5 text-amber-400" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Unlock Premium Tools</p>
+                  <p className="text-xs text-muted-foreground">AI Matcher, AMCAS Writer, School List Builder, and more.</p>
+                </div>
               </div>
-              <div className="min-w-0 space-y-2">
-                <p className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.2em] text-emerald-400/90">
-                  Featured — now accepting applications
-                </p>
-                <h2
-                  id="dashboard-bcs-feature-heading"
-                  className="text-lg sm:text-xl font-semibold text-foreground tracking-tight"
-                >
-                  BCS Free Health Clinic
-                </h2>
-                <p className="text-sm text-muted-foreground leading-relaxed max-w-xl">
-                  Free community health clinic in Bryan / College Station, Texas. Open positions are listed on the
-                  opportunity page—apply to a role from there.
-                </p>
-                <a
-                  href="https://bcshealthclinic.org/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  bcshealthclinic.org
-                  <ExternalLink className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
-                </a>
-                {!isGuest && user && bcsDashboardApplications.length > 0 && (
-                  <p className="text-xs text-muted-foreground pt-1">
-                    You have {bcsDashboardApplications.length}{" "}
-                    {bcsDashboardApplications.length === 1 ? "application" : "applications"} to this clinic —{" "}
-                    <Link to="/my-applications" className="text-emerald-400 hover:text-emerald-300 underline-offset-2 hover:underline">
-                      view in My Applications
-                    </Link>
-                    .
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="shrink-0">
-              <Button asChild className="h-10 gap-1.5 font-medium border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25">
-                <Link to={`/opportunities/${BCS_OPPORTUNITY_SLUG}`}>
-                  View opportunity <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </div>
+              <ArrowRight className="h-4 w-4 text-amber-400 shrink-0 group-hover:translate-x-0.5 transition-transform" aria-hidden />
+            </Link>
           </div>
-        </section>
+        )}
 
         {/* ─── Dashboard content ─────────────────────────── */}
         <div className="mt-8">

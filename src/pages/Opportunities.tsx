@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -12,6 +12,8 @@ import {
   AlertCircle,
   ChevronDown,
   Mail,
+  List,
+  Map,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +29,10 @@ import { HospitalDetail } from "@/components/HospitalDetail";
 import { cn } from "@/lib/utils";
 import type { Opportunity } from "@/types";
 
+const ImmersiveMap = lazy(() => import("@/components/ImmersiveMap"));
+
 const Opportunities = () => {
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -258,6 +263,33 @@ const Opportunities = () => {
                 <SelectItem value="emt">EMT</SelectItem>
               </SelectContent>
             </Select>
+            {/* List / Map toggle */}
+            <div className="flex rounded-lg border border-border overflow-hidden shrink-0 self-start">
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors",
+                  viewMode === "list"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:text-foreground"
+                )}
+                aria-label="List view"
+              >
+                <List className="h-3.5 w-3.5" /> List
+              </button>
+              <button
+                onClick={() => setViewMode("map")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-l border-border",
+                  viewMode === "map"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:text-foreground"
+                )}
+                aria-label="Map view"
+              >
+                <Map className="h-3.5 w-3.5" /> Map
+              </button>
+            </div>
           </div>
 
           {!loading && hasResults && (
@@ -270,7 +302,20 @@ const Opportunities = () => {
       </div>
 
       {/* ── Main Content Area ────────────────────────────────────────── */}
-      {loading && opportunities.length === 0 ? (
+      {viewMode === "map" ? (
+        /* ── Map View ───────────────────────────────────────────── */
+        <div className="flex-1 relative" style={{ minHeight: "calc(100vh - 220px)" }}>
+          <Suspense
+            fallback={
+              <div className="flex-1 flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+              </div>
+            }
+          >
+            <ImmersiveMap />
+          </Suspense>
+        </div>
+      ) : loading && opportunities.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
@@ -361,15 +406,17 @@ const Opportunities = () => {
       )}
 
       {/* ── Mobile Detail Overlay (<md) ──────────────────────────────── */}
-      <div
-        className={cn(
-          "md:hidden fixed inset-0 z-50 bg-background overflow-y-auto",
-          "transition-transform duration-300 ease-in-out",
-          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none",
-        )}
-      >
-        {detailProps && <HospitalDetail {...detailProps} />}
-      </div>
+      {viewMode === "list" && (
+        <div
+          className={cn(
+            "md:hidden fixed inset-0 z-50 bg-background overflow-y-auto",
+            "transition-transform duration-300 ease-in-out",
+            isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none",
+          )}
+        >
+          {detailProps && <HospitalDetail {...detailProps} />}
+        </div>
+      )}
 
       <Footer />
 
