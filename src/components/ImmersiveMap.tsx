@@ -83,7 +83,7 @@ const opportunitiesToGeoJSON = (opportunities: Opportunity[]): GeoJSON.FeatureCo
     })),
 });
 
-const ImmersiveMap = () => {
+const ImmersiveMap = ({ hideNav = false }: { hideNav?: boolean }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
@@ -491,7 +491,7 @@ const ImmersiveMap = () => {
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#070c1a]">
+    <div className={`relative ${hideNav ? 'h-full w-full' : 'h-screen w-screen'} overflow-hidden bg-[#070c1a]`}>
       {/* Starfield behind map */}
       <StarfieldBackground starCount={80} className="z-0" />
 
@@ -514,12 +514,14 @@ const ImmersiveMap = () => {
       )}
 
       {/* Standard site navigation */}
-      <div className="absolute top-0 left-0 right-0 z-30">
-        <Navigation />
-      </div>
+      {!hideNav && (
+        <div className="absolute top-0 left-0 right-0 z-30">
+          <Navigation />
+        </div>
+      )}
 
-      {/* Opportunity count badge — below nav */}
-      <div className="absolute top-[5.5rem] left-1/2 -translate-x-1/2 z-30">
+      {/* Opportunity count badge */}
+      <div className={`absolute ${hideNav ? 'top-3' : 'top-[5.5rem]'} left-1/2 -translate-x-1/2 z-30`}>
         <span className="text-xs text-white/40 bg-black/40 backdrop-blur-md rounded-full px-4 py-1.5 border border-white/10">
           {displayCount.toLocaleString()} {!showAll && activeCenter ? `within ${radiusMiles}mi` : 'opportunities'}
         </span>
@@ -527,7 +529,7 @@ const ImmersiveMap = () => {
 
       {/* --- DESKTOP LEFT CONTROL PANEL --- */}
       <div className={`
-        hidden sm:flex absolute top-28 left-4 z-30 flex-col
+        hidden sm:flex absolute ${hideNav ? 'top-12' : 'top-28'} left-4 z-30 flex-col
         w-72 rounded-2xl overflow-hidden
         bg-black/40 backdrop-blur-xl border border-white/10
         shadow-2xl shadow-black/40
@@ -585,6 +587,42 @@ const ImmersiveMap = () => {
                 <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
                   <X className="w-3.5 h-3.5" />
                 </button>
+              )}
+              {/* Search results dropdown */}
+              {searchQuery.trim().length > 1 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0c1222]/95 backdrop-blur-xl border border-white/10 rounded-lg max-h-52 overflow-y-auto z-50 shadow-xl shadow-black/40">
+                  {filteredOpportunities.length === 0 ? (
+                    <div className="px-3 py-3 text-xs text-white/30 text-center">No results found</div>
+                  ) : (
+                    filteredOpportunities.slice(0, 6).map(opp => (
+                      <button
+                        key={opp.id}
+                        onClick={() => {
+                          if (map.current && opp.latitude && opp.longitude) {
+                            map.current.flyTo({ center: [opp.longitude, opp.latitude], zoom: 14, duration: 1500 });
+                            setSelectedFeature({
+                              id: opp.id,
+                              slug: String(opp.slug ?? opp.id),
+                              name: String(opp.name),
+                              type: String(opp.type || ''),
+                              location: String(opp.location || ''),
+                              acceptance_likelihood: String(opp.acceptance_likelihood || ''),
+                              hours_required: String(opp.hours_required || ''),
+                              website: String(opp.website || ''),
+                              email: String(opp.email || ''),
+                              phone: String(opp.phone || ''),
+                            });
+                          }
+                          setSearchQuery('');
+                        }}
+                        className="w-full text-left px-3 py-2.5 hover:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-0 group"
+                      >
+                        <div className="text-xs font-medium text-white/80 group-hover:text-white truncate">{opp.name}</div>
+                        <div className="text-[10px] text-white/35 truncate mt-0.5">{opp.location}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
               )}
             </div>
 
@@ -703,6 +741,43 @@ const ImmersiveMap = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-cyan-500/40"
               />
+              {/* Search results dropdown */}
+              {searchQuery.trim().length > 1 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-[#0c1222]/95 backdrop-blur-xl border border-white/10 rounded-lg max-h-52 overflow-y-auto z-50 shadow-xl shadow-black/40">
+                  {filteredOpportunities.length === 0 ? (
+                    <div className="px-3 py-3 text-xs text-white/30 text-center">No results found</div>
+                  ) : (
+                    filteredOpportunities.slice(0, 6).map(opp => (
+                      <button
+                        key={opp.id}
+                        onClick={() => {
+                          if (map.current && opp.latitude && opp.longitude) {
+                            map.current.flyTo({ center: [opp.longitude, opp.latitude], zoom: 14, duration: 1500 });
+                            setSelectedFeature({
+                              id: opp.id,
+                              slug: String(opp.slug ?? opp.id),
+                              name: String(opp.name),
+                              type: String(opp.type || ''),
+                              location: String(opp.location || ''),
+                              acceptance_likelihood: String(opp.acceptance_likelihood || ''),
+                              hours_required: String(opp.hours_required || ''),
+                              website: String(opp.website || ''),
+                              email: String(opp.email || ''),
+                              phone: String(opp.phone || ''),
+                            });
+                          }
+                          setSearchQuery('');
+                          setMobileSheetOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2.5 hover:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-0 group"
+                      >
+                        <div className="text-xs font-medium text-white/80 group-hover:text-white truncate">{opp.name}</div>
+                        <div className="text-[10px] text-white/35 truncate mt-0.5">{opp.location}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
               {/* Show All toggle */}
