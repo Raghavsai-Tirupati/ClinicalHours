@@ -224,11 +224,40 @@ const Opportunities = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Navigation />
+      {/* ── Map mode: full-screen overlay ── */}
+      {viewMode === "map" && (
+        <>
+          <Navigation />
+          <div className="fixed top-20 left-0 right-0 bottom-0 z-30">
+            <Suspense
+              fallback={
+                <div className="flex-1 flex items-center justify-center h-full bg-[#070c1a]">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+                </div>
+              }
+            >
+              <ImmersiveMap hideNav />
+            </Suspense>
+          </div>
+          <div className="fixed top-24 right-16 z-[60]">
+            <button
+              onClick={() => setViewMode("list")}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium bg-black/50 backdrop-blur-md text-white/80 hover:text-white rounded-full border border-white/15 shadow-lg shadow-black/30 transition-colors"
+            >
+              <List className="h-3.5 w-3.5" /> List View
+            </button>
+          </div>
+        </>
+      )}
 
-      {/* ── Sticky Header + Search / Filter ─────────────────────────── */}
-      <div className="sticky top-20 z-30 bg-background/95 backdrop-blur-sm border-b border-border/50">
-        <div className="container mx-auto px-4 py-4">
+      {/* ── List mode ── */}
+      {viewMode === "list" && (
+        <>
+          <Navigation />
+          <div className="h-20" />
+
+          <div className="sticky top-20 z-30 bg-background/95 backdrop-blur-sm border-b border-border/50">
+            <div className="container mx-auto px-4 py-3">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row gap-3 mb-2">
               <div className="relative flex-1">
@@ -304,24 +333,8 @@ const Opportunities = () => {
         </div>
       </div>
 
-      {/* spacer for content below sticky header */}
-      <div className="pt-4" />
-
-      {/* ── Main Content Area ────────────────────────────────────────── */}
-      {viewMode === "map" ? (
-        /* ── Map View ───────────────────────────────────────────── */
-        <div className="flex-1 relative" style={{ minHeight: "calc(100vh - 220px)" }}>
-          <Suspense
-            fallback={
-              <div className="flex-1 flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-              </div>
-            }
-          >
-            <ImmersiveMap />
-          </Suspense>
-        </div>
-      ) : loading && opportunities.length === 0 ? (
+      {/* ── Main Content Area ── */}
+      {loading && opportunities.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
@@ -417,20 +430,20 @@ const Opportunities = () => {
         </div>
       )}
 
-      {/* ── Mobile Detail Overlay (<md) ──────────────────────────────── */}
-      {viewMode === "list" && (
-        <div
-          className={cn(
-            "md:hidden fixed inset-0 z-50 bg-background overflow-y-auto",
-            "transition-transform duration-300 ease-in-out",
-            isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none",
-          )}
-        >
-          {detailProps && <HospitalDetail {...detailProps} />}
-        </div>
-      )}
+      {/* ── Mobile Detail Overlay (<md) ── */}
+      <div
+        className={cn(
+          "md:hidden fixed inset-0 z-50 bg-background overflow-y-auto",
+          "transition-transform duration-300 ease-in-out",
+          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none",
+        )}
+      >
+        {detailProps && <HospitalDetail {...detailProps} />}
+      </div>
 
       <Footer />
+        </>
+      )}
 
       <GuestGate
         open={guestGateOpen}
