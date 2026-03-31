@@ -216,90 +216,86 @@ const Opportunities = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Navigation />
 
-      {/* ── Header + Search / Filter ─────────────────────────────────── */}
-      <div className="container mx-auto px-4 pt-28 pb-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-4xl font-bold mb-4 scroll-mt-28">
-              Find Clinical Opportunities Near You
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Discover clinical opportunities sorted by distance from your location.
-            </p>
-          </div>
-
-          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <Mail className="h-4 w-4 flex-shrink-0" />
-            <span>
-              Found a broken link or outdated info?{" "}
-              <Link to="/contact" className="text-primary hover:underline">
-                Let us know
-              </Link>{" "}
-              and we&rsquo;ll fix it.
-            </span>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search by name or location..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value.slice(0, 100))}
-                className="pl-10"
-                maxLength={100}
-                aria-label="Search opportunities by name or location"
-              />
+      {/* ── Sticky Header + Search / Filter ─────────────────────────── */}
+      <div className="sticky top-20 z-30 bg-background/95 backdrop-blur-sm border-b border-border/50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row gap-3 mb-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search by name or location..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value.slice(0, 100))}
+                  className="pl-10"
+                  maxLength={100}
+                  aria-label="Search opportunities by name or location"
+                />
+              </div>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-full md:w-[200px]" aria-label="Filter opportunities by type">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="hospital">Hospital</SelectItem>
+                  <SelectItem value="clinic">Clinic</SelectItem>
+                  <SelectItem value="hospice">Hospice</SelectItem>
+                  <SelectItem value="emt">EMT</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* List / Map toggle */}
+              <div className="flex rounded-lg border border-border overflow-hidden shrink-0 self-start">
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors",
+                    viewMode === "list"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  )}
+                  aria-label="List view"
+                >
+                  <List className="h-3.5 w-3.5" /> List
+                </button>
+                <button
+                  onClick={() => setViewMode("map")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-l border-border",
+                    viewMode === "map"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                  )}
+                  aria-label="Map view"
+                >
+                  <Map className="h-3.5 w-3.5" /> Map
+                </button>
+              </div>
             </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full md:w-[200px]" aria-label="Filter opportunities by type">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="hospital">Hospital</SelectItem>
-                <SelectItem value="clinic">Clinic</SelectItem>
-                <SelectItem value="hospice">Hospice</SelectItem>
-                <SelectItem value="emt">EMT</SelectItem>
-              </SelectContent>
-            </Select>
-            {/* List / Map toggle */}
-            <div className="flex rounded-lg border border-border overflow-hidden shrink-0 self-start">
-              <button
-                onClick={() => setViewMode("list")}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors",
-                  viewMode === "list"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-background text-muted-foreground hover:text-foreground"
-                )}
-                aria-label="List view"
-              >
-                <List className="h-3.5 w-3.5" /> List
-              </button>
-              <button
-                onClick={() => setViewMode("map")}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-l border-border",
-                  viewMode === "map"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-background text-muted-foreground hover:text-foreground"
-                )}
-                aria-label="Map view"
-              >
-                <Map className="h-3.5 w-3.5" /> Map
-              </button>
+
+            <div className="flex items-center justify-between gap-4">
+              {!loading && hasResults && (
+                <p className="text-xs text-muted-foreground">
+                  Showing {opportunities.length} of {totalCount} opportunities
+                  {userLocation && " · sorted by distance"}
+                </p>
+              )}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground ml-auto">
+                <Mail className="h-3 w-3 flex-shrink-0" />
+                <span>
+                  Broken link?{" "}
+                  <Link to="/contact" className="text-primary hover:underline">
+                    Let us know
+                  </Link>
+                </span>
+              </div>
             </div>
           </div>
-
-          {!loading && hasResults && (
-            <p className="text-sm text-muted-foreground">
-              Showing {opportunities.length} of {totalCount} opportunities
-              {userLocation && " sorted by distance"}
-            </p>
-          )}
         </div>
       </div>
+
+      {/* spacer for content below sticky header */}
+      <div className="pt-4" />
 
       {/* ── Main Content Area ────────────────────────────────────────── */}
       {viewMode === "map" ? (
@@ -399,7 +395,9 @@ const Opportunities = () => {
                 isDetailOpen ? "md:w-[55%] lg:w-[60%] opacity-100" : "w-0 opacity-0 pointer-events-none",
               )}
             >
-              {detailProps && <HospitalDetail {...detailProps} />}
+              <div className="sticky top-36 max-h-[calc(100vh-10rem)] overflow-y-auto">
+                {detailProps && <HospitalDetail {...detailProps} />}
+              </div>
             </div>
           </div>
         </div>
