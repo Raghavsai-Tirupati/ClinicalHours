@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Home, MapPin, Mail, LogIn, Sparkles, ChevronDown, User, Lock, Settings as SettingsIcon } from "lucide-react";
+import { Menu, X, Home, MapPin, Mail, LogIn, ChevronDown, User, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
-import { useHasApplications } from "@/hooks/useHasApplications";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,7 +50,7 @@ const Navigation = () => {
   const { user, isGuest } = useAuth();
   const { member: hospitalMember } = useHospitalMember();
   const { isPremium } = usePremiumStatus();
-  const { hasApplications } = useHasApplications(user?.id);
+
 
   // Check if we're on pages that should have transparent nav
   const isHomePage = location.pathname === "/";
@@ -108,9 +107,8 @@ const Navigation = () => {
   ];
 
   const authenticatedLinks = [
-    { name: "Dashboard", path: "/dashboard" },
+    { name: "Track", path: "/dashboard" },
     { name: "Opportunities", path: "/opportunities" },
-    { name: "Map", path: "/map" },
     ...(hospitalMember
       ? [{ name: "Hospital Admin", path: "/hospital/admin" }]
       : []),
@@ -139,9 +137,8 @@ const Navigation = () => {
   const showBottomTabs = isStudentContext && !isAuthOrHome;
 
   const bottomTabs = [
-    { name: "Dashboard", path: "/dashboard", icon: Home },
+    { name: "Track", path: "/dashboard", icon: Home },
     { name: "Opportunities", path: "/opportunities", icon: MapPin },
-    ...(hasApplications ? [{ name: "Tracker", path: "/my-applications", icon: Sparkles }] : []),
     { name: "Settings", path: "/settings", icon: SettingsIcon },
   ];
 
@@ -212,8 +209,8 @@ const Navigation = () => {
                         </DropdownMenuItem>
                       ))}
 
-                      {/* Premium tools section always labeled as Premium; locks only for non-premium users */}
-                      {premiumToolsLinks.length > 0 && (
+                      {/* Premium tools — only visible to premium users */}
+                      {isPremium && premiumToolsLinks.length > 0 && (
                         <>
                           <DropdownMenuSeparator />
                           <div className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-amber-400">
@@ -226,24 +223,9 @@ const Navigation = () => {
                                 className="cursor-pointer flex items-center justify-between gap-2"
                               >
                                 <span>{link.name}</span>
-                                {!isPremium && (
-                                  <Lock className="h-3.5 w-3.5 text-amber-400" />
-                                )}
                               </Link>
                             </DropdownMenuItem>
                           ))}
-                        </>
-                      )}
-
-                      {!isPremium && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                            <Link to="/premium" className="cursor-pointer flex items-center gap-1.5 text-amber-400">
-                              <Sparkles className="h-3.5 w-3.5" />
-                              <span>Upgrade to Premium</span>
-                            </Link>
-                          </DropdownMenuItem>
                         </>
                       )}
                     </DropdownMenuContent>
@@ -333,7 +315,8 @@ const Navigation = () => {
                       {link.name}
                     </Link>
                   ))}
-                  {premiumToolsLinks.length > 0 && (
+                  {/* Premium tools — only visible to premium users */}
+                  {isPremium && premiumToolsLinks.length > 0 && (
                     <>
                       <p className={`mt-3 text-[10px] font-semibold uppercase tracking-widest mb-1 text-amber-400`}>Premium</p>
                       {premiumToolsLinks.map((link) => (
@@ -344,19 +327,9 @@ const Navigation = () => {
                           className={`flex items-center justify-between text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
                         >
                           <span>{link.name}</span>
-                          {!isPremium && <Lock className="h-3.5 w-3.5 text-amber-400" />}
                         </Link>
                       ))}
                     </>
-                  )}
-                  {!isPremium && (
-                    <Link
-                      to="/premium"
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 text-amber-400 font-heading"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" /> Upgrade to Premium
-                    </Link>
                   )}
                 </div>
               )}
