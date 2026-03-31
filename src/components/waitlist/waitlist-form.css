@@ -1,17 +1,17 @@
-/* Scoped waitlist form — mirrors position-apply dark theme */
+/* Scoped waitlist form — mirrors main site grayscale design system */
 .wl-root {
   --pa-bg: #0f0f0f;
-  --pa-surface: #181818;
-  --pa-surface-2: #202020;
-  --pa-surface-3: #282828;
-  --pa-border: rgba(255, 255, 255, 0.07);
-  --pa-border-hover: rgba(255, 255, 255, 0.14);
-  --pa-text-1: #f0ede8;
-  --pa-text-2: #9b9890;
-  --pa-text-3: #5a5855;
-  --pa-accent: #8b5cf6;
-  --pa-accent-dim: rgba(139, 92, 246, 0.15);
-  --pa-accent-border: rgba(139, 92, 246, 0.4);
+  --pa-surface: #1a1a1a;
+  --pa-surface-2: #262626;
+  --pa-surface-3: #2e2e2e;
+  --pa-border: rgba(255, 255, 255, 0.1);
+  --pa-border-hover: rgba(255, 255, 255, 0.18);
+  --pa-text-1: #f2f2f2;
+  --pa-text-2: #999999;
+  --pa-text-3: #666666;
+  --pa-accent: #f2f2f2;
+  --pa-accent-dim: rgba(242, 242, 242, 0.08);
+  --pa-accent-border: rgba(242, 242, 242, 0.25);
   --pa-danger: #e05a4e;
   --pa-info: #3b82f6;
   --pa-info-dim: rgba(59, 130, 246, 0.12);

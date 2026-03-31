@@ -23,6 +23,7 @@ import DocumentUpload from '@/components/application/DocumentUpload';
 import type { PendingDocument } from '@/components/application/DocumentUpload';
 import SchedulingQuestionsForm from '@/components/application/SchedulingQuestionsForm';
 
+import logo from '@/assets/logo.png';
 import './position-apply.css';
 
 type StepKey = 'info' | 'questions' | 'documents' | 'availability' | 'review';
@@ -654,7 +655,7 @@ export default function PositionApplyPage() {
       <>
         <nav className="pa-topnav">
           <Link to="/dashboard" className="pa-nav-logo">
-            Clinical<span>Hours</span>
+            <img src={logo} alt="" /><span className="logo-light">Clinical</span><span className="logo-bold">Hours</span>
           </Link>
           <div className="pa-nav-links">
             <Link to="/dashboard">Dashboard</Link>
@@ -700,7 +701,7 @@ export default function PositionApplyPage() {
       <div className="pa-root min-h-screen">
         <nav className="pa-topnav">
           <Link to="/dashboard" className="pa-nav-logo">
-            Clinical<span>Hours</span>
+            <img src={logo} alt="" /><span className="logo-light">Clinical</span><span className="logo-bold">Hours</span>
           </Link>
           <div className="pa-nav-links">
             <Link to="/dashboard">Dashboard</Link>
