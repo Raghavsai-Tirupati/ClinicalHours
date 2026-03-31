@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { WaitlistSettings } from './types';
 import WaitlistForm from './WaitlistForm';
 
+import logo from '@/assets/logo.png';
 import '@/pages/position-apply.css';
 import './waitlist-form.css';
 
@@ -72,7 +73,7 @@ export default function WaitlistPage() {
       <div className="wl-root pa-root">
         <Helmet><title>Waitlist Not Found | ClinicalHours</title></Helmet>
         <nav className="pa-topnav">
-          <Link to="/" className="pa-nav-logo">Clinical<span>Hours</span></Link>
+          <Link to="/" className="pa-nav-logo"><img src={logo} alt="" /><span className="logo-light">Clinical</span><span className="logo-bold">Hours</span></Link>
         </nav>
         <div className="pa-page">
           <div className="wl-closed-wrap">
@@ -97,7 +98,7 @@ export default function WaitlistPage() {
 
       {/* Top nav */}
       <nav className="pa-topnav">
-        <Link to="/" className="pa-nav-logo">Clinical<span>Hours</span></Link>
+        <Link to="/" className="pa-nav-logo"><img src={logo} alt="" /><span className="logo-light">Clinical</span><span className="logo-bold">Hours</span></Link>
         <div className="pa-nav-links">
           <Link to="/opportunities">Browse Opportunities</Link>
           <Link to="/auth">Sign In</Link>
