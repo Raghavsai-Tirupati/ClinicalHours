@@ -62,12 +62,22 @@ const Opportunities = () => {
     pageSize: 20,
   });
 
+  // Ref for detail panel to reset scroll position when switching opportunities
+  const detailRef = useRef<HTMLDivElement>(null);
+
   // Keep last-selected opportunity so the detail panel content stays visible
   // during the CSS exit transition (after selectedId goes null).
   const lastSelectedRef = useRef<Opportunity | null>(null);
   const selectedOpportunity = opportunities.find((o) => o.id === selectedId) ?? null;
   if (selectedOpportunity) lastSelectedRef.current = selectedOpportunity;
   const displayedOpportunity = selectedOpportunity ?? lastSelectedRef.current;
+
+  // Reset detail panel scroll when switching between opportunities
+  useEffect(() => {
+    if (selectedId && detailRef.current) {
+      detailRef.current.scrollTop = 0;
+    }
+  }, [selectedId]);
 
   // Fetch saved opportunities
   useEffect(() => {
@@ -333,7 +343,7 @@ const Opportunities = () => {
       ) : (
         /* ── Split Layout ──────────────────────────────────────────── */
         <div className="flex-1 container mx-auto px-4 pb-8">
-          <div className="flex max-w-6xl mx-auto items-start gap-5 lg:gap-6">
+          <div className="flex max-w-6xl mx-auto gap-5 lg:gap-6">
             {/* ── Left: Hospital list ─────────────────────────────── */}
             <div
               className={cn(
@@ -391,11 +401,15 @@ const Opportunities = () => {
             {/* ── Right: Detail panel (tablet + desktop) ──────────── */}
             <div
               className={cn(
-                "hidden md:block transition-all duration-300 ease-in-out overflow-x-hidden",
+                "hidden md:block transition-all duration-300 ease-in-out",
                 isDetailOpen ? "md:w-[55%] lg:w-[60%] opacity-100" : "w-0 opacity-0 pointer-events-none",
               )}
+              style={{ overflowX: 'clip' }}
             >
-              <div className="sticky top-36 max-h-[calc(100vh-10rem)] overflow-y-auto">
+              <div
+                ref={detailRef}
+                className="sticky top-[11.5rem] max-h-[calc(100vh-12.5rem)] overflow-y-auto"
+              >
                 {detailProps && <HospitalDetail {...detailProps} />}
               </div>
             </div>
