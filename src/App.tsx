@@ -72,6 +72,7 @@ const EmailCommunication = lazyRetry(() => import("./components/clinic-dashboard
 const ActivityPage = lazyRetry(() => import("./components/hospital/ActivityPage"));
 const VolunteerManagement = lazyRetry(() => import("./components/clinic-dashboard/volunteer-management/VolunteerManagement"));
 const WaitlistModule = lazyRetry(() => import("./components/clinic-dashboard/waitlist/WaitlistModule"));
+const VolunteerTrackerPage = lazyRetry(() => import("./components/clinic-dashboard/volunteer-tracker/VolunteerTracker"));
 const WaitlistPage = lazyRetry(() => import("./components/waitlist/WaitlistPage"));
 const ClinicOnboard = lazyRetry(() => import("./pages/ClinicOnboard"));
 const PositionApplyPage = lazyRetry(() => import("./pages/PositionApplyPage"));
@@ -184,6 +185,7 @@ function AppContent() {
                 <Route path="activity" element={<ActivityPage />} />
                 <Route path="team" element={<VolunteerManagement />} />
                 <Route path="waitlist" element={<WaitlistModule />} />
+                <Route path="volunteer-tracker" element={<VolunteerTrackerPage />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
               </Route>
               <Route
@@ -211,6 +213,7 @@ function AppContent() {
                 <Route path="activity" element={<ActivityPage />} />
                 <Route path="team" element={<VolunteerManagement />} />
                 <Route path="waitlist" element={<WaitlistModule />} />
+                <Route path="volunteer-tracker" element={<VolunteerTrackerPage />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
               </Route>
               {/* Public waitlist form */}
