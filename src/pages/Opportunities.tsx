@@ -299,12 +299,7 @@ const Opportunities = () => {
                 </button>
                 <button
                   onClick={() => setViewMode("map")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-l border-border",
-                    viewMode === "map"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background text-muted-foreground hover:text-foreground"
-                  )}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-l border-border bg-background text-muted-foreground hover:text-foreground"
                   aria-label="Map view"
                 >
                   <Map className="h-3.5 w-3.5" /> Map

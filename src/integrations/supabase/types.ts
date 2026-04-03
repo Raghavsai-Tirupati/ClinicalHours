@@ -2118,6 +2118,157 @@ export type Database = {
         }
         Relationships: []
       }
+      volunteer_tracker_categories: {
+        Row: {
+          clinic_id: string
+          color: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          clinic_id: string
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          clinic_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_tracker_categories_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_tracker_columns: {
+        Row: {
+          clinic_id: string
+          column_type: Database["public"]["Enums"]["volunteer_tracker_column_type"]
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          clinic_id: string
+          column_type?: Database["public"]["Enums"]["volunteer_tracker_column_type"]
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          clinic_id?: string
+          column_type?: Database["public"]["Enums"]["volunteer_tracker_column_type"]
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_tracker_columns_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_tracker_entries: {
+        Row: {
+          category_id: string
+          clinic_id: string
+          created_at: string
+          id: string
+          sort_order: number
+          volunteer_name: string
+          volunteer_user_id: string | null
+        }
+        Insert: {
+          category_id: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          volunteer_name: string
+          volunteer_user_id?: string | null
+        }
+        Update: {
+          category_id?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          volunteer_name?: string
+          volunteer_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_tracker_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_tracker_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "volunteer_tracker_entries_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_tracker_values: {
+        Row: {
+          column_id: string
+          entry_id: string
+          id: string
+          value: string | null
+        }
+        Insert: {
+          column_id: string
+          entry_id: string
+          id?: string
+          value?: string | null
+        }
+        Update: {
+          column_id?: string
+          entry_id?: string
+          id?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_tracker_values_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_tracker_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "volunteer_tracker_values_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_tracker_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waitlist_settings: {
         Row: {
           clinic_id: string
@@ -2504,6 +2655,12 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       hospital_role: "owner" | "admin" | "viewer"
       opportunity_type: "hospital" | "clinic" | "hospice" | "emt" | "volunteer"
+      volunteer_tracker_column_type:
+        | "number"
+        | "percentage"
+        | "rating_1_5"
+        | "text"
+        | "boolean"
       votable_type: "question" | "answer"
     }
     CompositeTypes: {
@@ -2636,6 +2793,13 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       hospital_role: ["owner", "admin", "viewer"],
       opportunity_type: ["hospital", "clinic", "hospice", "emt", "volunteer"],
+      volunteer_tracker_column_type: [
+        "number",
+        "percentage",
+        "rating_1_5",
+        "text",
+        "boolean",
+      ],
       votable_type: ["question", "answer"],
     },
   },
