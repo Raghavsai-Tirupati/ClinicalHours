@@ -418,6 +418,7 @@ export type Database = {
           id: string
           is_required: boolean
           options: Json | null
+          position_id: string | null
           question_text: string
           question_type: string
           updated_at: string
@@ -429,6 +430,7 @@ export type Database = {
           id?: string
           is_required?: boolean
           options?: Json | null
+          position_id?: string | null
           question_text: string
           question_type?: string
           updated_at?: string
@@ -440,6 +442,7 @@ export type Database = {
           id?: string
           is_required?: boolean
           options?: Json | null
+          position_id?: string | null
           question_text?: string
           question_type?: string
           updated_at?: string
@@ -450,6 +453,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_scheduling_questions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_positions"
             referencedColumns: ["id"]
           },
         ]
@@ -2324,6 +2334,7 @@ export type Database = {
           role_interest: string | null
           submitted_at: string
           university: string | null
+          waitlist_id: string | null
         }
         Insert: {
           availability_json?: Json | null
@@ -2341,6 +2352,7 @@ export type Database = {
           role_interest?: string | null
           submitted_at?: string
           university?: string | null
+          waitlist_id?: string | null
         }
         Update: {
           availability_json?: Json | null
@@ -2358,6 +2370,7 @@ export type Database = {
           role_interest?: string | null
           submitted_at?: string
           university?: string | null
+          waitlist_id?: string | null
         }
         Relationships: [
           {
@@ -2372,6 +2385,61 @@ export type Database = {
             columns: ["converted_to_application_id"]
             isOneToOne: false
             referencedRelation: "student_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_submissions_waitlist_id_fkey"
+            columns: ["waitlist_id"]
+            isOneToOne: false
+            referencedRelation: "waitlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waitlists: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          description: string
+          id: string
+          position_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          description: string
+          id?: string
+          position_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          position_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlists_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlists_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_positions"
             referencedColumns: ["id"]
           },
         ]
