@@ -51,8 +51,17 @@ export default function WaitlistFormDialog({ open, onOpenChange, initial, onSubm
       await onSubmit({ title: title.trim(), description: description.trim(), status });
       onOpenChange(false);
     } catch (err) {
-      console.error(err);
-      toast.error(err instanceof Error ? err.message : 'Failed to save waitlist.');
+      console.error('[waitlist] save failed', err);
+      // Supabase PostgrestError objects are plain objects with message/details,
+      // not true Error instances, so unwrap defensively.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const e = err as any;
+      const msg =
+        e?.message ||
+        e?.details ||
+        e?.hint ||
+        (typeof err === 'string' ? err : 'Failed to save waitlist.');
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
