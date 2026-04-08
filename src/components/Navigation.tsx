@@ -25,7 +25,7 @@ const dropdownIcons: Record<string, React.ComponentType<{ className?: string; st
 };
 
 const freeToolsLinks = [
-  { name: "Clinical Hours Journal", path: "/hours" },
+  { name: "ClinicalHours Journal", path: "/hours" },
   { name: "Application Cost Calculator", path: "/costs" },
 ];
 

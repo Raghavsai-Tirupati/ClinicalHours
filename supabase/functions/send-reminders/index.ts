@@ -126,7 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
             subject: `Reminder: Follow up on ${opportunity.name}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h1 style="color: #4F46E5;">Clinical Hours Reminder</h1>
+                <h1 style="color: #4F46E5;">ClinicalHours Reminder</h1>
                 <p>Hi ${userName},</p>
                 <p>This is a friendly reminder about your clinical opportunity:</p>
                 
@@ -139,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
                 
                 <p>Don't forget to follow up on your application or reach out to the organization!</p>
                 
-                <p>Best of luck,<br>The Clinical Hours Team</p>
+                <p>Best of luck,<br>The ClinicalHours Team</p>
               </div>
             `,
           }),

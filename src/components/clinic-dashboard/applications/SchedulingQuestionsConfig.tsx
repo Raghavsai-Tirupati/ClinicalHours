@@ -21,30 +21,38 @@ interface FormQuestion {
   display_order: number;
 }
 
-interface SchedulingQuestionsConfigProps {
+interface Props {
+  // The position these scheduling questions belong to. Questions are now
+  // scoped per-position rather than per-clinic. `clinicId` is still written
+  // on insert because the DB column exists and is NOT NULL.
+  positionId: string;
   clinicId: string;
 }
 
-export default function SchedulingQuestionsConfig({ clinicId }: SchedulingQuestionsConfigProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
+export default function SchedulingQuestionsConfig({ positionId, clinicId }: Props) {
   const [questions, setQuestions] = useState<FormQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [existingIds, setExistingIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!clinicId) return;
+    if (!positionId) { setLoading(false); return; }
     (async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('clinic_scheduling_questions')
         .select('*')
-        .eq('clinic_id', clinicId)
+        .eq('position_id', positionId)
         .order('display_order', { ascending: true });
 
       if (error) {
         console.error(error);
         toast.error('Failed to load scheduling questions');
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const loaded = (data || []).map((q: any) => ({
           id: q.id,
           question_text: q.question_text,
@@ -58,7 +66,7 @@ export default function SchedulingQuestionsConfig({ clinicId }: SchedulingQuesti
       }
       setLoading(false);
     })();
-  }, [clinicId]);
+  }, [positionId]);
 
   const addQuestion = () => {
     setQuestions((prev) => [
@@ -95,17 +103,7 @@ export default function SchedulingQuestionsConfig({ clinicId }: SchedulingQuesti
     });
   };
 
-  const moveDown = (index: number) => {
-    setQuestions((prev) => {
-      if (index >= prev.length - 1) return prev;
-      const next = [...prev];
-      [next[index], next[index + 1]] = [next[index + 1], next[index]];
-      return next.map((q, i) => ({ ...q, display_order: i }));
-    });
-  };
-
   const handleSave = useCallback(async () => {
-    // Validate
     for (const q of questions) {
       if (!q.question_text.trim()) {
         toast.error('All questions must have text');
@@ -119,18 +117,17 @@ export default function SchedulingQuestionsConfig({ clinicId }: SchedulingQuesti
 
     setSaving(true);
     try {
-      // Delete removed questions
       const currentIds = questions.filter((q) => q.id).map((q) => q.id!);
       const removedIds = existingIds.filter((id) => !currentIds.includes(id));
       if (removedIds.length > 0) {
-        await supabase.from('clinic_scheduling_questions').delete().in('id', removedIds);
+        await db.from('clinic_scheduling_questions').delete().in('id', removedIds);
       }
 
-      // Upsert questions
       for (const q of questions) {
         if (!q.question_text.trim()) continue;
-        const data = {
+        const row = {
           clinic_id: clinicId,
+          position_id: positionId,
           question_text: q.question_text.trim(),
           question_type: q.question_type,
           is_required: q.is_required,
@@ -139,11 +136,11 @@ export default function SchedulingQuestionsConfig({ clinicId }: SchedulingQuesti
         };
 
         if (q.id) {
-          await supabase.from('clinic_scheduling_questions').update(data).eq('id', q.id);
+          await db.from('clinic_scheduling_questions').update(row).eq('id', q.id);
         } else {
-          const { data: inserted } = await supabase
+          const { data: inserted } = await db
             .from('clinic_scheduling_questions')
-            .insert(data)
+            .insert(row)
             .select('id')
             .single();
           if (inserted) q.id = inserted.id;
@@ -158,7 +155,7 @@ export default function SchedulingQuestionsConfig({ clinicId }: SchedulingQuesti
     } finally {
       setSaving(false);
     }
-  }, [clinicId, questions, existingIds]);
+  }, [clinicId, positionId, questions, existingIds]);
 
   if (loading) {
     return (
@@ -175,8 +172,7 @@ export default function SchedulingQuestionsConfig({ clinicId }: SchedulingQuesti
       <CardHeader>
         <CardTitle className="text-base">Scheduling Questions</CardTitle>
         <p className="text-xs text-muted-foreground">
-          Configure questions that appear on the scheduling/availability section of your application form.
-          Students will answer these when they apply to any of your positions.
+          Custom questions shown to applicants on this position's scheduling/availability section.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -270,9 +266,7 @@ export default function SchedulingQuestionsConfig({ clinicId }: SchedulingQuesti
                       variant="ghost"
                       size="sm"
                       className="h-7 text-xs"
-                      onClick={() =>
-                        updateQuestion(idx, { options: [...q.options, ''] })
-                      }
+                      onClick={() => updateQuestion(idx, { options: [...q.options, ''] })}
                     >
                       <Plus className="h-3 w-3 mr-1" />
                       Add option

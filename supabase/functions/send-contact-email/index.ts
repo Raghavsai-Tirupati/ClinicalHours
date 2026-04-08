@@ -263,7 +263,7 @@ const handler = async (req: Request): Promise<Response> => {
           <blockquote style="border-left: 3px solid #3b82f6; padding-left: 12px; color: #666;">
             ${safeMessage.replace(/\n/g, "<br>")}
           </blockquote>
-          <p>Best regards,<br>The Clinical Hours Team</p>
+          <p>Best regards,<br>The ClinicalHours Team</p>
         `,
       }),
     });

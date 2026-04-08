@@ -62,6 +62,9 @@
   width: 28px;
   object-fit: contain;
 }
+.pa-nav-logo .logo-wordmark {
+  display: inline-flex;
+}
 .pa-nav-logo .logo-light {
   font-weight: 400;
 }
