@@ -26,17 +26,6 @@ interface Scene {
 
 const scenes: Scene[] = [
   {
-    id: "dashboard",
-    title: "Your Clinical Journey, Organized",
-    subtitle: "Track saved opportunities, monitor your progress, and manage applications all in one powerful dashboard.",
-    ctaText: "View Dashboard",
-    ctaHref: "/dashboard",
-    // Deep navy to slate gradient
-    bgGradient: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)",
-    imageSrc: "/screenshots/dashboard.png",
-    imageAlt: "ClinicalHours Dashboard showing saved opportunities and progress tracking",
-  },
-  {
     id: "opportunities",
     title: "Discover Real Opportunities",
     subtitle: "Browse thousands of clinical positions sorted by distance. Filter by type and add promising ones to your tracker.",
