@@ -246,6 +246,12 @@ const FeatureShowcase = () => {
                         height={1200}
                         decoding="async"
                         loading={index === 0 ? "eager" : "lazy"}
+                        onError={(e) => {
+                          // Hide gracefully if the screenshot asset is missing
+                          // so the broken-image alt text does not render over
+                          // the device frame.
+                          e.currentTarget.style.display = 'none';
+                        }}
                         className={`absolute inset-0 w-full h-full object-cover object-top ${transitionClass}`}
                         style={{
                           opacity: activeIndex === index ? 1 : 0,
