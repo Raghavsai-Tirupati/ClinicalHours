@@ -222,7 +222,7 @@ const Home = () => {
               <div className="text-xs text-white/40 uppercase tracking-[0.2em]" style={{ fontWeight: 400 }}>Our Story</div>
               <h2 className="text-4xl md:text-5xl text-white" style={{ fontWeight: 400 }}>How It Started</h2>
               <p className="text-white/50 leading-relaxed" style={{ fontWeight: 400 }}>
-                Clinical Hours started with a simple problem.
+                ClinicalHours started with a simple problem.
               </p>
               <p className="text-white/50 leading-relaxed" style={{ fontWeight: 400 }}>
                 As a premed student, finding clinical experience was harder than it needed to be. Opportunities were scattered across hospital websites, outdated lists, and word of mouth, with no clear way to know what was real or accessible.
@@ -231,7 +231,7 @@ const Home = () => {
                 At the same time, an engineering student saw a system that lacked structure. The information existed, but it was disorganized, inefficient, and difficult to navigate.
               </p>
               <p className="text-white/50 leading-relaxed" style={{ fontWeight: 400 }}>
-                We realized this was not just a personal frustration. It was a shared problem for students everywhere. So we built Clinical Hours to bring real clinical opportunities into one clear, reliable place.
+                We realized this was not just a personal frustration. It was a shared problem for students everywhere. So we built ClinicalHours to bring real clinical opportunities into one clear, reliable place.
               </p>
               <p className="text-white/50 leading-relaxed italic" style={{ fontWeight: 400 }}>
                 Built by students who have gone through the process, for students who are still navigating it.

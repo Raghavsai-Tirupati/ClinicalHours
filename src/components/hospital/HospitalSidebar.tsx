@@ -10,7 +10,6 @@ import {
   Plus,
   Shield,
   ClipboardList,
-  Table,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -56,8 +55,7 @@ export default function HospitalSidebar() {
     { label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
     { label: 'Email', icon: Mail, route: `${basePath}/email` },
     { label: 'Team', icon: Users, route: `${basePath}/team` },
-    { label: 'Waitlist', icon: ClipboardList, route: `${basePath}/waitlist` },
-    { label: 'Volunteer Tracker', icon: Table, route: `${basePath}/volunteer-tracker` },
+    { label: 'Waitlists', icon: ClipboardList, route: `${basePath}/waitlist` },
   ];
 
   return (

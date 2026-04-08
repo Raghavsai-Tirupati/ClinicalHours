@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import SchedulingQuestionsConfig from '@/components/clinic-dashboard/applications/SchedulingQuestionsConfig';
 
 function GoogleLogo({ className }: { className?: string }) {
   return (
@@ -235,8 +234,8 @@ export default function HospitalSettings() {
         </CardContent>
       </Card>
 
-      {/* Scheduling questions config */}
-      <SchedulingQuestionsConfig clinicId={hospitalPage.id} />
+      {/* Scheduling questions are now configured per-position on the
+          position create/edit form rather than clinic-wide. */}
     </div>
   );
 }

@@ -187,11 +187,13 @@ export default function PositionApplyPage() {
       const opp = (data as any)?.opportunities;
       if (opp?.name) setHospitalName(opp.name);
 
-      // Fetch clinic scheduling questions
-      const { data: schedQs } = await supabase
+      // Fetch scheduling questions for THIS position. Questions are now
+      // scoped per-position rather than clinic-wide.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: schedQs } = await (supabase as any)
         .from('clinic_scheduling_questions')
         .select('*')
-        .eq('clinic_id', position.hospital_page_id)
+        .eq('position_id', position.id)
         .order('display_order', { ascending: true });
       if (schedQs) setSchedulingQuestions(schedQs as ClinicSchedulingQuestion[]);
     })();
@@ -655,7 +657,7 @@ export default function PositionApplyPage() {
       <>
         <nav className="pa-topnav">
           <Link to="/dashboard" className="pa-nav-logo">
-            <img src={logo} alt="" /><span className="logo-light">Clinical</span><span className="logo-bold">Hours</span>
+            <img src={logo} alt="" /><span className="logo-wordmark"><span className="logo-light">Clinical</span><span className="logo-bold">Hours</span></span>
           </Link>
           <div className="pa-nav-links">
             <Link to="/dashboard">Dashboard</Link>
@@ -701,7 +703,7 @@ export default function PositionApplyPage() {
       <div className="pa-root min-h-screen">
         <nav className="pa-topnav">
           <Link to="/dashboard" className="pa-nav-logo">
-            <img src={logo} alt="" /><span className="logo-light">Clinical</span><span className="logo-bold">Hours</span>
+            <img src={logo} alt="" /><span className="logo-wordmark"><span className="logo-light">Clinical</span><span className="logo-bold">Hours</span></span>
           </Link>
           <div className="pa-nav-links">
             <Link to="/dashboard">Dashboard</Link>

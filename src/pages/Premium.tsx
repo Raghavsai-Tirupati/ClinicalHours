@@ -39,7 +39,7 @@ const PLANS = [
       { text: "Search within 25-mile radius", included: true },
       { text: "Up to 10 search results", included: true },
       { text: "Application cost calculator", included: true },
-      { text: "Clinical Hours Journal (basic logging)", included: true },
+      { text: "ClinicalHours Journal (basic logging)", included: true },
       { text: "Basic profile", included: true },
       { text: "PathFinder — AI Opportunity Matcher", included: false },
       { text: "Reflections & analytics (Hours Journal)", included: false },
@@ -102,7 +102,7 @@ const FEATURE_HIGHLIGHTS = [
   },
   {
     icon: Clock,
-    title: "Clinical Hours Journal",
+    title: "ClinicalHours Journal",
     description: "Log clinical hours, write structured reflections, and track progress across all activities.",
     color: "text-blue-400",
     bg: "bg-blue-500/10",

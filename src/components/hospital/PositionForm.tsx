@@ -21,6 +21,7 @@ import {
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { usePositionDetail } from '@/hooks/usePositionDetail';
 import PositionQuestionsEditor from './PositionQuestionsEditor';
+import SchedulingQuestionsConfig from '@/components/clinic-dashboard/applications/SchedulingQuestionsConfig';
 import type { PositionType, PositionStatus, QuestionFormData } from '@/types/positions';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
 import { Badge } from '@/components/ui/badge';
@@ -477,6 +478,20 @@ export default function PositionForm() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Scheduling questions are now configured per position. Only available
+          once the position has been created (we need a position_id to attach
+          questions to). */}
+      {isEdit && positionId && (
+        <div className="mt-6">
+          <SchedulingQuestionsConfig positionId={positionId} clinicId={pageId} />
+        </div>
+      )}
+      {!isEdit && (
+        <div className="mt-6 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          Save this position first to configure its scheduling questions.
+        </div>
+      )}
 
       <div className="flex gap-3 justify-between pt-4">
         <div>

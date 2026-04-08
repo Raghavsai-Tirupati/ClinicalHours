@@ -34,7 +34,7 @@ const scenes: Scene[] = [
     // Deep navy to slate gradient
     bgGradient: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)",
     imageSrc: "/screenshots/dashboard.png",
-    imageAlt: "Clinical Hours Dashboard showing saved opportunities and progress tracking",
+    imageAlt: "ClinicalHours Dashboard showing saved opportunities and progress tracking",
   },
   {
     id: "opportunities",
