@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Home, MapPin, Mail, LogIn, ChevronDown, User, Settings as SettingsIcon } from "lucide-react";
+import { Menu, X, Home, MapPin, Mail, LogIn, ChevronDown, User, Settings as SettingsIcon, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
@@ -109,6 +109,7 @@ const Navigation = () => {
   const authenticatedLinks = [
     { name: "Track", path: "/dashboard" },
     { name: "Opportunities", path: "/opportunities" },
+    { name: "Applications", path: "/my-applications" },
     ...(hospitalMember
       ? [{ name: "Hospital Admin", path: "/hospital/admin" }]
       : []),
@@ -139,7 +140,7 @@ const Navigation = () => {
   const bottomTabs = [
     { name: "Track", path: "/dashboard", icon: Home },
     { name: "Opportunities", path: "/opportunities", icon: MapPin },
-    { name: "Settings", path: "/settings", icon: SettingsIcon },
+    { name: "Applications", path: "/my-applications", icon: FileText },
   ];
 
   // Determine nav styles based on scroll and page
