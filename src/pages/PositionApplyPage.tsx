@@ -19,14 +19,12 @@ import { usePositionDetail } from '@/hooks/usePositionDetail';
 import { useProfileComplete } from '@/hooks/useProfileComplete';
 import { POSITION_TYPE_LABELS } from '@/types/positions';
 import type { ApplicationAvailability, ClinicSchedulingQuestion, PositionQuestion } from '@/types/positions';
-import DocumentUpload from '@/components/application/DocumentUpload';
-import type { PendingDocument } from '@/components/application/DocumentUpload';
 import SchedulingQuestionsForm from '@/components/application/SchedulingQuestionsForm';
 
 import logo from '@/assets/logo.png';
 import './position-apply.css';
 
-type StepKey = 'info' | 'questions' | 'documents' | 'availability' | 'review';
+type StepKey = 'info' | 'questions' | 'availability' | 'review';
 
 const LONG_ANSWER_MAX = 2000;
 
@@ -58,7 +56,6 @@ const COMMITMENT_OPTIONS = [
 const STEP_LABELS: Record<StepKey, string> = {
   info: 'Your info',
   questions: 'Questions',
-  documents: 'Documents',
   availability: 'Availability',
   review: 'Review',
 };
@@ -66,7 +63,6 @@ const STEP_LABELS: Record<StepKey, string> = {
 function buildStepsWithAvailability(hasQuestions: boolean, askForAvailability: boolean): StepKey[] {
   const steps: StepKey[] = ['info'];
   if (hasQuestions) steps.push('questions');
-  steps.push('documents');
   if (askForAvailability) steps.push('availability');
   steps.push('review');
   return steps;
@@ -124,8 +120,6 @@ export default function PositionApplyPage() {
   const [fileNames, setFileNames] = useState<Record<string, string>>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  // Document uploads
-  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
 
   // Scheduling questions (clinic-configured)
   const [schedulingQuestions, setSchedulingQuestions] = useState<ClinicSchedulingQuestion[]>([]);
@@ -145,8 +139,8 @@ export default function PositionApplyPage() {
 
   const askForAvailability = position?.ask_for_availability !== false;
   const steps = useMemo(
-    () => buildStepsWithAvailability(questions.length > 0, askForAvailability),
-    [questions.length, askForAvailability],
+    () => buildStepsWithAvailability(questions.length > 0 || schedulingQuestions.length > 0, askForAvailability),
+    [questions.length, schedulingQuestions.length, askForAvailability],
   );
   const currentStep = steps[stepIndex];
   const requirementItems = useMemo(() => parseRequirements(position?.requirements ?? null), [position?.requirements]);
@@ -248,9 +242,8 @@ export default function PositionApplyPage() {
       }
       return true;
     }
-    if (currentStep === 'questions') return validateQuestions();
-    if (currentStep === 'documents') {
-      // Validate required scheduling questions
+    if (currentStep === 'questions') {
+      if (!validateQuestions()) return false;
       for (const q of schedulingQuestions) {
         if (q.is_required && !schedulingAnswers[q.id]?.trim()) {
           toast.error(`Please answer: "${q.question_text}"`);
@@ -386,34 +379,6 @@ export default function PositionApplyPage() {
       }
 
       const applicationId = data?.id;
-
-      // Upload documents to storage and save metadata
-      if (applicationId && pendingDocuments.length > 0) {
-        for (const doc of pendingDocuments) {
-          const ext = doc.fileName.split('.').pop() || 'dat';
-          const storagePath = `position-applications/${user.id}/${positionId}/docs/${Date.now()}-${doc.id}.${ext}`;
-
-          const { error: upErr } = await supabase.storage
-            .from('resumes')
-            .upload(storagePath, doc.file, { upsert: false });
-
-          if (upErr) {
-            console.error('Doc upload error:', upErr);
-            continue; // don't fail whole submission for a doc
-          }
-
-          const { data: urlData } = supabase.storage.from('resumes').getPublicUrl(storagePath);
-
-          await supabase.from('application_documents').insert({
-            application_id: applicationId,
-            student_id: user.id,
-            file_name: doc.fileName,
-            file_url: urlData.publicUrl,
-            file_type: doc.fileType,
-            file_size_bytes: doc.fileSizeBytes,
-          });
-        }
-      }
 
       // Save scheduling answers
       if (applicationId && schedulingQuestions.length > 0) {
@@ -876,54 +841,36 @@ export default function PositionApplyPage() {
           )}
 
           {/* Step: Questions */}
-          {currentStep === 'questions' && questions.length > 0 && (
-            <div className="pa-section-card">
-              <div className="pa-section-head">
-                <h2>Application questions</h2>
-                <p>
-                  {hospitalName ? `Questions from ${hospitalName}` : 'Application questions'} — take your time with
-                  these.
-                </p>
-              </div>
-              <div className="pa-section-body">
-                <div className="pa-required-note">
-                  <span>*</span> Required fields
-                </div>
-                {questions.map((q, idx) => (
-                  <div key={q.id}>
-                    {idx > 0 && <div className="pa-field-divider" />}
-                    <div className="pa-form-group">
-                      <label className="pa-form-label">
-                        {q.question_text}
-                        {q.is_required && <span className="pa-req">*</span>}
-                      </label>
-                      {renderQuestionField(q)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step: Documents */}
-          {currentStep === 'documents' && (
+          {currentStep === 'questions' && (
             <>
-              <div className="pa-section-card">
-                <div className="pa-section-head">
-                  <h2>Upload documents</h2>
-                  <p>
-                    Attach your resume, CV, certifications, references, or other supporting documents.
-                    These are optional but strongly recommended.
-                  </p>
+              {questions.length > 0 && (
+                <div className="pa-section-card">
+                  <div className="pa-section-head">
+                    <h2>Application questions</h2>
+                    <p>
+                      {hospitalName ? `Questions from ${hospitalName}` : 'Application questions'} — take your time with
+                      these.
+                    </p>
+                  </div>
+                  <div className="pa-section-body">
+                    <div className="pa-required-note">
+                      <span>*</span> Required fields
+                    </div>
+                    {questions.map((q, idx) => (
+                      <div key={q.id}>
+                        {idx > 0 && <div className="pa-field-divider" />}
+                        <div className="pa-form-group">
+                          <label className="pa-form-label">
+                            {q.question_text}
+                            {q.is_required && <span className="pa-req">*</span>}
+                          </label>
+                          {renderQuestionField(q)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="pa-section-body">
-                  <DocumentUpload
-                    documents={pendingDocuments}
-                    onChange={setPendingDocuments}
-                    maxFiles={5}
-                  />
-                </div>
-              </div>
+              )}
 
               {schedulingQuestions.length > 0 && (
                 <SchedulingQuestionsForm
@@ -1101,22 +1048,6 @@ export default function PositionApplyPage() {
                               ? fileNames[q.id] || fileAnswers[q.id]?.name || '—'
                               : answers[q.id]?.trim() || '—'}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {pendingDocuments.length > 0 && (
-                  <div className="pa-form-group">
-                    <div className="pa-if-label" style={{ marginBottom: 12 }}>
-                      Documents ({pendingDocuments.length})
-                    </div>
-                    <div className="space-y-2 rounded-md border border-[var(--pa-border)] bg-[var(--pa-surface-2)] p-4">
-                      {pendingDocuments.map((doc) => (
-                        <div key={doc.id} className="text-sm flex items-center gap-2">
-                          <span className="text-[var(--pa-text-3)] text-xs uppercase">{doc.fileType}</span>
-                          <span className="text-[var(--pa-text-1)]">{doc.fileName}</span>
                         </div>
                       ))}
                     </div>

@@ -7,6 +7,7 @@ import {
   FileText,
   Loader2,
   Code,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ export default function EmailTemplates({
   });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
 
   const grouped = useMemo(() => {
     const map = new Map<TemplateCategory, EmailTemplate[]>();
@@ -102,6 +104,57 @@ export default function EmailTemplates({
 
   const insertVariable = (v: string) => {
     setForm((prev) => ({ ...prev, body: prev.body + v }));
+  };
+
+  const seedDefaults = async () => {
+    setSeeding(true);
+    const defaults = [
+      {
+        clinic_id: clinicId,
+        name: 'Acceptance Letter',
+        category: 'accepted' as TemplateCategory,
+        subject: "You've been accepted, {{name}}!",
+        body: `Hi {{name}},
+
+We are thrilled to let you know that your application for the {{role}} position has been accepted!
+
+Please plan to arrive on {{date}} for the {{shift}} shift. We'll walk you through everything you need to know on your first day.
+
+If you have any questions before then, feel free to reply to this email.
+
+We look forward to having you on the team!
+
+Warm regards,
+The ClinicalHours Team`,
+      },
+      {
+        clinic_id: clinicId,
+        name: 'Application Update',
+        category: 'rejected' as TemplateCategory,
+        subject: 'Update on your application, {{name}}',
+        body: `Hi {{name}},
+
+Thank you for taking the time to apply for the {{role}} position and for your interest in volunteering with us.
+
+After careful consideration, we are unable to move forward with your application at this time. This was a difficult decision, as we received many strong applications.
+
+We encourage you to check back for future openings — we would love to have you involved when the right opportunity arises.
+
+Thank you again for your interest, and we wish you all the best.
+
+Warm regards,
+The ClinicalHours Team`,
+      },
+    ];
+
+    const { error } = await supabase.from('email_templates').insert(defaults);
+    if (error) {
+      toast.error('Failed to load default templates: ' + error.message);
+    } else {
+      toast.success('Default templates loaded');
+      onRefresh();
+    }
+    setSeeding(false);
   };
 
   const saveTemplate = async () => {
@@ -343,9 +396,23 @@ export default function EmailTemplates({
       ) : templates.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center">
           <FileText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">
-            No templates yet. Create your first email template.
+          <p className="text-sm text-muted-foreground mb-4">
+            No templates yet. Start from scratch or load the default accepted &amp; rejected templates.
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={seedDefaults}
+            disabled={seeding}
+            className="gap-1.5"
+          >
+            {seeding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            Load Default Templates
+          </Button>
         </div>
       ) : (
         <div className="space-y-6">
