@@ -77,7 +77,7 @@ export default function BulkEmailDialog({
     let rendered = text;
     const sampleMember = recipientsWithEmail[0];
     if (sampleMember) {
-      rendered = rendered.split('{{name}}').join(sampleMember.full_name);
+      rendered = rendered.split('{{name}}').join(sampleMember.full_name || 'Member');
       const role = sampleMember.role_id
         ? roleMap.get(sampleMember.role_id)?.role_name || ''
         : '';

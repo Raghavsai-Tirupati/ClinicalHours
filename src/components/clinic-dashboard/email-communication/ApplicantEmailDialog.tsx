@@ -125,11 +125,11 @@ export default function ApplicantEmailDialog({
   const needsDate = hasVar(subject, 'date') || hasVar(body, 'date');
   const needsShift = hasVar(subject, 'shift') || hasVar(body, 'shift');
 
-  // Final text with all variables resolved
-  const finalSubject = subject
+  // Final text with all variables resolved (re-apply name/role in case admin typed them manually)
+  const finalSubject = substituteKnown(subject, name, role)
     .replace(/\{\{date\}\}/g, dateVal || '{{date}}')
     .replace(/\{\{shift\}\}/g, shiftVal || '{{shift}}');
-  const finalBody = body
+  const finalBody = substituteKnown(body, name, role)
     .replace(/\{\{date\}\}/g, dateVal || '{{date}}')
     .replace(/\{\{shift\}\}/g, shiftVal || '{{shift}}');
 

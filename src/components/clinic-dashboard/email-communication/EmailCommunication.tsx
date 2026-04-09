@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Mail, FileText, Clock } from 'lucide-react';
+import { Mail, FileText } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
-import { useEmailTemplates, useEmailSendLogs } from './hooks';
+import { useEmailTemplates } from './hooks';
 import EmailTemplates from './EmailTemplates';
-import SendHistory from './SendHistory';
 import EmailPageCompose from '@/components/hospital/EmailPage';
 
 export default function EmailCommunication() {
@@ -17,12 +16,6 @@ export default function EmailCommunication() {
     refetch: refetchTemplates,
   } = useEmailTemplates(clinicId);
 
-  const {
-    logs,
-    loading: logsLoading,
-    refetch: refetchLogs,
-  } = useEmailSendLogs(clinicId);
-
   const [activeTab, setActiveTab] = useState('compose');
 
   if (!clinicId) return null;
@@ -32,12 +25,12 @@ export default function EmailCommunication() {
       <div>
         <h2 className="text-2xl font-bold">Email & Communication</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Compose emails, manage templates, and view send history
+          Compose emails and manage templates
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+        <TabsList className="grid w-full grid-cols-2 max-w-xs">
           <TabsTrigger value="compose" className="gap-1.5 text-xs">
             <Mail className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Compose</span>
@@ -45,10 +38,6 @@ export default function EmailCommunication() {
           <TabsTrigger value="templates" className="gap-1.5 text-xs">
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Templates</span>
-          </TabsTrigger>
-          <TabsTrigger value="history" className="gap-1.5 text-xs">
-            <Clock className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Send Log</span>
           </TabsTrigger>
         </TabsList>
 
@@ -63,10 +52,6 @@ export default function EmailCommunication() {
             loading={templatesLoading}
             onRefresh={refetchTemplates}
           />
-        </TabsContent>
-
-        <TabsContent value="history" className="mt-6">
-          <SendHistory logs={logs} loading={logsLoading} />
         </TabsContent>
       </Tabs>
     </div>
