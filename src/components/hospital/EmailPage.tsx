@@ -42,6 +42,8 @@ import type { StudentApplication } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
+import type { EmailTemplate, TemplateCategory } from '@/components/clinic-dashboard/email-communication/types';
+import { TEMPLATE_CATEGORY_COLORS, TEMPLATE_CATEGORIES } from '@/components/clinic-dashboard/email-communication/types';
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 
@@ -106,9 +108,10 @@ function escapeHtml(unsafe: string): string {
 
 interface EmailPageProps {
   hideHeader?: boolean;
+  templates?: EmailTemplate[];
 }
 
-export default function EmailPage({ hideHeader }: EmailPageProps = {}) {
+export default function EmailPage({ hideHeader, templates = [] }: EmailPageProps) {
   const { hospitalPage } = useHospitalPageContext();
   const { applications, positions, loading: appsLoading } = useAllApplications(hospitalPage?.id);
   const { entries, loading: logLoading, refetch: refetchLog } = useActivityLog(hospitalPage?.id);
@@ -122,6 +125,7 @@ export default function EmailPage({ hideHeader }: EmailPageProps = {}) {
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedSentEmailId, setSelectedSentEmailId] = useState<string | null>(null);
+  const [loadedTemplateId, setLoadedTemplateId] = useState('');
   const editorRef = useRef<HTMLDivElement | null>(null);
 
   const draftKey = useMemo(() => {
@@ -265,6 +269,20 @@ export default function EmailPage({ hideHeader }: EmailPageProps = {}) {
   }, [attachments]);
 
   const previewHtml = useMemo(() => sanitizeRichHtml(htmlBody) + attachmentsPreviewHtml, [htmlBody, attachmentsPreviewHtml]);
+
+  const loadTemplate = (id: string) => {
+    setLoadedTemplateId(id);
+    if (!id) return;
+    const t = templates.find((tmpl) => tmpl.id === id);
+    if (!t) return;
+    setSubject(t.subject);
+    // Convert plain-text body to HTML paragraphs for the rich editor
+    const html = t.body
+      .split('\n')
+      .map((line) => (line.trim() ? `<p>${line}</p>` : '<p><br></p>'))
+      .join('');
+    setEditorContent(html);
+  };
 
   const applyFormat = (command: string, value?: string) => {
     editorRef.current?.focus();
@@ -501,6 +519,41 @@ export default function EmailPage({ hideHeader }: EmailPageProps = {}) {
                 </div>
               </div>
             </div>
+
+            {/* Template loader (only shown when templates exist) */}
+            {templates.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Load Template
+                </label>
+                <Select value={loadedTemplateId} onValueChange={loadTemplate}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pre-fill from a saved template…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">— Choose a template —</SelectItem>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <span className="flex items-center gap-2">
+                          {t.name}
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] py-0 h-4 ${TEMPLATE_CATEGORY_COLORS[t.category as TemplateCategory]}`}
+                          >
+                            {TEMPLATE_CATEGORIES[t.category as TemplateCategory]}
+                          </Badge>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {loadedTemplateId && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Template loaded. Edit the subject and body freely before sending.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Subject */}
             <div className="space-y-1.5">

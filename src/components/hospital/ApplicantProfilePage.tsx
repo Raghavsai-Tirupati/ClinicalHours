@@ -32,6 +32,8 @@ import SchedulingAnswersView from '@/components/clinic-dashboard/applications/Sc
 import ResumeScoreBadge from '@/components/clinic-dashboard/applications/ResumeScoreBadge';
 import ApplicationNotesPanel from '@/components/clinic-dashboard/applications/ApplicationNotesPanel';
 import PersonMembershipActions from '@/components/clinic-dashboard/applications/PersonMembershipActions';
+import ApplicantEmailDialog from '@/components/clinic-dashboard/email-communication/ApplicantEmailDialog';
+import { useEmailTemplates } from '@/components/clinic-dashboard/email-communication/hooks';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -119,6 +121,9 @@ export default function ApplicantProfilePage() {
   const [otherApps, setOtherApps] = useState<OtherPositionApp[]>([]);
   const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
   const [schedulingAnswers, setSchedulingAnswers] = useState<SchedulingAnswer[]>([]);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+
+  const { templates } = useEmailTemplates(hospitalPage?.id);
 
   useEffect(() => {
     if (!applicationId) return;
@@ -368,15 +373,13 @@ export default function ApplicantProfilePage() {
                 <h1 className="text-xl font-bold break-words">{name}</h1>
                 {email && (
                   <Button
-                    asChild
                     size="sm"
                     variant="outline"
                     className="gap-1.5 shrink-0"
+                    onClick={() => setEmailDialogOpen(true)}
                   >
-                    <a href={`mailto:${email}`}>
-                      <Mail className="h-3.5 w-3.5" />
-                      Email
-                    </a>
+                    <Mail className="h-3.5 w-3.5" />
+                    Send Email
                   </Button>
                 )}
               </div>
@@ -650,6 +653,19 @@ export default function ApplicantProfilePage() {
           </Card>
         </div>
       </div>
+
+      {/* Send Email dialog */}
+      {application && hospitalPage && (
+        <ApplicantEmailDialog
+          open={emailDialogOpen}
+          onClose={() => setEmailDialogOpen(false)}
+          application={application}
+          clinicId={hospitalPage.id}
+          hospitalPageId={hospitalPage.id}
+          templates={templates}
+          adminEmail={hospitalPage.admin_email}
+        />
+      )}
     </div>
   );
 }

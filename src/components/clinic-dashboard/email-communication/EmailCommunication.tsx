@@ -53,7 +53,7 @@ export default function EmailCommunication() {
         </TabsList>
 
         <TabsContent value="compose" className="mt-6">
-          <EmailPageCompose hideHeader />
+          <EmailPageCompose hideHeader templates={templates} />
         </TabsContent>
 
         <TabsContent value="templates" className="mt-6">
