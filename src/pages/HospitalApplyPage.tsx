@@ -339,15 +339,20 @@ export default function HospitalApplyPage() {
                       <label className="block text-sm font-medium mb-1.5">
                         {q.question_text} {q.required && <span className="text-destructive">*</span>}
                       </label>
-                      <textarea
-                        value={answers[q.id] ?? ""}
-                        onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                        rows={4}
-                        placeholder="Your answer..."
-                        className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px] ${
-                          fieldErrors[`q_${q.id}`] ? "border-destructive" : "border-input"
-                        }`}
-                      />
+                      <div className="relative">
+                        <textarea
+                          value={answers[q.id] ?? ""}
+                          onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                          rows={4}
+                          placeholder="Your answer..."
+                          className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px] pb-6 ${
+                            fieldErrors[`q_${q.id}`] ? "border-destructive" : "border-input"
+                          }`}
+                        />
+                        <span className="absolute bottom-2 right-3 text-xs text-muted-foreground pointer-events-none">
+                          {(answers[q.id] ?? "").length} characters
+                        </span>
+                      </div>
                       {fieldErrors[`q_${q.id}`] && (
                         <p className="text-destructive text-xs mt-1">{fieldErrors[`q_${q.id}`]}</p>
                       )}
