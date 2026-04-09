@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -67,7 +67,7 @@ function QuestionCardBody({
   onRemoveOption,
 }: CardBodyProps) {
   return (
-    <Card className={`border transition-colors ${isDragOverlay ? 'border-primary/50 shadow-2xl' : 'border-border'}`}>
+    <Card className={`border transition-colors ${isDragOverlay ? 'border-primary/40 shadow-xl' : 'border-border'}`}>
       <CardContent className="pt-4 space-y-3">
         <div className="flex items-start gap-2 w-full min-w-0">
 
@@ -188,8 +188,11 @@ function SortableQuestionCard({ id, ...rest }: CardBodyProps & { id: string }) {
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={isDragging ? 'opacity-40 z-0' : undefined}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
     >
       <QuestionCardBody
         {...rest}
@@ -284,7 +287,7 @@ export default function PositionQuestionsEditor({ questions, onChange }: Props) 
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        modifiers={[restrictToVerticalAxis]}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
@@ -296,11 +299,9 @@ export default function PositionQuestionsEditor({ questions, onChange }: Props) 
           </div>
         </SortableContext>
 
-        <DragOverlay modifiers={[restrictToVerticalAxis]}>
+        <DragOverlay>
           {activeIndex !== null && (
-            <div className="rotate-[0.75deg] scale-[1.015]">
-              <QuestionCardBody {...sharedCardProps(activeIndex)} isDragOverlay />
-            </div>
+            <QuestionCardBody {...sharedCardProps(activeIndex)} isDragOverlay />
           )}
         </DragOverlay>
       </DndContext>
