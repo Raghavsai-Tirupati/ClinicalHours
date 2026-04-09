@@ -224,6 +224,13 @@ function escapeAttachmentUrl(url: string): string {
   return escapeHtml(url);
 }
 
+/** Replace {{variable}} placeholders in a template string. */
+function renderTemplate(template: string, variables: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => {
+    return variables[key] !== undefined ? variables[key] : `{{${key}}}`;
+  });
+}
+
 function buildAttachmentsHtml(attachments: Array<{ fileName?: string; publicUrl?: string }>): string {
   if (!Array.isArray(attachments) || attachments.length === 0) return "";
 
@@ -439,6 +446,7 @@ const handler = async (req: Request): Promise<Response> => {
     type Recipient = {
       email: string;
       name: string;
+      role: string;
       pendingApplicationIds: string[];
       pendingPositionNames: string[];
     };
@@ -451,6 +459,7 @@ const handler = async (req: Request): Promise<Response> => {
         recipients.set(email, {
           email,
           name: app.applicant_name?.trim() || "Applicant",
+          role: positionTitleById.get(app.position_id) || "",
           pendingApplicationIds: [],
           pendingPositionNames: [],
         });
@@ -497,8 +506,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const recipient of recipientsToSend) {
       let didSend = false;
+      const recipientVars = { name: recipient.name, role: recipient.role };
       const emailSubject = selectedEmailType === "general"
-        ? (subject as string).trim()
+        ? renderTemplate((subject as string).trim(), recipientVars)
         : "Interview invitation - schedule your slot";
 
       const attachmentsHtml = selectedEmailType === "general" ? buildAttachmentsHtml(normalizedAttachments) : "";
@@ -506,14 +516,14 @@ const handler = async (req: Request): Promise<Response> => {
         ? ((htmlBody?.trim().length ?? 0) > 0
           ? `
           <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; line-height: 1.6; color: #333;">
-            ${htmlBody}
+            ${renderTemplate(htmlBody!.trim(), { name: escapeHtml(recipient.name), role: escapeHtml(recipient.role) })}
             ${attachmentsHtml}
           </div>
         `
           : `
           <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
             <h2 style="color: #1a1a2e;">Hi ${escapeHtml(recipient.name)},</h2>
-            <div style="line-height: 1.6; color: #333;">${formatBodyHtml((body as string).trim())}</div>
+            <div style="line-height: 1.6; color: #333;">${formatBodyHtml(renderTemplate((body as string).trim(), recipientVars))}</div>
             ${attachmentsHtml}
           </div>
         `)
