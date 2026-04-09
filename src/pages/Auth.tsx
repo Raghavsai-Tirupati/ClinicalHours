@@ -145,7 +145,9 @@ const Auth = () => {
       .eq("role", "owner");
 
     if (!memberships?.length) {
-      navigate(redirectTo || "/dashboard");
+      const stored = sessionStorage.getItem('postAuthRedirect');
+      if (stored) sessionStorage.removeItem('postAuthRedirect');
+      navigate(redirectTo || stored || "/dashboard");
       return;
     }
 
@@ -269,6 +271,7 @@ const Auth = () => {
       // This ensures the useAuth hook picks it up when user returns
       setRememberMePreference(rememberMe);
       
+      if (redirectTo) sessionStorage.setItem('postAuthRedirect', redirectTo);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
