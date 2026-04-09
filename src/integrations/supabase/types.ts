@@ -204,6 +204,44 @@ export type Database = {
         }
         Relationships: []
       }
+      application_notes: {
+        Row: {
+          application_id: string
+          body: string
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          body: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_notes_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "student_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           created_at: string
@@ -311,6 +349,7 @@ export type Database = {
       }
       clinic_members: {
         Row: {
+          application_id: string | null
           clinic_id: string
           created_at: string
           email: string | null
@@ -327,6 +366,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          application_id?: string | null
           clinic_id: string
           created_at?: string
           email?: string | null
@@ -343,6 +383,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          application_id?: string | null
           clinic_id?: string
           created_at?: string
           email?: string | null
@@ -359,6 +400,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clinic_members_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "student_applications"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clinic_members_clinic_id_fkey"
             columns: ["clinic_id"]
