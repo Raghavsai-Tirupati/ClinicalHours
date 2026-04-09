@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +25,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { StudentApplication } from '@/types/positions';
+import { useEmailTemplates } from '@/components/clinic-dashboard/email-communication/hooks';
+import type { TemplateCategory } from '@/components/clinic-dashboard/email-communication/types';
+import { TEMPLATE_CATEGORY_COLORS, TEMPLATE_CATEGORIES } from '@/components/clinic-dashboard/email-communication/types';
 
 const DEFAULT_EMAIL_HTML = '<p><br></p>';
 
@@ -66,15 +71,33 @@ export default function RichEmailDialog({
   const [htmlBody, setHtmlBody] = useState(DEFAULT_EMAIL_HTML);
   const [sending, setSending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [loadedTemplateId, setLoadedTemplateId] = useState('');
   const editorRef = useRef<HTMLDivElement | null>(null);
+
+  const { templates } = useEmailTemplates(hospitalPageId);
 
   useEffect(() => {
     if (open && editorRef.current) {
       editorRef.current.innerHTML = DEFAULT_EMAIL_HTML;
       setHtmlBody(DEFAULT_EMAIL_HTML);
       setSubject('');
+      setLoadedTemplateId('');
     }
   }, [open]);
+
+  const loadTemplate = (id: string) => {
+    setLoadedTemplateId(id);
+    const t = templates.find((tmpl) => tmpl.id === id);
+    if (!t) return;
+    setSubject(t.subject);
+    const html = t.body
+      .split('\n')
+      .map((line) => (line.trim() ? `<p>${line}</p>` : '<p><br></p>'))
+      .join('');
+    const sanitized = sanitizeRichHtml(html);
+    setHtmlBody(sanitized);
+    if (editorRef.current) editorRef.current.innerHTML = sanitized;
+  };
 
   const recipientCount = useMemo(() => {
     const emails = new Set<string>();
@@ -153,6 +176,40 @@ export default function RichEmailDialog({
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Template picker */}
+            {templates.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Load Template
+                </label>
+                <Select value={loadedTemplateId} onValueChange={loadTemplate}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pre-fill from a saved template…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <span className="flex items-center gap-2">
+                          {t.name}
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] py-0 h-4 ${TEMPLATE_CATEGORY_COLORS[t.category as TemplateCategory]}`}
+                          >
+                            {TEMPLATE_CATEGORIES[t.category as TemplateCategory]}
+                          </Badge>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {loadedTemplateId && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Template loaded. Edit freely before sending.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Subject */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
