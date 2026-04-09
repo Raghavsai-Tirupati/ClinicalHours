@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
-import { Loader2, Pencil, Users, Clock, MapPin, Calendar, BarChart2, Settings2 } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, Pencil, Users, Clock, MapPin, Calendar, BarChart2, Settings2, Link2, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,14 @@ const STATUS_COLORS: Record<PositionStatus, string> = {
 export default function PositionDetail() {
   const { positionId } = useParams<{ positionId: string }>();
   const { basePath } = useHospitalPageContext();
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const copyApplicationLink = () => {
+    const url = `${window.location.origin}/apply/${positionId}`;
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
   const { position, questions, loading, error } = usePositionDetail(positionId, { adminMode: true });
   const { allApplications } = usePositionApplications(positionId || '');
 
@@ -93,12 +102,21 @@ export default function PositionDetail() {
             )}
           </div>
         </div>
-        <Button asChild variant="outline" size="sm" className="shrink-0 self-start">
-          <Link to={`${basePath}/positions/${position.id}/edit`}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit
-          </Link>
-        </Button>
+        <div className="flex shrink-0 items-center gap-2 self-start">
+          <Button variant="outline" size="sm" onClick={copyApplicationLink}>
+            {linkCopied ? (
+              <><Check className="h-4 w-4 mr-2 text-green-500" />Copied!</>
+            ) : (
+              <><Link2 className="h-4 w-4 mr-2" />Share Link</>
+            )}
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to={`${basePath}/positions/${position.id}/edit`}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Tabs: Applicants, Analytics, Settings */}

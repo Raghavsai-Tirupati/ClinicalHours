@@ -15,6 +15,8 @@ const CheckEmail = () => {
   const emailParam = searchParams.get("email") || "";
   const userIdParam = searchParams.get("uid") || "";
   const fullNameParam = searchParams.get("name") || "User";
+  const rawRedirect = searchParams.get("redirect");
+  const redirectTo = rawRedirect?.startsWith('/') ? rawRedirect : null;
 
   const email = emailParam || user?.email || "";
   const userId = userIdParam || user?.id || "";
@@ -125,11 +127,11 @@ const CheckEmail = () => {
             </div>
 
             <Button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(redirectTo || "/dashboard")}
               className="w-full"
               size="lg"
             >
-              Continue to Dashboard
+              {redirectTo ? "Continue to Application" : "Continue to Dashboard"}
             </Button>
           </div>
         </CardContent>

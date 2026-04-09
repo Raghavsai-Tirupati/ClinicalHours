@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +68,11 @@ const signupSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { enterGuestMode, isGuest } = useAuth();
+  // Only allow same-origin relative paths as redirect targets to prevent open redirect.
+  const rawRedirect = new URLSearchParams(location.search).get('redirect');
+  const redirectTo = rawRedirect?.startsWith('/') ? rawRedirect : null;
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -126,7 +130,8 @@ const Auth = () => {
     navigate("/dashboard");
   };
 
-  // Check hospital account status and redirect accordingly
+  // Check hospital account status and redirect accordingly.
+  // For student accounts (no hospital membership), honors redirectTo if present.
   const redirectByAccountType = useCallback(async (userId: string) => {
     if (redirectStartRef.current === null) {
       redirectStartRef.current = performance.now();
@@ -140,7 +145,7 @@ const Auth = () => {
       .eq("role", "owner");
 
     if (!memberships?.length) {
-      navigate("/dashboard");
+      navigate(redirectTo || "/dashboard");
       return;
     }
 
@@ -155,7 +160,7 @@ const Auth = () => {
     }
 
     navigate(hasApproved ? "/hospital-dashboard" : "/pending-approval");
-  }, [navigate]);
+  }, [navigate, redirectTo]);
 
   useEffect(() => {
     if (authInitRef.current) return;
@@ -437,7 +442,8 @@ const Auth = () => {
             validatedData.fullName || "User"
           );
           toast.success("Account created! You can start exploring. Verify your email within 24 hours.");
-          navigate(`/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(userId)}&name=${encodeURIComponent(validatedData.fullName || "User")}`);
+          const checkEmailUrl = `/check-email?email=${encodeURIComponent(validatedData.email)}&uid=${encodeURIComponent(userId)}&name=${encodeURIComponent(validatedData.fullName || "User")}${redirectTo ? `&redirect=${encodeURIComponent(redirectTo)}` : ''}`;
+          navigate(checkEmailUrl);
         }
       }
     } catch (error: unknown) {
