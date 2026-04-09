@@ -209,9 +209,17 @@ export default function EmailPage({ hideHeader, templates = [] }: EmailPageProps
   }, [applications, selectedIds]);
 
   const toggleManual = (id: string, checked: boolean) => {
-    setManualSelected((prev) =>
-      checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id),
-    );
+    if (checked) {
+      setManualSelected((prev) => [...new Set([...prev, id])]);
+    } else {
+      // If nothing is manually selected yet, all filtered recipients are implicitly selected.
+      // Initialise from the full filtered list so unchecking one actually removes it.
+      const base =
+        manualSelected.length === 0
+          ? filteredRecipients.map((a) => a.id)
+          : manualSelected;
+      setManualSelected(base.filter((x) => x !== id));
+    }
   };
 
   const sentEmails = useMemo(
