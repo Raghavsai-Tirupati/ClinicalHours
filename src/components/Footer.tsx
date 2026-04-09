@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
+import { Linkedin, Instagram } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-white border-t border-border safe-area-inset-bottom">
+    <footer className="bg-background border-t border-border safe-area-inset-bottom">
       <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 md:gap-12">
           {/* Brand - Full width on mobile */}
@@ -69,14 +70,26 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a
-                  href="https://linkedin.com/company/clinicalhours"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground/70 hover:text-foreground transition-colors font-light inline-block min-h-[44px] sm:min-h-0 flex items-center"
-                >
-                  LinkedIn
-                </a>
+                <div className="flex items-center gap-4 pt-1">
+                  <a
+                    href="https://linkedin.com/company/clinicalhours"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground/70 hover:text-foreground transition-colors"
+                    aria-label="LinkedIn"
+                  >
+                    <Linkedin className="h-5 w-5" />
+                  </a>
+                  <a
+                    href="https://instagram.com/clinicalhours"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground/70 hover:text-foreground transition-colors"
+                    aria-label="Instagram"
+                  >
+                    <Instagram className="h-5 w-5" />
+                  </a>
+                </div>
               </li>
             </ul>
           </div>

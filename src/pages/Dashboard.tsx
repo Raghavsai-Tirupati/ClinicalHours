@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -16,65 +17,23 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Clock,
   Briefcase,
   FileText,
   CalendarClock,
   Search,
   Plus,
-  MoreHorizontal,
-  Globe,
-  Pencil,
-  Trash2,
-  Quote,
   ArrowRight,
   Loader2,
   Building2,
   Sparkles,
-  ExternalLink,
 } from "lucide-react";
-import HospitalLogo from "@/components/HospitalLogo";
 import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from "@/types/positions";
 import type { ApplicationStatus, PositionType } from "@/types/positions";
-
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-type OpportunityStatus = "Saved" | "Applied" | "Interviewing" | "Completed";
-
-interface Opportunity {
-  id: string;           // saved_opportunities.id — used for DB remove/update
-  opportunityId: string; // opportunities.id — used for experience_entries lookup
-  name: string;
-  type: string;
-  website: string;
-  location: string;
-  status: OpportunityStatus;
-  deadline: string | null;
-  hoursLogged: number;
-  reflectionCount: number;
-  logo_url: string | null;
-}
-
-interface Reflection {
-  id: string;
-  opportunityId: string;
-  orgName: string;
-  date: string;
-  text: string;
-}
+import { type OpportunityStatus, type Opportunity, type Reflection, type DashboardApplication, daysUntil, deadlineLabel } from "@/components/dashboard/types";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { OpportunityCard } from "@/components/dashboard/OpportunityCard";
+import { ReflectionBlock } from "@/components/dashboard/ReflectionBlock";
 
 interface SavedOpportunityRow {
   id: string;
@@ -98,15 +57,6 @@ interface ExperienceEntryRow {
   entry_date: string;
 }
 
-interface DashboardApplication {
-  id: string;
-  status: ApplicationStatus;
-  submitted_at: string;
-  position_title: string;
-  position_type: PositionType;
-  hospital_name: string;
-}
-
 /** Preview count on the dashboard; full list is on /my-applications */
 const DASHBOARD_APPLICATIONS_PREVIEW_LIMIT = 2;
 
@@ -118,31 +68,6 @@ function isBcsHospitalName(name: string): boolean {
   return n.includes("bcs free health clinic") || (n.includes("bcs") && n.includes("clinic"));
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function daysUntil(dateStr: string): number {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function deadlineLabel(deadline: string | null): string | null {
-  if (!deadline) return null;
-  const days = daysUntil(deadline);
-  if (days < 0) return "Past due";
-  if (days === 0) return "Due today";
-  if (days === 1) return "Due tomorrow";
-  return `Due in ${days} days`;
-}
-
-const statusColors: Record<OpportunityStatus, string> = {
-  Saved: "bg-zinc-700/60 text-zinc-300",
-  Applied: "bg-blue-900/50 text-blue-300",
-  Interviewing: "bg-amber-900/50 text-amber-300",
-  Completed: "bg-emerald-900/50 text-emerald-300",
-};
-
 const applicationStatusColors: Record<ApplicationStatus, string> = {
   new: "bg-blue-500/10 text-blue-300 border-blue-500/30",
   under_review: "bg-amber-500/10 text-amber-300 border-amber-500/30",
@@ -151,241 +76,6 @@ const applicationStatusColors: Record<ApplicationStatus, string> = {
   rejected: "bg-red-500/10 text-red-300 border-red-500/30",
   waitlisted: "bg-purple-500/10 text-purple-300 border-purple-500/30",
 };
-
-const typeColors: Record<string, string> = {
-  hospital: "border-red-500/40 text-red-300",
-  clinic: "border-blue-500/40 text-blue-300",
-  hospice: "border-purple-500/40 text-purple-300",
-  emt: "border-orange-500/40 text-orange-300",
-  volunteer: "border-teal-500/40 text-teal-300",
-};
-
-// ─── Sub-components ─────────────────────────────────────────────────────────
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="flex items-center gap-4 rounded-lg border border-border bg-card p-5">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-        <Icon className="h-5 w-5 text-primary" />
-      </div>
-      <div>
-        <p className="text-2xl font-semibold text-foreground">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-function OpportunityCard({
-  opp,
-  onStatusChange,
-  onRemove,
-  onLogHours,
-  onAddReflection,
-  onCardClick,
-}: {
-  opp: Opportunity;
-  onStatusChange: (id: string, status: OpportunityStatus) => void;
-  onRemove: (id: string) => void;
-  onLogHours: (opp: Opportunity) => void;
-  onAddReflection: (opp: Opportunity) => void;
-  onCardClick: (opp: Opportunity) => void;
-}) {
-  const dl = deadlineLabel(opp.deadline);
-  const dlDays = opp.deadline ? daysUntil(opp.deadline) : null;
-  const dlUrgent = dlDays !== null && dlDays >= 0 && dlDays <= 3;
-
-  return (
-    <div
-      className="group rounded-lg border border-border bg-card p-5 transition-colors hover:border-border/80 cursor-pointer"
-      onClick={() => onCardClick(opp)}
-    >
-      {/* Top row: logo + name + 3-dot menu */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex gap-3 min-w-0 flex-1">
-          <HospitalLogo
-            logoUrl={opp.logo_url}
-            hospitalName={opp.name}
-            size="sm"
-          />
-          <div className="min-w-0 flex-1">
-            <h3 className="line-clamp-2 break-words text-base font-medium text-foreground">
-              {opp.name}
-            </h3>
-            <p className="mt-0.5 break-words text-sm text-muted-foreground">{opp.location}</p>
-          </div>
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 text-muted-foreground"
-              aria-label="More actions"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {opp.website && (
-              <DropdownMenuItem asChild>
-                <a
-                  href={opp.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2"
-                >
-                  <Globe className="h-4 w-4" /> Visit Website
-                </a>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem className="flex items-center gap-2">
-              <Pencil className="h-4 w-4" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="flex items-center gap-2 text-destructive focus:text-destructive"
-              onClick={(e) => { e.stopPropagation(); onRemove(opp.id); }}
-            >
-              <Trash2 className="h-4 w-4" /> Remove
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Pills row */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span
-          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-            typeColors[opp.type] || "border-border text-muted-foreground"
-          }`}
-        >
-          {opp.type === "emt" ? "EMT" : opp.type.charAt(0).toUpperCase() + opp.type.slice(1)}
-        </span>
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[opp.status]}`}
-        >
-          {opp.status}
-        </span>
-        {dl && (
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              dlUrgent
-                ? "bg-red-900/50 text-red-300"
-                : "bg-zinc-800 text-zinc-400"
-            }`}
-          >
-            {dl}
-          </span>
-        )}
-      </div>
-
-      {/* Stats */}
-      <div className="mt-4 flex items-center gap-5 text-sm text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5" /> {opp.hoursLogged}h logged
-        </span>
-        <span className="flex items-center gap-1.5">
-          <FileText className="h-3.5 w-3.5" /> {opp.reflectionCount} reflections
-        </span>
-      </div>
-
-      {/* Actions row */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 text-xs"
-          onClick={(e) => { e.stopPropagation(); onLogHours(opp); }}
-        >
-          Log Hours
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 text-xs"
-          onClick={(e) => { e.stopPropagation(); onAddReflection(opp); }}
-        >
-          Add Reflection
-        </Button>
-        <div onClick={(e) => e.stopPropagation()}>
-          <Select
-            value={opp.status}
-            onValueChange={(val) =>
-              onStatusChange(opp.id, val as OpportunityStatus)
-            }
-          >
-            <SelectTrigger className="h-8 w-[140px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Saved">Saved</SelectItem>
-              <SelectItem value="Applied">Applied</SelectItem>
-              <SelectItem value="Interviewing">Interviewing</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ReflectionBlock({ reflection, onDelete }: { reflection: Reflection; onDelete: (id: string) => void }) {
-  const [confirming, setConfirming] = useState(false);
-
-  return (
-    <div className="group rounded-lg border border-border bg-card p-5 relative">
-      <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-        <Quote className="h-3.5 w-3.5 text-primary/60" />
-        <span className="font-medium text-foreground/80">
-          {reflection.orgName}
-        </span>
-        <span>&middot;</span>
-        <time>
-          {new Date(reflection.date.includes("T") ? reflection.date : reflection.date + "T00:00:00").toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
-        </time>
-        <div className="ml-auto">
-          {confirming ? (
-            <div className="flex items-center gap-1">
-              <Button variant="destructive" size="sm" className="h-6 px-2 text-xs" onClick={() => onDelete(reflection.id)}>
-                Delete
-              </Button>
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setConfirming(false)}>
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => setConfirming(true)}
-            >
-              <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-            </Button>
-          )}
-        </div>
-      </div>
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        {reflection.text}
-      </p>
-    </div>
-  );
-}
 
 // ─── Dashboard Page ─────────────────────────────────────────────────────────
 
@@ -724,6 +414,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background relative">
+      <Helmet>
+        <title>Dashboard — ClinicalHours</title>
+        <meta name="description" content="Track your clinical hours, manage saved opportunities, log reflections, and monitor your pre-med application progress." />
+      </Helmet>
       {/* ─── Full-page background image layer ──────────────── */}
       <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
         <div
@@ -740,7 +434,7 @@ const Dashboard = () => {
 
       <main className="flex-1 container mx-auto px-4 pt-24 pb-16 relative z-10">
         {/* ─── Hero Banner ────────────────────────────────── */}
-        <HeroBanner firstName={firstName} isGuest={isGuest} />
+        <HeroBanner firstName={firstName} isGuest={isGuest} compact={!!user && !isGuest} />
 
         {/* ─── Guest Banner ────────────────────────────────── */}
         {isGuest && (
@@ -826,6 +520,18 @@ const Dashboard = () => {
             </div>
           ) : (
             <>
+              {/* Onboarding card — shown when no opportunities are tracked yet */}
+              {!isGuest && user && opportunities.length === 0 && (
+                <div className="mb-8 rounded-xl border border-primary/20 bg-primary/5 px-6 py-8 text-center">
+                  <p className="text-base font-medium text-foreground mb-3">
+                    Save your first opportunity to start tracking your progress.
+                  </p>
+                  <Button asChild size="sm">
+                    <Link to="/opportunities">Browse Opportunities</Link>
+                  </Button>
+                </div>
+              )}
+
               {/* Progress Summary */}
               <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard icon={Clock} label="Total Hours Logged" value={Math.round(totalHours * 10) / 10} />
@@ -918,8 +624,10 @@ const Dashboard = () => {
               <section>
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-lg font-medium text-foreground">Recent Reflections</h2>
-                  <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
-                    View all reflections <ArrowRight className="h-3.5 w-3.5" />
+                  <Button asChild variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground">
+                    <Link to="/hours">
+                      Go to Journal <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
                   </Button>
                 </div>
                 {reflections.length === 0 ? (

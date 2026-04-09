@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { MapPin, Building2, Heart } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -63,6 +64,10 @@ const Home = () => {
 
   return (
     <div className="min-h-screen">
+      <Helmet>
+        <title>ClinicalHours — Find Clinical Volunteering Opportunities</title>
+        <meta name="description" content="Browse thousands of clinical volunteering opportunities at hospitals, clinics, and hospices near you. Free tools for pre-med students to track hours and build competitive applications." />
+      </Helmet>
       <Navigation />
 
       {/* Hero Section — full-viewport, video bg, centered text, hospital reel */}
@@ -80,7 +85,7 @@ const Home = () => {
             Clinical Future.
           </h1>
 
-          <p className="mt-4 sm:mt-5 text-xs sm:text-sm text-white/50 max-w-md leading-relaxed animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+          <p className="mt-4 sm:mt-5 text-xs sm:text-sm text-white/70 max-w-md leading-relaxed animate-fade-in-up" style={{ animationDelay: '150ms' }}>
             Connecting pre-health students with {opportunityCount > 0 ? opportunityCount.toLocaleString() + "+" : ""} clinical
             opportunities across the country.
           </p>
@@ -88,9 +93,9 @@ const Home = () => {
           <div className="mt-7 sm:mt-8 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
             <Link
               to="/auth"
-              className="inline-flex items-center justify-center text-xs font-medium uppercase tracking-widest px-8 sm:px-10 py-3 sm:py-3.5 border border-white/40 text-white hover:bg-white/10 transition-all duration-300"
+              className="inline-flex items-center justify-center text-xs font-medium uppercase tracking-widest px-8 sm:px-10 py-3 sm:py-3.5 bg-white text-black hover:bg-white/90 transition-all duration-300"
             >
-              Get Started
+              Find Clinical Hours Near You
             </Link>
           </div>
         </div>
@@ -98,7 +103,7 @@ const Home = () => {
         {/* Hospital reel — anchored to bottom of hero */}
         <div className="absolute bottom-0 inset-x-0 z-10 pb-8 sm:pb-10">
           <p className="text-[10px] sm:text-xs text-white/30 uppercase tracking-[0.25em] text-center mb-4">
-            Trusted by students at leading institutions
+            Opportunities at top hospitals &amp; clinics nationwide
           </p>
           <div className="relative overflow-hidden">
             {/* Fade edges */}
@@ -145,7 +150,6 @@ const Home = () => {
         <div 
           ref={statsRef}
           className="relative z-10 py-4 sm:py-6 md:py-8"
-          style={{ fontFamily: '"Times New Roman", Times, serif' }}
         >
           <div className="container mx-auto px-4 sm:px-6">
             <div className="grid grid-cols-3 md:flex md:flex-row justify-center items-center gap-4 sm:gap-12 md:gap-32">
@@ -158,7 +162,7 @@ const Home = () => {
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className="relative inline-block mb-2 sm:mb-3">
-                    <div className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl text-white relative z-10 group-hover:scale-110 transition-transform duration-300" style={{ fontWeight: 400, fontFamily: '"Times New Roman", Times, serif' }}>
+                    <div className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl text-white relative z-10 transition-transform duration-300 font-light">
                       {statsInView ? (
                         <AnimatedCounter 
                           end={stat.value} 
@@ -173,7 +177,7 @@ const Home = () => {
                   </div>
                   <div className="flex items-center justify-center gap-1 sm:gap-2 mb-2">
                     <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-white/40 group-hover:text-white/70 transition-colors duration-300" />
-                    <div className="text-[10px] sm:text-xs text-white/50 uppercase tracking-[0.1em] sm:tracking-[0.2em] group-hover:text-white/80 transition-colors duration-300" style={{ fontWeight: 400 }}>{stat.label}</div>
+                    <div className="text-[10px] sm:text-xs text-white/50 uppercase tracking-[0.1em] sm:tracking-[0.2em] group-hover:text-white/80 transition-colors duration-300">{stat.label}</div>
                   </div>
                 </div>
               ))}
@@ -204,7 +208,7 @@ const Home = () => {
             <div className="pt-4 sm:pt-6 px-4 sm:px-0">
               <Link 
                 to="/auth"
-                className="group inline-flex items-center justify-center w-full sm:w-auto text-sm uppercase tracking-widest px-8 sm:px-16 py-5 sm:py-6 bg-white text-black hover:bg-white/90 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.6)] relative overflow-hidden min-h-[56px]"
+                className="group inline-flex items-center justify-center w-full sm:w-auto text-sm uppercase tracking-widest px-8 sm:px-16 py-5 sm:py-6 bg-white text-black hover:bg-white/90 transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] relative overflow-hidden min-h-[56px]"
               >
                 <span className="relative z-10">Get Started Free</span>
                 <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
@@ -215,25 +219,25 @@ const Home = () => {
       </section>
 
       {/* Our Story Section */}
-      <section ref={storyRef} className="py-32 bg-black" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+      <section ref={storyRef} className="py-32 bg-black">
         <div className="container mx-auto px-6 relative z-10">
           <div className={`max-w-3xl mx-auto text-center ${storyInView ? 'animate-fade-in-up' : 'opacity-0'}`}>
             <div className="space-y-8">
-              <div className="text-xs text-white/40 uppercase tracking-[0.2em]" style={{ fontWeight: 400 }}>Our Story</div>
-              <h2 className="text-4xl md:text-5xl text-white" style={{ fontWeight: 400 }}>How It Started</h2>
-              <p className="text-white/50 leading-relaxed" style={{ fontWeight: 400 }}>
+              <div className="text-xs text-white/40 uppercase tracking-[0.2em]">Our Story</div>
+              <h2 className="text-4xl md:text-5xl text-white font-light">How It Started</h2>
+              <p className="text-white/70 leading-relaxed">
                 ClinicalHours started with a simple problem.
               </p>
-              <p className="text-white/50 leading-relaxed" style={{ fontWeight: 400 }}>
+              <p className="text-white/70 leading-relaxed">
                 As a premed student, finding clinical experience was harder than it needed to be. Opportunities were scattered across hospital websites, outdated lists, and word of mouth, with no clear way to know what was real or accessible.
               </p>
-              <p className="text-white/50 leading-relaxed" style={{ fontWeight: 400 }}>
+              <p className="text-white/70 leading-relaxed">
                 At the same time, an engineering student saw a system that lacked structure. The information existed, but it was disorganized, inefficient, and difficult to navigate.
               </p>
-              <p className="text-white/50 leading-relaxed" style={{ fontWeight: 400 }}>
+              <p className="text-white/70 leading-relaxed">
                 We realized this was not just a personal frustration. It was a shared problem for students everywhere. So we built ClinicalHours to bring real clinical opportunities into one clear, reliable place.
               </p>
-              <p className="text-white/50 leading-relaxed italic" style={{ fontWeight: 400 }}>
+              <p className="text-white/90 leading-relaxed italic border-l-2 border-white/20 pl-4 text-left">
                 Built by students who have gone through the process, for students who are still navigating it.
               </p>
             </div>

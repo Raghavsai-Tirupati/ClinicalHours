@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -680,9 +681,14 @@ const Auth = () => {
         backgroundRepeat: 'no-repeat',
       }}
     >
+      <Helmet>
+        <title>Sign In — ClinicalHours</title>
+        <meta name="description" content="Sign in or create a free account to save clinical opportunities, track your hours, and build your pre-med application." />
+      </Helmet>
+
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/50" />
-      
+
       {/* Back to Home Link */}
       <Link 
         to="/" 
@@ -724,16 +730,14 @@ const Auth = () => {
             Continue with Google
           </Button>
           
-          <Button
+          <button
             type="button"
-            variant="secondary"
-            className="w-full h-12 text-base"
             onClick={handleGuestMode}
             disabled={loading || googleLoading}
+            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1.5 py-2 disabled:opacity-50"
           >
-            <UserCircle className="mr-2 h-5 w-5" />
-            Try the hour tracker first (no signup)
-          </Button>
+            Browse as guest →
+          </button>
         </div>
 
         <div className="relative my-6">

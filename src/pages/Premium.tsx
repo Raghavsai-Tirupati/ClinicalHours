@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -80,14 +81,27 @@ const PLANS = [
     name: "Premium Annual",
     price: "$79.99",
     period: "/ year",
-    description: "Save 33% with an annual plan. Best value for your application cycle.",
+    description: "The complete toolkit for your full application cycle.",
     cta: "Upgrade to Annual",
     ctaDisabled: false,
+    bestValue: true,
     features: [
-      { text: "Everything in Premium", included: true },
-      { text: "Save $39.89 vs. monthly", included: true },
+      { text: "Everything in Premium, plus:", included: true, bold: true },
+      { text: "Save $39.89/yr vs. monthly", included: true },
       { text: "Full application cycle coverage", included: true },
       { text: "Early access to new features", included: true },
+      { text: "Unlimited search radius & results", included: true },
+      { text: "PathFinder — AI Opportunity Matcher", included: true },
+      { text: "Reflections & analytics (Hours Journal)", included: true },
+      { text: "AMCAS Activity Writer + Most Meaningful Drafter", included: true },
+      { text: "AAMC Competency Tracker (17 competencies)", included: true },
+      { text: "Letter of Rec Manager (CRM pipeline)", included: true },
+      { text: "Application Timeline & milestone alerts", included: true },
+      { text: "Secondary Essay Coach", included: true },
+      { text: "AI School List Builder", included: true },
+      { text: "Direct Application Finder", included: true },
+      { text: "PDF export for all data", included: true },
+      { text: "Priority support", included: true },
     ],
   },
 ];
@@ -160,6 +174,10 @@ const Premium = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet>
+        <title>Premium — ClinicalHours</title>
+        <meta name="description" content="Unlock AI-powered tools for pre-med students: PathFinder opportunity matching, AMCAS Activity Writer, AAMC Competency Tracker, and more. Starting at $4.99/month." />
+      </Helmet>
       <Navigation />
 
       <main className="flex-1 pt-20">
@@ -252,6 +270,13 @@ const Premium = () => {
                       </span>
                     </div>
                   )}
+                  {plan.bestValue && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">
+                        <Star className="h-3 w-3" /> Best Value
+                      </span>
+                    </div>
+                  )}
 
                   <div className="min-h-[140px] mb-6">
                     <h3 className="text-lg font-semibold text-foreground">{plan.name}</h3>
@@ -259,6 +284,9 @@ const Premium = () => {
                       <span className="text-4xl font-bold text-foreground">{plan.price}</span>
                       <span className="text-sm text-muted-foreground">{plan.period}</span>
                     </div>
+                    {plan.bestValue && (
+                      <p className="mt-1 text-xs font-medium text-emerald-400">Save $39.89/yr vs. monthly</p>
+                    )}
                     <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
                   </div>
 
@@ -273,7 +301,7 @@ const Premium = () => {
                         <span
                           className={`text-sm ${
                             feature.included ? "text-foreground" : "text-muted-foreground"
-                          }`}
+                          } ${feature.bold ? "font-semibold" : ""}`}
                         >
                           {feature.text}
                         </span>

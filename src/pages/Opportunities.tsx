@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate, Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -14,6 +15,7 @@ import {
   Mail,
   List,
   Map,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +39,7 @@ const Opportunities = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationDenied, setLocationDenied] = useState(false);
   const [savedOpportunityIds, setSavedOpportunityIds] = useState<Set<string>>(new Set());
   const [savedLoading, setSavedLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
@@ -131,26 +134,18 @@ const Opportunities = () => {
     }
   }, [user, authLoading, isGuest, navigate]);
 
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          logger.error("Error getting location", error);
-          toast({
-            title: "Location access denied",
-            description: "Unable to sort by distance. Showing all opportunities.",
-            variant: "destructive",
-          });
-        }
-      );
-    }
-  }, [toast]);
+  const handleSortByDistance = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setLocationDenied(false);
+      },
+      () => {
+        setLocationDenied(true);
+      }
+    );
+  };
 
   const handleAddToTracker = async (opportunityId: string) => {
     if (isGuest) { setGuestGateOpen(true); return; }
@@ -224,6 +219,10 @@ const Opportunities = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Helmet>
+        <title>Find Clinical Opportunities — ClinicalHours</title>
+        <meta name="description" content="Search thousands of hospitals, free clinics, hospices, and EMT programs accepting pre-med volunteers. Filter by type, location, and distance." />
+      </Helmet>
       {/* ── Map mode: full-screen overlay ── */}
       {viewMode === "map" && (
         <>
@@ -283,6 +282,17 @@ const Opportunities = () => {
                   <SelectItem value="emt">EMT</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                type="button"
+                variant={userLocation ? "default" : "outline"}
+                size="sm"
+                onClick={handleSortByDistance}
+                className="shrink-0 self-start h-10 gap-1.5"
+                aria-label="Sort by distance"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                {userLocation ? "Sorted by distance" : "Sort by distance"}
+              </Button>
               {/* List / Map toggle */}
               <div className="flex rounded-lg border border-border overflow-hidden shrink-0 self-start">
                 <button
@@ -314,14 +324,12 @@ const Opportunities = () => {
                   {userLocation && " · sorted by distance"}
                 </p>
               )}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground ml-auto">
-                <Mail className="h-3 w-3 flex-shrink-0" />
-                <span>
-                  Broken link?{" "}
-                  <Link to="/contact" className="text-primary hover:underline">
-                    Let us know
-                  </Link>
-                </span>
+              {locationDenied && (
+                <p className="text-xs text-muted-foreground">
+                  Location access denied — showing all opportunities.
+                </p>
+              )}
+              <div className="hidden">
               </div>
             </div>
           </div>
@@ -342,8 +350,30 @@ const Opportunities = () => {
             <Card>
               <CardContent className="py-12 text-center">
                 <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">No opportunities found</p>
-                <p className="text-muted-foreground">Try adjusting your search or filters</p>
+                {(debouncedSearch.trim() || filterType !== "all") ? (
+                  <>
+                    <p className="text-lg font-medium mb-2">
+                      {searchTerm.trim()
+                        ? `No results for "${searchTerm}"`
+                        : "No results found"}
+                    </p>
+                    <p className="text-muted-foreground mb-4">
+                      Try removing filters or broadening your search.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setSearchTerm(""); setFilterType("all"); }}
+                    >
+                      Clear filters
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-lg font-medium mb-2">No opportunities found</p>
+                    <p className="text-muted-foreground">Try adjusting your search or filters</p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
