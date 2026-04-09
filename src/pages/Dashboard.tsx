@@ -473,6 +473,28 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* ─── Featured Opportunity ────────────────────────── */}
+        <div className="mt-6">
+          <Link
+            to="/opportunities/bcs-free-health-clinic"
+            className="group flex items-center justify-between gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] backdrop-blur-sm px-5 py-4 hover:bg-emerald-500/[0.1] transition-colors"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+                <Building2 className="h-5 w-5 text-emerald-400" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-foreground">BCS Free Health Clinic</p>
+                  <Badge className="text-[10px] py-0 h-4 bg-emerald-500/15 text-emerald-400 border-emerald-500/30">Featured</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">College Station, TX · Free community health clinic · Now accepting volunteers</p>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-emerald-400 shrink-0 group-hover:translate-x-0.5 transition-transform" aria-hidden />
+          </Link>
+        </div>
+
         {/* ─── Dashboard content ─────────────────────────── */}
         <div className="mt-8">
           {(guestTutorialVisible || accountTutorialVisible) && (
