@@ -531,7 +531,6 @@ export default function EmailPage({ hideHeader, templates = [] }: EmailPageProps
                     <SelectValue placeholder="Pre-fill from a saved template…" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">— Choose a template —</SelectItem>
                     {templates.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
                         <span className="flex items-center gap-2">

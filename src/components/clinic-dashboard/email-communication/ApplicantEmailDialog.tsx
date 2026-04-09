@@ -232,7 +232,6 @@ export default function ApplicantEmailDialog({
                 <SelectValue placeholder="Start from a template…" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">— No template —</SelectItem>
                 {templates.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     <span className="flex items-center gap-2">
