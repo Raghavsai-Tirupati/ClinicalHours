@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, Table as TableIcon } from 'lucide-react';
+import { Users, Table as TableIcon, UserCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useClinicRoles, useClinicMembers } from './hooks';
 import MembersTab from './MembersTab';
+import PeopleTab from './PeopleTab';
 import VolunteerTracker from '../volunteer-tracker/VolunteerTracker';
 
+// Renamed from "Team" → "People" in the People refactor.
+// Three tabs:
+//   • People  – everyone who has ever applied (any status)
+//   • Members – only people promoted from accepted applications (incl. alumni)
+//   • Tracker – the volunteer hours tracker (unchanged)
 export default function VolunteerManagement() {
   const { hospitalPage } = useHospitalPageContext();
   const rawId = hospitalPage?.id;
@@ -16,20 +22,19 @@ export default function VolunteerManagement() {
   const { roles, loading: rolesLoading } = useClinicRoles(clinicId);
   const { members, loading: membersLoading, refetch: refetchMembers } = useClinicMembers(clinicId);
 
-  // Support ?tab=tracker for legacy /volunteer-tracker redirects.
+  // Support legacy ?tab= deep links and the new "people" default.
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') ?? 'members';
+  const initialTab = searchParams.get('tab') ?? 'people';
   const [activeTab, setActiveTab] = useState(initialTab);
 
   useEffect(() => {
     const qp = searchParams.get('tab');
-    // Redirect any deep links to the removed tabs (onboarding/files/roles)
-    // back to Members so URLs from earlier versions don't 404.
+    // Redirect any deep links to removed tabs back to People.
     if (qp && ['onboarding', 'files', 'roles'].includes(qp)) {
       const next = new URLSearchParams(searchParams);
       next.delete('tab');
       setSearchParams(next, { replace: true });
-      setActiveTab('members');
+      setActiveTab('people');
       return;
     }
     if (qp && qp !== activeTab) setActiveTab(qp);
@@ -38,9 +43,8 @@ export default function VolunteerManagement() {
 
   const handleTabChange = (next: string) => {
     setActiveTab(next);
-    // Keep the URL query in sync so deep links work.
     const nextParams = new URLSearchParams(searchParams);
-    if (next === 'members') nextParams.delete('tab');
+    if (next === 'people') nextParams.delete('tab');
     else nextParams.set('tab', next);
     setSearchParams(nextParams, { replace: true });
   };
@@ -48,7 +52,7 @@ export default function VolunteerManagement() {
   if (!clinicId) return (
     <div className="rounded-lg border border-dashed border-border p-12 text-center">
       <p className="text-sm text-muted-foreground">
-        Volunteer management is not available yet. Please reload the page or contact support if this persists.
+        People management is not available yet. Please reload the page or contact support if this persists.
       </p>
     </div>
   );
@@ -56,16 +60,20 @@ export default function VolunteerManagement() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Volunteer Management</h2>
+        <h2 className="text-2xl font-bold">People</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage your team roster and volunteer hours
+          Everyone who has ever applied, your active members, and your hours tracker — all in one place.
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="members" className="gap-1.5 text-xs">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsTrigger value="people" className="gap-1.5 text-xs">
             <Users className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">People</span>
+          </TabsTrigger>
+          <TabsTrigger value="members" className="gap-1.5 text-xs">
+            <UserCheck className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Members</span>
           </TabsTrigger>
           <TabsTrigger value="tracker" className="gap-1.5 text-xs">
@@ -73,6 +81,10 @@ export default function VolunteerManagement() {
             <span className="hidden sm:inline">Tracker</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="people" className="mt-6">
+          <PeopleTab clinicId={clinicId} />
+        </TabsContent>
 
         <TabsContent value="members" className="mt-6">
           <MembersTab

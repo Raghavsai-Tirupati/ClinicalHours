@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -9,14 +9,12 @@ import {
   Clock,
   ExternalLink,
   FileText,
-  Loader2,
   Mail,
   MessageSquare,
-  Save,
   Square,
   User,
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +23,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
@@ -33,6 +30,8 @@ import type { ApplicationAvailability, ApplicationDocument, ApplicationStatus, S
 import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
 import SchedulingAnswersView from '@/components/clinic-dashboard/applications/SchedulingAnswersView';
 import ResumeScoreBadge from '@/components/clinic-dashboard/applications/ResumeScoreBadge';
+import ApplicationNotesPanel from '@/components/clinic-dashboard/applications/ApplicationNotesPanel';
+import PersonMembershipActions from '@/components/clinic-dashboard/applications/PersonMembershipActions';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -103,72 +102,10 @@ interface OtherPositionApp {
   position_title: string | null;
 }
 
-// ─── Autosave hook ───────────────────────────────────────────────────────────
-
-function useAutosaveNotes(
-  applicationId: string,
-  initialNotes: string,
-  enabled: boolean,
-) {
-  const [notes, setNotes] = useState(initialNotes);
-  const [saving, setSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSavedValue = useRef(initialNotes);
-
-  useEffect(() => {
-    setNotes(initialNotes);
-    lastSavedValue.current = initialNotes;
-    setLastSaved(null);
-  }, [applicationId, initialNotes]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    if (notes === lastSavedValue.current) return;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      setSaving(true);
-      try {
-        const { error } = await supabase
-          .from('student_applications')
-          .update({ notes: notes.trim() || null })
-          .eq('id', applicationId);
-        if (error) throw error;
-        lastSavedValue.current = notes;
-        setLastSaved(new Date());
-      } catch {
-      } finally {
-        setSaving(false);
-      }
-    }, 2000);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [notes, applicationId, enabled]);
-
-  const saveNow = useCallback(async () => {
-    if (!enabled || notes === lastSavedValue.current) return;
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('student_applications')
-        .update({ notes: notes.trim() || null })
-        .eq('id', applicationId);
-      if (error) throw error;
-      lastSavedValue.current = notes;
-      setLastSaved(new Date());
-      toast.success('Notes saved');
-    } catch {
-      toast.error('Failed to save notes');
-    } finally {
-      setSaving(false);
-    }
-  }, [applicationId, notes, enabled]);
-
-  const isDirty = notes !== lastSavedValue.current;
-
-  return { notes, setNotes, saving, saveNow, lastSaved, isDirty };
-}
-
 // ─── Main Component ──────────────────────────────────────────────────────────
+// Notes are now stored in `application_notes` (one row per dated note) and
+// rendered by <ApplicationNotesPanel/>. The legacy single-textarea autosave
+// hook was removed in the People refactor.
 
 export default function ApplicantProfilePage() {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -379,12 +316,6 @@ export default function ApplicantProfilePage() {
     [application?.id],
   );
 
-  const autosave = useAutosaveNotes(
-    application?.id || '',
-    application?.notes || '',
-    !!application,
-  );
-
   if (loading) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto">
@@ -433,7 +364,22 @@ export default function ApplicantProfilePage() {
               {initial}
             </div>
             <div className="min-w-0 flex-1 space-y-1">
-              <h1 className="text-xl font-bold break-words">{name}</h1>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <h1 className="text-xl font-bold break-words">{name}</h1>
+                {email && (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 shrink-0"
+                  >
+                    <a href={`mailto:${email}`}>
+                      <Mail className="h-3.5 w-3.5" />
+                      Email
+                    </a>
+                  </Button>
+                )}
+              </div>
               {email && <p className="break-all text-sm text-muted-foreground">{email}</p>}
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Badge className={`text-xs ${STATUS_COLORS[application.status]}`}>
@@ -553,48 +499,19 @@ export default function ApplicantProfilePage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Admin Notes</CardTitle>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {autosave.saving && (
-                    <span className="flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Saving…
-                    </span>
-                  )}
-                  {!autosave.saving && autosave.lastSaved && (
-                    <span className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3 text-emerald-400" />
-                      Saved {formatDistanceToNow(autosave.lastSaved, { addSuffix: true })}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Textarea
-                value={autosave.notes}
-                onChange={(e) => autosave.setNotes(e.target.value)}
-                placeholder="Private notes about this applicant…"
-                rows={4}
-                className="resize-none text-sm"
-              />
-              <Button
-                size="sm"
-                onClick={autosave.saveNow}
-                disabled={autosave.saving || !autosave.isDirty}
-                className="gap-1.5"
-              >
-                {autosave.saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                Save notes
-              </Button>
-            </CardContent>
-          </Card>
+          <ApplicationNotesPanel applicationId={application.id} />
         </div>
 
         <div className="space-y-6">
+          {hospitalPage?.id && (
+            <PersonMembershipActions
+              clinicId={hospitalPage.id}
+              application={application}
+              applicantName={name}
+              applicantEmail={email || null}
+            />
+          )}
+
           {profile && (
             <Card className="border-border/50">
               <CardHeader className="pb-3">

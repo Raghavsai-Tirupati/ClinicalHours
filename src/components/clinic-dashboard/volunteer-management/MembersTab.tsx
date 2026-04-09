@@ -1,12 +1,11 @@
 import { useState, useMemo } from 'react';
 import {
   ArrowUpDown,
-  Plus,
   Pencil,
   Trash2,
   Check,
   X,
-  UserPlus,
+  Users,
   Loader2,
   Mail,
   Filter,
@@ -23,16 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
-import type { ClinicMember, ClinicRole, MemberStatus, OnboardingSource } from './types';
+import type { ClinicMember, ClinicRole, MemberStatus } from './types';
 import { MEMBER_STATUS_LABELS, MEMBER_STATUS_COLORS } from './types';
 import { useEmailTemplates } from '../email-communication/hooks';
 import BulkEmailDialog from '../email-communication/BulkEmailDialog';
@@ -53,16 +44,7 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<ClinicMember>>({});
-  const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [newMember, setNewMember] = useState({
-    full_name: '',
-    email: '',
-    phone: '',
-    role_id: '',
-    status: 'active' as MemberStatus,
-    onboarding_source: 'new_applicant' as OnboardingSource,
-  });
 
   // ── Selection & Bulk Email ────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -186,32 +168,6 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
     }
   };
 
-  const addMember = async () => {
-    if (!newMember.full_name.trim()) {
-      toast.error('Name is required');
-      return;
-    }
-    setSaving(true);
-    const { error } = await supabase.from('clinic_members').insert({
-      clinic_id: clinicId,
-      full_name: newMember.full_name.trim(),
-      email: newMember.email.trim() || null,
-      phone: newMember.phone.trim() || null,
-      role_id: newMember.role_id || null,
-      status: newMember.status,
-      onboarding_source: newMember.onboarding_source,
-    });
-    setSaving(false);
-    if (error) {
-      toast.error('Failed to add member: ' + error.message);
-    } else {
-      toast.success('Member added');
-      setAddOpen(false);
-      setNewMember({ full_name: '', email: '', phone: '', role_id: '', status: 'active', onboarding_source: 'new_applicant' });
-      onRefresh();
-    }
-  };
-
   const SortHeader = ({ field, label }: { field: SortField; label: string }) => (
     <button
       className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
@@ -243,10 +199,6 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
                 Send Email ({selectedIds.size})
               </Button>
             )}
-            <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5">
-              <UserPlus className="h-4 w-4" />
-              Add Member
-            </Button>
           </div>
         </div>
 
@@ -296,9 +248,12 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
 
       {/* Table */}
       {filteredMembers.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-12 text-center">
-          <UserPlus className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No members yet. Add your first team member.</p>
+        <div className="rounded-lg border border-dashed border-border p-12 text-center space-y-2">
+          <Users className="h-10 w-10 text-muted-foreground/40 mx-auto mb-1" />
+          <p className="text-sm text-muted-foreground">No members yet.</p>
+          <p className="text-xs text-muted-foreground">
+            Members are added by accepting an applicant in the <span className="font-medium text-foreground">People</span> tab and promoting them.
+          </p>
         </div>
       ) : (
         <div className="rounded-lg border border-border overflow-x-auto">
@@ -464,86 +419,6 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
           </table>
         </div>
       )}
-
-      {/* Add Member Dialog */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Team Member</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Full Name *</Label>
-              <Input
-                value={newMember.full_name}
-                onChange={(e) => setNewMember((v) => ({ ...v, full_name: e.target.value }))}
-                placeholder="Jane Doe"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Email</Label>
-                <Input
-                  value={newMember.email}
-                  onChange={(e) => setNewMember((v) => ({ ...v, email: e.target.value }))}
-                  placeholder="jane@example.com"
-                  type="email"
-                />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input
-                  value={newMember.phone}
-                  onChange={(e) => setNewMember((v) => ({ ...v, phone: e.target.value }))}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Role</Label>
-                <Select
-                  value={newMember.role_id || 'none'}
-                  onValueChange={(v) => setNewMember((prev) => ({ ...prev, role_id: v === 'none' ? '' : v }))}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No role</SelectItem>
-                    {roles.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
-                          {r.role_name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Source</Label>
-                <Select
-                  value={newMember.onboarding_source}
-                  onValueChange={(v) => setNewMember((prev) => ({ ...prev, onboarding_source: v as OnboardingSource }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new_applicant">New Applicant</SelectItem>
-                    <SelectItem value="existing_staff">Existing Staff</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button onClick={addMember} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Add Member
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Bulk Email Dialog */}
       <BulkEmailDialog

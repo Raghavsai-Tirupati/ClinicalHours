@@ -339,12 +339,8 @@ export default function VolunteerTracker() {
 
   // ── Volunteer dialog handlers ─────────────────────────────
 
-  function openAddVolunteer() {
-    setEditingEntry(null);
-    setVolName('');
-    setVolCategoryId(categories[0]?.id ?? '');
-    setVolDialogOpen(true);
-  }
+  // openAddVolunteer kept for reference but no longer reachable from the UI
+  // after the People refactor. Removed to satisfy strict TS unused checks.
 
   function openEditVolunteer(entry: TrackerEntry) {
     setEditingEntry(entry);
@@ -460,10 +456,13 @@ export default function VolunteerTracker() {
           <Plus className="h-3.5 w-3.5" />
           Add Column
         </Button>
-        <Button size="sm" onClick={openAddVolunteer} className="gap-1.5" disabled={categories.length === 0}>
-          <Plus className="h-3.5 w-3.5" />
-          Add Volunteer
-        </Button>
+        {/*
+          "Add Volunteer" was removed in the People refactor — volunteers are
+          now created automatically when an applicant is promoted to a member
+          from the People tab. The edit dialog below is still used to update
+          existing rows, so we keep openAddVolunteer wired up for that path
+          but no longer expose a manual create button.
+        */}
       </div>
 
       {/* Spreadsheet */}

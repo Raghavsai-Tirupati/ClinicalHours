@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Users,
+  UserCircle,
   Calendar,
   Mail,
   Settings,
@@ -54,7 +55,9 @@ export default function HospitalSidebar() {
     { label: 'Applicants', icon: Users, route: `${basePath}/applications` },
     { label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
     { label: 'Email', icon: Mail, route: `${basePath}/email` },
-    { label: 'Team', icon: Users, route: `${basePath}/team` },
+    // Renamed from "Team" → "People" in the People refactor. The route is
+    // still /team for now so existing bookmarks keep working.
+    { label: 'People', icon: UserCircle, route: `${basePath}/team` },
     { label: 'Waitlists', icon: ClipboardList, route: `${basePath}/waitlist` },
   ];
 

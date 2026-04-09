@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { Search, ExternalLink } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -10,9 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -20,21 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
-import {
-  APPLICATION_STATUS_LABELS,
-  type ApplicationStatus,
-  type StudentApplication,
-} from '@/types/positions';
-
-// People-refactor note:
-// The full review/triage UI now lives on the People profile page
-// (`/applicants/:applicationId`). This page used to host filters, kanban,
-// analytics, bulk-email, etc. — all of that has moved to the People tab and
-// the per-applicant profile. We keep this route as a slim list so anyone
-// landing on /<clinic>/applications still sees a familiar table, with each
-// name hyperlinked to the rich profile.
+import { APPLICATION_STATUS_LABELS } from '@/types/positions';
+import type { ApplicationStatus, StudentApplication } from '@/types/positions';
+import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
+import { format } from 'date-fns';
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   new: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
@@ -47,7 +36,10 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 function getApplicantName(app: StudentApplication): string {
-  const candidates = [app.applicant_name, app.student_profile?.full_name];
+  const candidates = [
+    app.applicant_name,
+    app.student_profile?.full_name,
+  ];
   for (const c of candidates) {
     const t = c?.trim();
     if (t && !PLACEHOLDER_NAME_REGEX.test(t)) return t;
@@ -59,7 +51,13 @@ function getApplicantName(app: StudentApplication): string {
   );
 }
 
-export default function ApplicationsHub() {
+interface PeopleTabProps {
+  clinicId: string;
+}
+
+// People = anyone who has ever applied (any status). Click a row to open
+// their full profile in the existing /applicants/:id route.
+export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
   const { hospitalPage, basePath } = useHospitalPageContext();
   const { applications, loading } = useAllApplications(hospitalPage?.id);
   const [search, setSearch] = useState('');
@@ -84,15 +82,7 @@ export default function ApplicationsHub() {
   }, [applications, search, statusFilter]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Applicants</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Click any name to open their full profile and review answers, files,
-          notes, and membership status.
-        </p>
-      </div>
-
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -120,7 +110,7 @@ export default function ApplicationsHub() {
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground ml-auto">
-          {filtered.length} {filtered.length === 1 ? 'applicant' : 'applicants'}
+          {filtered.length} {filtered.length === 1 ? 'person' : 'people'}
         </p>
       </div>
 
@@ -146,11 +136,8 @@ export default function ApplicationsHub() {
               ))
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center text-sm text-muted-foreground py-10"
-                >
-                  No applicants match your filters yet.
+                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-10">
+                  No people match your filters yet.
                 </TableCell>
               </TableRow>
             ) : (
@@ -159,7 +146,7 @@ export default function ApplicationsHub() {
                 const email = app.applicant_email || app.student_profile?.email || '';
                 const href = `${basePath}/applicants/${app.id}`;
                 return (
-                  <TableRow key={app.id}>
+                  <TableRow key={app.id} className="cursor-pointer">
                     <TableCell>
                       <Link to={href} className="block">
                         <div className="font-medium hover:underline">{name}</div>

@@ -7,13 +7,18 @@ export interface ClinicRole {
   created_at: string;
 }
 
-export type MemberStatus = 'active' | 'inactive' | 'on_leave';
+// 'alumni' = a former member who is no longer active but whose role label is
+// preserved (e.g. "Volunteer (Alumni)") so historical context survives.
+export type MemberStatus = 'active' | 'inactive' | 'on_leave' | 'alumni';
 export type OnboardingSource = 'new_applicant' | 'existing_staff';
 
 export interface ClinicMember {
   id: string;
   clinic_id: string;
   user_id: string | null;
+  // Optional link to the application that produced this member. NULL means
+  // the member was added manually before the People refactor.
+  application_id: string | null;
   full_name: string;
   email: string | null;
   phone: string | null;
@@ -66,12 +71,14 @@ export const MEMBER_STATUS_LABELS: Record<MemberStatus, string> = {
   active: 'Active',
   inactive: 'Inactive',
   on_leave: 'On Leave',
+  alumni: 'Alumni',
 };
 
 export const MEMBER_STATUS_COLORS: Record<MemberStatus, string> = {
   active: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   inactive: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
   on_leave: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  alumni: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
 };
 
 export const ONBOARDING_STATUS_COLORS: Record<OnboardingStatus, string> = {
