@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
 import ApplicantReviewPanel, { getApplicantNameForPanel } from '@/components/hospital/ApplicantReviewPanel';
 import { useAutoMarkApplicationUnderReview } from '@/hooks/useAutoMarkApplicationUnderReview';
@@ -24,12 +24,10 @@ export default function ApplicationDetailSheet({
 
   return (
     <Sheet open={!!application} onOpenChange={() => onClose()}>
-      <SheetContent className="sm:max-w-lg overflow-y-auto border-border/50 bg-background">
+      <SheetContent className="sm:max-w-lg overflow-y-auto border-border/50 bg-background pt-10">
         {application && (
           <>
-            <SheetHeader className="pb-0">
-              <SheetTitle className="sr-only">{name}</SheetTitle>
-            </SheetHeader>
+            <SheetTitle className="sr-only">{name}</SheetTitle>
             <ApplicantReviewPanel
               application={application}
               onStatusChange={onStatusChange}

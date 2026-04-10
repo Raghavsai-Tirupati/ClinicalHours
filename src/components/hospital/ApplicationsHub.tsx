@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Mail, CalendarCheck } from 'lucide-react';
+import { CalendarCheck, ExternalLink, LayoutList, Mail, Table2 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Table,
@@ -68,7 +68,8 @@ export default function ApplicationsHub() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
 
-  // ── Review panel state ────────────────────────────────────
+  // ── View mode ─────────────────────────────────────────────
+  const [applicationView, setApplicationView] = useState(false);
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
@@ -102,13 +103,34 @@ export default function ApplicationsHub() {
 
   const selectedApplicationIds = useMemo(() => [...validSelected], [validSelected]);
 
+  const handleViewToggle = useCallback(() => {
+    setApplicationView((v) => !v);
+    setReviewIndex(null);
+  }, []);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Applicants</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Filter, select, and review everyone who has applied. Click a name to open their full profile.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Applicants</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {applicationView
+              ? 'Click any row to open their profile in a side panel.'
+              : 'Filter, select, and review everyone who has applied. Click a name to open their full profile.'}
+          </p>
+        </div>
+        <Button
+          variant={applicationView ? 'default' : 'outline'}
+          size="sm"
+          className="gap-2 shrink-0 mt-1"
+          onClick={handleViewToggle}
+        >
+          {applicationView ? (
+            <><Table2 className="h-4 w-4" />Table view</>
+          ) : (
+            <><LayoutList className="h-4 w-4" />Application view</>
+          )}
+        </Button>
       </div>
 
       {/* ── Advanced filter bar ─────────────────────────────── */}
@@ -208,12 +230,13 @@ export default function ApplicationsHub() {
                 const email = app.applicant_email || app.student_profile?.email || '';
                 const href = `${basePath}/people/${app.student_id}`;
                 const isSelected = validSelected.has(app.id);
+                const isActive = applicationView && reviewIndex === rowIdx;
 
                 return (
                   <TableRow
                     key={app.id}
-                    className={`cursor-pointer ${isSelected ? 'bg-primary/5' : ''}`}
-                    onClick={() => setReviewIndex(rowIdx)}
+                    className={`${applicationView ? 'cursor-pointer' : ''} ${isActive ? 'bg-muted/60' : isSelected ? 'bg-primary/5' : ''}`}
+                    onClick={() => applicationView && setReviewIndex(rowIdx)}
                   >
                     <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
@@ -261,8 +284,8 @@ export default function ApplicationsHub() {
         </Table>
       </div>
 
-      {/* ── Review panel ───────────────────────────────────── */}
-      {reviewIndex !== null && hospitalPage && (
+      {/* ── Review panel (application view) ────────────────── */}
+      {applicationView && reviewIndex !== null && hospitalPage && (
         <ApplicationReviewPanel
           applications={applications}
           filteredList={filtered}
