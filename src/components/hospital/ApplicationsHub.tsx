@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Search } from 'lucide-react';
+import { ExternalLink, LayoutList, Search, Table2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -11,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -20,21 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
+import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import {
   APPLICATION_STATUS_LABELS,
   type ApplicationStatus,
   type StudentApplication,
 } from '@/types/positions';
-
-// People-refactor note:
-// The full review/triage UI now lives on the People profile page
-// (`/applicants/:applicationId`). This page used to host filters, kanban,
-// analytics, bulk-email, etc. — all of that has moved to the People tab and
-// the per-applicant profile. We keep this route as a slim list so anyone
-// landing on /<clinic>/applications still sees a familiar table, with each
-// name hyperlinked to the rich profile.
+import ApplicationDetailSheet from '@/components/hospital/ApplicationDetailSheet';
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   new: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
@@ -61,9 +58,11 @@ function getApplicantName(app: StudentApplication): string {
 
 export default function ApplicationsHub() {
   const { hospitalPage, basePath } = useHospitalPageContext();
-  const { applications, loading } = useAllApplications(hospitalPage?.id);
+  const { applications, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | 'all'>('all');
+  const [applicationView, setApplicationView] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<StudentApplication | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -83,13 +82,51 @@ export default function ApplicationsHub() {
       );
   }, [applications, search, statusFilter]);
 
+  const handleStatusChange = useCallback(
+    async (appId: string, newStatus: ApplicationStatus) => {
+      const update = buildStudentApplicationStatusUpdate(newStatus);
+      updateApplicationLocally(appId, update);
+      if (selectedApp?.id === appId) {
+        setSelectedApp((prev) => prev ? { ...prev, ...update } : null);
+      }
+      const { error } = await supabase
+        .from('student_applications')
+        .update(update)
+        .eq('id', appId);
+      if (error) {
+        toast.error('Failed to update status');
+      }
+    },
+    [selectedApp, updateApplicationLocally],
+  );
+
+  const handleApplicationPatched = useCallback(
+    (appId: string, patch: Partial<StudentApplication>) => {
+      updateApplicationLocally(appId, patch);
+      if (selectedApp?.id === appId) {
+        setSelectedApp((prev) => prev ? { ...prev, ...patch } : null);
+      }
+    },
+    [selectedApp, updateApplicationLocally],
+  );
+
+  const handleRowClick = useCallback(
+    (app: StudentApplication) => {
+      if (applicationView) {
+        setSelectedApp(app);
+      }
+    },
+    [applicationView],
+  );
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Applicants</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Click any name to open their full profile and review answers, files,
-          notes, and membership status.
+          {applicationView
+            ? 'Click any row to open their profile in a side panel.'
+            : 'Click any name to open their full profile and review answers, files, notes, and membership status.'}
         </p>
       </div>
 
@@ -119,6 +156,21 @@ export default function ApplicationsHub() {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant={applicationView ? 'default' : 'outline'}
+          size="sm"
+          className="gap-2 shrink-0"
+          onClick={() => {
+            setApplicationView((v) => !v);
+            setSelectedApp(null);
+          }}
+        >
+          {applicationView ? (
+            <><Table2 className="h-4 w-4" />Table view</>
+          ) : (
+            <><LayoutList className="h-4 w-4" />Application view</>
+          )}
+        </Button>
         <p className="text-xs text-muted-foreground ml-auto">
           {filtered.length} {filtered.length === 1 ? 'applicant' : 'applicants'}
         </p>
@@ -132,7 +184,7 @@ export default function ApplicationsHub() {
               <TableHead className="hidden md:table-cell">Position</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden lg:table-cell">Submitted</TableHead>
-              <TableHead className="w-10"></TableHead>
+              {!applicationView && <TableHead className="w-10"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -158,6 +210,43 @@ export default function ApplicationsHub() {
                 const name = getApplicantName(app);
                 const email = app.applicant_email || app.student_profile?.email || '';
                 const href = `${basePath}/people/${app.student_id}`;
+                const isSelected = selectedApp?.id === app.id;
+
+                if (applicationView) {
+                  return (
+                    <TableRow
+                      key={app.id}
+                      className={`cursor-pointer transition-colors ${isSelected ? 'bg-muted/60' : 'hover:bg-muted/30'}`}
+                      onClick={() => handleRowClick(app)}
+                    >
+                      <TableCell>
+                        <div className="font-medium">{name}</div>
+                        {email && (
+                          <div className="text-xs text-muted-foreground break-all">
+                            {email}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">
+                        {app.position?.title || '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${STATUS_COLORS[app.status] || ''}`}
+                        >
+                          {APPLICATION_STATUS_LABELS[app.status] || app.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                        {app.submitted_at
+                          ? format(new Date(app.submitted_at), 'MMM d, yyyy')
+                          : '—'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+
                 return (
                   <TableRow key={app.id}>
                     <TableCell>
@@ -208,6 +297,14 @@ export default function ApplicationsHub() {
           </TableBody>
         </Table>
       </div>
+
+      <ApplicationDetailSheet
+        application={selectedApp}
+        onClose={() => setSelectedApp(null)}
+        onStatusChange={handleStatusChange}
+        onNoteSaved={() => {}}
+        onApplicationPatched={handleApplicationPatched}
+      />
     </div>
   );
 }
