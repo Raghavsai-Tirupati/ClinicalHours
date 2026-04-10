@@ -39,6 +39,26 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+// ─── Utility functions (exported for testing) ────────────────────────────────
+
+export function formatLastFirst(fullName: string): string {
+  const parts = fullName.trim().split(' ');
+  if (parts.length < 2) return fullName;
+  const last = parts[parts.length - 1];
+  const first = parts.slice(0, -1).join(' ');
+  return `${last}, ${first}`;
+}
+
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
+  'bg-rose-500', 'bg-cyan-500', 'bg-fuchsia-500', 'bg-orange-500',
+] as const;
+
+export function emailToColor(email: string): string {
+  const hash = [...email].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
 interface UserProfile {
   id: string;
   email: string;
@@ -124,6 +144,59 @@ interface Review {
   opportunity_type: string;
   rating: number;
   has_comment: boolean;
+  created_at: string;
+}
+
+interface ApplicationRow {
+  id: string;
+  status: string;
+  submitted_at: string;
+  reviewed_at: string | null;
+  interview_invited_at: string | null;
+  interview_confirmed_at: string | null;
+  availability_json: {
+    days?: string[];
+    time_pref?: string;
+    hours_per_week?: number;
+    commitment?: string;
+  } | null;
+  position: {
+    title: string;
+    opportunity: { name: string } | null;
+  } | null;
+}
+
+interface ResponseRow {
+  id: string;
+  application_id: string;
+  answer_text: string | null;
+  answer_options: string[] | null;
+  created_at: string;
+  question: { question_text: string; question_type: string } | null;
+}
+
+interface NoteRow {
+  id: string;
+  application_id: string;
+  body: string;
+  created_at: string;
+  created_by_email: string | null;
+}
+
+interface DocumentRow {
+  id: string;
+  application_id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  created_at: string;
+}
+
+interface EmailLogRow {
+  id: string;
+  subject: string;
+  template_name: string | null;
+  sent_by: string;
   created_at: string;
 }
 
