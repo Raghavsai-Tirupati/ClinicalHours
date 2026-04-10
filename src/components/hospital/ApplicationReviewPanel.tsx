@@ -10,9 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
 import { APPLICATION_STATUS_LABELS, type ApplicationStatus, type StudentApplication } from '@/types/positions';
-import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { changeApplicationStatus } from '@/lib/applicationStatus';
 import ApplicationNotesPanel from '@/components/clinic-dashboard/applications/ApplicationNotesPanel';
 import RichEmailDialog from './RichEmailDialog';
 import InterviewInviteDialog from './InterviewInviteDialog';
@@ -74,11 +73,12 @@ export default function ApplicationReviewPanel({
 
   const handleStatusChange = async (newStatus: ApplicationStatus) => {
     setSavingStatus(true);
-    const updates = buildStudentApplicationStatusUpdate(newStatus);
-    const { error } = await supabase
-      .from('student_applications')
-      .update(updates)
-      .eq('id', app.id);
+    const { error } = await changeApplicationStatus({
+      applicationId: app.id,
+      studentId: app.student_id || null,
+      newStatus,
+      clinicId: hospitalPage.id,
+    });
     setSavingStatus(false);
     if (error) {
       toast.error('Failed to update status');

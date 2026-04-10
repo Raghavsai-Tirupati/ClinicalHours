@@ -29,7 +29,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
-import { buildStudentApplicationStatusUpdate, autoPromoteToStaff } from '@/lib/applicationStatus';
+import { changeApplicationStatus } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationAvailability, ApplicationDocument, ApplicationStatus, SchedulingAnswer, StudentApplication } from '@/types/positions';
 import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
@@ -371,34 +371,18 @@ export default function ApplicantProfilePage() {
     async (newStatus: ApplicationStatus) => {
       if (!application) return;
       setUpdatingStatus(true);
-      try {
-        const updatePayload = buildStudentApplicationStatusUpdate(newStatus);
-        const { error } = await supabase
-          .from('student_applications')
-          .update(updatePayload)
-          .eq('id', application.id);
-        if (error) throw error;
-
-        // Auto-promote to staff when accepted
-        if (newStatus === 'accepted' && hospitalPage?.id) {
-          const appName = getApplicantName(application);
-          const appEmail = application.applicant_email || application.student_profile?.email || null;
-          const { error: promoteErr } = await autoPromoteToStaff({
-            clinicId: hospitalPage.id,
-            applicationId: application.id,
-            studentId: application.student_id || null,
-            fullName: appName,
-            email: appEmail,
-          });
-          if (promoteErr) toast.error('Accepted, but failed to add to Staff: ' + promoteErr);
-        }
-
+      const { error } = await changeApplicationStatus({
+        applicationId: application.id,
+        studentId: application.student_id || null,
+        newStatus,
+        clinicId: hospitalPage?.id,
+      });
+      setUpdatingStatus(false);
+      if (error) {
+        toast.error('Failed to update status');
+      } else {
         toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
         setApplication((prev) => prev ? { ...prev, status: newStatus } : null);
-      } catch (err: any) {
-        toast.error(err?.message || 'Failed to update status');
-      } finally {
-        setUpdatingStatus(false);
       }
     },
     [application, hospitalPage?.id],
