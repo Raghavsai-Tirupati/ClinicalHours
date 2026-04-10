@@ -54,9 +54,16 @@ export default function InterviewInviteDialog({
     return emails.size;
   }, [applications, selectedApplicationIds]);
 
+  const missingBookingUrl = !bookingUrl?.trim();
+
   const handleSend = async () => {
     if (selectedApplicationIds.length === 0) {
       toast.error('Select at least one applicant first');
+      return;
+    }
+
+    if (missingBookingUrl) {
+      toast.error('Interview booking link is not configured. Go to the Interviews page to set your Calendly or booking URL.', { duration: 6000 });
       return;
     }
 
@@ -66,17 +73,37 @@ export default function InterviewInviteDialog({
         body: {
           hospitalPageId,
           applicationIds: selectedApplicationIds,
+          emailType: 'interview_invite',
           customMessage: message.trim() || undefined,
           forceResend: true,
         },
       });
 
       const { data, error } = res;
-      if (data?.code === 'rate_limited' || (error && String((error as any)?.status) === '429')) {
-        toast.error('Email rate limit reached — please wait a few minutes before sending again.', { duration: 6000 });
-        return;
+
+      // Extract the real error message from edge function responses
+      if (error) {
+        // For FunctionsHttpError, try to parse the actual JSON error from the response context
+        let realMessage = 'Failed to send interview invites';
+        try {
+          const ctx = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) realMessage = body.error;
+          } else if (error.message && error.message !== 'Edge Function returned a non-2xx status code') {
+            realMessage = error.message;
+          }
+        } catch {
+          // fallback to generic message
+        }
+
+        if (data?.code === 'rate_limited' || String((error as any)?.status) === '429') {
+          toast.error('Email rate limit reached — please wait a few minutes before sending again.', { duration: 6000 });
+          return;
+        }
+        throw new Error(realMessage);
       }
-      if (error) throw new Error(error.message || 'Failed to send interview invites');
+
       if (!data?.success) throw new Error(data?.error || 'Failed to send interview invites');
 
       const sent = data?.sent ?? 0;
@@ -112,6 +139,12 @@ export default function InterviewInviteDialog({
             </DialogDescription>
           </DialogHeader>
 
+          {missingBookingUrl && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
+              <strong>Booking link not configured.</strong> Go to the Interviews page to set your Calendly or booking URL before sending invites.
+            </div>
+          )}
+
           <div className="space-y-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Custom Message (optional)</label>
@@ -141,7 +174,7 @@ export default function InterviewInviteDialog({
               Preview Template
             </Button>
             <div className="flex items-center gap-1.5">
-              <Button onClick={handleSend} disabled={sending}>
+              <Button onClick={handleSend} disabled={sending || missingBookingUrl}>
                 {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Send Invites
               </Button>
