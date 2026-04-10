@@ -153,7 +153,7 @@ export default function ApplicationsHub() {
       <div className={`flex gap-0 rounded-lg border border-border/40 overflow-hidden ${panelOpen ? 'items-start' : ''}`}>
 
         {/* Table — shrinks when panel is open */}
-        <div className={`overflow-x-auto transition-all duration-200 ${panelOpen ? 'w-[45%] min-w-[300px] border-r border-border/40' : 'w-full'}`}>
+        <div className={`overflow-x-auto transition-all duration-200 ${panelOpen ? 'w-[25%] min-w-[200px] border-r border-border/40' : 'w-full'}`}>
           <Table>
             <TableHeader>
               <TableRow>
