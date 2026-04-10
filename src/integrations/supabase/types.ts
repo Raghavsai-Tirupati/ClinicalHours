@@ -1578,6 +1578,7 @@ export type Database = {
       }
       position_questions: {
         Row: {
+          char_limit: number | null
           created_at: string | null
           display_order: number | null
           id: string
@@ -1588,6 +1589,7 @@ export type Database = {
           question_type: string
         }
         Insert: {
+          char_limit?: number | null
           created_at?: string | null
           display_order?: number | null
           id?: string
@@ -1598,6 +1600,7 @@ export type Database = {
           question_type: string
         }
         Update: {
+          char_limit?: number | null
           created_at?: string | null
           display_order?: number | null
           id?: string
