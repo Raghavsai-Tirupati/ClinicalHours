@@ -9,8 +9,10 @@ import {
   Clock,
   ExternalLink,
   FileText,
+  Linkedin,
   Mail,
   MessageSquare,
+  Phone,
   Square,
   User,
 } from 'lucide-react';
@@ -23,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
@@ -55,6 +58,24 @@ function getApplicantName(app: StudentApplication): string {
     app.applicant_email?.split('@')[0] ||
     `Student ${app.student_id.slice(0, 8)}`
   );
+}
+
+function formatLastFirst(fullName: string): string {
+  const parts = fullName.trim().split(' ');
+  if (parts.length < 2) return fullName;
+  const last = parts[parts.length - 1];
+  const first = parts.slice(0, -1).join(' ');
+  return `${last}, ${first}`;
+}
+
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
+  'bg-rose-500', 'bg-cyan-500', 'bg-fuchsia-500', 'bg-orange-500',
+] as const;
+
+function emailToColor(email: string): string {
+  const hash = [...email].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 function formatAvailability(raw: ApplicationAvailability | null | undefined): string | null {
@@ -105,9 +126,6 @@ interface OtherPositionApp {
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-// Notes are now stored in `application_notes` (one row per dated note) and
-// rendered by <ApplicationNotesPanel/>. The legacy single-textarea autosave
-// hook was removed in the People refactor.
 
 export default function ApplicantProfilePage() {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -185,7 +203,6 @@ export default function ApplicantProfilePage() {
           question: Array.isArray(row.question) ? row.question[0] : row.question,
         }));
 
-        // Fetch uploaded documents
         const { data: docRows } = await supabase
           .from('application_documents')
           .select('*')
@@ -193,7 +210,6 @@ export default function ApplicantProfilePage() {
           .order('created_at', { ascending: true });
         if (!cancelled) setDocuments((docRows || []) as ApplicationDocument[]);
 
-        // Fetch scheduling answers
         const { data: schedRows } = await supabase
           .from('scheduling_answers')
           .select(`
@@ -326,10 +342,7 @@ export default function ApplicantProfilePage() {
       <div className="space-y-6 max-w-4xl mx-auto">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-40 rounded-lg" />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-60 rounded-lg" />
-          <Skeleton className="h-60 rounded-lg" />
-        </div>
+        <Skeleton className="h-60 rounded-lg" />
       </div>
     );
   }
@@ -362,101 +375,91 @@ export default function ApplicantProfilePage() {
         Back
       </Button>
 
+      {/* ── Card Header ─────────────────────────────────────────────────── */}
       <Card className="border-border/50">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xl font-semibold">
-              {initial}
-            </div>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <h1 className="text-xl font-bold break-words">{name}</h1>
+        <CardContent className="pt-6 pb-0">
+          {/* Name + contact info (left) / avatar (right) */}
+          <div className="flex items-start justify-between gap-4 pb-4">
+            {/* Left: name + contact block */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-semibold tracking-tight">
+                {formatLastFirst(name)}
+              </h1>
+              <div className="mt-3 space-y-1.5 text-sm">
                 {email && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5 shrink-0"
-                    onClick={() => setEmailDialogOpen(true)}
-                  >
-                    <Mail className="h-3.5 w-3.5" />
-                    Send Email
-                  </Button>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    <span className="break-all">{email}</span>
+                  </div>
                 )}
-              </div>
-              {email && <p className="break-all text-sm text-muted-foreground">{email}</p>}
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <Badge className={`text-xs ${STATUS_COLORS[application.status]}`}>
-                  {APPLICATION_STATUS_LABELS[application.status]}
-                </Badge>
-                {application.resume_match_score != null && (
-                  <ResumeScoreBadge score={application.resume_match_score} size="md" />
+                {profile?.phone && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5 shrink-0" />
+                    <span>{profile.phone}</span>
+                  </div>
                 )}
                 {application.position?.title && (
-                  <span className="text-xs text-muted-foreground break-words">
-                    Applied for{' '}
-                    <span className="font-medium text-foreground">{application.position.title}</span>
-                  </span>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span>
+                      Applied for{' '}
+                      <span className="font-medium text-foreground">{application.position.title}</span>
+                    </span>
+                  </div>
                 )}
-                <span className="text-xs text-muted-foreground">
-                  {format(new Date(application.submitted_at), "MMM d, yyyy 'at' h:mm a")}
-                </span>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Badge className={`text-xs ${STATUS_COLORS[application.status]}`}>
+                    {APPLICATION_STATUS_LABELS[application.status]}
+                  </Badge>
+                  {application.resume_match_score != null && (
+                    <ResumeScoreBadge score={application.resume_match_score} size="md" />
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(application.submitted_at), "MMM d, yyyy 'at' h:mm a")}
+                  </span>
+                  {email && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 h-6 text-xs px-2"
+                      onClick={() => setEmailDialogOpen(true)}
+                    >
+                      <Mail className="h-3 w-3" />
+                      Send Email
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Right: color avatar */}
+            <div
+              className={`h-14 w-14 rounded-full shrink-0 flex items-center justify-center text-white text-xl font-bold ${email ? emailToColor(email) : 'bg-primary'}`}
+            >
+              {initial}
+            </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Decision</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {(application.status === 'new' || application.status === 'under_review') && (
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={updatingStatus} onClick={() => handleStatusChange('accepted')}>
-                    Accept
-                  </Button>
-                  <Button size="sm" variant="destructive" disabled={updatingStatus} onClick={() => handleStatusChange('rejected')}>
-                    Reject
-                  </Button>
-                  <Button size="sm" variant="outline" className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10" disabled={updatingStatus} onClick={() => handleStatusChange('interview')}>
-                    Interview
-                  </Button>
-                  <Button size="sm" variant="outline" className="border-purple-500/40 text-purple-300 hover:bg-purple-500/10" disabled={updatingStatus} onClick={() => handleStatusChange('waitlisted')}>
-                    Waitlist
-                  </Button>
-                </div>
+          {/* ── Tabs bar ────────────────────────────────────────────────── */}
+          <Tabs defaultValue="responses" className="w-full">
+            <TabsList className="flex w-full overflow-x-auto flex-nowrap justify-start h-auto p-1 gap-1 rounded-none border-t border-border/40 bg-transparent -mx-6 px-6">
+              <TabsTrigger value="responses" className="shrink-0">Responses</TabsTrigger>
+              <TabsTrigger value="decision" className="shrink-0">Decision</TabsTrigger>
+              <TabsTrigger value="notes" className="shrink-0">Notes</TabsTrigger>
+              <TabsTrigger value="documents" className="shrink-0">Documents</TabsTrigger>
+              <TabsTrigger value="profile" className="shrink-0">Profile</TabsTrigger>
+              <TabsTrigger value="availability" className="shrink-0">Availability</TabsTrigger>
+              <TabsTrigger value="interview" className="shrink-0">Interview</TabsTrigger>
+              {otherApps.length > 0 && (
+                <TabsTrigger value="other-apps" className="shrink-0">Other Apps</TabsTrigger>
               )}
-              <Collapsible className="space-y-2">
-                <CollapsibleTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground gap-1">
-                    <ChevronDown className="h-3.5 w-3.5" />
-                    {application.status === 'new' || application.status === 'under_review' ? 'More options' : 'Change status'}
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <Select value={application.status} onValueChange={(v) => handleStatusChange(v as ApplicationStatus)} disabled={updatingStatus}>
-                    <SelectTrigger className="h-9 w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CollapsibleContent>
-              </Collapsible>
-            </CardContent>
-          </Card>
+              <TabsTrigger value="contact-history" className="shrink-0">Contact History</TabsTrigger>
+              {hospitalPage?.id && (
+                <TabsTrigger value="membership" className="shrink-0">Membership</TabsTrigger>
+              )}
+            </TabsList>
 
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Application Responses</CardTitle>
-            </CardHeader>
-            <CardContent>
+            {/* ── Responses ─────────────────────────────────────────────── */}
+            <TabsContent value="responses" className="mt-4">
               {application.answers && application.answers.length > 0 ? (
                 <div className="space-y-5">
                   {application.answers
@@ -497,84 +500,153 @@ export default function ApplicantProfilePage() {
                     ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No custom question responses.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <ApplicationNotesPanel applicationId={application.id} />
-        </div>
-
-        <div className="space-y-6">
-          {hospitalPage?.id && (
-            <PersonMembershipActions
-              clinicId={hospitalPage.id}
-              application={application}
-              applicantName={name}
-              applicantEmail={email || null}
-            />
-          )}
-
-          {profile && (
-            <Card className="border-border/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                  <User className="h-3.5 w-3.5" />
-                  Profile
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                  <InfoField label="Full name" value={normalizeDisplayName(profile.full_name) || '—'} />
-                  <InfoField label="Email" value={profile.email || email || '—'} />
-                  <InfoField label="Phone" value={profile.phone || '—'} />
-                  <InfoField label="University" value={profile.university || '—'} />
-                  <InfoField label="Major" value={profile.major || '—'} />
-                  <InfoField label="Graduation year" value={profile.graduation_year?.toString() ?? '—'} />
-                  <InfoField label="GPA" value={typeof profile.gpa === 'number' ? profile.gpa.toFixed(2) : '—'} />
-                  <InfoField label="Clinical hours" value={typeof profile.clinical_hours === 'number' ? profile.clinical_hours.toString() : '—'} />
+                <div className="text-center py-8 text-muted-foreground">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No custom question responses.</p>
                 </div>
-                {resumeUrl && (
-                  <Button variant="outline" size="sm" className="gap-2 mt-4 w-full" asChild>
-                    <a href={resumeUrl} target="_blank" rel="noopener noreferrer">
-                      <FileText className="h-4 w-4" />
-                      View Resume
-                      <ExternalLink className="h-3 w-3 opacity-50" />
-                    </a>
+              )}
+            </TabsContent>
+
+            {/* ── Decision ──────────────────────────────────────────────── */}
+            <TabsContent value="decision" className="mt-4 space-y-4">
+              {(application.status === 'new' || application.status === 'under_review') && (
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={updatingStatus} onClick={() => handleStatusChange('accepted')}>
+                    Accept
                   </Button>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  <Button size="sm" variant="destructive" disabled={updatingStatus} onClick={() => handleStatusChange('rejected')}>
+                    Reject
+                  </Button>
+                  <Button size="sm" variant="outline" className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10" disabled={updatingStatus} onClick={() => handleStatusChange('interview')}>
+                    Interview
+                  </Button>
+                  <Button size="sm" variant="outline" className="border-purple-500/40 text-purple-300 hover:bg-purple-500/10" disabled={updatingStatus} onClick={() => handleStatusChange('waitlisted')}>
+                    Waitlist
+                  </Button>
+                </div>
+              )}
+              <Collapsible className="space-y-2">
+                <CollapsibleTrigger asChild>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground gap-1">
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    {application.status === 'new' || application.status === 'under_review' ? 'More options' : 'Change status'}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <Select value={application.status} onValueChange={(v) => handleStatusChange(v as ApplicationStatus)} disabled={updatingStatus}>
+                    <SelectTrigger className="h-9 w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CollapsibleContent>
+              </Collapsible>
+            </TabsContent>
 
-          <ApplicantDocuments documents={documents} />
+            {/* ── Notes ─────────────────────────────────────────────────── */}
+            <TabsContent value="notes" className="mt-4">
+              <ApplicationNotesPanel applicationId={application.id} />
+            </TabsContent>
 
-          {schedulingAnswers.length > 0 && (
-            <SchedulingAnswersView answers={schedulingAnswers} />
-          )}
+            {/* ── Documents ─────────────────────────────────────────────── */}
+            <TabsContent value="documents" className="mt-4 space-y-4">
+              <ApplicantDocuments documents={documents} />
+              {schedulingAnswers.length > 0 && (
+                <SchedulingAnswersView answers={schedulingAnswers} />
+              )}
+              {documents.length === 0 && schedulingAnswers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No documents uploaded</p>
+                </div>
+              )}
+            </TabsContent>
 
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5" />
-                Availability
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm">{availabilitySummary || 'Not provided.'}</p>
-            </CardContent>
-          </Card>
+            {/* ── Profile ───────────────────────────────────────────────── */}
+            <TabsContent value="profile" className="mt-4">
+              {profile ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <InfoField label="Full name" value={normalizeDisplayName(profile.full_name) || '—'} />
+                    <InfoField label="Email" value={profile.email || email || '—'} />
+                    <InfoField label="Phone" value={profile.phone || '—'} />
+                    <InfoField label="University" value={profile.university || '—'} />
+                    <InfoField label="Major" value={profile.major || '—'} />
+                    <InfoField label="Graduation year" value={profile.graduation_year?.toString() ?? '—'} />
+                    <InfoField label="GPA" value={typeof profile.gpa === 'number' ? profile.gpa.toFixed(2) : '—'} />
+                    <InfoField label="Clinical hours" value={typeof profile.clinical_hours === 'number' ? profile.clinical_hours.toString() : '—'} />
+                  </div>
+                  {resumeUrl && (
+                    <Button variant="outline" size="sm" className="gap-2 w-full" asChild>
+                      <a href={resumeUrl} target="_blank" rel="noopener noreferrer">
+                        <FileText className="h-4 w-4" />
+                        View Resume
+                        <ExternalLink className="h-3 w-3 opacity-50" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <User className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No profile data available.</p>
+                </div>
+              )}
+            </TabsContent>
 
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                <Calendar className="h-3.5 w-3.5" />
-                Interview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            {/* ── Availability ──────────────────────────────────────────── */}
+            <TabsContent value="availability" className="mt-4">
+              {availabilitySummary ? (
+                <div className="space-y-3 text-sm">
+                  {(() => {
+                    const av = application.availability_json;
+                    if (!av || typeof av !== 'object') return <p>{availabilitySummary}</p>;
+                    return (
+                      <div className="space-y-2">
+                        {av.days && av.days.length > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Days</span>
+                            <span>{av.days.join(', ')}</span>
+                          </div>
+                        )}
+                        {av.time_pref && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Time preference</span>
+                            <span className="capitalize">{av.time_pref}</span>
+                          </div>
+                        )}
+                        {av.hours_per_week != null && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Hours / week</span>
+                            <span>{av.hours_per_week}</span>
+                          </div>
+                        )}
+                        {av.commitment && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Commitment</span>
+                            <span>{av.commitment}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No availability data</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ── Interview ─────────────────────────────────────────────── */}
+            <TabsContent value="interview" className="mt-4">
               {application.interview_invited_at ? (
-                <>
+                <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle className="h-4 w-4" />
                     <span>Invite sent</span>
@@ -582,19 +654,29 @@ export default function ApplicantProfilePage() {
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(application.interview_invited_at), "MMM d, yyyy 'at' h:mm a")}
                   </p>
-                </>
+                  {application.interview_confirmed_at && (
+                    <>
+                      <div className="flex items-center gap-2 text-emerald-400 mt-2">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Confirmed</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(application.interview_confirmed_at), "MMM d, yyyy 'at' h:mm a")}
+                      </p>
+                    </>
+                  )}
+                </div>
               ) : (
-                <p className="text-muted-foreground">No interview invite sent yet.</p>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No interview records</p>
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </TabsContent>
 
-          {otherApps.length > 0 && (
-            <Card className="border-border/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Other Applications</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+            {/* ── Other Apps ────────────────────────────────────────────── */}
+            {otherApps.length > 0 && (
+              <TabsContent value="other-apps" className="mt-4 space-y-2">
                 {otherApps.map((oa) => (
                   <Link
                     key={oa.id}
@@ -612,25 +694,21 @@ export default function ApplicantProfilePage() {
                     </div>
                   </Link>
                 ))}
-              </CardContent>
-            </Card>
-          )}
+              </TabsContent>
+            )}
 
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                <MessageSquare className="h-3.5 w-3.5" />
-                Contact History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+            {/* ── Contact History ───────────────────────────────────────── */}
+            <TabsContent value="contact-history" className="mt-4">
               {activityLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-3/4" />
                 </div>
               ) : activityLog.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No contact history recorded.</p>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Mail className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No contact history recorded.</p>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {activityLog.slice(0, 20).map((entry) => (
@@ -649,10 +727,22 @@ export default function ApplicantProfilePage() {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            </TabsContent>
+
+            {/* ── Membership ────────────────────────────────────────────── */}
+            {hospitalPage?.id && (
+              <TabsContent value="membership" className="mt-4">
+                <PersonMembershipActions
+                  clinicId={hospitalPage.id}
+                  application={application}
+                  applicantName={name}
+                  applicantEmail={email || null}
+                />
+              </TabsContent>
+            )}
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {/* Send Email dialog */}
       {application && hospitalPage && (
