@@ -339,7 +339,7 @@ export default function ApplicantProfilePage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-40 rounded-lg" />
         <Skeleton className="h-60 rounded-lg" />
@@ -369,7 +369,7 @@ export default function ApplicantProfilePage() {
   })?.answer_file_url || null;
 
   return (
-    <div className="mx-auto max-w-4xl min-w-0 space-y-6">
+    <div className="min-w-0 space-y-6">
       <Button variant="ghost" size="sm" className="-ml-2 gap-2" onClick={() => navigate(-1)}>
         <ArrowLeft className="h-4 w-4" />
         Back
@@ -377,7 +377,7 @@ export default function ApplicantProfilePage() {
 
       {/* ── Card Header ─────────────────────────────────────────────────── */}
       <Card className="border-border/50">
-        <CardContent className="pt-6 pb-0">
+        <CardContent className="pt-6 pb-6">
           {/* Name + contact info (left) / avatar (right) */}
           <div className="flex items-start justify-between gap-4 pb-4">
             {/* Left: name + contact block */}
@@ -441,7 +441,7 @@ export default function ApplicantProfilePage() {
 
           {/* ── Tabs bar ────────────────────────────────────────────────── */}
           <Tabs defaultValue="responses" className="w-full">
-            <TabsList className="flex w-full overflow-x-auto flex-nowrap justify-start h-auto p-1 gap-1 rounded-none border-t border-border/40 bg-transparent -mx-6 px-6">
+            <TabsList className="flex w-full overflow-x-auto flex-nowrap justify-start h-auto p-1 gap-1 rounded-none border-t border-border/40 bg-transparent">
               <TabsTrigger value="responses" className="shrink-0">Responses</TabsTrigger>
               <TabsTrigger value="decision" className="shrink-0">Decision</TabsTrigger>
               <TabsTrigger value="notes" className="shrink-0">Notes</TabsTrigger>
@@ -454,7 +454,7 @@ export default function ApplicantProfilePage() {
               )}
               <TabsTrigger value="contact-history" className="shrink-0">Contact History</TabsTrigger>
               {hospitalPage?.id && (
-                <TabsTrigger value="membership" className="shrink-0">Membership</TabsTrigger>
+                <TabsTrigger value="staff" className="shrink-0">Staff</TabsTrigger>
               )}
             </TabsList>
 
@@ -729,9 +729,9 @@ export default function ApplicantProfilePage() {
               )}
             </TabsContent>
 
-            {/* ── Membership ────────────────────────────────────────────── */}
+            {/* ── Staff ─────────────────────────────────────────────────── */}
             {hospitalPage?.id && (
-              <TabsContent value="membership" className="mt-4">
+              <TabsContent value="staff" className="mt-4">
                 <PersonMembershipActions
                   clinicId={hospitalPage.id}
                   application={application}

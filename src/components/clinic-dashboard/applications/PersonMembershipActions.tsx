@@ -123,7 +123,7 @@ export default function PersonMembershipActions({
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
           <GraduationCap className="h-3.5 w-3.5" />
-          Membership
+          Staff
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
