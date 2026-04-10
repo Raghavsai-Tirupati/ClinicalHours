@@ -188,6 +188,7 @@ export default function ApplicantPersonPage() {
   const [uploadAppId, setUploadAppId] = useState('');
   const [uploadFileType, setUploadFileType] = useState<ApplicationDocument['file_type']>('other');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [personEmail, setPersonEmail] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -220,19 +221,20 @@ export default function ApplicantPersonPage() {
     if (!studentId || !hospitalPage?.id) return;
     setLoading(true);
     try {
+      // 1. Fetch positions for this clinic
       const { data: posData } = await supabase
         .from('hospital_positions')
         .select('id')
         .eq('hospital_page_id', hospitalPage.id);
-
       const positionIds = (posData || []).map((p) => p.id);
 
+      // 2. Fetch profile + applications in parallel
       const [profileResult, appsResult] = await Promise.all([
         supabase
           .from('profiles')
           .select('id, full_name, university, major, graduation_year, city, state, phone, clinical_hours, gpa, bio, career_goals, linkedin_url, resume_url, email_verified, avatar_url')
           .eq('id', studentId)
-          .single(),
+          .maybeSingle(),
         positionIds.length > 0
           ? supabase
               .from('student_applications')
@@ -241,147 +243,185 @@ export default function ApplicantPersonPage() {
               .eq('student_id', studentId)
               .in('position_id', positionIds)
               .order('submitted_at', { ascending: false })
-          : Promise.resolve({ data: [], error: null }),
+          : Promise.resolve({ data: [] as any[], error: null }),
       ]);
 
       setProfile(profileResult.data as PersonProfile | null);
       const fetchedApps = (appsResult.data || []) as unknown as PersonApplication[];
       setApplications(fetchedApps);
 
-      if (fetchedApps.length > 0) {
-        setUploadAppId(fetchedApps[0].id);
-        const appIds = fetchedApps.map((a) => a.id);
-        const studentEmail = fetchedApps[0].applicant_email || '';
+      // 3. Derive email: check all apps, then clinic_members
+      let resolvedEmail = '';
+      for (const a of fetchedApps) {
+        if (a.applicant_email?.trim()) { resolvedEmail = a.applicant_email.trim(); break; }
+      }
+      if (!resolvedEmail) {
+        // Fallback: check clinic_members for email
+        const { data: memberData } = await supabase
+          .from('clinic_members')
+          .select('email')
+          .eq('clinic_id', hospitalPage.id)
+          .eq('user_id', studentId)
+          .maybeSingle();
+        if (memberData?.email) resolvedEmail = memberData.email;
+      }
+      setPersonEmail(resolvedEmail);
 
-        const [answersResult, docsResult, emailLogsResult, activityResult] = await Promise.all([
-          supabase
-            .from('application_answers')
-            .select(`id, application_id, answer_text, answer_options, answer_file_url, created_at,
-              question:position_questions(question_text, question_type, display_order)`)
-            .in('application_id', appIds),
-          supabase
-            .from('application_documents')
-            .select('id, application_id, student_id, file_name, file_url, file_type, file_size_bytes, created_at')
-            .in('application_id', appIds)
-            .order('created_at', { ascending: true }),
-          studentEmail
-            ? supabase
-                .from('email_send_logs')
-                .select('id, subject, template_name, sent_by, created_at')
-                .contains('recipient_emails', [studentEmail])
-                .order('created_at', { ascending: false })
-            : Promise.resolve({ data: [] }),
-          supabase
-            .from('admin_activity_log')
-            .select('id, action_type, metadata, actor_email, created_at')
-            .eq('hospital_page_id', hospitalPage.id)
-            .in('target_id', appIds)
-            .order('created_at', { ascending: false })
-            .limit(50),
-        ]);
+      // 4. Fetch related data (answers, docs, emails, activity) — always try, even with 0 apps
+      const appIds = fetchedApps.map((a) => a.id);
+      if (fetchedApps.length > 0) setUploadAppId(fetchedApps[0].id);
 
-        setResponses((answersResult.data || []) as unknown as ResponseRow[]);
-        setDocuments((docsResult.data || []) as ApplicationDocument[]);
-        setEmailLogs((emailLogsResult.data || []) as EmailLogRow[]);
+      const [answersResult, docsResult, emailLogsResult, activityResult] = await Promise.all([
+        appIds.length > 0
+          ? supabase
+              .from('application_answers')
+              .select(`id, application_id, answer_text, answer_options, answer_file_url, created_at,
+                question:position_questions(question_text, question_type, display_order)`)
+              .in('application_id', appIds)
+          : Promise.resolve({ data: [] }),
+        appIds.length > 0
+          ? supabase
+              .from('application_documents')
+              .select('id, application_id, student_id, file_name, file_url, file_type, file_size_bytes, created_at')
+              .in('application_id', appIds)
+              .order('created_at', { ascending: true })
+          : Promise.resolve({ data: [] }),
+        resolvedEmail
+          ? supabase
+              .from('email_send_logs')
+              .select('id, subject, template_name, sent_by, created_at')
+              .eq('clinic_id', hospitalPage.id)
+              .contains('recipient_emails', [resolvedEmail])
+              .order('created_at', { ascending: false })
+          : Promise.resolve({ data: [] }),
+        // Activity: fetch ALL activity for this hospital, filter by target_id matching any app OR by student-related metadata
+        supabase
+          .from('admin_activity_log')
+          .select('id, action_type, target_type, target_id, metadata, actor_email, created_at')
+          .eq('hospital_page_id', hospitalPage.id)
+          .order('created_at', { ascending: false })
+          .limit(200),
+      ]);
 
-        // Build unified activity timeline
-        const events: ActivityEvent[] = [];
+      setResponses((answersResult.data || []) as unknown as ResponseRow[]);
+      setDocuments((docsResult.data || []) as ApplicationDocument[]);
+      setEmailLogs((emailLogsResult.data || []) as EmailLogRow[]);
 
-        // From admin_activity_log
-        for (const row of (activityResult.data || []) as any[]) {
-          const meta = row.metadata || {};
-          let label = row.action_type;
-          let detail: string | null = null;
+      // 5. Build unified activity timeline — filter activity entries relevant to this person
+      const appIdSet = new Set(appIds);
+      const events: ActivityEvent[] = [];
 
-          switch (row.action_type) {
-            case 'status_change':
-              label = 'Status changed';
-              detail = meta.from && meta.to
+      for (const row of (activityResult.data || []) as any[]) {
+        // Only include events that target one of this person's applications
+        if (row.target_id && !appIdSet.has(row.target_id)) continue;
+        // If no target_id, skip (it's not about a specific application)
+        if (!row.target_id) continue;
+
+        const meta = row.metadata || {};
+        let label = row.action_type;
+        let detail: string | null = null;
+
+        switch (row.action_type) {
+          case 'status_change':
+            label = 'Status changed';
+            detail = meta.newStatus
+              ? `Set to ${APPLICATION_STATUS_LABELS[meta.newStatus as ApplicationStatus] || meta.newStatus}`
+              : meta.from && meta.to
                 ? `${APPLICATION_STATUS_LABELS[meta.from as ApplicationStatus] || meta.from} → ${APPLICATION_STATUS_LABELS[meta.to as ApplicationStatus] || meta.to}`
-                : meta.to ? `Set to ${APPLICATION_STATUS_LABELS[meta.to as ApplicationStatus] || meta.to}` : null;
-              break;
-            case 'email_sent':
-              label = 'Email sent';
-              detail = meta.subject || null;
-              break;
-            case 'interview_invited':
-              label = 'Interview invite sent';
-              detail = null;
-              break;
-            case 'note_added':
-              label = 'Note added';
-              detail = null;
-              break;
-            case 'application_reviewed':
-              label = 'Application reviewed';
-              detail = null;
-              break;
-            default:
-              label = row.action_type.replace(/_/g, ' ');
-          }
-
-          events.push({
-            id: `act-${row.id}`,
-            type: row.action_type,
-            label,
-            detail,
-            timestamp: row.created_at,
-            actor: row.actor_email,
-          });
+                : null;
+            break;
+          case 'email_sent':
+            label = 'Email sent';
+            detail = meta.subject as string || null;
+            break;
+          case 'interview_invited':
+            label = 'Interview invite sent';
+            detail = null;
+            break;
+          case 'note_added':
+            label = 'Note added';
+            detail = null;
+            break;
+          case 'application_reviewed':
+            label = 'Application reviewed';
+            detail = null;
+            break;
+          default:
+            label = row.action_type.replace(/_/g, ' ');
         }
 
-        // From email_send_logs (in case not already in activity log)
-        for (const log of (emailLogsResult.data || []) as EmailLogRow[]) {
+        events.push({
+          id: `act-${row.id}`,
+          type: row.action_type,
+          label,
+          detail,
+          timestamp: row.created_at,
+          actor: row.actor_email,
+        });
+      }
+
+      // Email logs not in activity
+      for (const log of (emailLogsResult.data || []) as EmailLogRow[]) {
+        const alreadyTracked = events.some(
+          (e) => e.type === 'email_sent' && Math.abs(new Date(e.timestamp).getTime() - new Date(log.created_at).getTime()) < 60000,
+        );
+        if (!alreadyTracked) {
+          events.push({
+            id: `email-${log.id}`,
+            type: 'email_sent',
+            label: 'Email sent',
+            detail: log.subject,
+            timestamp: log.created_at,
+            actor: log.sent_by,
+          });
+        }
+      }
+
+      // Interview invites from applications
+      for (const app of fetchedApps) {
+        if (app.interview_invited_at) {
           const alreadyTracked = events.some(
-            (e) => e.type === 'email_sent' && Math.abs(new Date(e.timestamp).getTime() - new Date(log.created_at).getTime()) < 60000,
+            (e) => e.type === 'interview_invited' && Math.abs(new Date(e.timestamp).getTime() - new Date(app.interview_invited_at!).getTime()) < 60000,
           );
           if (!alreadyTracked) {
             events.push({
-              id: `email-${log.id}`,
-              type: 'email_sent',
-              label: 'Email sent',
-              detail: log.subject,
-              timestamp: log.created_at,
-              actor: log.sent_by,
+              id: `inv-${app.id}`,
+              type: 'interview_invited',
+              label: 'Interview invite sent',
+              detail: app.position?.title || null,
+              timestamp: app.interview_invited_at,
+              actor: null,
             });
           }
         }
-
-        // Interview invite events from applications
-        for (const app of fetchedApps) {
-          if (app.interview_invited_at) {
-            const alreadyTracked = events.some(
-              (e) => e.type === 'interview_invited' && Math.abs(new Date(e.timestamp).getTime() - new Date(app.interview_invited_at!).getTime()) < 60000,
-            );
-            if (!alreadyTracked) {
-              events.push({
-                id: `inv-${app.id}`,
-                type: 'interview_invited',
-                label: 'Interview invite sent',
-                detail: app.position?.title || null,
-                timestamp: app.interview_invited_at,
-                actor: null,
-              });
-            }
-          }
-        }
-
-        // Document uploads
-        for (const doc of (docsResult.data || []) as ApplicationDocument[]) {
-          events.push({
-            id: `doc-${doc.id}`,
-            type: 'document_uploaded',
-            label: 'Document uploaded',
-            detail: doc.file_name,
-            timestamp: doc.created_at,
-            actor: null,
-          });
-        }
-
-        // Sort newest first
-        events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        setActivityEvents(events);
       }
+
+      // Document uploads
+      for (const doc of (docsResult.data || []) as ApplicationDocument[]) {
+        events.push({
+          id: `doc-${doc.id}`,
+          type: 'document_uploaded',
+          label: 'Document uploaded',
+          detail: doc.file_name,
+          timestamp: doc.created_at,
+          actor: null,
+        });
+      }
+
+      // Application submissions
+      for (const app of fetchedApps) {
+        events.push({
+          id: `submit-${app.id}`,
+          type: 'application_submitted',
+          label: 'Application submitted',
+          detail: app.position?.title || null,
+          timestamp: app.submitted_at,
+          actor: null,
+        });
+      }
+
+      events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setActivityEvents(events);
     } catch (err) {
       console.error('Failed to load person profile:', err);
     } finally {
@@ -681,7 +721,7 @@ export default function ApplicantPersonPage() {
     (profile?.full_name?.trim()) ||
     firstApp?.applicant_name?.trim() ||
     `Student ${studentId?.slice(0, 8)}`;
-  const email = firstApp?.applicant_email || '';
+  const email = personEmail || firstApp?.applicant_email || '';
   const initial = displayName.charAt(0).toUpperCase();
 
   function appLabel(app: PersonApplication) {
