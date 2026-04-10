@@ -7,7 +7,6 @@ import {
   CalendarCheck,
   Camera,
   CheckCircle,
-  ChevronDown,
   Clock,
   ExternalLink,
   Eye,
@@ -37,7 +36,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -49,7 +47,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
-import { autoPromoteToStaff, buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS, STATUS_COLORS } from '@/types/positions';
 import type { ApplicationDocument, ApplicationStatus, StudentApplication } from '@/types/positions';
 import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
@@ -183,7 +180,6 @@ export default function ApplicantPersonPage() {
   const [emailLogs, setEmailLogs] = useState<EmailLogRow[]>([]);
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadAppId, setUploadAppId] = useState('');
   const [uploadFileType, setUploadFileType] = useState<ApplicationDocument['file_type']>('other');
@@ -467,44 +463,6 @@ export default function ApplicantPersonPage() {
     setTrackerCategories((data as TrackerCategory[]) || []);
   }
 
-  const handleStatusChange = useCallback(
-    async (applicationId: string, newStatus: ApplicationStatus) => {
-      setUpdatingStatus(applicationId);
-      try {
-        const payload = buildStudentApplicationStatusUpdate(newStatus);
-        const { error } = await supabase
-          .from('student_applications')
-          .update(payload)
-          .eq('id', applicationId);
-        if (error) throw error;
-        toast.success(`Status updated to ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
-        setApplications((prev) =>
-          prev.map((a) => (a.id === applicationId ? { ...a, status: newStatus } : a)),
-        );
-
-        if (newStatus === 'accepted' && hospitalPage?.id) {
-          const app = applications.find((a) => a.id === applicationId);
-          if (app) {
-            const name = app.applicant_name?.trim() || profile?.full_name?.trim() || app.applicant_email?.split('@')[0] || 'Unknown';
-            const { error: promoteErr } = await autoPromoteToStaff({
-              clinicId: hospitalPage.id,
-              applicationId,
-              studentId: studentId || null,
-              fullName: name,
-              email: app.applicant_email || null,
-            });
-            if (promoteErr) toast.error('Accepted, but failed to add to Staff: ' + promoteErr);
-            else await loadMember(); // Refresh role tab
-          }
-        }
-      } catch (err: any) {
-        toast.error(err?.message || 'Failed to update status');
-      } finally {
-        setUpdatingStatus(null);
-      }
-    },
-    [applications, hospitalPage?.id, studentId, profile?.full_name],
-  );
 
   const handleFileUpload = useCallback(
     async (file: File) => {
@@ -888,11 +846,10 @@ export default function ApplicantPersonPage() {
       {/* ── Content Tabs ──────────────────────────────────────────────── */}
       <Card className="border-border/50">
         <CardContent className="pt-0 pb-6">
-          <Tabs defaultValue="decision" className="w-full">
+          <Tabs defaultValue="notes" className="w-full">
             <TabsList className="flex w-full overflow-x-auto flex-nowrap justify-start h-auto p-1 gap-1 bg-transparent border-b border-border/40 rounded-none">
-              <TabsTrigger value="decision" className="shrink-0">Decision</TabsTrigger>
-              <TabsTrigger value="responses" className="shrink-0">Responses</TabsTrigger>
               <TabsTrigger value="notes" className="shrink-0">Notes</TabsTrigger>
+              <TabsTrigger value="responses" className="shrink-0">Responses</TabsTrigger>
               <TabsTrigger value="documents" className="shrink-0">Documents</TabsTrigger>
               <TabsTrigger value="email" className="shrink-0">Email</TabsTrigger>
               {hospitalPage?.id && (
@@ -901,54 +858,6 @@ export default function ApplicantPersonPage() {
               <TabsTrigger value="activity" className="shrink-0">Activity</TabsTrigger>
               <TabsTrigger value="contact-history" className="shrink-0">Contact History</TabsTrigger>
             </TabsList>
-
-            {/* ── Decision ──────────────────────────────────────────── */}
-            <TabsContent value="decision" className="mt-4 space-y-3">
-              {applications.map((app) => {
-                const busy = updatingStatus === app.id;
-                return (
-                  <div key={app.id} className="rounded-md border border-border/40 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium">{app.position?.title ?? 'Unknown Position'}</p>
-                        <p className="text-xs text-muted-foreground">Submitted {formatDateShort(app.submitted_at)}</p>
-                      </div>
-                      <Badge variant="secondary" className={`text-xs shrink-0 ${STATUS_COLORS[app.status] ?? ''}`}>
-                        {APPLICATION_STATUS_LABELS[app.status]}
-                      </Badge>
-                    </div>
-                    {(app.status === 'new' || app.status === 'under_review') && (
-                      <div className="flex flex-wrap gap-2">
-                        <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={busy} onClick={() => handleStatusChange(app.id, 'accepted')}>Accept</Button>
-                        <Button size="sm" variant="destructive" disabled={busy} onClick={() => handleStatusChange(app.id, 'rejected')}>Reject</Button>
-                        <Button size="sm" variant="outline" className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10" disabled={busy} onClick={() => handleStatusChange(app.id, 'interview')}>Interview</Button>
-                        <Button size="sm" variant="outline" className="border-purple-500/40 text-purple-300 hover:bg-purple-500/10" disabled={busy} onClick={() => handleStatusChange(app.id, 'waitlisted')}>Waitlist</Button>
-                      </div>
-                    )}
-                    <Collapsible>
-                      <CollapsibleTrigger asChild>
-                        <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground gap-1">
-                          <ChevronDown className="h-3.5 w-3.5" />
-                          {app.status === 'new' || app.status === 'under_review' ? 'More options' : 'Change status'}
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <Select value={app.status} onValueChange={(v) => handleStatusChange(app.id, v as ApplicationStatus)} disabled={busy}>
-                          <SelectTrigger className="h-9 w-48 mt-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
-                              <SelectItem key={key} value={key}>{label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </div>
-                );
-              })}
-            </TabsContent>
 
             {/* ── Responses ─────────────────────────────────────────── */}
             <TabsContent value="responses" className="mt-4 space-y-4">
@@ -985,14 +894,18 @@ export default function ApplicantPersonPage() {
 
             {/* ── Notes ─────────────────────────────────────────────── */}
             <TabsContent value="notes" className="mt-4 space-y-4">
-              {applications.map((app) => (
-                <div key={app.id} className="space-y-2">
-                  {applications.length > 1 && (
+              {applications.length === 0 ? (
+                <EmptyState icon={MessageSquare} message="No applications found — notes are tied to applications" />
+              ) : applications.length === 1 ? (
+                <ApplicationNotesPanel applicationId={applications[0].id} />
+              ) : (
+                applications.map((app) => (
+                  <div key={app.id} className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{appLabel(app)}</p>
-                  )}
-                  <ApplicationNotesPanel applicationId={app.id} />
-                </div>
-              ))}
+                    <ApplicationNotesPanel applicationId={app.id} />
+                  </div>
+                ))
+              )}
             </TabsContent>
 
             {/* ── Documents ─────────────────────────────────────────── */}
