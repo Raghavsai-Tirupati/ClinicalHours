@@ -3,23 +3,19 @@ import { useSearchParams } from 'react-router-dom';
 import { Users, Table as TableIcon, UserCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
-import { useClinicMembers } from './hooks';
 import MembersTab from './MembersTab';
 import PeopleTab from './PeopleTab';
 import VolunteerTracker from '../volunteer-tracker/VolunteerTracker';
 
-// Renamed from "Team" → "People" in the People refactor.
 // Three tabs:
 //   • People  – everyone who has ever applied (any status)
-//   • Staff   – only people promoted from accepted applications (incl. alumni)
-//   • Tracker – the volunteer hours tracker (unchanged)
+//   • Staff   – accepted applicants only (derived live from applications)
+//   • Tracker – spreadsheet-style performance tracker
 export default function VolunteerManagement() {
   const { hospitalPage } = useHospitalPageContext();
   const rawId = hospitalPage?.id;
   // virtual- IDs are placeholders when the hospital page hasn't been provisioned yet
   const clinicId = rawId && !rawId.startsWith('virtual-') ? rawId : undefined;
-
-  const { members, loading: membersLoading, refetch: refetchMembers } = useClinicMembers(clinicId);
 
   // Support legacy ?tab= deep links and the new "people" default.
   const [searchParams, setSearchParams] = useSearchParams();
@@ -86,12 +82,7 @@ export default function VolunteerManagement() {
         </TabsContent>
 
         <TabsContent value="members" className="mt-6">
-          <MembersTab
-            clinicId={clinicId}
-            members={members}
-            loading={membersLoading}
-            onRefresh={refetchMembers}
-          />
+          <MembersTab clinicId={clinicId} />
         </TabsContent>
 
         <TabsContent value="tracker" className="mt-6">

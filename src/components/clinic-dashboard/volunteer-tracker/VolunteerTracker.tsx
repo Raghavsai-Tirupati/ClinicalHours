@@ -58,8 +58,8 @@ import {
   useTrackerEntries,
   useTrackerValues,
 } from './hooks';
-import { useClinicMembers } from '../volunteer-management/hooks';
-import type { ClinicMember } from '../volunteer-management/types';
+import { useAllApplications } from '@/hooks/useAllApplications';
+import type { StudentApplication } from '@/types/positions';
 import type { TrackerCategory, TrackerColumn, TrackerColumnType, TrackerEntry } from './types';
 import { COLUMN_TYPE_LABELS, DEFAULT_CATEGORY_COLORS } from './types';
 import { toast } from 'sonner';
@@ -192,7 +192,7 @@ export default function VolunteerTracker() {
   const { entries, loading: entLoading, add: addEntry, update: updateEntry, remove: removeEntry, refetch: refetchEntries } = useTrackerEntries(clinicId);
   const entryIds = useMemo(() => entries.map(e => e.id), [entries]);
   const { values, loading: valLoading, upsert: upsertValue } = useTrackerValues(entryIds);
-  const { members, loading: memLoading, refetch: refetchMembers } = useClinicMembers(clinicId);
+  const { applications, loading: appsLoading } = useAllApplications(hospitalPage?.id);
 
   // Modal state
   const [catDialogOpen, setCatDialogOpen] = useState(false);
@@ -217,14 +217,28 @@ export default function VolunteerTracker() {
   const [staffPanelOpen, setStaffPanelOpen] = useState(false);
   const [dropTargetCatId, setDropTargetCatId] = useState<string | null>(null);
 
-  const loading = catLoading || colLoading || entLoading || valLoading || memLoading;
+  const loading = catLoading || colLoading || entLoading || valLoading || appsLoading;
 
-  // Staff who are active but don't have a tracker_category_id (unassigned).
-  const unassignedStaff = useMemo(() => {
-    return members.filter(
-      (m) => m.status === 'active' && !m.tracker_category_id,
-    );
-  }, [members]);
+  // Accepted applicants, deduplicated by student_id (source of truth for Staff).
+  const acceptedStaff = useMemo(() => {
+    const seen = new Set<string>();
+    return applications.filter((a) => {
+      if (a.status !== 'accepted' || !a.student_id) return false;
+      if (seen.has(a.student_id)) return false;
+      seen.add(a.student_id);
+      return true;
+    });
+  }, [applications]);
+
+  // Unassigned = accepted staff whose student_id has no tracker entry yet.
+  const assignedStudentIds = useMemo(
+    () => new Set(entries.map(e => e.volunteer_user_id).filter(Boolean) as string[]),
+    [entries],
+  );
+  const unassignedStaff = useMemo(
+    () => acceptedStaff.filter(a => !assignedStudentIds.has(a.student_id)),
+    [acceptedStaff, assignedStudentIds],
+  );
 
   if (!clinicId) {
     return (
@@ -373,10 +387,6 @@ export default function VolunteerTracker() {
     if (!volCategoryId) { toast.error('Select a role'); return; }
     setSaving(true);
     if (editingEntry) {
-      // If the category changed, also update the clinic_member.
-      if (editingEntry.category_id !== volCategoryId) {
-        await updateMemberCategory(editingEntry.volunteer_user_id, volCategoryId);
-      }
       const err = await updateEntry(editingEntry.id, { volunteer_name: volName.trim(), category_id: volCategoryId });
       if (err) toast.error('Failed to update');
       else toast.success('Updated');
@@ -390,56 +400,25 @@ export default function VolunteerTracker() {
   }
 
   async function handleDeleteVolunteer(id: string) {
-    // Also clear the tracker_category_id on the clinic_member.
-    const entry = entries.find(e => e.id === id);
-    if (entry?.volunteer_user_id) {
-      await supabase
-        .from('clinic_members')
-        .update({ tracker_category_id: null })
-        .eq('user_id', entry.volunteer_user_id)
-        .eq('clinic_id', clinicId);
-    }
     const err = await removeEntry(id);
     if (err) toast.error('Failed to remove');
     else {
       toast.success('Removed from role');
-      refetchMembers();
+      refetchEntries();
     }
   }
 
   // ── Drag and drop handlers ───────────────────────────────
 
-  async function handleDropStaff(memberId: string, categoryId: string) {
-    const member = members.find(m => m.id === memberId);
-    if (!member) return;
-
-    // 1. Create a tracker entry for this staff member.
-    const err = await addEntry(categoryId, member.full_name, member.user_id);
+  async function handleDropStaff(studentId: string, name: string, categoryId: string) {
+    const err = await addEntry(categoryId, name, studentId);
     if (err) {
       toast.error('Failed to assign role');
       return;
     }
-
-    // 2. Update the clinic_member's tracker_category_id.
-    await supabase
-      .from('clinic_members')
-      .update({ tracker_category_id: categoryId })
-      .eq('id', memberId);
-
-    toast.success(`${member.full_name} assigned to role`);
-    refetchMembers();
+    toast.success(`${name} assigned to role`);
     refetchEntries();
     setDropTargetCatId(null);
-  }
-
-  async function updateMemberCategory(userId: string | null, newCategoryId: string) {
-    if (!userId) return;
-    await supabase
-      .from('clinic_members')
-      .update({ tracker_category_id: newCategoryId })
-      .eq('user_id', userId)
-      .eq('clinic_id', clinicId);
-    refetchMembers();
   }
 
   // ── Cell save ─────────────────────────────────────────────
@@ -477,9 +456,9 @@ export default function VolunteerTracker() {
             <TableIcon className="h-12 w-12 text-muted-foreground/40 mb-4" />
             <h3 className="text-lg font-semibold mb-2">Set up your tracker</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-md">
-              Add your first role to get started. Roles group your staff
-              (e.g. "Medical Assistant", "Scribe", "Patient Registration").
-              Then drag staff members from the panel into their role.
+              Add your first role to get started. Roles group your accepted staff —
+              you create them dynamically based on your clinic's needs.
+              Then drag staff members from the Unassigned Staff panel into their role.
             </p>
             <Button onClick={openAddCategory} className="gap-2">
               <Plus className="h-4 w-4" />
@@ -553,7 +532,7 @@ export default function VolunteerTracker() {
           <CardContent className="pt-4 pb-4">
             {unassignedStaff.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
-                All staff have been assigned a role. Accept new applicants to see them here.
+                All accepted staff have been assigned a role. Accept new applicants to see them here.
               </p>
             ) : (
               <>
@@ -561,8 +540,8 @@ export default function VolunteerTracker() {
                   Drag a person into a role below to assign them.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {unassignedStaff.map((m) => (
-                    <StaffChip key={m.id} member={m} />
+                  {unassignedStaff.map((a) => (
+                    <StaffChip key={a.id} app={a} />
                   ))}
                 </div>
               </>
@@ -638,10 +617,6 @@ export default function VolunteerTracker() {
                     onDeleteEntry={(id) => handleDeleteVolunteer(id)}
                     allCategories={categories}
                     onMoveEntry={async (entryId, newCatId) => {
-                      const entry = entries.find(e => e.id === entryId);
-                      if (entry?.volunteer_user_id) {
-                        await updateMemberCategory(entry.volunteer_user_id, newCatId);
-                      }
                       await updateEntry(entryId, { category_id: newCatId });
                       toast.success('Moved to new role');
                     }}
@@ -653,8 +628,13 @@ export default function VolunteerTracker() {
                     onDragLeave={() => setDropTargetCatId(null)}
                     onDrop={(e) => {
                       e.preventDefault();
-                      const memberId = e.dataTransfer.getData(STAFF_DND_TYPE);
-                      if (memberId) handleDropStaff(memberId, cat.id);
+                      const raw = e.dataTransfer.getData(STAFF_DND_TYPE);
+                      if (raw) {
+                        try {
+                          const { studentId, name } = JSON.parse(raw) as { studentId: string; name: string };
+                          handleDropStaff(studentId, name, cat.id);
+                        } catch { /* ignore malformed payload */ }
+                      }
                       setDropTargetCatId(null);
                     }}
                   />
@@ -709,9 +689,22 @@ export default function VolunteerTracker() {
 
 // ── Draggable staff chip ──────────────────────────────────────
 
-function StaffChip({ member }: { member: ClinicMember }) {
+const PLACEHOLDER_NAME_REGEX_CHIP = /^student\s+[a-f0-9]{8}$/i;
+function getChipName(app: StudentApplication): string {
+  const candidates = [app.applicant_name, app.student_profile?.full_name];
+  for (const c of candidates) {
+    const t = c?.trim();
+    if (t && !PLACEHOLDER_NAME_REGEX_CHIP.test(t)) return t;
+  }
+  return app.student_profile?.email?.split('@')[0] || app.applicant_email?.split('@')[0] || `Student ${app.student_id?.slice(0, 8) || ''}`;
+}
+
+function StaffChip({ app }: { app: StudentApplication }) {
+  const name = getChipName(app);
+  const email = app.applicant_email || app.student_profile?.email || '';
+
   const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
-    e.dataTransfer.setData(STAFF_DND_TYPE, member.id);
+    e.dataTransfer.setData(STAFF_DND_TYPE, JSON.stringify({ studentId: app.student_id, name }));
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -722,10 +715,10 @@ function StaffChip({ member }: { member: ClinicMember }) {
       className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-sm cursor-grab active:cursor-grabbing hover:border-primary/40 hover:bg-primary/5 transition-colors select-none"
     >
       <GripVertical className="h-3 w-3 text-muted-foreground/50" />
-      <span className="font-medium truncate max-w-[180px]">{member.full_name}</span>
-      {member.email && (
+      <span className="font-medium truncate max-w-[180px]">{name}</span>
+      {email && (
         <span className="text-[10px] text-muted-foreground truncate max-w-[140px] hidden sm:inline">
-          {member.email}
+          {email}
         </span>
       )}
     </div>
@@ -932,7 +925,7 @@ function CategoryDialog({
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit Role' : 'Add Role'}</DialogTitle>
           <DialogDescription>
-            Roles group your staff by position (e.g. "Medical Assistant", "Scribe").
+            Roles group your accepted staff. Create them based on your clinic's specific positions.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -940,7 +933,7 @@ function CategoryDialog({
             <Label htmlFor="cat-name">Name</Label>
             <Input
               id="cat-name"
-              placeholder="e.g. Medical Assistant"
+              placeholder="Role name"
               value={name}
               onChange={(e) => onNameChange(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') onSave(); }}
