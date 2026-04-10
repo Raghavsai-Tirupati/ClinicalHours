@@ -50,7 +50,7 @@ import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { APPLICATION_STATUS_LABELS, STATUS_COLORS } from '@/types/positions';
 import type { ApplicationDocument, ApplicationStatus, StudentApplication } from '@/types/positions';
 import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
-import ApplicationNotesPanel from '@/components/clinic-dashboard/applications/ApplicationNotesPanel';
+import PersonNotesPanel from '@/components/clinic-dashboard/applications/PersonNotesPanel';
 import InterviewInviteDialog from '@/components/hospital/InterviewInviteDialog';
 import { useEmailTemplates } from '@/components/clinic-dashboard/email-communication/hooks';
 import type { TemplateCategory } from '@/components/clinic-dashboard/email-communication/types';
@@ -894,17 +894,10 @@ export default function ApplicantPersonPage() {
 
             {/* ── Notes ─────────────────────────────────────────────── */}
             <TabsContent value="notes" className="mt-4 space-y-4">
-              {applications.length === 0 ? (
-                <EmptyState icon={MessageSquare} message="No applications found — notes are tied to applications" />
-              ) : applications.length === 1 ? (
-                <ApplicationNotesPanel applicationId={applications[0].id} />
+              {hospitalPage?.id && studentId ? (
+                <PersonNotesPanel clinicId={hospitalPage.id} studentId={studentId} />
               ) : (
-                applications.map((app) => (
-                  <div key={app.id} className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{appLabel(app)}</p>
-                    <ApplicationNotesPanel applicationId={app.id} />
-                  </div>
-                ))
+                <EmptyState icon={MessageSquare} message="Unable to load notes" />
               )}
             </TabsContent>
 
