@@ -11,6 +11,7 @@ import {
   FileText,
   Loader2,
   Mail,
+  CalendarCheck,
   MessageSquare,
   Phone,
   Square,
@@ -37,6 +38,8 @@ import ResumeScoreBadge from '@/components/clinic-dashboard/applications/ResumeS
 import ApplicationNotesPanel from '@/components/clinic-dashboard/applications/ApplicationNotesPanel';
 import PersonMembershipActions from '@/components/clinic-dashboard/applications/PersonMembershipActions';
 import ApplicantEmailDialog from '@/components/clinic-dashboard/email-communication/ApplicantEmailDialog';
+import RichEmailDialog from '@/components/hospital/RichEmailDialog';
+import InterviewInviteDialog from '@/components/hospital/InterviewInviteDialog';
 import { useEmailTemplates } from '@/components/clinic-dashboard/email-communication/hooks';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -141,6 +144,8 @@ export default function ApplicantProfilePage() {
   const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
   const [schedulingAnswers, setSchedulingAnswers] = useState<SchedulingAnswer[]>([]);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [richEmailDialogOpen, setRichEmailDialogOpen] = useState(false);
+  const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadFileType, setUploadFileType] = useState<'resume' | 'cv' | 'certification' | 'reference' | 'transcript' | 'other'>('other');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -494,15 +499,26 @@ export default function ApplicantProfilePage() {
                     {format(new Date(application.submitted_at), "MMM d, yyyy 'at' h:mm a")}
                   </span>
                   {email && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5 h-6 text-xs px-2"
-                      onClick={() => setEmailDialogOpen(true)}
-                    >
-                      <Mail className="h-3 w-3" />
-                      Send Email
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-6 text-xs px-2"
+                        onClick={() => setRichEmailDialogOpen(true)}
+                      >
+                        <Mail className="h-3 w-3" />
+                        Send Email
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-6 text-xs px-2 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                        onClick={() => setInterviewDialogOpen(true)}
+                      >
+                        <CalendarCheck className="h-3 w-3" />
+                        Interview Invite
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -807,7 +823,7 @@ export default function ApplicantProfilePage() {
             {/* ── Interview ─────────────────────────────────────────────── */}
             <TabsContent value="interview" className="mt-4">
               {application.interview_invited_at ? (
-                <div className="space-y-2 text-sm">
+                <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle className="h-4 w-4" />
                     <span>Invite sent</span>
@@ -826,11 +842,29 @@ export default function ApplicantProfilePage() {
                       </p>
                     </>
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                    onClick={() => setInterviewDialogOpen(true)}
+                  >
+                    <CalendarCheck className="h-3.5 w-3.5" />
+                    Resend Interview Invite
+                  </Button>
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground space-y-3">
                   <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No interview records</p>
+                  <p>No interview invite sent yet.</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                    onClick={() => setInterviewDialogOpen(true)}
+                  >
+                    <CalendarCheck className="h-3.5 w-3.5" />
+                    Send Interview Invite
+                  </Button>
                 </div>
               )}
             </TabsContent>
@@ -905,7 +939,7 @@ export default function ApplicantProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Send Email dialog */}
+      {/* Send Email dialog (legacy template-based) */}
       {application && hospitalPage && (
         <ApplicantEmailDialog
           open={emailDialogOpen}
@@ -915,6 +949,32 @@ export default function ApplicantProfilePage() {
           hospitalPageId={hospitalPage.id}
           templates={templates}
           adminEmail={hospitalPage.admin_email}
+        />
+      )}
+
+      {/* Rich Email dialog */}
+      {application && hospitalPage && (
+        <RichEmailDialog
+          open={richEmailDialogOpen}
+          onOpenChange={setRichEmailDialogOpen}
+          hospitalPageId={hospitalPage.id}
+          hospitalName={hospitalPage.name || 'ClinicalHours'}
+          senderEmail={hospitalPage.gmail_email}
+          selectedApplicationIds={[application.id]}
+          applications={[application]}
+        />
+      )}
+
+      {/* Interview Invite dialog */}
+      {application && hospitalPage && (
+        <InterviewInviteDialog
+          open={interviewDialogOpen}
+          onOpenChange={setInterviewDialogOpen}
+          hospitalPageId={hospitalPage.id}
+          hospitalName={hospitalPage.name || 'ClinicalHours'}
+          bookingUrl={hospitalPage.interview_booking_url || ''}
+          selectedApplicationIds={[application.id]}
+          applications={[application]}
         />
       )}
     </div>

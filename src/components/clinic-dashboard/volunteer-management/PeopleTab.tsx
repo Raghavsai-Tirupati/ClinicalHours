@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ExternalLink } from 'lucide-react';
+import { CalendarCheck, ExternalLink, Mail, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -20,9 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAllApplications } from '@/hooks/useAllApplications';
+import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
-import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
+import RichEmailDialog from '@/components/hospital/RichEmailDialog';
+import InterviewInviteDialog from '@/components/hospital/InterviewInviteDialog';
 import { format } from 'date-fns';
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
@@ -55,13 +59,16 @@ interface PeopleTabProps {
   clinicId: string;
 }
 
-// People = anyone who has ever applied (any status). Click a row to open
-// their full profile in the existing /applicants/:id route.
 export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
   const { hospitalPage, basePath } = useHospitalPageContext();
   const { applications, loading } = useAllApplications(hospitalPage?.id);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | 'all'>('all');
+
+  // ── Selection & Bulk Actions ──────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -81,22 +88,49 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
       );
   }, [applications, search, statusFilter]);
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length && filtered.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((a) => a.id)));
+    }
+  };
+
+  // Clear selection when filters change
+  const handleSearchChange = (v: string) => {
+    setSearch(v);
+    setSelectedIds(new Set());
+  };
+  const handleStatusChange = (v: string) => {
+    setStatusFilter(v as ApplicationStatus | 'all');
+    setSelectedIds(new Set());
+  };
+
+  const selectedApplicationIds = useMemo(() => [...selectedIds], [selectedIds]);
+
   return (
     <div className="space-y-4">
+      {/* Search + filter bar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search by name, email, position…"
             className="pl-9"
           />
         </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as ApplicationStatus | 'all')}
-        >
+        <Select value={statusFilter} onValueChange={handleStatusChange}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
@@ -114,10 +148,53 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
         </p>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEmailDialogOpen(true)}
+              className="gap-1.5"
+            >
+              <Mail className="h-4 w-4" />
+              Send Email
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setInterviewDialogOpen(true)}
+              className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+            >
+              <CalendarCheck className="h-4 w-4" />
+              Send Interview Invite
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs"
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
       <div className="rounded-lg border border-border/40 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                  onCheckedChange={toggleSelectAll}
+                  className="h-3.5 w-3.5"
+                />
+              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead className="hidden md:table-cell">Position</TableHead>
               <TableHead>Status</TableHead>
@@ -129,14 +206,14 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={6}>
                     <Skeleton className="h-6 w-full" />
                   </TableCell>
                 </TableRow>
               ))
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-10">
+                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-10">
                   No people match your filters yet.
                 </TableCell>
               </TableRow>
@@ -147,6 +224,13 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
                 const href = `${basePath}/people/${app.student_id}`;
                 return (
                   <TableRow key={app.id} className="cursor-pointer">
+                    <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(app.id)}
+                        onCheckedChange={() => toggleSelect(app.id)}
+                        className="h-3.5 w-3.5"
+                      />
+                    </TableCell>
                     <TableCell>
                       <Link to={href} className="block">
                         <div className="font-medium hover:underline">{name}</div>
@@ -195,6 +279,33 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
           </TableBody>
         </Table>
       </div>
+
+      {/* Email Dialog */}
+      {hospitalPage && (
+        <>
+          <RichEmailDialog
+            open={emailDialogOpen}
+            onOpenChange={setEmailDialogOpen}
+            hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.name || 'ClinicalHours'}
+            senderEmail={hospitalPage.gmail_email}
+            selectedApplicationIds={selectedApplicationIds}
+            applications={applications}
+          />
+          <InterviewInviteDialog
+            open={interviewDialogOpen}
+            onOpenChange={(open) => {
+              setInterviewDialogOpen(open);
+              if (!open) setSelectedIds(new Set());
+            }}
+            hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.name || 'ClinicalHours'}
+            bookingUrl={hospitalPage.interview_booking_url || ''}
+            selectedApplicationIds={selectedApplicationIds}
+            applications={applications}
+          />
+        </>
+      )}
     </div>
   );
 }

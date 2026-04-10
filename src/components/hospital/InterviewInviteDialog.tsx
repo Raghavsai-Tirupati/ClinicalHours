@@ -67,6 +67,7 @@ export default function InterviewInviteDialog({
           hospitalPageId,
           applicationIds: selectedApplicationIds,
           customMessage: message.trim() || undefined,
+          forceResend: true,
         },
       });
 

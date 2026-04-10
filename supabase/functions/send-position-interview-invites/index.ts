@@ -296,7 +296,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { hospitalPageId, applicationIds, emailType, subject, body, htmlBody, customMessage, attachments } = payload;
+    const { hospitalPageId, applicationIds, emailType, subject, body, htmlBody, customMessage, attachments, forceResend } = payload;
     if (!hospitalPageId) {
       return new Response(
         JSON.stringify({ success: false, error: "hospitalPageId is required" }),
@@ -464,8 +464,8 @@ const handler = async (req: Request): Promise<Response> => {
           pendingPositionNames: [],
         });
       }
-      // Idempotency: if we've already marked this app as invited, don't spam another email.
-      if (selectedEmailType === "interview_invite" && !app.interview_invited_at) {
+      // Idempotency: skip already-invited unless forceResend is true.
+      if (selectedEmailType === "interview_invite" && (!app.interview_invited_at || forceResend)) {
         recipients.get(email)!.pendingApplicationIds.push(app.id);
         const positionTitle = positionTitleById.get(app.position_id) || "the position you applied for";
         if (!recipients.get(email)!.pendingPositionNames.includes(positionTitle)) {
