@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { STATUS_COLORS } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -10,10 +11,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  User,
   Mail,
   Phone,
   GraduationCap,
@@ -353,6 +352,12 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
     }
   };
 
+  function appLabel(app: ApplicationRow): string {
+    const pos = app.position?.title ?? 'Unknown Position';
+    const opp = app.position?.opportunity?.name ?? 'Unknown Hospital';
+    return `${pos} @ ${opp}`;
+  }
+
   if (!user) return null;
 
   return (
@@ -375,54 +380,207 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
         ) : (
           <ScrollArea className="max-h-[70vh]">
             <div className="space-y-6 pr-4">
-              {/* User Header */}
-              <div className="flex items-start gap-4">
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-8 w-8 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold">{user.full_name}</h3>
-                  <p className="text-muted-foreground">{user.email}</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {user.email_verified ? (
-                      <Badge variant="default" className="text-xs">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Email Verified
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-xs">
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Email Not Verified
-                      </Badge>
+              {/* Card Header */}
+              <div className="flex items-start justify-between gap-4">
+                {/* Left: name + contact info */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-semibold tracking-tight">
+                    {formatLastFirst(user.full_name)}
+                  </h3>
+                  <div className="mt-3 space-y-1.5 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Mail className="h-3.5 w-3.5 shrink-0" />
+                      <span className="break-all">{user.email}</span>
+                    </div>
+                    {user.phone && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="h-3.5 w-3.5 shrink-0" />
+                        <span>{user.phone}</span>
+                      </div>
                     )}
-                    {user.email_opt_in ? (
-                      <Badge variant="outline" className="text-xs">
-                        <Mail className="h-3 w-3 mr-1" />
-                        Subscribed
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs text-muted-foreground">
-                        <Mail className="h-3 w-3 mr-1" />
-                        Not Subscribed
-                      </Badge>
+                    {(user.city || user.state) && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <span>{[user.city, user.state].filter(Boolean).join(', ')}</span>
+                      </div>
                     )}
+                    {fullProfile?.linkedin_url && (
+                      <div className="flex items-center gap-2">
+                        <Linkedin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <a
+                          href={fullProfile.linkedin_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-primary hover:underline"
+                        >
+                          LinkedIn
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {user.email_verified ? (
+                        <Badge variant="default" className="text-xs">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Email Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Email Not Verified
+                        </Badge>
+                      )}
+                      {user.email_opt_in ? (
+                        <Badge variant="outline" className="text-xs">
+                          <Mail className="h-3 w-3 mr-1" />
+                          Subscribed
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          <Mail className="h-3 w-3 mr-1" />
+                          Not Subscribed
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right text-sm text-muted-foreground">
-                  <p>User ID:</p>
-                  <code className="text-xs bg-muted px-2 py-1 rounded">{user.id.slice(0, 8)}...</code>
+
+                {/* Right: avatar */}
+                <div
+                  className={`h-14 w-14 rounded-full shrink-0 flex items-center justify-center text-white text-xl font-bold ${emailToColor(user.email)}`}
+                >
+                  {user.full_name.charAt(0).toUpperCase()}
                 </div>
               </div>
 
-              <Separator />
-
-              <Tabs defaultValue="activity" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="activity">Activity</TabsTrigger>
-                  <TabsTrigger value="profile">Profile</TabsTrigger>
-                  <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
-                  <TabsTrigger value="hours">Hours Log</TabsTrigger>
+              <Tabs defaultValue="applications" className="w-full">
+                <TabsList className="flex w-full overflow-x-auto flex-nowrap justify-start h-auto p-1 gap-1">
+                  <TabsTrigger value="applications" className="shrink-0">Applications</TabsTrigger>
+                  <TabsTrigger value="responses" className="shrink-0">Responses</TabsTrigger>
+                  <TabsTrigger value="notes" className="shrink-0">Notes</TabsTrigger>
+                  <TabsTrigger value="documents" className="shrink-0">Documents</TabsTrigger>
+                  <TabsTrigger value="availability" className="shrink-0">Availability</TabsTrigger>
+                  <TabsTrigger value="interview" className="shrink-0">Interview</TabsTrigger>
+                  <TabsTrigger value="contact-history" className="shrink-0">Contact History</TabsTrigger>
+                  <TabsTrigger value="profile" className="shrink-0">Profile</TabsTrigger>
+                  <TabsTrigger value="activity" className="shrink-0">Activity</TabsTrigger>
                 </TabsList>
+
+                {/* Applications Tab */}
+                <TabsContent value="applications" className="mt-4">
+                  {applications.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No applications yet</p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="text-left px-4 py-2 font-medium">Hospital / Position</th>
+                            <th className="text-left px-4 py-2 font-medium">Status</th>
+                            <th className="text-left px-4 py-2 font-medium">Submitted</th>
+                            <th className="text-left px-4 py-2 font-medium">Reviewed</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {applications.map((app) => (
+                            <tr key={app.id} className="border-b last:border-0 hover:bg-muted/30">
+                              <td className="px-4 py-3">
+                                <p className="font-medium">{app.position?.title ?? '—'}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {app.position?.opportunity?.name ?? '—'}
+                                </p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge
+                                  variant="secondary"
+                                  className={`text-xs ${STATUS_COLORS[app.status as keyof typeof STATUS_COLORS] ?? ''}`}
+                                >
+                                  {app.status.replace('_', ' ')}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {formatDateShort(app.submitted_at)}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {app.reviewed_at ? formatDateShort(app.reviewed_at) : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Responses Tab */}
+                <TabsContent value="responses" className="mt-4 space-y-4">
+                  {applications.length === 0 || responses.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No application responses on record</p>
+                    </div>
+                  ) : (
+                    applications.map((app) => {
+                      const appResponses = responses.filter((r) => r.application_id === app.id);
+                      if (appResponses.length === 0) return null;
+                      return (
+                        <Card key={app.id}>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium">{appLabel(app)}</CardTitle>
+                            <CardDescription>{formatDateShort(app.submitted_at)}</CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {appResponses.map((r) => (
+                              <div key={r.id} className="text-sm">
+                                <p className="font-medium text-muted-foreground">
+                                  {r.question?.question_text ?? 'Question'}
+                                </p>
+                                <p className="mt-0.5">
+                                  {r.answer_text ?? (r.answer_options?.join(', ') ?? '—')}
+                                </p>
+                              </div>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  )}
+                </TabsContent>
+
+                {/* Notes Tab */}
+                <TabsContent value="notes" className="mt-4 space-y-4">
+                  {applications.length === 0 || notes.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No admin notes on record</p>
+                    </div>
+                  ) : (
+                    applications.map((app) => {
+                      const appNotes = notes.filter((n) => n.application_id === app.id);
+                      if (appNotes.length === 0) return null;
+                      return (
+                        <Card key={app.id}>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium">{appLabel(app)}</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {appNotes.map((note) => (
+                              <div key={note.id} className="text-sm border-b last:border-0 pb-3 last:pb-0">
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  {formatDate(note.created_at)}
+                                  {note.created_by_email && ` · ${note.created_by_email}`}
+                                </p>
+                                <p>{note.body}</p>
+                              </div>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  )}
+                </TabsContent>
 
                 {/* Activity Tab */}
                 <TabsContent value="activity" className="mt-4 space-y-4">
