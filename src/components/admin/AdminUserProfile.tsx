@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { STATUS_COLORS } from '@/types/positions';
+import { STATUS_COLORS, ApplicationStatus } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -148,7 +148,7 @@ interface Review {
 
 interface ApplicationRow {
   id: string;
-  status: string;
+  status: ApplicationStatus;
   submitted_at: string;
   reviewed_at: string | null;
   interview_invited_at: string | null;
@@ -495,7 +495,7 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                               <td className="px-4 py-3">
                                 <Badge
                                   variant="secondary"
-                                  className={`text-xs ${STATUS_COLORS[app.status as keyof typeof STATUS_COLORS] ?? ''}`}
+                                  className={`text-xs ${STATUS_COLORS[app.status] ?? ''}`}
                                 >
                                   {app.status.replace('_', ' ')}
                                 </Badge>
