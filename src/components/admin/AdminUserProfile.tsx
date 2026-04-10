@@ -213,10 +213,21 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
   const [savedOpportunities, setSavedOpportunities] = useState<SavedOpportunity[]>([]);
   const [experienceEntries, setExperienceEntries] = useState<ExperienceEntry[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [applications, setApplications] = useState<ApplicationRow[]>([]);
+  const [responses, setResponses] = useState<ResponseRow[]>([]);
+  const [notes, setNotes] = useState<NoteRow[]>([]);
+  const [documents, setDocuments] = useState<DocumentRow[]>([]);
+  const [emailLogs, setEmailLogs] = useState<EmailLogRow[]>([]);
 
   useEffect(() => {
     if (open && user) {
       fetchUserData();
+    } else {
+      setApplications([]);
+      setResponses([]);
+      setNotes([]);
+      setDocuments([]);
+      setEmailLogs([]);
     }
   }, [open, user]);
 
@@ -250,6 +261,60 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
           setReviews(profileData.reviews || []);
         }
       }
+
+      // Fetch applications for this user
+      const { data: appRows } = await supabase
+        .from('student_applications')
+        .select(`
+          id, status, submitted_at, reviewed_at,
+          interview_invited_at, interview_confirmed_at, availability_json,
+          position:hospital_positions(
+            title,
+            opportunity:opportunities(name)
+          )
+        `)
+        .eq('student_id', user.id)
+        .order('submitted_at', { ascending: false });
+
+      const fetchedApps: ApplicationRow[] = (appRows ?? []) as ApplicationRow[];
+      setApplications(fetchedApps);
+
+      // Use application IDs to batch-fetch dependent data
+      const appIds = fetchedApps.map((a) => a.id);
+
+      if (appIds.length > 0) {
+        const [responsesResult, notesResult, documentsResult] = await Promise.all([
+          supabase
+            .from('application_answers')
+            .select(`
+              id, application_id, answer_text, answer_options, created_at,
+              question:position_questions(question_text, question_type)
+            `)
+            .in('application_id', appIds),
+          supabase
+            .from('application_notes')
+            .select('id, application_id, body, created_at, created_by_email')
+            .in('application_id', appIds)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('application_documents')
+            .select('id, application_id, file_name, file_url, file_type, created_at')
+            .in('application_id', appIds),
+        ]);
+
+        setResponses((responsesResult.data ?? []) as ResponseRow[]);
+        setNotes((notesResult.data ?? []) as NoteRow[]);
+        setDocuments((documentsResult.data ?? []) as DocumentRow[]);
+      }
+
+      // Contact history: email_send_logs where this user's email is in recipient_emails
+      const { data: emailLogRows } = await supabase
+        .from('email_send_logs')
+        .select('id, subject, template_name, sent_by, created_at')
+        .contains('recipient_emails', [user.email])
+        .order('created_at', { ascending: false });
+
+      setEmailLogs((emailLogRows ?? []) as EmailLogRow[]);
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
