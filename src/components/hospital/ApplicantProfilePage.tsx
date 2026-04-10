@@ -383,19 +383,30 @@ export default function ApplicantProfilePage() {
         // Creates a clinic_member row with no role (tracker_category_id
         // stays NULL until they're assigned a role in the Tracker tab).
         if (newStatus === 'accepted' && hospitalPage?.id) {
-          // Only create if one doesn't already exist for this application.
-          const { data: existing } = await supabase
+          // Check by application_id OR by student user_id to avoid dupes.
+          const { data: existingByApp } = await supabase
             .from('clinic_members')
             .select('id')
+            .eq('clinic_id', hospitalPage.id)
             .eq('application_id', application.id)
             .maybeSingle();
-          if (!existing) {
+
+          const { data: existingByUser } = !existingByApp && application.student_id
+            ? await supabase
+                .from('clinic_members')
+                .select('id')
+                .eq('clinic_id', hospitalPage.id)
+                .eq('user_id', application.student_id)
+                .maybeSingle()
+            : { data: null };
+
+          if (!existingByApp && !existingByUser) {
             const appName = getApplicantName(application);
             const appEmail =
               application.applicant_email ||
               application.student_profile?.email ||
               null;
-            await supabase.from('clinic_members').insert({
+            const { error: insertErr } = await supabase.from('clinic_members').insert({
               clinic_id: hospitalPage.id,
               user_id: application.student_id || null,
               application_id: application.id,
@@ -405,6 +416,16 @@ export default function ApplicantProfilePage() {
               onboarding_source: 'new_applicant',
               join_date: new Date().toISOString().slice(0, 10),
             });
+            if (insertErr) {
+              console.error('Failed to auto-promote to staff:', insertErr);
+              toast.error('Accepted, but failed to add to Staff: ' + insertErr.message);
+            }
+          } else if (existingByUser && !existingByApp) {
+            // Link the existing member to this application
+            await supabase
+              .from('clinic_members')
+              .update({ application_id: application.id, status: 'active' })
+              .eq('id', existingByUser.id);
           }
         }
 
