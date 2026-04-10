@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Search } from 'lucide-react';
+import { ExternalLink, Mail, CalendarCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Table,
@@ -11,15 +11,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
 import {
@@ -27,14 +21,15 @@ import {
   type ApplicationStatus,
   type StudentApplication,
 } from '@/types/positions';
-
-// People-refactor note:
-// The full review/triage UI now lives on the People profile page
-// (`/applicants/:applicationId`). This page used to host filters, kanban,
-// analytics, bulk-email, etc. — all of that has moved to the People tab and
-// the per-applicant profile. We keep this route as a slim list so anyone
-// landing on /<clinic>/applications still sees a familiar table, with each
-// name hyperlinked to the rich profile.
+import {
+  applyApplicationFilters,
+  sortApplications,
+  type ApplicationFilterRule,
+  type SortState,
+} from '@/lib/applicationFilters';
+import ApplicationFilterBar from './ApplicationFilterBar';
+import RichEmailDialog from './RichEmailDialog';
+import InterviewInviteDialog from './InterviewInviteDialog';
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   new: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
@@ -61,85 +56,133 @@ function getApplicantName(app: StudentApplication): string {
 
 export default function ApplicationsHub() {
   const { hospitalPage, basePath } = useHospitalPageContext();
-  const { applications, loading } = useAllApplications(hospitalPage?.id);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ApplicationStatus | 'all'>('all');
+  const { applications, positions, loading } = useAllApplications(hospitalPage?.id);
+
+  // ── Filter & sort state ───────────────────────────────────
+  const [filterRules, setFilterRules] = useState<ApplicationFilterRule[]>([]);
+  const [sort] = useState<SortState | null>(null);
+
+  // ── Selection state ───────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return applications
-      .filter((a) => statusFilter === 'all' || a.status === statusFilter)
-      .filter((a) => {
-        if (!q) return true;
-        const name = getApplicantName(a).toLowerCase();
-        const email = (a.applicant_email || a.student_profile?.email || '').toLowerCase();
-        const pos = (a.position?.title || '').toLowerCase();
-        return name.includes(q) || email.includes(q) || pos.includes(q);
-      })
-      .sort(
-        (a, b) =>
-          new Date(b.submitted_at || 0).getTime() -
-          new Date(a.submitted_at || 0).getTime(),
-      );
-  }, [applications, search, statusFilter]);
+    const afterFilter = applyApplicationFilters(applications, filterRules);
+    return sortApplications(afterFilter, sort);
+  }, [applications, filterRules, sort]);
+
+  // Keep selection valid when filter changes
+  const filteredIds = useMemo(() => new Set(filtered.map((a) => a.id)), [filtered]);
+  const validSelected = useMemo(
+    () => new Set([...selectedIds].filter((id) => filteredIds.has(id))),
+    [selectedIds, filteredIds],
+  );
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (validSelected.size === filtered.length && filtered.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((a) => a.id)));
+    }
+  };
+
+  const selectedApplicationIds = useMemo(() => [...validSelected], [validSelected]);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Applicants</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Click any name to open their full profile and review answers, files,
-          notes, and membership status.
+          Filter, select, and review everyone who has applied. Click a name to open their full profile.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, position…"
-            className="pl-9"
-          />
+      {/* ── Advanced filter bar ─────────────────────────────── */}
+      <ApplicationFilterBar
+        hospitalPageId={hospitalPage?.id}
+        rules={filterRules}
+        onRulesChange={setFilterRules}
+        positions={positions}
+        applications={applications}
+      />
+
+      {/* ── Bulk action bar ─────────────────────────────────── */}
+      {validSelected.size > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2">
+          <span className="text-sm font-medium">{validSelected.size} selected</span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEmailDialogOpen(true)}
+              className="gap-1.5"
+            >
+              <Mail className="h-4 w-4" />
+              Send Email
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setInterviewDialogOpen(true)}
+              className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+            >
+              <CalendarCheck className="h-4 w-4" />
+              Send Interview Invite
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs"
+            >
+              Clear
+            </Button>
+          </div>
         </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as ApplicationStatus | 'all')}
-        >
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
-              <SelectItem key={key} value={key}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground ml-auto">
-          {filtered.length} {filtered.length === 1 ? 'applicant' : 'applicants'}
-        </p>
-      </div>
+      )}
 
+      {/* ── Results count ───────────────────────────────────── */}
+      {!loading && (
+        <p className="text-xs text-muted-foreground -mt-2">
+          {filtered.length} {filtered.length === 1 ? 'applicant' : 'applicants'}
+          {filterRules.length > 0 && ` (filtered from ${applications.length})`}
+        </p>
+      )}
+
+      {/* ── Table ──────────────────────────────────────────── */}
       <div className="rounded-lg border border-border/40 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={filtered.length > 0 && validSelected.size === filtered.length}
+                  onCheckedChange={toggleSelectAll}
+                  className="h-3.5 w-3.5"
+                />
+              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead className="hidden md:table-cell">Position</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden lg:table-cell">Submitted</TableHead>
-              <TableHead className="w-10"></TableHead>
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={6}>
                     <Skeleton className="h-6 w-full" />
                   </TableCell>
                 </TableRow>
@@ -147,10 +190,12 @@ export default function ApplicationsHub() {
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center text-sm text-muted-foreground py-10"
                 >
-                  No applicants match your filters yet.
+                  {filterRules.length > 0
+                    ? 'No applicants match your filters. Try adjusting or clearing them.'
+                    : 'No applicants yet.'}
                 </TableCell>
               </TableRow>
             ) : (
@@ -158,8 +203,20 @@ export default function ApplicationsHub() {
                 const name = getApplicantName(app);
                 const email = app.applicant_email || app.student_profile?.email || '';
                 const href = `${basePath}/people/${app.student_id}`;
+                const isSelected = validSelected.has(app.id);
+
                 return (
-                  <TableRow key={app.id}>
+                  <TableRow
+                    key={app.id}
+                    className={isSelected ? 'bg-primary/5' : ''}
+                  >
+                    <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(app.id)}
+                        className="h-3.5 w-3.5"
+                      />
+                    </TableCell>
                     <TableCell>
                       <Link to={href} className="block">
                         <div className="font-medium hover:underline">{name}</div>
@@ -208,6 +265,33 @@ export default function ApplicationsHub() {
           </TableBody>
         </Table>
       </div>
+
+      {/* ── Bulk email dialogs ─────────────────────────────── */}
+      {hospitalPage && (
+        <>
+          <RichEmailDialog
+            open={emailDialogOpen}
+            onOpenChange={setEmailDialogOpen}
+            hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.name || 'ClinicalHours'}
+            senderEmail={hospitalPage.gmail_email}
+            selectedApplicationIds={selectedApplicationIds}
+            applications={applications}
+          />
+          <InterviewInviteDialog
+            open={interviewDialogOpen}
+            onOpenChange={(open) => {
+              setInterviewDialogOpen(open);
+              if (!open) setSelectedIds(new Set());
+            }}
+            hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.name || 'ClinicalHours'}
+            bookingUrl={hospitalPage.interview_booking_url || ''}
+            selectedApplicationIds={selectedApplicationIds}
+            applications={applications}
+          />
+        </>
+      )}
     </div>
   );
 }
