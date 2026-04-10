@@ -252,6 +252,11 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       include: ["react", "react-dom", "react-router-dom"],
     },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: './src/test-setup.ts',
+    },
   };
 });
 
