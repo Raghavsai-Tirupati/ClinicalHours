@@ -298,8 +298,7 @@ export default function PositionForm() {
         </TabsList>
 
         <TabsContent value="details" className="mt-0">
-      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
-        <Card className="2xl:col-span-8">
+          <Card>
           <CardHeader>
             <CardTitle>Position Details</CardTitle>
           </CardHeader>
@@ -484,11 +483,10 @@ export default function PositionForm() {
           </CardContent>
         </Card>
 
-      </div>
         </TabsContent>
 
         <TabsContent value="questions" className="mt-0">
-          <div className="max-w-3xl space-y-6">
+          <div className="space-y-6">
             <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
 
             {/* Scheduling questions */}
