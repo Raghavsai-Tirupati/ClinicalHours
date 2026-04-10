@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -9,11 +9,12 @@ import {
   Clock,
   ExternalLink,
   FileText,
-  Linkedin,
+  Loader2,
   Mail,
   MessageSquare,
   Phone,
   Square,
+  Upload,
   User,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -140,6 +141,9 @@ export default function ApplicantProfilePage() {
   const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
   const [schedulingAnswers, setSchedulingAnswers] = useState<SchedulingAnswer[]>([]);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFileType, setUploadFileType] = useState<'resume' | 'cv' | 'certification' | 'reference' | 'transcript' | 'other'>('other');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { templates } = useEmailTemplates(hospitalPage?.id);
 
@@ -314,6 +318,46 @@ export default function ApplicantProfilePage() {
 
     return () => { cancelled = true; };
   }, [hospitalPage?.id, application?.id, application?.applicant_email, application?.student_id]);
+
+  const handleFileUpload = useCallback(
+    async (file: File) => {
+      if (!application) return;
+      setUploading(true);
+      try {
+        const ext = file.name.split('.').pop() || 'bin';
+        const storagePath = `application-documents/${application.id}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('resumes')
+          .upload(storagePath, file, { upsert: false });
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from('resumes').getPublicUrl(storagePath);
+
+        const { data: docRow, error: insertError } = await supabase
+          .from('application_documents')
+          .insert({
+            application_id: application.id,
+            student_id: application.student_id,
+            file_name: file.name,
+            file_url: urlData.publicUrl,
+            file_type: uploadFileType,
+            file_size_bytes: file.size,
+          })
+          .select()
+          .single();
+        if (insertError) throw insertError;
+
+        setDocuments((prev) => [...prev, docRow as ApplicationDocument]);
+        toast.success(`${file.name} uploaded`);
+      } catch (err: any) {
+        toast.error(err?.message || 'Upload failed');
+      } finally {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    },
+    [application?.id, application?.student_id, uploadFileType],
+  );
 
   const handleStatusChange = useCallback(
     async (newStatus: ApplicationStatus) => {
@@ -554,15 +598,99 @@ export default function ApplicantProfilePage() {
 
             {/* ── Documents ─────────────────────────────────────────────── */}
             <TabsContent value="documents" className="mt-4 space-y-4">
+              {/* Upload section */}
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border/60 bg-muted/10 p-3">
+                <Select
+                  value={uploadFileType}
+                  onValueChange={(v) => setUploadFileType(v as typeof uploadFileType)}
+                >
+                  <SelectTrigger className="h-8 w-36 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="resume">Resume</SelectItem>
+                    <SelectItem value="cv">CV</SelectItem>
+                    <SelectItem value="certification">Certification</SelectItem>
+                    <SelectItem value="reference">Reference</SelectItem>
+                    <SelectItem value="transcript">Transcript</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="h-3.5 w-3.5" />
+                  )}
+                  {uploading ? 'Uploading…' : 'Upload File'}
+                </Button>
+                <span className="text-xs text-muted-foreground">PDF, DOC, PNG, JPG</span>
+              </div>
+
+              {/* Files uploaded as application answers */}
+              {(() => {
+                const answerFiles = (application.answers || []).filter((a) => a.answer_file_url);
+                if (answerFiles.length === 0) return null;
+                return (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground px-0.5">Application Uploads</p>
+                    {answerFiles.map((ans) => (
+                      <div
+                        key={ans.id}
+                        className="flex items-center gap-3 rounded-md border border-border/40 p-2.5 hover:bg-muted/20 transition-colors"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted/30">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">
+                            {ans.answer_text?.trim() || 'Uploaded file'}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {ans.question?.question_text || 'Application question'}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
+                          <a href={ans.answer_file_url!} target="_blank" rel="noopener noreferrer" aria-label="View file">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Admin-uploaded + applicant documents */}
               <ApplicantDocuments documents={documents} />
+
               {schedulingAnswers.length > 0 && (
                 <SchedulingAnswersView answers={schedulingAnswers} />
               )}
-              {documents.length === 0 && schedulingAnswers.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No documents uploaded</p>
-                </div>
+
+              {documents.length === 0 &&
+                schedulingAnswers.length === 0 &&
+                !(application.answers || []).some((a) => a.answer_file_url) && (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <FileText className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                    <p className="text-sm">No documents yet</p>
+                  </div>
               )}
             </TabsContent>
 
