@@ -11,7 +11,7 @@ import VolunteerTracker from '../volunteer-tracker/VolunteerTracker';
 // Renamed from "Team" → "People" in the People refactor.
 // Three tabs:
 //   • People  – everyone who has ever applied (any status)
-//   • Members – only people promoted from accepted applications (incl. alumni)
+//   • Staff   – only people promoted from accepted applications (incl. alumni)
 //   • Tracker – the volunteer hours tracker (unchanged)
 export default function VolunteerManagement() {
   const { hospitalPage } = useHospitalPageContext();
@@ -62,7 +62,7 @@ export default function VolunteerManagement() {
       <div>
         <h2 className="text-2xl font-bold">People</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Everyone who has ever applied, your active members, and your hours tracker — all in one place.
+          Everyone who has ever applied, your active staff, and your hours tracker — all in one place.
         </p>
       </div>
 
@@ -74,7 +74,7 @@ export default function VolunteerManagement() {
           </TabsTrigger>
           <TabsTrigger value="members" className="gap-1.5 text-xs">
             <UserCheck className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Members</span>
+            <span className="hidden sm:inline">Staff</span>
           </TabsTrigger>
           <TabsTrigger value="tracker" className="gap-1.5 text-xs">
             <TableIcon className="h-3.5 w-3.5" />

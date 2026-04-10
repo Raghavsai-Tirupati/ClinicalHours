@@ -151,7 +151,7 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
     if (error) {
       toast.error('Failed to save: ' + error.message);
     } else {
-      toast.success('Member updated');
+      toast.success('Staff member updated');
       cancelEdit();
       onRefresh();
     }
@@ -161,9 +161,9 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
     if (!confirm(`Remove ${name} from the roster?`)) return;
     const { error } = await supabase.from('clinic_members').delete().eq('id', id);
     if (error) {
-      toast.error('Failed to remove member');
+      toast.error('Failed to remove staff member');
     } else {
-      toast.success('Member removed');
+      toast.success('Staff member removed');
       onRefresh();
     }
   };
@@ -191,7 +191,7 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
       {/* Toolbar */}
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <p className="text-sm text-muted-foreground">{filteredMembers.length} member{filteredMembers.length !== 1 ? 's' : ''}{filteredMembers.length !== members.length ? ` (of ${members.length})` : ''}</p>
+          <p className="text-sm text-muted-foreground">{filteredMembers.length} staff{filteredMembers.length !== members.length ? ` (of ${members.length})` : ''}</p>
           <div className="flex items-center gap-2">
             {selectedIds.size > 0 && (
               <Button size="sm" variant="outline" onClick={() => setBulkEmailOpen(true)} className="gap-1.5">
@@ -250,9 +250,9 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
       {filteredMembers.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center space-y-2">
           <Users className="h-10 w-10 text-muted-foreground/40 mx-auto mb-1" />
-          <p className="text-sm text-muted-foreground">No members yet.</p>
+          <p className="text-sm text-muted-foreground">No staff yet.</p>
           <p className="text-xs text-muted-foreground">
-            Members are added by accepting an applicant in the <span className="font-medium text-foreground">People</span> tab and promoting them.
+            Staff are added by accepting an applicant in the <span className="font-medium text-foreground">People</span> tab and promoting them.
           </p>
         </div>
       ) : (

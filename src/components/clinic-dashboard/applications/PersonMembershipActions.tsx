@@ -83,7 +83,7 @@ export default function PersonMembershipActions({
         join_date: new Date().toISOString().slice(0, 10),
       });
       if (error) throw error;
-      toast.success(`${applicantName} added to members`);
+      toast.success(`${applicantName} added to staff`);
       await refresh();
     } catch (err: any) {
       console.error('[membership] promote failed', err);
@@ -165,7 +165,7 @@ export default function PersonMembershipActions({
                   ) : (
                     <RotateCcw className="h-3.5 w-3.5" />
                   )}
-                  Reactivate as Member
+                  Reactivate as Staff
                 </Button>
               ) : (
                 <Button
@@ -188,7 +188,7 @@ export default function PersonMembershipActions({
         ) : isPromotable ? (
           <>
             <p className="text-xs text-muted-foreground">
-              Accepted but not yet a member. Pick a role and confirm to add them
+              Accepted but not yet on staff. Pick a role and confirm to add them
               to your roster.
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -223,13 +223,13 @@ export default function PersonMembershipActions({
                 ) : (
                   <UserPlus className="h-3.5 w-3.5" />
                 )}
-                Promote to Member
+                Promote to Staff
               </Button>
             </div>
           </>
         ) : (
           <p className="text-xs text-muted-foreground">
-            This person is not a member yet. Set their application status to
+            This person is not on staff yet. Set their application status to
             <span className="font-medium text-foreground"> Accepted </span>
             to enable promotion.
           </p>
