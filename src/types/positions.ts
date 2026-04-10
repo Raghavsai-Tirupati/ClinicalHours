@@ -77,6 +77,7 @@ export interface StudentApplication {
     gpa?: number | null;
     clinical_hours?: number | null;
     research_experience?: string | null;
+    avatar_url?: string | null;
   };
   answers?: ApplicationAnswer[];
 }

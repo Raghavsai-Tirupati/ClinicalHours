@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarCheck, ExternalLink, Mail, Search } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,6 +29,22 @@ import type { ApplicationStatus, StudentApplication } from '@/types/positions';
 import RichEmailDialog from '@/components/hospital/RichEmailDialog';
 import InterviewInviteDialog from '@/components/hospital/InterviewInviteDialog';
 import { format } from 'date-fns';
+
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
+  'bg-rose-500', 'bg-cyan-500', 'bg-fuchsia-500', 'bg-orange-500',
+] as const;
+
+function emailToColor(email: string): string {
+  const hash = [...email].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return (parts[0]?.[0] || '?').toUpperCase();
+}
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   new: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
@@ -232,13 +249,25 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
                       />
                     </TableCell>
                     <TableCell>
-                      <Link to={href} className="block">
-                        <div className="font-medium hover:underline">{name}</div>
-                        {email && (
-                          <div className="text-xs text-muted-foreground break-all">
-                            {email}
-                          </div>
-                        )}
+                      <Link to={href} className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8 shrink-0">
+                          {app.student_profile?.avatar_url && (
+                            <AvatarImage src={app.student_profile.avatar_url} alt={name} />
+                          )}
+                          <AvatarFallback
+                            className={`text-xs font-semibold text-white ${emailToColor(email || name)}`}
+                          >
+                            {getInitials(name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <div className="font-medium hover:underline">{name}</div>
+                          {email && (
+                            <div className="text-xs text-muted-foreground break-all">
+                              {email}
+                            </div>
+                          )}
+                        </div>
                       </Link>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">

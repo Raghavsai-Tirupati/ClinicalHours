@@ -115,7 +115,7 @@ export function usePositionApplications(positionId: string | undefined) {
         const studentIds = apps.map((a) => a.student_id);
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, full_name, university, major, graduation_year, phone, resume_url, gpa, clinical_hours, research_experience')
+          .select('id, full_name, university, major, graduation_year, phone, resume_url, gpa, clinical_hours, research_experience, avatar_url')
           .in('id', studentIds);
 
         const profileMap = new Map(
@@ -138,6 +138,7 @@ export function usePositionApplications(positionId: string | undefined) {
               gpa: profile.gpa,
               clinical_hours: profile.clinical_hours,
               research_experience: profile.research_experience,
+              avatar_url: profile.avatar_url,
             };
             if (!normalizeDisplayName(app.applicant_name) && profileName) {
               app.applicant_name = profileName;
