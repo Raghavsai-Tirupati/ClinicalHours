@@ -144,7 +144,7 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
               filtered.map((app) => {
                 const name = getApplicantName(app);
                 const email = app.applicant_email || app.student_profile?.email || '';
-                const href = `${basePath}/applicants/${app.id}`;
+                const href = `${basePath}/people/${app.student_id}`;
                 return (
                   <TableRow key={app.id} className="cursor-pointer">
                     <TableCell>

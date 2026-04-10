@@ -265,7 +265,10 @@ export default function ApplicantProfilePage() {
           }
         }
 
-        if (!cancelled) setApplication(app);
+        if (!cancelled) {
+          setApplication(app);
+          navigate(`${basePath}/people/${app.student_id}`, { replace: true });
+        }
       } catch (err) {
         console.error('Failed to load application:', err);
         if (!cancelled) setApplication(null);

@@ -63,6 +63,7 @@ const HospitalOverview = lazyRetry(() => import("./components/hospital/HospitalO
 const PositionForm = lazyRetry(() => import("./components/hospital/PositionForm"));
 const PositionDetail = lazyRetry(() => import("./components/hospital/PositionDetail"));
 const ApplicantProfilePage = lazyRetry(() => import("./components/hospital/ApplicantProfilePage"));
+const ApplicantPersonPage = lazyRetry(() => import("./components/hospital/ApplicantPersonPage"));
 const HospitalSettingsPage = lazyRetry(() => import("./components/hospital/HospitalSettings"));
 const PositionsHub = lazyRetry(() => import("./components/hospital/PositionsHub"));
 const InterviewsPage = lazyRetry(() => import("./components/hospital/InterviewsPage"));
@@ -179,6 +180,7 @@ function AppContent() {
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
                 <Route path="applicants/:applicationId" element={<ApplicantProfilePage />} />
+                <Route path="people/:studentId" element={<ApplicantPersonPage />} />
                 <Route path="interviews" element={<InterviewsPage />} />
                 <Route path="email" element={<EmailCommunication />} />
                 <Route path="activity" element={<ActivityPage />} />
@@ -206,6 +208,7 @@ function AppContent() {
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
                 <Route path="applicants/:applicationId" element={<ApplicantProfilePage />} />
+                <Route path="people/:studentId" element={<ApplicantPersonPage />} />
                 <Route path="interviews" element={<InterviewsPage />} />
                 <Route path="email" element={<EmailCommunication />} />
                 <Route path="activity" element={<ActivityPage />} />
