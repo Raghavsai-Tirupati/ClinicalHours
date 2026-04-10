@@ -2,7 +2,7 @@
 
 export type PositionType = 'volunteer' | 'internship' | 'shadowing' | 'paid' | 'research' | 'other';
 export type PositionStatus = 'draft' | 'active' | 'paused' | 'closed' | 'archived';
-export type QuestionType = 'short_answer' | 'long_answer' | 'multiple_choice' | 'yes_no' | 'file_upload';
+export type QuestionType = 'short_answer' | 'multiple_choice' | 'yes_no' | 'file_upload';
 export type ApplicationStatus = 'new' | 'under_review' | 'interview' | 'accepted' | 'rejected' | 'waitlisted';
 
 export interface HospitalPosition {
@@ -33,6 +33,7 @@ export interface PositionQuestion {
   is_required: boolean;
   options: string[] | null;
   display_order: number;
+  char_limit: number | null;
   created_at: string;
 }
 
@@ -184,6 +185,7 @@ export interface QuestionFormData {
   is_required: boolean;
   options: string[];
   display_order: number;
+  char_limit?: number | null;
 }
 
 // Position type display labels

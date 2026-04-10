@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -104,10 +105,12 @@ export default function PositionForm() {
         existingQuestions.map((q) => ({
           id: q.id,
           question_text: q.question_text,
-          question_type: q.question_type,
+          // treat legacy long_answer as short_answer
+          question_type: q.question_type === 'long_answer' ? 'short_answer' : q.question_type,
           is_required: q.is_required,
           options: (q.options as string[]) || [],
           display_order: q.display_order,
+          char_limit: q.char_limit ?? null,
         }))
       );
     }
@@ -192,6 +195,7 @@ export default function PositionForm() {
             is_required: q.is_required,
             options: q.question_type === 'multiple_choice' ? q.options.filter(Boolean) : null,
             display_order: q.display_order,
+            char_limit: q.question_type === 'short_answer' ? (q.char_limit ?? null) : null,
           };
 
           if (q.id) {
@@ -280,6 +284,20 @@ export default function PositionForm() {
         </h2>
       </div>
 
+      <Tabs defaultValue="details" className="space-y-6">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="details" className="flex-1 sm:flex-none">Position Details</TabsTrigger>
+          <TabsTrigger value="questions" className="flex-1 sm:flex-none">
+            Application Questions
+            {questions.length > 0 && (
+              <span className="ml-1.5 text-[10px] bg-primary/20 text-primary rounded-full px-1.5 py-0.5 font-semibold">
+                {questions.length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="mt-0">
       <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
         <Card className="2xl:col-span-8">
           <CardHeader>
@@ -466,32 +484,24 @@ export default function PositionForm() {
           </CardContent>
         </Card>
 
-        <Card className="2xl:col-span-4 h-fit">
-          <CardHeader className="pb-3">
-            <CardTitle>Custom Application Questions</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Build and organize the form students complete for this position.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
-          </CardContent>
-        </Card>
       </div>
+        </TabsContent>
 
-      {/* Scheduling questions are now configured per position. Only available
-          once the position has been created (we need a position_id to attach
-          questions to). */}
-      {isEdit && positionId && (
-        <div className="mt-6">
-          <SchedulingQuestionsConfig positionId={positionId} clinicId={pageId} />
-        </div>
-      )}
-      {!isEdit && (
-        <div className="mt-6 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-          Save this position first to configure its scheduling questions.
-        </div>
-      )}
+        <TabsContent value="questions" className="mt-0">
+          <div className="max-w-3xl space-y-6">
+            <PositionQuestionsEditor questions={questions} onChange={setQuestions} />
+
+            {/* Scheduling questions */}
+            {isEdit && positionId ? (
+              <SchedulingQuestionsConfig positionId={positionId} clinicId={pageId} />
+            ) : (
+              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                Save this position first to configure its scheduling questions.
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <div className="flex gap-3 justify-between pt-4">
         <div>

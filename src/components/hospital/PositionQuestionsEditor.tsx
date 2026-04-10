@@ -19,11 +19,12 @@ import {
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileText, ToggleLeft, List, Upload, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -33,71 +34,54 @@ import {
 } from '@/components/ui/select';
 import type { QuestionFormData, QuestionType } from '@/types/positions';
 
-const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
-  short_answer: 'Short Answer',
-  long_answer: 'Long Answer',
-  multiple_choice: 'Multiple Choice',
-  yes_no: 'Yes / No',
-  file_upload: 'File Upload',
-};
+/* ─── Config ────────────────────────────────────────────────────────────── */
+
+const QUESTION_TYPES: { value: QuestionType; label: string; icon: React.ElementType; description: string }[] = [
+  { value: 'short_answer', label: 'Short Answer', icon: FileText, description: 'Free-text response with optional character limit' },
+  { value: 'multiple_choice', label: 'Multiple Choice', icon: List, description: 'Student picks one option' },
+  { value: 'yes_no', label: 'Yes / No', icon: ToggleLeft, description: 'Simple boolean question' },
+  { value: 'file_upload', label: 'File Upload', icon: Upload, description: 'Resume, cover letter, etc.' },
+];
+
+const TYPE_LABEL: Record<QuestionType, string> = Object.fromEntries(
+  QUESTION_TYPES.map((t) => [t.value, t.label])
+) as Record<QuestionType, string>;
+
+const CHAR_LIMIT_PRESETS = [100, 250, 500, 1000, 2000];
 
 /* ─── Stable ID management ─────────────────────────────────────────────── */
 
-let _idCounter = 0;
-function newStableId() {
-  return `pq-${++_idCounter}`;
-}
+let _counter = 0;
+const nextId = () => `pq-${++_counter}`;
 
-/* ─── Pure overlay card (no dnd hooks — safe inside DragOverlay) ────────── */
+/* ─── Drag overlay — pure display, no dnd hooks ─────────────────────────── */
 
-interface CardDisplayProps {
-  question: QuestionFormData;
-  index: number;
-  isOverlay?: boolean;
-}
-
-function QuestionCardDisplay({ question, index, isOverlay }: CardDisplayProps) {
-  const typeLabel = QUESTION_TYPE_LABELS[question.question_type] ?? question.question_type;
+function OverlayCard({ question, index }: { question: QuestionFormData; index: number }) {
   return (
-    <div
-      className={`rounded-lg border bg-card transition-colors ${
-        isOverlay ? 'border-primary/40 shadow-xl' : 'border-border'
-      }`}
-    >
-      {/* Header row */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40">
-        <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-        <span className="text-xs font-semibold text-muted-foreground select-none">
-          Q{index + 1}
-        </span>
-        <span className="flex-1" />
-        <span className="text-[10px] text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded">
-          {typeLabel}
-        </span>
-        {question.is_required && (
-          <span className="text-[10px] text-destructive/70 font-medium">required</span>
-        )}
-      </div>
-      {/* Body */}
-      <div className="px-3 py-2.5">
-        <p className="text-sm text-foreground break-words whitespace-pre-wrap line-clamp-3">
-          {question.question_text || <span className="italic text-muted-foreground">Untitled question</span>}
+    <div className="rounded-xl border border-primary/40 bg-card shadow-xl p-4">
+      <div className="flex items-center gap-3">
+        <GripVertical className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+        <Badge variant="outline" className="text-xs shrink-0">Q{index + 1}</Badge>
+        <p className="text-sm font-medium truncate flex-1">
+          {question.question_text || 'Untitled question'}
         </p>
+        <span className="text-xs text-muted-foreground shrink-0">{TYPE_LABEL[question.question_type]}</span>
       </div>
     </div>
   );
 }
 
-/* ─── Sortable question card (has dnd hooks) ────────────────────────────── */
+/* ─── Sortable question card ─────────────────────────────────────────────── */
 
-interface SortableCardProps {
+interface CardProps {
   id: string;
   question: QuestionFormData;
   index: number;
-  onUpdate: (updates: Partial<QuestionFormData>) => void;
+  total: number;
+  onUpdate: (u: Partial<QuestionFormData>) => void;
   onRemove: () => void;
   onAddOption: () => void;
-  onUpdateOption: (oi: number, value: string) => void;
+  onUpdateOption: (oi: number, v: string) => void;
   onRemoveOption: (oi: number) => void;
 }
 
@@ -105,12 +89,13 @@ function SortableQuestionCard({
   id,
   question,
   index,
+  total,
   onUpdate,
   onRemove,
   onAddOption,
   onUpdateOption,
   onRemoveOption,
-}: SortableCardProps) {
+}: CardProps) {
   const {
     attributes,
     listeners,
@@ -121,6 +106,9 @@ function SortableQuestionCard({
     isDragging,
   } = useSortable({ id });
 
+  const isShortAnswer = question.question_type === 'short_answer';
+  const isMultiChoice = question.question_type === 'multiple_choice';
+
   return (
     <div
       ref={setNodeRef}
@@ -129,121 +117,194 @@ function SortableQuestionCard({
         transition,
         opacity: isDragging ? 0.4 : 1,
       }}
-      className="rounded-lg border border-border bg-card"
+      className="rounded-xl border border-border bg-card overflow-hidden"
     >
-      {/* ── Header row ── */}
-      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border/40">
-        {/* Drag handle — setActivatorNodeRef is the correct dnd-kit pattern */}
+      {/* ── Header ── */}
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/30 border-b border-border/50">
         <button
           ref={setActivatorNodeRef}
           type="button"
           aria-label="Drag to reorder"
-          className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/60 cursor-grab active:cursor-grabbing transition-colors touch-none shrink-0"
+          className="text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted rounded p-1 cursor-grab active:cursor-grabbing transition-colors touch-none shrink-0"
           {...listeners}
           {...attributes}
         >
           <GripVertical className="h-4 w-4" />
         </button>
 
-        <span className="text-xs font-semibold text-muted-foreground select-none">
-          Q{index + 1}
-        </span>
+        <Badge variant="secondary" className="text-xs font-semibold shrink-0">
+          Q{index + 1} <span className="text-muted-foreground font-normal ml-1">of {total}</span>
+        </Badge>
 
         <span className="flex-1" />
+
+        <span className="text-xs text-muted-foreground hidden sm:block">
+          {TYPE_LABEL[question.question_type]}
+        </span>
+
+        {question.is_required && (
+          <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30 hidden sm:flex">
+            required
+          </Badge>
+        )}
 
         <Button
           type="button"
           variant="ghost"
           size="icon"
           onClick={onRemove}
+          className="h-7 w-7 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 shrink-0"
           aria-label="Remove question"
-          className="h-6 w-6 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 shrink-0"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
 
       {/* ── Body ── */}
-      <div className="p-3 space-y-3">
+      <div className="p-4 space-y-4">
         {/* Question text */}
-        <Textarea
-          placeholder="Type your question here…"
-          value={question.question_text}
-          onChange={(e) => onUpdate({ question_text: e.target.value })}
-          rows={2}
-          className="w-full min-h-[3rem] resize-y text-sm leading-relaxed break-words"
-        />
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Question text</label>
+          <Textarea
+            placeholder="e.g. What motivates you to pursue a career in healthcare?"
+            value={question.question_text}
+            onChange={(e) => onUpdate({ question_text: e.target.value })}
+            rows={2}
+            className="resize-y text-sm"
+          />
+        </div>
 
-        {/* Answer type + Required */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Select
-            value={question.question_type}
-            onValueChange={(val) =>
-              onUpdate({
-                question_type: val as QuestionType,
-                options:
-                  val === 'multiple_choice'
-                    ? question.options.length
-                      ? question.options
-                      : ['']
-                    : [],
-              })
-            }
-          >
-            <SelectTrigger className="h-7 text-xs flex-1 min-w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(QUESTION_TYPE_LABELS).map(([key, label]) => (
-                <SelectItem key={key} value={key} className="text-xs">
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Type + Required row */}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1.5 flex-1 min-w-[160px]">
+            <label className="text-xs font-medium text-muted-foreground">Answer type</label>
+            <Select
+              value={question.question_type}
+              onValueChange={(val) =>
+                onUpdate({
+                  question_type: val as QuestionType,
+                  options: val === 'multiple_choice' ? (question.options.length ? question.options : ['']) : [],
+                  char_limit: val === 'short_answer' ? question.char_limit : null,
+                })
+              }
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {QUESTION_TYPES.map(({ value, label, icon: Icon }) => (
+                  <SelectItem key={value} value={value}>
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                      {label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer pb-0.5 shrink-0">
             <Switch
               checked={question.is_required}
-              onCheckedChange={(checked) => onUpdate({ is_required: checked })}
-              className="scale-75"
+              onCheckedChange={(v) => onUpdate({ is_required: v })}
             />
-            <span className="text-xs text-muted-foreground">Required</span>
+            <span className="text-sm text-muted-foreground">Required</span>
           </label>
         </div>
 
-        {/* Multiple choice options */}
-        {question.question_type === 'multiple_choice' && (
-          <div className="space-y-1.5 pl-3 border-l-2 border-muted">
-            {question.options.map((opt, oi) => (
-              <div key={oi} className="flex gap-1.5 min-w-0">
-                <Input
-                  placeholder={`Option ${oi + 1}`}
-                  value={opt}
-                  onChange={(e) => onUpdateOption(oi, e.target.value)}
-                  className="h-7 text-xs min-w-0 flex-1"
-                />
-                <Button
+        {/* Character limit (short_answer only) */}
+        {isShortAnswer && (
+          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="flex items-center gap-2">
+              <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Character limit</span>
+              {question.char_limit && (
+                <Badge variant="secondary" className="text-xs ml-auto">
+                  max {question.char_limit.toLocaleString()} chars
+                </Badge>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <button
+                type="button"
+                onClick={() => onUpdate({ char_limit: null })}
+                className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                  !question.char_limit
+                    ? 'border-primary bg-primary/10 text-primary font-medium'
+                    : 'border-border text-muted-foreground hover:border-border/80 hover:text-foreground'
+                }`}
+              >
+                No limit
+              </button>
+              {CHAR_LIMIT_PRESETS.map((n) => (
+                <button
+                  key={n}
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onRemoveOption(oi)}
-                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => onUpdate({ char_limit: n })}
+                  className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                    question.char_limit === n
+                      ? 'border-primary bg-primary/10 text-primary font-medium'
+                      : 'border-border text-muted-foreground hover:border-border/80 hover:text-foreground'
+                  }`}
                 >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                  {n >= 1000 ? `${n / 1000}k` : n}
+                </button>
+              ))}
+              <div className="flex items-center gap-1.5 ml-auto">
+                <span className="text-xs text-muted-foreground">Custom:</span>
+                <Input
+                  type="number"
+                  min={10}
+                  max={10000}
+                  placeholder="e.g. 750"
+                  value={question.char_limit && !CHAR_LIMIT_PRESETS.includes(question.char_limit) ? question.char_limit : ''}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value);
+                    if (!isNaN(v) && v > 0) onUpdate({ char_limit: v });
+                  }}
+                  className="h-7 w-24 text-xs"
+                />
               </div>
-            ))}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onAddOption}
-              className="h-6 text-xs px-2"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add option
-            </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Multiple choice options */}
+        {isMultiChoice && (
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Options</label>
+            <div className="space-y-1.5 pl-3 border-l-2 border-muted">
+              {question.options.map((opt, oi) => (
+                <div key={oi} className="flex gap-2">
+                  <Input
+                    placeholder={`Option ${oi + 1}`}
+                    value={opt}
+                    onChange={(e) => onUpdateOption(oi, e.target.value)}
+                    className="h-8 text-sm flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onRemoveOption(oi)}
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onAddOption}
+                className="h-7 text-xs"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add option
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -251,7 +312,7 @@ function SortableQuestionCard({
   );
 }
 
-/* ─── Main editor ───────────────────────────────────────────────────────── */
+/* ─── Main editor ────────────────────────────────────────────────────────── */
 
 interface Props {
   questions: QuestionFormData[];
@@ -259,14 +320,9 @@ interface Props {
 }
 
 export default function PositionQuestionsEditor({ questions, onChange }: Props) {
-  // Stable ID array — synced with questions array length
   const stableIds = useRef<string[]>([]);
-  while (stableIds.current.length < questions.length) {
-    stableIds.current.push(newStableId());
-  }
-  if (stableIds.current.length > questions.length) {
-    stableIds.current.length = questions.length;
-  }
+  while (stableIds.current.length < questions.length) stableIds.current.push(nextId());
+  if (stableIds.current.length > questions.length) stableIds.current.length = questions.length;
   const ids = stableIds.current.slice();
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -277,16 +333,10 @@ export default function PositionQuestionsEditor({ questions, onChange }: Props) 
   );
 
   const addQuestion = () => {
-    stableIds.current.push(newStableId());
+    stableIds.current.push(nextId());
     onChange([
       ...questions,
-      {
-        question_text: '',
-        question_type: 'short_answer',
-        is_required: true,
-        options: [],
-        display_order: questions.length,
-      },
+      { question_text: '', question_type: 'short_answer', is_required: true, options: [], display_order: questions.length, char_limit: null },
     ]);
   };
 
@@ -303,21 +353,16 @@ export default function PositionQuestionsEditor({ questions, onChange }: Props) 
     onChange(updated);
   };
 
-  const addOption = (qi: number) =>
-    updateQuestion(qi, { options: [...questions[qi].options, ''] });
-
-  const updateOption = (qi: number, oi: number, value: string) => {
-    const opts = [...questions[qi].options];
-    opts[oi] = value;
+  const addOption = (qi: number) => updateQuestion(qi, { options: [...questions[qi].options, ''] });
+  const updateOption = (qi: number, oi: number, v: string) => {
+    const opts = [...questions[qi].options]; opts[oi] = v;
     updateQuestion(qi, { options: opts });
   };
-
   const removeOption = (qi: number, oi: number) =>
     updateQuestion(qi, { options: questions[qi].options.filter((_, i) => i !== oi) });
 
-  const handleDragStart = ({ active }: DragStartEvent) => {
+  const handleDragStart = ({ active }: DragStartEvent) =>
     setActiveIndex(ids.indexOf(active.id as string));
-  };
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveIndex(null);
@@ -325,36 +370,52 @@ export default function PositionQuestionsEditor({ questions, onChange }: Props) 
     const oldIdx = ids.indexOf(active.id as string);
     const newIdx = ids.indexOf(over.id as string);
     if (oldIdx === -1 || newIdx === -1) return;
-
-    // Reorder stable IDs in sync
-    const newIds = arrayMove(stableIds.current, oldIdx, newIdx);
-    stableIds.current = newIds;
-
+    stableIds.current = arrayMove(stableIds.current, oldIdx, newIdx);
     const reordered = arrayMove(questions, oldIdx, newIdx);
     reordered.forEach((q, i) => { q.display_order = i; });
     onChange(reordered);
   };
 
   return (
-    <div className="space-y-3">
-      {/* Add button */}
-      <div className="flex justify-end">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold">Custom Application Questions</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Build the form students complete when applying. Drag to reorder.
+          </p>
+        </div>
         <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
           <Plus className="h-4 w-4 mr-1.5" />
           Add Question
         </Button>
       </div>
 
-      {/* Empty state */}
+      {/* Question type quick-add */}
       {questions.length === 0 && (
-        <div className="flex flex-col items-center gap-2 py-10 border border-dashed rounded-lg text-center">
-          <GripVertical className="h-6 w-6 text-muted-foreground/25" />
-          <p className="text-sm text-muted-foreground">No questions yet.</p>
-          <p className="text-xs text-muted-foreground/60">Click "Add Question" to build your form.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {QUESTION_TYPES.map(({ value, label, icon: Icon, description }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => {
+                stableIds.current.push(nextId());
+                onChange([
+                  { question_text: '', question_type: value, is_required: true, options: value === 'multiple_choice' ? [''] : [], display_order: 0, char_limit: null },
+                ]);
+              }}
+              className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border hover:border-primary/40 hover:bg-primary/5 p-4 text-center transition-colors group"
+            >
+              <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="text-xs font-medium">{label}</span>
+              <span className="text-[10px] text-muted-foreground leading-tight">{description}</span>
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Sortable list */}
+      {/* DnD list */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -363,13 +424,14 @@ export default function PositionQuestionsEditor({ questions, onChange }: Props) 
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {questions.map((q, index) => (
               <SortableQuestionCard
                 key={ids[index]}
                 id={ids[index]}
                 question={q}
                 index={index}
+                total={questions.length}
                 onUpdate={(u) => updateQuestion(index, u)}
                 onRemove={() => removeQuestion(index)}
                 onAddOption={() => addOption(index)}
@@ -380,17 +442,20 @@ export default function PositionQuestionsEditor({ questions, onChange }: Props) 
           </div>
         </SortableContext>
 
-        {/* Drag overlay — uses pure display card, no dnd hooks */}
         <DragOverlay>
           {activeIndex !== null && (
-            <QuestionCardDisplay
-              question={questions[activeIndex]}
-              index={activeIndex}
-              isOverlay
-            />
+            <OverlayCard question={questions[activeIndex]} index={activeIndex} />
           )}
         </DragOverlay>
       </DndContext>
+
+      {/* Add another button when questions exist */}
+      {questions.length > 0 && (
+        <Button type="button" variant="outline" className="w-full" onClick={addQuestion}>
+          <Plus className="h-4 w-4 mr-1.5" />
+          Add Another Question
+        </Button>
+      )}
     </div>
   );
 }

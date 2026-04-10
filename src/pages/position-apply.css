@@ -387,6 +387,11 @@
   font-size: 11px;
   color: var(--pa-text-3);
   pointer-events: none;
+  transition: color 0.2s;
+}
+.pa-char-count--warn {
+  color: #f59e0b;
+  font-weight: 500;
 }
 
 .pa-options-list {

@@ -431,34 +431,26 @@ export default function PositionApplyPage() {
   const renderQuestionField = (q: PositionQuestion) => {
     const id = q.id;
 
-    if (q.question_type === 'short_answer') {
-      return (
-        <input
-          type="text"
-          className="pa-input"
-          value={answers[id] || ''}
-          onChange={(e) => setAnswers((prev) => ({ ...prev, [id]: e.target.value }))}
-          required={q.is_required}
-        />
-      );
-    }
-
-    if (q.question_type === 'long_answer') {
+    if (q.question_type === 'short_answer' || q.question_type === 'long_answer') {
+      const limit = q.char_limit ?? (q.question_type === 'long_answer' ? LONG_ANSWER_MAX : null);
       const len = (answers[id] || '').length;
+      const nearLimit = limit && len >= limit * 0.85;
       return (
         <div className="pa-char-wrap">
           <textarea
             className="pa-textarea"
             style={{ minHeight: 110, paddingBottom: 28 }}
             value={answers[id] || ''}
-            maxLength={LONG_ANSWER_MAX}
+            maxLength={limit ?? undefined}
             onChange={(e) => setAnswers((prev) => ({ ...prev, [id]: e.target.value }))}
             required={q.is_required}
             placeholder="Your answer…"
           />
-          <span className="pa-char-count">
-            {len} / {LONG_ANSWER_MAX}
-          </span>
+          {limit && (
+            <span className={`pa-char-count ${nearLimit ? 'pa-char-count--warn' : ''}`}>
+              {len} / {limit}
+            </span>
+          )}
         </div>
       );
     }
