@@ -207,6 +207,15 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   waitlisted: 'Waitlisted',
 };
 
+export const STATUS_COLORS: Record<ApplicationStatus, string> = {
+  new: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+  under_review: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30',
+  interview: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+  accepted: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  rejected: 'bg-red-500/15 text-red-300 border-red-500/30',
+  waitlisted: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+};
+
 export type ActivityActionType =
   | 'status_change'
   | 'email_sent'
