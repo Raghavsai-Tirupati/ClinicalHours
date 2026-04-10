@@ -29,7 +29,7 @@ import {
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { buildStudentApplicationStatusUpdate, autoPromoteToStaff } from '@/lib/applicationStatus';
 import {
   APPLICATION_STATUS_LABELS,
   type ApplicationStatus,
