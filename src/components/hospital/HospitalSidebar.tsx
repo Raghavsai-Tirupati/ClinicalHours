@@ -52,14 +52,11 @@ export default function HospitalSidebar() {
   const activeCount = positions.filter(p => p.status === 'active').length;
 
   const navItems = [
-    { label: 'Overview', icon: LayoutDashboard, route: basePath },
-    { label: 'Applications', icon: Inbox, route: `${basePath}/applications`, badge: newAppCount },
+    { label: 'Applications', icon: Inbox, route: basePath, badge: newAppCount },
     { label: 'Positions', icon: Briefcase, route: `${basePath}/positions`, badge: activeCount || positions.length },
-{ label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
-    { label: 'Email', icon: Mail, route: `${basePath}/email` },
-    // Renamed from "Team" → "People" in the People refactor. The route is
-    // still /team for now so existing bookmarks keep working.
     { label: 'People', icon: UserCircle, route: `${basePath}/team` },
+    { label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
+    { label: 'Email', icon: Mail, route: `${basePath}/email` },
     { label: 'Waitlists', icon: ClipboardList, route: `${basePath}/waitlist` },
   ];
 

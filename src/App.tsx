@@ -59,7 +59,6 @@ const GoogleAuthCallback = lazyRetry(() => import("./pages/GoogleAuthCallback"))
 
 // Hospital admin dashboard (position system)
 const HospitalDashboardLayout = lazyRetry(() => import("./layouts/HospitalDashboardLayout"));
-const HospitalOverview = lazyRetry(() => import("./components/hospital/HospitalOverview"));
 const PositionForm = lazyRetry(() => import("./components/hospital/PositionForm"));
 const PositionDetail = lazyRetry(() => import("./components/hospital/PositionDetail"));
 const ApplicantProfilePage = lazyRetry(() => import("./components/hospital/ApplicantProfilePage"));
@@ -175,7 +174,7 @@ function AppContent() {
                   </HospitalOnlyRoute>
                 }
               >
-                <Route index element={<HospitalOverview />} />
+                <Route index element={<ApplicationsHub />} />
                 <Route path="positions" element={<PositionsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
@@ -199,13 +198,13 @@ function AppContent() {
                   </HospitalOnlyRoute>
                 }
               >
-                <Route index element={<HospitalOverview />} />
+                <Route index element={<ApplicationsHub />} />
                 <Route path="applications" element={<ApplicationsHub />} />
               </Route>
               <Route path="/pending-approval" element={<PendingApproval />} />
               {/* Hospital admin dashboard with sidebar layout */}
               <Route path="/hospital/:id" element={<HospitalDashboardLayout />}>
-                <Route index element={<HospitalOverview />} />
+                <Route index element={<ApplicationsHub />} />
                 <Route path="positions" element={<PositionsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />

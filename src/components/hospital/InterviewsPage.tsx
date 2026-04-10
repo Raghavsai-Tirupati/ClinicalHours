@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
-import { autoPromoteToStaff, buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
