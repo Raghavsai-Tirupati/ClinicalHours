@@ -36,3 +36,6 @@ node_modules
 # Import checkpoint
 scripts/.import-checkpoint.json
 
+# Git worktrees
+.worktrees
+
