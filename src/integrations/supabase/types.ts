@@ -362,6 +362,7 @@ export type Database = {
           phone: string | null
           role_id: string | null
           status: string
+          tracker_category_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -379,6 +380,7 @@ export type Database = {
           phone?: string | null
           role_id?: string | null
           status?: string
+          tracker_category_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -396,6 +398,7 @@ export type Database = {
           phone?: string | null
           role_id?: string | null
           status?: string
+          tracker_category_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -419,6 +422,13 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "clinic_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_members_tracker_category_id_fkey"
+            columns: ["tracker_category_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_tracker_categories"
             referencedColumns: ["id"]
           },
         ]
