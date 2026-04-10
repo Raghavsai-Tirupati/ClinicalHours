@@ -319,7 +319,7 @@ export default function ApplicantPersonPage() {
     );
   }
 
-  if (!firstApp) {
+  if (!firstApp && !profile) {
     return (
       <div className="text-center py-20">
         <p className="text-muted-foreground">No applications found for this person at your clinic.</p>
