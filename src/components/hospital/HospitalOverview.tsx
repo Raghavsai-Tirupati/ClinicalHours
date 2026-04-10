@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, Users, FileText, TrendingUp, Plus, ArrowRight, Clock } from 'lucide-react';
+import { Briefcase, Users, FileText, TrendingUp, Plus, ArrowRight, Clock, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -14,11 +15,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
-import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from '@/types/positions';
-import type { ApplicationStatus, PositionStatus } from '@/types/positions';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import type { ApplicationStatus, PositionStatus, StudentApplication } from '@/types/positions';
 import { format } from 'date-fns';
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
@@ -40,12 +38,7 @@ const POSITION_STATUS_COLORS: Record<PositionStatus, string> = {
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 
-function getApplicantName(app: {
-  applicant_name?: string | null;
-  student_profile?: { full_name: string | null };
-  applicant_email?: string | null;
-  student_id: string;
-}): string {
+function getApplicantName(app: StudentApplication): string {
   if (app.applicant_name?.trim() && !PLACEHOLDER_NAME_REGEX.test(app.applicant_name.trim())) {
     return app.applicant_name.trim();
   }
@@ -60,43 +53,37 @@ function getApplicantName(app: {
 
 export default function HospitalOverview() {
   const { hospitalPage, basePath } = useHospitalPageContext();
-  const { applications, positions, stats, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const { applications, positions, stats, loading } = useAllApplications(hospitalPage?.id);
   const [positionStatusFilter, setPositionStatusFilter] = useState<'all' | 'active' | 'draft' | 'archived'>('all');
+  const [appSearch, setAppSearch] = useState('');
+  const [appStatusFilter, setAppStatusFilter] = useState<ApplicationStatus | 'all'>('all');
 
-  const activePositionCount = positions.filter((p) => p.status === 'active').length;
-  const recentApps = applications.slice(0, 5);
   const filteredPositions = positions.filter((position) => {
     if (positionStatusFilter === 'all') return true;
     return position.status === positionStatusFilter;
   });
 
-  const handleStatusChange = async (appId: string, newStatus: ApplicationStatus) => {
-    setUpdatingId(appId);
-    try {
-      const { error } = await supabase
-        .from('student_applications')
-        .update(buildStudentApplicationStatusUpdate(newStatus))
-        .eq('id', appId);
-
-      if (error) throw error;
-      toast.success(`Status updated to ${APPLICATION_STATUS_LABELS[newStatus]}`);
-      updateApplicationLocally(appId, { status: newStatus });
-    } catch {
-      toast.error('Failed to update status');
-    } finally {
-      setUpdatingId(null);
-    }
-  };
+  const filteredApps = useMemo(() => {
+    const q = appSearch.trim().toLowerCase();
+    return applications
+      .filter((a) => appStatusFilter === 'all' || a.status === appStatusFilter)
+      .filter((a) => {
+        if (!q) return true;
+        const name = getApplicantName(a).toLowerCase();
+        const email = (a.applicant_email || a.student_profile?.email || '').toLowerCase();
+        const pos = (a.position?.title || '').toLowerCase();
+        return name.includes(q) || email.includes(q) || pos.includes(q);
+      });
+  }, [applications, appSearch, appStatusFilter]);
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Page header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-2xl font-bold tracking-tight break-words">Overview</h2>
+          <h1 className="text-2xl font-bold tracking-tight break-words">Overview</h1>
           <p className="text-muted-foreground text-sm mt-1 text-pretty break-words">
-            Manage positions, review applications, and track progress
+            Manage incoming applications
           </p>
         </div>
         <Button asChild className="w-full shrink-0 sm:w-auto">
@@ -160,143 +147,176 @@ export default function HospitalOverview() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Acceptance Rate
+                Under Review
               </CardTitle>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/15">
-                <TrendingUp className="h-4 w-4 text-green-400" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15">
+                <TrendingUp className="h-4 w-4 text-amber-400" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.acceptanceRate}%</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.accepted} accepted of {stats.accepted + stats.rejected} decided
-              </p>
+              <div className="text-2xl font-bold">{stats.underReview}</div>
+              <p className="text-xs text-muted-foreground mt-1">In progress</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active Positions
+                Accepted
               </CardTitle>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/15">
-                <Briefcase className="h-4 w-4 text-purple-400" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/15">
+                <Users className="h-4 w-4 text-green-400" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activePositionCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">Currently accepting</p>
+              <div className="text-2xl font-bold">{stats.accepted}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.acceptanceRate}% acceptance rate
+              </p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Recent Applications */}
+      {/* Applications — primary content */}
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <CardTitle>Recent Applications</CardTitle>
+            <CardTitle>
+              Applications
+              {!loading && (
+                <span className="ml-2 text-base font-normal text-muted-foreground">
+                  ({filteredApps.length}{appStatusFilter !== 'all' || appSearch ? ` of ${applications.length}` : ''})
+                </span>
+              )}
+            </CardTitle>
             <p className="text-sm text-muted-foreground mt-1 text-pretty break-words">
-              Latest submissions across all positions
+              All submissions across every position
             </p>
           </div>
-          {applications.length > 5 && (
-            <Button variant="ghost" size="sm" className="shrink-0 self-start sm:self-center" asChild>
-              <Link to={`${basePath}/positions`}>
-                View All
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Link>
-            </Button>
-          )}
         </CardHeader>
         <CardContent>
+          {/* Search + filter controls */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search by name, email, or position…"
+                value={appSearch}
+                onChange={(e) => setAppSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Select
+              value={appStatusFilter}
+              onValueChange={(value) => setAppStatusFilter(value as ApplicationStatus | 'all')}
+            >
+              <SelectTrigger className="h-10 sm:w-[170px]">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                {(Object.entries(APPLICATION_STATUS_LABELS) as [ApplicationStatus, string][]).map(
+                  ([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  )
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
           {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-3">
-                  <Skeleton className="h-9 w-9 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
-                  <Skeleton className="h-6 w-20" />
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-3 rounded-lg border">
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <Skeleton className="h-4 flex-1 max-w-[160px]" />
+                  <Skeleton className="h-4 flex-1 max-w-[120px]" />
+                  <Skeleton className="h-5 w-20 ml-auto" />
+                  <Skeleton className="h-4 w-16" />
                 </div>
               ))}
             </div>
-          ) : recentApps.length === 0 ? (
-            <div className="text-center py-10">
+          ) : filteredApps.length === 0 ? (
+            <div className="text-center py-12">
               <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">No applications yet</p>
+              <p className="text-muted-foreground font-medium">
+                {applications.length === 0 ? 'No applications yet' : 'No applications match your filters'}
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Applications will appear here once students apply
+                {applications.length === 0
+                  ? 'Applications will appear here once students apply'
+                  : 'Try adjusting your search or status filter'}
               </p>
             </div>
           ) : (
-            <div className="space-y-1">
-              {recentApps.map((app) => {
-                const positionTitle = app.position?.title || 'Unknown Position';
-                const displayName = getApplicantName(app);
-                return (
-                  <div
-                    key={app.id}
-                    className="flex flex-col gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/30 sm:flex-row sm:items-center sm:gap-4"
-                  >
-                    <div className="flex min-w-0 flex-1 items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase">
-                        {displayName.charAt(0)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium break-words">{displayName}</p>
-                        <p className="text-xs text-muted-foreground break-words">{positionTitle}</p>
-                        <span className="mt-1 text-xs text-muted-foreground sm:hidden">
-                          {format(new Date(app.submitted_at), 'MMM d')}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
-                    <Badge
-                      variant="secondary"
-                      className={`max-w-full whitespace-normal text-[11px] leading-snug ${STATUS_COLORS[app.status]}`}
-                    >
-                      {APPLICATION_STATUS_LABELS[app.status]}
-                    </Badge>
-                    <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
-                      {format(new Date(app.submitted_at), 'MMM d')}
-                    </span>
-                    <Select
-                      value={app.status}
-                      onValueChange={(val) => handleStatusChange(app.id, val as ApplicationStatus)}
-                      disabled={updatingId === app.id}
-                    >
-                      <SelectTrigger className="h-9 min-w-[8.5rem] flex-1 text-xs sm:h-7 sm:w-[120px] sm:flex-initial">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.entries(APPLICATION_STATUS_LABELS) as [ApplicationStatus, string][]).map(
-                          ([value, label]) => (
-                            <SelectItem key={value} value={value} className="text-xs">
-                              {label}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-xs text-muted-foreground">
+                    <th className="pb-2 pr-4 text-left font-medium">Name</th>
+                    <th className="pb-2 pr-4 text-left font-medium hidden sm:table-cell">Position</th>
+                    <th className="pb-2 pr-4 text-left font-medium">Status</th>
+                    <th className="pb-2 pr-4 text-left font-medium hidden md:table-cell">Date Applied</th>
+                    <th className="pb-2 text-right font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filteredApps.map((app) => {
+                    const displayName = getApplicantName(app);
+                    const positionTitle = app.position?.title || 'Unknown Position';
+                    return (
+                      <tr key={app.id} className="group hover:bg-muted/30 transition-colors">
+                        <td className="py-3 pr-4">
+                          <Link
+                            to={`${basePath}/applicants/${app.id}`}
+                            className="font-medium hover:underline break-words"
+                          >
+                            {displayName}
+                          </Link>
+                        </td>
+                        <td className="py-3 pr-4 text-muted-foreground hidden sm:table-cell">
+                          <span className="break-words line-clamp-1">{positionTitle}</span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <Badge
+                            variant="secondary"
+                            className={`text-[11px] whitespace-nowrap ${STATUS_COLORS[app.status]}`}
+                          >
+                            {APPLICATION_STATUS_LABELS[app.status]}
+                          </Badge>
+                        </td>
+                        <td className="py-3 pr-4 text-muted-foreground hidden md:table-cell whitespace-nowrap">
+                          {format(new Date(app.submitted_at), 'MMM d, yyyy')}
+                        </td>
+                        <td className="py-3 text-right">
+                          <Link
+                            to={`${basePath}/applicants/${app.id}`}
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            View
+                            <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Positions at a Glance */}
+      {/* Positions — secondary / compact */}
       <div className="min-w-0">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-lg font-semibold tracking-tight break-words">Positions at a Glance</h3>
+          <h3 className="text-lg font-semibold tracking-tight break-words">Positions</h3>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-muted-foreground">View</span>
+              <span className="text-xs text-muted-foreground">Filter</span>
               <Select
                 value={positionStatusFilter}
                 onValueChange={(value) =>
@@ -304,10 +324,10 @@ export default function HospitalOverview() {
                 }
               >
                 <SelectTrigger className="h-8 min-w-0 flex-1 sm:w-[150px] sm:flex-initial">
-                  <SelectValue placeholder="All position statuses" />
+                  <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All position statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
@@ -324,22 +344,18 @@ export default function HospitalOverview() {
         </div>
         {!loading && positions.length > 0 && (
           <p className="text-xs text-muted-foreground mb-3">
-            Showing {filteredPositions.length} of {positions.length} positions
+            Showing {filteredPositions.length} of {positions.length} position{positions.length !== 1 ? 's' : ''}
           </p>
         )}
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="pt-6">
-                  <Skeleton className="h-5 w-40 mb-3" />
-                  <div className="flex gap-2 mb-4">
-                    <Skeleton className="h-5 w-16" />
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                  <Skeleton className="h-4 w-24" />
-                </CardContent>
-              </Card>
+              <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+                <Skeleton className="h-4 w-40 flex-1" />
+                <Skeleton className="h-5 w-14" />
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-4 w-12 ml-auto" />
+              </div>
             ))}
           </div>
         ) : positions.length === 0 ? (
@@ -360,45 +376,38 @@ export default function HospitalOverview() {
           </Card>
         ) : filteredPositions.length === 0 ? (
           <Card>
-            <CardContent className="py-10 text-center">
-              <Briefcase className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">No positions match this status</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Try switching to another status filter.
-              </p>
+            <CardContent className="py-8 text-center">
+              <Briefcase className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground font-medium text-sm">No positions match this filter</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-2">
             {filteredPositions.map((pos) => {
               const appCount = applications.filter((a) => a.position_id === pos.id).length;
               return (
-                <Link key={pos.id} to={`${basePath}/positions/${pos.id}`} className="group">
-                  <Card className="transition-colors group-hover:border-primary/40">
-                    <CardContent className="pt-6">
-                      <div className="mb-3 flex items-start justify-between gap-2">
-                        <h4 className="line-clamp-2 text-sm font-semibold break-words">{pos.title}</h4>
-                        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5 mb-4">
-                        <Badge
-                          variant="secondary"
-                          className={`text-[10px] ${POSITION_STATUS_COLORS[pos.status]}`}
-                        >
-                          {pos.status}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px]">
-                          {POSITION_TYPE_LABELS[pos.position_type] || pos.position_type}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Users className="h-3.5 w-3.5" />
-                        <span>
-                          {appCount} application{appCount !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <Link
+                  key={pos.id}
+                  to={`${basePath}/positions/${pos.id}`}
+                  className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:border-primary/40 hover:bg-muted/20"
+                >
+                  <span className="flex-1 min-w-0 text-sm font-medium line-clamp-1 break-words">
+                    {pos.title}
+                  </span>
+                  <Badge
+                    variant="secondary"
+                    className={`shrink-0 text-[10px] ${POSITION_STATUS_COLORS[pos.status]}`}
+                  >
+                    {pos.status}
+                  </Badge>
+                  <Badge variant="outline" className="shrink-0 text-[10px] hidden sm:inline-flex">
+                    {POSITION_TYPE_LABELS[pos.position_type] || pos.position_type}
+                  </Badge>
+                  <span className="shrink-0 text-xs text-muted-foreground flex items-center gap-1">
+                    <Users className="h-3.5 w-3.5" />
+                    {appCount}
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
               );
             })}

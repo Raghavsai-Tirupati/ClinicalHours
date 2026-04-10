@@ -66,6 +66,7 @@ const ApplicantProfilePage = lazyRetry(() => import("./components/hospital/Appli
 const ApplicantPersonPage = lazyRetry(() => import("./components/hospital/ApplicantPersonPage"));
 const HospitalSettingsPage = lazyRetry(() => import("./components/hospital/HospitalSettings"));
 const PositionsHub = lazyRetry(() => import("./components/hospital/PositionsHub"));
+const ApplicationsHub = lazyRetry(() => import("./components/hospital/ApplicationsHub"));
 const InterviewsPage = lazyRetry(() => import("./components/hospital/InterviewsPage"));
 const EmailPage = lazyRetry(() => import("./components/hospital/EmailPage"));
 const EmailCommunication = lazyRetry(() => import("./components/clinic-dashboard/email-communication/EmailCommunication"));
@@ -188,6 +189,7 @@ function AppContent() {
                 <Route path="waitlist" element={<WaitlistModule />} />
                 <Route path="volunteer-tracker" element={<Navigate to="../team?tab=tracker" replace />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
+                <Route path="applications" element={<ApplicationsHub />} />
               </Route>
               <Route
                 path="/hospital/admin"
@@ -198,6 +200,7 @@ function AppContent() {
                 }
               >
                 <Route index element={<HospitalOverview />} />
+                <Route path="applications" element={<ApplicationsHub />} />
               </Route>
               <Route path="/pending-approval" element={<PendingApproval />} />
               {/* Hospital admin dashboard with sidebar layout */}
@@ -216,6 +219,7 @@ function AppContent() {
                 <Route path="waitlist" element={<WaitlistModule />} />
                 <Route path="volunteer-tracker" element={<Navigate to="../team?tab=tracker" replace />} />
                 <Route path="settings" element={<HospitalSettingsPage />} />
+                <Route path="applications" element={<ApplicationsHub />} />
               </Route>
               {/* Public waitlist form */}
               <Route path="/waitlist/:slug" element={<WaitlistPage />} />

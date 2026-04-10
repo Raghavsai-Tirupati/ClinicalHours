@@ -10,6 +10,7 @@ import {
   Plus,
   Shield,
   ClipboardList,
+  Inbox,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -26,6 +27,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { usePositions } from '@/hooks/usePositions';
+import { useNewApplicationCount } from '@/hooks/useNewApplicationCount';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function HospitalSidebar() {
@@ -33,6 +35,7 @@ export default function HospitalSidebar() {
   const navigate = useNavigate();
   const { hospitalPage, basePath, isSuperAdmin } = useHospitalPageContext();
   const { positions } = usePositions(hospitalPage?.id);
+  const { count: newAppCount } = useNewApplicationCount(hospitalPage?.id);
 
   const isActive = (route: string) => {
     if (route === basePath) {
@@ -50,6 +53,7 @@ export default function HospitalSidebar() {
 
   const navItems = [
     { label: 'Overview', icon: LayoutDashboard, route: basePath },
+    { label: 'Applications', icon: Inbox, route: `${basePath}/applications`, badge: newAppCount },
     { label: 'Positions', icon: Briefcase, route: `${basePath}/positions`, badge: activeCount || positions.length },
 { label: 'Interviews', icon: Calendar, route: `${basePath}/interviews` },
     { label: 'Email', icon: Mail, route: `${basePath}/email` },
