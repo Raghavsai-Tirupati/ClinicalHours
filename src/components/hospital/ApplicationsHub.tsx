@@ -28,6 +28,7 @@ import {
   type SortState,
 } from '@/lib/applicationFilters';
 import ApplicationFilterBar from './ApplicationFilterBar';
+import ApplicationReviewPanel from './ApplicationReviewPanel';
 import RichEmailDialog from './RichEmailDialog';
 import InterviewInviteDialog from './InterviewInviteDialog';
 
@@ -56,7 +57,7 @@ function getApplicantName(app: StudentApplication): string {
 
 export default function ApplicationsHub() {
   const { hospitalPage, basePath } = useHospitalPageContext();
-  const { applications, positions, loading } = useAllApplications(hospitalPage?.id);
+  const { applications, positions, loading, updateApplicationLocally } = useAllApplications(hospitalPage?.id);
 
   // ── Filter & sort state ───────────────────────────────────
   const [filterRules, setFilterRules] = useState<ApplicationFilterRule[]>([]);
@@ -66,6 +67,9 @@ export default function ApplicationsHub() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
+
+  // ── Review panel state ────────────────────────────────────
+  const [reviewIndex, setReviewIndex] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
     const afterFilter = applyApplicationFilters(applications, filterRules);
@@ -199,7 +203,7 @@ export default function ApplicationsHub() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((app) => {
+              filtered.map((app, rowIdx) => {
                 const name = getApplicantName(app);
                 const email = app.applicant_email || app.student_profile?.email || '';
                 const href = `${basePath}/people/${app.student_id}`;
@@ -208,7 +212,8 @@ export default function ApplicationsHub() {
                 return (
                   <TableRow
                     key={app.id}
-                    className={isSelected ? 'bg-primary/5' : ''}
+                    className={`cursor-pointer ${isSelected ? 'bg-primary/5' : ''}`}
+                    onClick={() => setReviewIndex(rowIdx)}
                   >
                     <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
@@ -218,42 +223,32 @@ export default function ApplicationsHub() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Link to={href} className="block">
-                        <div className="font-medium hover:underline">{name}</div>
-                        {email && (
-                          <div className="text-xs text-muted-foreground break-all">
-                            {email}
-                          </div>
-                        )}
-                      </Link>
+                      <div className="font-medium">{name}</div>
+                      {email && (
+                        <div className="text-xs text-muted-foreground break-all">{email}</div>
+                      )}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      <Link to={href} className="block">
-                        {app.position?.title || '—'}
-                      </Link>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      {app.position?.title || '—'}
                     </TableCell>
                     <TableCell>
-                      <Link to={href} className="block">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${STATUS_COLORS[app.status] || ''}`}
-                        >
-                          {APPLICATION_STATUS_LABELS[app.status] || app.status}
-                        </Badge>
-                      </Link>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${STATUS_COLORS[app.status] || ''}`}
+                      >
+                        {APPLICATION_STATUS_LABELS[app.status] || app.status}
+                      </Badge>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                      <Link to={href} className="block">
-                        {app.submitted_at
-                          ? format(new Date(app.submitted_at), 'MMM d, yyyy')
-                          : '—'}
-                      </Link>
+                      {app.submitted_at
+                        ? format(new Date(app.submitted_at), 'MMM d, yyyy')
+                        : '—'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <Link
                         to={href}
                         className="text-muted-foreground hover:text-foreground"
-                        aria-label={`Open ${name}'s profile`}
+                        aria-label={`Open ${name}'s full profile`}
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Link>
@@ -265,6 +260,20 @@ export default function ApplicationsHub() {
           </TableBody>
         </Table>
       </div>
+
+      {/* ── Review panel ───────────────────────────────────── */}
+      {reviewIndex !== null && hospitalPage && (
+        <ApplicationReviewPanel
+          applications={applications}
+          filteredList={filtered}
+          startIndex={reviewIndex}
+          hospitalPage={hospitalPage}
+          onClose={() => setReviewIndex(null)}
+          onStatusChange={(appId, newStatus) => {
+            updateApplicationLocally(appId, { status: newStatus });
+          }}
+        />
+      )}
 
       {/* ── Bulk email dialogs ─────────────────────────────── */}
       {hospitalPage && (
