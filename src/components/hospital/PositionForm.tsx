@@ -106,7 +106,7 @@ export default function PositionForm() {
           id: q.id,
           question_text: q.question_text,
           // treat legacy long_answer as short_answer
-          question_type: q.question_type === 'long_answer' ? 'short_answer' : q.question_type,
+          question_type: (q.question_type as string) === 'long_answer' ? 'short_answer' : q.question_type,
           is_required: q.is_required,
           options: (q.options as string[]) || [],
           display_order: q.display_order,

@@ -431,8 +431,8 @@ export default function PositionApplyPage() {
   const renderQuestionField = (q: PositionQuestion) => {
     const id = q.id;
 
-    if (q.question_type === 'short_answer' || q.question_type === 'long_answer') {
-      const limit = q.char_limit ?? (q.question_type === 'long_answer' ? LONG_ANSWER_MAX : null);
+    if (q.question_type === 'short_answer' || (q.question_type as string) === 'long_answer') {
+      const limit = q.char_limit ?? ((q.question_type as string) === 'long_answer' ? LONG_ANSWER_MAX : null);
       const len = (answers[id] || '').length;
       const nearLimit = limit && len >= limit * 0.85;
       return (
