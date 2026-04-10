@@ -259,11 +259,11 @@ export default function ApplicantPersonPage() {
       try {
         const storagePath = `application-documents/${uploadAppId}/${Date.now()}-${file.name}`;
         const { error: uploadError } = await supabase.storage
-          .from('resumes')
+          .from('clinic-files')
           .upload(storagePath, file, { upsert: false });
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage.from('resumes').getPublicUrl(storagePath);
+        const { data: urlData } = supabase.storage.from('clinic-files').getPublicUrl(storagePath);
 
         const { data: docRow, error: insertError } = await supabase
           .from('application_documents')
