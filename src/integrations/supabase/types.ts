@@ -1586,6 +1586,47 @@ export type Database = {
         }
         Relationships: []
       }
+      person_notes: {
+        Row: {
+          body: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          id?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_notes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       position_questions: {
         Row: {
           char_limit: number | null
@@ -1632,6 +1673,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           bio: string | null
           career_goals: string | null
           certifications: string[] | null
@@ -1660,6 +1702,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           bio?: string | null
           career_goals?: string | null
           certifications?: string[] | null
@@ -1688,6 +1731,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           bio?: string | null
           career_goals?: string | null
           certifications?: string[] | null
