@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Users, Table as TableIcon, UserCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
-import { useClinicRoles, useClinicMembers } from './hooks';
+import { useClinicMembers } from './hooks';
 import MembersTab from './MembersTab';
 import PeopleTab from './PeopleTab';
 import VolunteerTracker from '../volunteer-tracker/VolunteerTracker';
@@ -19,7 +19,6 @@ export default function VolunteerManagement() {
   // virtual- IDs are placeholders when the hospital page hasn't been provisioned yet
   const clinicId = rawId && !rawId.startsWith('virtual-') ? rawId : undefined;
 
-  const { roles, loading: rolesLoading } = useClinicRoles(clinicId);
   const { members, loading: membersLoading, refetch: refetchMembers } = useClinicMembers(clinicId);
 
   // Support legacy ?tab= deep links and the new "people" default.
@@ -90,8 +89,7 @@ export default function VolunteerManagement() {
           <MembersTab
             clinicId={clinicId}
             members={members}
-            roles={roles}
-            loading={membersLoading || rolesLoading}
+            loading={membersLoading}
             onRefresh={refetchMembers}
           />
         </TabsContent>

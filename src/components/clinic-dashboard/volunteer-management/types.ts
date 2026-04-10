@@ -19,9 +19,14 @@ export interface ClinicMember {
   // Optional link to the application that produced this member. NULL means
   // the member was added manually before the People refactor.
   application_id: string | null;
+  // The tracker category that defines this person's role. NULL = unassigned
+  // ("Accepted" label in the UI). Set when dragged into a Tracker role.
+  tracker_category_id: string | null;
   full_name: string;
   email: string | null;
   phone: string | null;
+  // Legacy FK to clinic_roles. Kept for backward-compat but no longer used
+  // in the UI — tracker categories are the sole source of truth for roles.
   role_id: string | null;
   status: MemberStatus;
   onboarding_source: OnboardingSource;

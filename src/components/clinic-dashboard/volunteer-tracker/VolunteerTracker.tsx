@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, DragEvent } from 'react';
 import {
   Plus,
   MoreVertical,
@@ -9,11 +9,16 @@ import {
   FolderInput,
   Table as TableIcon,
   Loader2,
+  Users,
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -53,9 +58,12 @@ import {
   useTrackerEntries,
   useTrackerValues,
 } from './hooks';
+import { useClinicMembers } from '../volunteer-management/hooks';
+import type { ClinicMember } from '../volunteer-management/types';
 import type { TrackerCategory, TrackerColumn, TrackerColumnType, TrackerEntry } from './types';
 import { COLUMN_TYPE_LABELS, DEFAULT_CATEGORY_COLORS } from './types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // ── Inline cell editor ────────────────────────────────────────
 
@@ -101,7 +109,6 @@ function CellEditor({
   const handleBlur = () => {
     setEditing(false);
     const trimmed = draft.trim();
-
     if (columnType === 'percentage') {
       const num = parseFloat(trimmed);
       if (trimmed && (isNaN(num) || num < 0 || num > 100)) {
@@ -170,6 +177,9 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
   );
 }
 
+// ── DnD mime type for staff drag ──────────────────────────────
+const STAFF_DND_TYPE = 'application/x-staff-member';
+
 // ── Main component ────────────────────────────────────────────
 
 export default function VolunteerTracker() {
@@ -177,11 +187,12 @@ export default function VolunteerTracker() {
   const rawId = hospitalPage?.id;
   const clinicId = rawId && !rawId.startsWith('virtual-') ? rawId : undefined;
 
-  const { categories, loading: catLoading, add: addCategory, update: updateCategory, remove: removeCategory } = useTrackerCategories(clinicId);
+  const { categories, loading: catLoading, add: addCategory, update: updateCategory, remove: removeCategory, refetch: refetchCategories } = useTrackerCategories(clinicId);
   const { columns, loading: colLoading, add: addColumn, update: updateColumn, remove: removeColumn } = useTrackerColumns(clinicId);
-  const { entries, loading: entLoading, add: addEntry, update: updateEntry, remove: removeEntry } = useTrackerEntries(clinicId);
+  const { entries, loading: entLoading, add: addEntry, update: updateEntry, remove: removeEntry, refetch: refetchEntries } = useTrackerEntries(clinicId);
   const entryIds = useMemo(() => entries.map(e => e.id), [entries]);
   const { values, loading: valLoading, upsert: upsertValue } = useTrackerValues(entryIds);
+  const { members, loading: memLoading, refetch: refetchMembers } = useClinicMembers(clinicId);
 
   // Modal state
   const [catDialogOpen, setCatDialogOpen] = useState(false);
@@ -202,7 +213,18 @@ export default function VolunteerTracker() {
   const [volCategoryId, setVolCategoryId] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const loading = catLoading || colLoading || entLoading || valLoading;
+  // Staff panel
+  const [staffPanelOpen, setStaffPanelOpen] = useState(false);
+  const [dropTargetCatId, setDropTargetCatId] = useState<string | null>(null);
+
+  const loading = catLoading || colLoading || entLoading || valLoading || memLoading;
+
+  // Staff who are active but don't have a tracker_category_id (unassigned).
+  const unassignedStaff = useMemo(() => {
+    return members.filter(
+      (m) => m.status === 'active' && !m.tracker_category_id,
+    );
+  }, [members]);
 
   if (!clinicId) {
     return (
@@ -224,7 +246,7 @@ export default function VolunteerTracker() {
     return entries.filter(e => e.category_id === categoryId).sort((a, b) => a.sort_order - b.sort_order);
   }
 
-  // ── Category dialog handlers ──────────────────────────────
+  // ── Role (category) dialog handlers ───────────────────────
 
   function openAddCategory() {
     setEditingCategory(null);
@@ -245,12 +267,12 @@ export default function VolunteerTracker() {
     setSaving(true);
     if (editingCategory) {
       const err = await updateCategory(editingCategory.id, { name: catName.trim(), color: catColor });
-      if (err) toast.error('Failed to update category');
-      else toast.success('Category updated');
+      if (err) toast.error('Failed to update role');
+      else toast.success('Role updated');
     } else {
       const err = await addCategory(catName.trim(), catColor);
-      if (err) toast.error('Failed to add category');
-      else toast.success('Category added');
+      if (err) toast.error('Failed to add role');
+      else toast.success('Role added');
     }
     setSaving(false);
     setCatDialogOpen(false);
@@ -259,12 +281,12 @@ export default function VolunteerTracker() {
   async function handleDeleteCategory(id: string) {
     const catEntries = entries.filter(e => e.category_id === id);
     if (catEntries.length > 0) {
-      toast.error('Remove all volunteers in this category first');
+      toast.error('Remove all staff in this role first');
       return;
     }
     const err = await removeCategory(id);
-    if (err) toast.error('Failed to delete category');
-    else toast.success('Category deleted');
+    if (err) toast.error('Failed to delete role');
+    else toast.success('Role deleted');
   }
 
   async function handleMoveCategoryUp(cat: TrackerCategory) {
@@ -337,10 +359,7 @@ export default function VolunteerTracker() {
     await updateColumn(next.id, { sort_order: col.sort_order });
   }
 
-  // ── Volunteer dialog handlers ─────────────────────────────
-
-  // openAddVolunteer kept for reference but no longer reachable from the UI
-  // after the People refactor. Removed to satisfy strict TS unused checks.
+  // ── Volunteer (entry) edit dialog handler ─────────────────
 
   function openEditVolunteer(entry: TrackerEntry) {
     setEditingEntry(entry);
@@ -351,25 +370,76 @@ export default function VolunteerTracker() {
 
   async function handleSaveVolunteer() {
     if (!volName.trim()) { toast.error('Name is required'); return; }
-    if (!volCategoryId) { toast.error('Select a category'); return; }
+    if (!volCategoryId) { toast.error('Select a role'); return; }
     setSaving(true);
     if (editingEntry) {
+      // If the category changed, also update the clinic_member.
+      if (editingEntry.category_id !== volCategoryId) {
+        await updateMemberCategory(editingEntry.volunteer_user_id, volCategoryId);
+      }
       const err = await updateEntry(editingEntry.id, { volunteer_name: volName.trim(), category_id: volCategoryId });
-      if (err) toast.error('Failed to update volunteer');
-      else toast.success('Volunteer updated');
+      if (err) toast.error('Failed to update');
+      else toast.success('Updated');
     } else {
       const err = await addEntry(volCategoryId, volName.trim());
-      if (err) toast.error('Failed to add volunteer');
-      else toast.success('Volunteer added');
+      if (err) toast.error('Failed to add');
+      else toast.success('Added');
     }
     setSaving(false);
     setVolDialogOpen(false);
   }
 
   async function handleDeleteVolunteer(id: string) {
+    // Also clear the tracker_category_id on the clinic_member.
+    const entry = entries.find(e => e.id === id);
+    if (entry?.volunteer_user_id) {
+      await supabase
+        .from('clinic_members')
+        .update({ tracker_category_id: null })
+        .eq('user_id', entry.volunteer_user_id)
+        .eq('clinic_id', clinicId);
+    }
     const err = await removeEntry(id);
-    if (err) toast.error('Failed to delete volunteer');
-    else toast.success('Volunteer removed');
+    if (err) toast.error('Failed to remove');
+    else {
+      toast.success('Removed from role');
+      refetchMembers();
+    }
+  }
+
+  // ── Drag and drop handlers ───────────────────────────────
+
+  async function handleDropStaff(memberId: string, categoryId: string) {
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+
+    // 1. Create a tracker entry for this staff member.
+    const err = await addEntry(categoryId, member.full_name, member.user_id);
+    if (err) {
+      toast.error('Failed to assign role');
+      return;
+    }
+
+    // 2. Update the clinic_member's tracker_category_id.
+    await supabase
+      .from('clinic_members')
+      .update({ tracker_category_id: categoryId })
+      .eq('id', memberId);
+
+    toast.success(`${member.full_name} assigned to role`);
+    refetchMembers();
+    refetchEntries();
+    setDropTargetCatId(null);
+  }
+
+  async function updateMemberCategory(userId: string | null, newCategoryId: string) {
+    if (!userId) return;
+    await supabase
+      .from('clinic_members')
+      .update({ tracker_category_id: newCategoryId })
+      .eq('user_id', userId)
+      .eq('clinic_id', clinicId);
+    refetchMembers();
   }
 
   // ── Cell save ─────────────────────────────────────────────
@@ -397,27 +467,27 @@ export default function VolunteerTracker() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold">Volunteer Tracker</h2>
+          <h2 className="text-2xl font-bold">Tracker</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Spreadsheet-style performance tracking for your volunteers
+            Spreadsheet-style performance tracking for your staff
           </p>
         </div>
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <TableIcon className="h-12 w-12 text-muted-foreground/40 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Set up your volunteer tracker</h3>
+            <h3 className="text-lg font-semibold mb-2">Set up your tracker</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-md">
-              Add your first role category to get started. Categories group volunteers by role
+              Add your first role to get started. Roles group your staff
               (e.g. "Medical Assistant", "Scribe", "Patient Registration").
+              Then drag staff members from the panel into their role.
             </p>
             <Button onClick={openAddCategory} className="gap-2">
               <Plus className="h-4 w-4" />
-              Add First Category
+              Add First Role
             </Button>
           </CardContent>
         </Card>
 
-        {/* Category dialog for empty state */}
         <CategoryDialog
           open={catDialogOpen}
           onOpenChange={setCatDialogOpen}
@@ -435,14 +505,14 @@ export default function VolunteerTracker() {
 
   // ── Main spreadsheet view ─────────────────────────────────
 
-  const totalCols = columns.length + 2; // category + name + dynamic cols
+  const totalCols = columns.length + 2;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Volunteer Tracker</h2>
+        <h2 className="text-2xl font-bold">Tracker</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Spreadsheet-style performance tracking for your volunteers
+          Spreadsheet-style performance tracking for your staff
         </p>
       </div>
 
@@ -450,20 +520,56 @@ export default function VolunteerTracker() {
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={openAddCategory} className="gap-1.5">
           <Plus className="h-3.5 w-3.5" />
-          Add Category
+          Add Role
         </Button>
         <Button size="sm" variant="outline" onClick={openAddColumn} className="gap-1.5">
           <Plus className="h-3.5 w-3.5" />
           Add Column
         </Button>
-        {/*
-          "Add Volunteer" was removed in the People refactor — volunteers are
-          now created automatically when an applicant is promoted to a member
-          from the People tab. The edit dialog below is still used to update
-          existing rows, so we keep openAddVolunteer wired up for that path
-          but no longer expose a manual create button.
-        */}
+        <Button
+          size="sm"
+          variant={staffPanelOpen ? 'default' : 'outline'}
+          onClick={() => setStaffPanelOpen(!staffPanelOpen)}
+          className="gap-1.5"
+        >
+          <Users className="h-3.5 w-3.5" />
+          Unassigned Staff
+          {unassignedStaff.length > 0 && (
+            <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-[10px]">
+              {unassignedStaff.length}
+            </Badge>
+          )}
+          {staffPanelOpen ? (
+            <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ChevronRight className="h-3 w-3" />
+          )}
+        </Button>
       </div>
+
+      {/* ── Unassigned Staff Panel (drag source) ────────────── */}
+      {staffPanelOpen && (
+        <Card className="border-border/50 bg-muted/10">
+          <CardContent className="pt-4 pb-4">
+            {unassignedStaff.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                All staff have been assigned a role. Accept new applicants to see them here.
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Drag a person into a role below to assign them.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {unassignedStaff.map((m) => (
+                    <StaffChip key={m.id} member={m} />
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Spreadsheet */}
       <Card className="border-border/50 overflow-hidden">
@@ -471,7 +577,7 @@ export default function VolunteerTracker() {
           <Table className="min-w-[600px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border/60">
-                <TableHead className="w-[180px] sticky left-0 z-10 bg-background">Category / Volunteer</TableHead>
+                <TableHead className="w-[180px] sticky left-0 z-10 bg-background">Role / Staff</TableHead>
                 {columns.map((col) => (
                   <TableHead key={col.id} className="min-w-[140px]">
                     <div className="flex items-center gap-1">
@@ -532,8 +638,24 @@ export default function VolunteerTracker() {
                     onDeleteEntry={(id) => handleDeleteVolunteer(id)}
                     allCategories={categories}
                     onMoveEntry={async (entryId, newCatId) => {
+                      const entry = entries.find(e => e.id === entryId);
+                      if (entry?.volunteer_user_id) {
+                        await updateMemberCategory(entry.volunteer_user_id, newCatId);
+                      }
                       await updateEntry(entryId, { category_id: newCatId });
-                      toast.success('Volunteer moved');
+                      toast.success('Moved to new role');
+                    }}
+                    isDropTarget={dropTargetCatId === cat.id}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDropTargetCatId(cat.id);
+                    }}
+                    onDragLeave={() => setDropTargetCatId(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const memberId = e.dataTransfer.getData(STAFF_DND_TYPE);
+                      if (memberId) handleDropStaff(memberId, cat.id);
+                      setDropTargetCatId(null);
                     }}
                   />
                 );
@@ -585,6 +707,31 @@ export default function VolunteerTracker() {
   );
 }
 
+// ── Draggable staff chip ──────────────────────────────────────
+
+function StaffChip({ member }: { member: ClinicMember }) {
+  const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
+    e.dataTransfer.setData(STAFF_DND_TYPE, member.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  return (
+    <div
+      draggable
+      onDragStart={handleDragStart}
+      className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-sm cursor-grab active:cursor-grabbing hover:border-primary/40 hover:bg-primary/5 transition-colors select-none"
+    >
+      <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+      <span className="font-medium truncate max-w-[180px]">{member.full_name}</span>
+      {member.email && (
+        <span className="text-[10px] text-muted-foreground truncate max-w-[140px] hidden sm:inline">
+          {member.email}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ── Category group rows ─────────────────────────────────────
 
 function CategoryGroup({
@@ -604,6 +751,10 @@ function CategoryGroup({
   onDeleteEntry,
   allCategories,
   onMoveEntry,
+  isDropTarget,
+  onDragOver,
+  onDragLeave,
+  onDrop,
 }: {
   category: TrackerCategory;
   entries: TrackerEntry[];
@@ -621,11 +772,22 @@ function CategoryGroup({
   onDeleteEntry: (id: string) => void;
   allCategories: TrackerCategory[];
   onMoveEntry: (entryId: string, newCatId: string) => void;
+  isDropTarget: boolean;
+  onDragOver: (e: DragEvent<HTMLTableRowElement>) => void;
+  onDragLeave: () => void;
+  onDrop: (e: DragEvent<HTMLTableRowElement>) => void;
 }) {
   return (
     <>
-      {/* Category header row */}
-      <TableRow className="hover:bg-muted/20 border-border/40">
+      {/* Category header row — acts as drop zone */}
+      <TableRow
+        className={`hover:bg-muted/20 border-border/40 transition-colors ${
+          isDropTarget ? 'bg-primary/10 ring-2 ring-primary/30 ring-inset' : ''
+        }`}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+      >
         <TableCell
           colSpan={Math.max(totalCols, columns.length + 1)}
           className="py-2 px-0"
@@ -633,6 +795,11 @@ function CategoryGroup({
           <div className="flex items-center gap-2" style={{ borderLeft: `4px solid ${category.color}`, paddingLeft: 12 }}>
             <span className="font-semibold text-sm">{category.name}</span>
             <span className="text-xs text-muted-foreground">({entries.length})</span>
+            {isDropTarget && (
+              <span className="text-xs text-primary font-medium animate-pulse">
+                Drop here to assign
+              </span>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-6 w-6 ml-1 opacity-60 hover:opacity-100">
@@ -641,7 +808,7 @@ function CategoryGroup({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 <DropdownMenuItem onClick={onEditCategory}>
-                  <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Category
+                  <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Role
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onMoveCategoryUp} disabled={isFirst}>
                   <ArrowUp className="h-3.5 w-3.5 mr-2" /> Move Up
@@ -651,7 +818,7 @@ function CategoryGroup({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onDeleteCategory} className="text-destructive focus:text-destructive">
-                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Category
+                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Role
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -659,7 +826,7 @@ function CategoryGroup({
         </TableCell>
       </TableRow>
 
-      {/* Volunteer entry rows */}
+      {/* Entry rows */}
       {entries.map((entry) => (
         <TableRow key={entry.id} className="border-border/30 hover:bg-muted/10">
           <TableCell className="sticky left-0 z-10 bg-background">
@@ -713,11 +880,22 @@ function CategoryGroup({
         </TableRow>
       ))}
 
-      {/* Empty category message */}
+      {/* Empty role message */}
       {entries.length === 0 && (
-        <TableRow className="border-border/30">
+        <TableRow
+          className={`border-border/30 transition-colors ${
+            isDropTarget ? 'bg-primary/10' : ''
+          }`}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+        >
           <TableCell colSpan={Math.max(totalCols, columns.length + 1)} className="text-center py-4">
-            <p className="text-xs text-muted-foreground/60">No volunteers in this category yet</p>
+            <p className="text-xs text-muted-foreground/60">
+              {isDropTarget
+                ? 'Release to assign to this role'
+                : 'No staff in this role yet — drag someone here from the panel above'}
+            </p>
           </TableCell>
         </TableRow>
       )}
@@ -752,9 +930,9 @@ function CategoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit Category' : 'Add Category'}</DialogTitle>
+          <DialogTitle>{editing ? 'Edit Role' : 'Add Role'}</DialogTitle>
           <DialogDescription>
-            Categories group volunteers by role (e.g. "Medical Assistant", "Scribe").
+            Roles group your staff by position (e.g. "Medical Assistant", "Scribe").
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -777,7 +955,7 @@ function CategoryDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button onClick={onSave} disabled={saving} className="gap-1.5">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {editing ? 'Save Changes' : 'Add Category'}
+            {editing ? 'Save Changes' : 'Add Role'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -812,7 +990,7 @@ function ColumnDialog({
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit Column' : 'Add Column'}</DialogTitle>
           <DialogDescription>
-            Columns define the metrics you track for each volunteer.
+            Columns define the metrics you track for each staff member.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -879,14 +1057,14 @@ function VolunteerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit Volunteer' : 'Add Volunteer'}</DialogTitle>
+          <DialogTitle>{editing ? 'Edit Staff Entry' : 'Add Staff Entry'}</DialogTitle>
           <DialogDescription>
-            {editing ? 'Update volunteer details.' : 'Add a volunteer to track their performance.'}
+            {editing ? 'Update staff entry details.' : 'Add a staff member to track their performance.'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="vol-name">Volunteer Name</Label>
+            <Label htmlFor="vol-name">Name</Label>
             <Input
               id="vol-name"
               placeholder="e.g. John Doe"
@@ -896,10 +1074,10 @@ function VolunteerDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label>Category</Label>
+            <Label>Role</Label>
             <Select value={categoryId} onValueChange={onCategoryChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
+                <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
@@ -918,7 +1096,7 @@ function VolunteerDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button onClick={onSave} disabled={saving} className="gap-1.5">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {editing ? 'Save Changes' : 'Add Volunteer'}
+            {editing ? 'Save Changes' : 'Add Entry'}
           </Button>
         </DialogFooter>
       </DialogContent>

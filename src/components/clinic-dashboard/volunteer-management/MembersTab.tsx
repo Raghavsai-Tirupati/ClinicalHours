@@ -23,9 +23,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import type { ClinicMember, ClinicRole, MemberStatus } from './types';
+import type { ClinicMember, MemberStatus } from './types';
 import { MEMBER_STATUS_LABELS, MEMBER_STATUS_COLORS } from './types';
 import { useEmailTemplates } from '../email-communication/hooks';
+import { useTrackerCategories } from '../volunteer-tracker/hooks';
+import type { TrackerCategory } from '../volunteer-tracker/types';
 import BulkEmailDialog from '../email-communication/BulkEmailDialog';
 
 type SortField = 'full_name' | 'join_date' | 'hours_logged' | 'status';
@@ -34,17 +36,24 @@ type SortDir = 'asc' | 'desc';
 interface MembersTabProps {
   clinicId: string;
   members: ClinicMember[];
-  roles: ClinicRole[];
   loading: boolean;
   onRefresh: () => void;
 }
 
-export default function MembersTab({ clinicId, members, roles, loading, onRefresh }: MembersTabProps) {
+export default function MembersTab({ clinicId, members, loading, onRefresh }: MembersTabProps) {
   const [sortField, setSortField] = useState<SortField>('full_name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<ClinicMember>>({});
   const [saving, setSaving] = useState(false);
+
+  // Fetch tracker categories — they are the source of truth for "roles".
+  const { categories } = useTrackerCategories(clinicId);
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, TrackerCategory>();
+    categories.forEach((c) => map.set(c.id, c));
+    return map;
+  }, [categories]);
 
   // ── Selection & Bulk Email ────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -64,7 +73,7 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
 
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
-      if (filterRole !== 'all' && (m.role_id || 'none') !== filterRole) return false;
+      if (filterRole !== 'all' && (m.tracker_category_id || 'none') !== filterRole) return false;
       if (filterStatus !== 'all' && m.status !== filterStatus) return false;
       return true;
     });
@@ -110,19 +119,12 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
     }
   };
 
-  const roleMap = useMemo(() => {
-    const map = new Map<string, ClinicRole>();
-    roles.forEach((r) => map.set(r.id, r));
-    return map;
-  }, [roles]);
-
   const startEdit = (member: ClinicMember) => {
     setEditingId(member.id);
     setEditValues({
       full_name: member.full_name,
       email: member.email,
       phone: member.phone,
-      role_id: member.role_id,
       status: member.status,
       hours_logged: member.hours_logged,
     });
@@ -142,7 +144,6 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
         full_name: editValues.full_name,
         email: editValues.email || null,
         phone: editValues.phone || null,
-        role_id: editValues.role_id || null,
         status: editValues.status,
         hours_logged: editValues.hours_logged ?? 0,
       })
@@ -211,12 +212,12 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="none">No Role</SelectItem>
-              {roles.map((r) => (
-                <SelectItem key={r.id} value={r.id}>
+              <SelectItem value="none">Unassigned</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
                   <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
-                    {r.role_name}
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
+                    {c.name}
                   </div>
                 </SelectItem>
               ))}
@@ -252,7 +253,7 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
           <Users className="h-10 w-10 text-muted-foreground/40 mx-auto mb-1" />
           <p className="text-sm text-muted-foreground">No staff yet.</p>
           <p className="text-xs text-muted-foreground">
-            Staff are added by accepting an applicant in the <span className="font-medium text-foreground">People</span> tab and promoting them.
+            Staff are added automatically when an applicant is accepted. Assign roles in the <span className="font-medium text-foreground">Tracker</span> tab.
           </p>
         </div>
       ) : (
@@ -281,14 +282,14 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
             </thead>
             <tbody>
               {sorted.map((m) => {
-                const role = m.role_id ? roleMap.get(m.role_id) : null;
+                const cat = m.tracker_category_id ? categoryMap.get(m.tracker_category_id) : null;
                 const isEditing = editingId === m.id;
 
                 return (
                   <tr
                     key={m.id}
                     className="border-b border-border/50 hover:bg-muted/10 transition-colors"
-                    style={role ? { borderLeftWidth: 3, borderLeftColor: role.color } : undefined}
+                    style={cat ? { borderLeftWidth: 3, borderLeftColor: cat.color } : undefined}
                   >
                     {/* Checkbox */}
                     <td className="p-3 w-10">
@@ -315,35 +316,18 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
                       )}
                     </td>
 
-                    {/* Role */}
+                    {/* Role (from tracker category) */}
                     <td className="p-3 hidden sm:table-cell">
-                      {isEditing ? (
-                        <Select
-                          value={editValues.role_id || 'none'}
-                          onValueChange={(v) => setEditValues((prev) => ({ ...prev, role_id: v === 'none' ? null : v }))}
-                        >
-                          <SelectTrigger className="h-8 text-xs w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No role</SelectItem>
-                            {roles.map((r) => (
-                              <SelectItem key={r.id} value={r.id}>
-                                <div className="flex items-center gap-2">
-                                  <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
-                                  {r.role_name}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : role ? (
-                        <Badge variant="outline" className="text-xs" style={{ borderColor: role.color, color: role.color }}>
-                          <div className="h-2 w-2 rounded-full mr-1.5" style={{ backgroundColor: role.color }} />
-                          {role.role_name}
+                      {cat ? (
+                        <Badge variant="outline" className="text-xs" style={{ borderColor: cat.color, color: cat.color }}>
+                          <div className="h-2 w-2 rounded-full mr-1.5" style={{ backgroundColor: cat.color }} />
+                          {cat.name}
+                          {m.status === 'alumni' && ' (Alumni)'}
                         </Badge>
                       ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
+                          Accepted
+                        </Badge>
                       )}
                     </td>
 
@@ -426,7 +410,7 @@ export default function MembersTab({ clinicId, members, roles, loading, onRefres
         onOpenChange={setBulkEmailOpen}
         clinicId={clinicId}
         selectedMembers={selectedMembers}
-        roles={roles}
+        roles={[]}
         templates={templates}
         onSent={() => {
           setSelectedIds(new Set());

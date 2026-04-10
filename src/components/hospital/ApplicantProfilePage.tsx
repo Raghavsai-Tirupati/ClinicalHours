@@ -373,6 +373,36 @@ export default function ApplicantProfilePage() {
           .update(updatePayload)
           .eq('id', application.id);
         if (error) throw error;
+
+        // ── Auto-promote to staff when accepted ──────────────────
+        // Creates a clinic_member row with no role (tracker_category_id
+        // stays NULL until they're assigned a role in the Tracker tab).
+        if (newStatus === 'accepted' && hospitalPage?.id) {
+          // Only create if one doesn't already exist for this application.
+          const { data: existing } = await supabase
+            .from('clinic_members')
+            .select('id')
+            .eq('application_id', application.id)
+            .maybeSingle();
+          if (!existing) {
+            const appName = getApplicantName(application);
+            const appEmail =
+              application.applicant_email ||
+              application.student_profile?.email ||
+              null;
+            await supabase.from('clinic_members').insert({
+              clinic_id: hospitalPage.id,
+              user_id: application.student_id || null,
+              application_id: application.id,
+              full_name: appName,
+              email: appEmail,
+              status: 'active',
+              onboarding_source: 'new_applicant',
+              join_date: new Date().toISOString().slice(0, 10),
+            });
+          }
+        }
+
         toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
         setApplication((prev) => prev ? { ...prev, status: newStatus } : null);
       } catch (err: any) {
@@ -381,7 +411,7 @@ export default function ApplicantProfilePage() {
         setUpdatingStatus(false);
       }
     },
-    [application?.id],
+    [application, hospitalPage?.id],
   );
 
   if (loading) {
