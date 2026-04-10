@@ -18,6 +18,7 @@ interface InviteRequest {
   htmlBody?: string;
   customMessage?: string;
   attachments?: Array<{ fileName?: string; publicUrl?: string }>;
+  forceResend?: boolean;
 }
 
 interface InterviewInviteTemplateData {

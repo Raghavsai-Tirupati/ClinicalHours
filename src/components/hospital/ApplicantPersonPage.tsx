@@ -1340,7 +1340,7 @@ export default function ApplicantPersonPage() {
           open={interviewDialogOpen}
           onOpenChange={setInterviewDialogOpen}
           hospitalPageId={hospitalPage.id}
-          hospitalName={hospitalPage.name || 'ClinicalHours'}
+          hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
           bookingUrl={hospitalPage.interview_booking_url || ''}
           selectedApplicationIds={applications.map((a) => a.id)}
           applications={applications.map(asStudentApp)}

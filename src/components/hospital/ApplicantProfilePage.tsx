@@ -29,7 +29,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
-import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { buildStudentApplicationStatusUpdate, autoPromoteToStaff } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationAvailability, ApplicationDocument, ApplicationStatus, SchedulingAnswer, StudentApplication } from '@/types/positions';
 import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
@@ -943,7 +943,7 @@ export default function ApplicantProfilePage() {
           open={richEmailDialogOpen}
           onOpenChange={setRichEmailDialogOpen}
           hospitalPageId={hospitalPage.id}
-          hospitalName={hospitalPage.name || 'ClinicalHours'}
+          hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
           senderEmail={hospitalPage.gmail_email}
           selectedApplicationIds={[application.id]}
           applications={[application]}
@@ -956,7 +956,7 @@ export default function ApplicantProfilePage() {
           open={interviewDialogOpen}
           onOpenChange={setInterviewDialogOpen}
           hospitalPageId={hospitalPage.id}
-          hospitalName={hospitalPage.name || 'ClinicalHours'}
+          hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
           bookingUrl={hospitalPage.interview_booking_url || ''}
           selectedApplicationIds={[application.id]}
           applications={[application]}
