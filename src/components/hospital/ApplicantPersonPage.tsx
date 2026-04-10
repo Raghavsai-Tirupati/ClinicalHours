@@ -158,28 +158,19 @@ export default function ApplicantPersonPage() {
     if (!studentId || !hospitalPage?.id) return;
     setLoading(true);
     try {
-      const { data: positions } = await supabase
-        .from('hospital_positions')
-        .select('id')
-        .eq('hospital_page_id', hospitalPage.id);
-
-      const positionIds = (positions || []).map((p) => p.id);
-
       const [profileResult, appsResult] = await Promise.all([
         supabase
           .from('profiles')
           .select('id, full_name, university, major, graduation_year, city, state, phone, clinical_hours, gpa, bio, career_goals, linkedin_url, resume_url, email_verified')
           .eq('id', studentId)
           .single(),
-        positionIds.length > 0
-          ? supabase
-              .from('student_applications')
-              .select(`id, status, submitted_at, reviewed_at, interview_invited_at, interview_confirmed_at, availability_json, applicant_email, applicant_name,
-                position:hospital_positions(title, opportunity:opportunities(name))`)
-              .eq('student_id', studentId)
-              .in('position_id', positionIds)
-              .order('submitted_at', { ascending: false })
-          : Promise.resolve({ data: [] }),
+        supabase
+          .from('student_applications')
+          .select(`id, status, submitted_at, reviewed_at, interview_invited_at, interview_confirmed_at, availability_json, applicant_email, applicant_name,
+            position:hospital_positions!inner(title, hospital_page_id, opportunity:opportunities(name))`)
+          .eq('student_id', studentId)
+          .eq('hospital_positions.hospital_page_id', hospitalPage.id)
+          .order('submitted_at', { ascending: false }),
       ]);
 
       setProfile(profileResult.data as PersonProfile | null);
