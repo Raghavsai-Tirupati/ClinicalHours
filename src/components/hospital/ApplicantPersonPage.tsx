@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
+  Bold,
   Calendar,
   CalendarCheck,
   Camera,
@@ -9,13 +10,24 @@ import {
   ChevronDown,
   Clock,
   ExternalLink,
+  Eye,
   FileText,
   GraduationCap,
+  History,
+  Italic,
+  Link2,
   Linkedin,
+  List,
+  ListOrdered,
   Loader2,
   Mail,
   MessageSquare,
   Phone,
+  RotateCcw,
+  Send,
+  Shield,
+  Strikethrough,
+  Underline,
   Upload,
   User,
 } from 'lucide-react';
@@ -26,6 +38,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -41,9 +54,15 @@ import { APPLICATION_STATUS_LABELS, STATUS_COLORS } from '@/types/positions';
 import type { ApplicationDocument, ApplicationStatus, StudentApplication } from '@/types/positions';
 import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
 import ApplicationNotesPanel from '@/components/clinic-dashboard/applications/ApplicationNotesPanel';
-import PersonMembershipActions from '@/components/clinic-dashboard/applications/PersonMembershipActions';
-import RichEmailDialog from '@/components/hospital/RichEmailDialog';
 import InterviewInviteDialog from '@/components/hospital/InterviewInviteDialog';
+import { useEmailTemplates } from '@/components/clinic-dashboard/email-communication/hooks';
+import type { TemplateCategory } from '@/components/clinic-dashboard/email-communication/types';
+import { TEMPLATE_CATEGORY_COLORS, TEMPLATE_CATEGORIES } from '@/components/clinic-dashboard/email-communication/types';
+import {
+  MEMBER_STATUS_COLORS,
+  MEMBER_STATUS_LABELS,
+} from '@/components/clinic-dashboard/volunteer-management/types';
+import type { ClinicMember } from '@/components/clinic-dashboard/volunteer-management/types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -60,6 +79,25 @@ function emailToColor(email: string): string {
 function formatDateShort(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+const DEFAULT_EMAIL_HTML = '<p><br></p>';
+
+function stripHtml(value: string): string {
+  if (!value) return '';
+  const doc = new DOMParser().parseFromString(value, 'text/html');
+  return doc.body.textContent?.trim() ?? '';
+}
+
+function sanitizeRichHtml(value: string): string {
+  const doc = new DOMParser().parseFromString(value, 'text/html');
+  doc.querySelectorAll('script,style').forEach((n) => n.remove());
+  doc.body.querySelectorAll('*').forEach((el) => {
+    Array.from(el.attributes).forEach((attr) => {
+      if (attr.name.toLowerCase().startsWith('on')) el.removeAttribute(attr.name);
+    });
+  });
+  return doc.body.innerHTML || DEFAULT_EMAIL_HTML;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -114,6 +152,22 @@ interface EmailLogRow {
   created_at: string;
 }
 
+interface ActivityEvent {
+  id: string;
+  type: 'status_change' | 'email_sent' | 'interview_invited' | 'note_added' | 'document_uploaded' | 'application_reviewed' | 'role_assigned' | string;
+  label: string;
+  detail: string | null;
+  timestamp: string;
+  actor: string | null;
+}
+
+interface TrackerCategory {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ApplicantPersonPage() {
@@ -127,7 +181,7 @@ export default function ApplicantPersonPage() {
   const [responses, setResponses] = useState<ResponseRow[]>([]);
   const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
   const [emailLogs, setEmailLogs] = useState<EmailLogRow[]>([]);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -137,9 +191,29 @@ export default function ApplicantPersonPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // Email tab state
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailHtml, setEmailHtml] = useState(DEFAULT_EMAIL_HTML);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [loadedTemplateId, setLoadedTemplateId] = useState('');
+  const editorRef = useRef<HTMLDivElement | null>(null);
+
+  // Role tab state
+  const [member, setMember] = useState<ClinicMember | null>(null);
+  const [memberLoading, setMemberLoading] = useState(true);
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [trackerCategories, setTrackerCategories] = useState<TrackerCategory[]>([]);
+  const [roleName, setRoleName] = useState<string | null>(null);
+  const [assigningRole, setAssigningRole] = useState(false);
+
+  const { templates } = useEmailTemplates(hospitalPage?.id ?? '');
+
   useEffect(() => {
     if (!studentId || !hospitalPage?.id) return;
     load();
+    loadMember();
+    loadTrackerCategories();
   }, [studentId, hospitalPage?.id]);
 
   async function load() {
@@ -179,7 +253,7 @@ export default function ApplicantPersonPage() {
         const appIds = fetchedApps.map((a) => a.id);
         const studentEmail = fetchedApps[0].applicant_email || '';
 
-        const [answersResult, docsResult, emailLogsResult] = await Promise.all([
+        const [answersResult, docsResult, emailLogsResult, activityResult] = await Promise.all([
           supabase
             .from('application_answers')
             .select(`id, application_id, answer_text, answer_options, answer_file_url, created_at,
@@ -197,17 +271,160 @@ export default function ApplicantPersonPage() {
                 .contains('recipient_emails', [studentEmail])
                 .order('created_at', { ascending: false })
             : Promise.resolve({ data: [] }),
+          supabase
+            .from('admin_activity_log')
+            .select('id, action_type, metadata, actor_email, created_at')
+            .eq('hospital_page_id', hospitalPage.id)
+            .in('target_id', appIds)
+            .order('created_at', { ascending: false })
+            .limit(50),
         ]);
 
         setResponses((answersResult.data || []) as unknown as ResponseRow[]);
         setDocuments((docsResult.data || []) as ApplicationDocument[]);
         setEmailLogs((emailLogsResult.data || []) as EmailLogRow[]);
+
+        // Build unified activity timeline
+        const events: ActivityEvent[] = [];
+
+        // From admin_activity_log
+        for (const row of (activityResult.data || []) as any[]) {
+          const meta = row.metadata || {};
+          let label = row.action_type;
+          let detail: string | null = null;
+
+          switch (row.action_type) {
+            case 'status_change':
+              label = 'Status changed';
+              detail = meta.from && meta.to
+                ? `${APPLICATION_STATUS_LABELS[meta.from as ApplicationStatus] || meta.from} → ${APPLICATION_STATUS_LABELS[meta.to as ApplicationStatus] || meta.to}`
+                : meta.to ? `Set to ${APPLICATION_STATUS_LABELS[meta.to as ApplicationStatus] || meta.to}` : null;
+              break;
+            case 'email_sent':
+              label = 'Email sent';
+              detail = meta.subject || null;
+              break;
+            case 'interview_invited':
+              label = 'Interview invite sent';
+              detail = null;
+              break;
+            case 'note_added':
+              label = 'Note added';
+              detail = null;
+              break;
+            case 'application_reviewed':
+              label = 'Application reviewed';
+              detail = null;
+              break;
+            default:
+              label = row.action_type.replace(/_/g, ' ');
+          }
+
+          events.push({
+            id: `act-${row.id}`,
+            type: row.action_type,
+            label,
+            detail,
+            timestamp: row.created_at,
+            actor: row.actor_email,
+          });
+        }
+
+        // From email_send_logs (in case not already in activity log)
+        for (const log of (emailLogsResult.data || []) as EmailLogRow[]) {
+          const alreadyTracked = events.some(
+            (e) => e.type === 'email_sent' && Math.abs(new Date(e.timestamp).getTime() - new Date(log.created_at).getTime()) < 60000,
+          );
+          if (!alreadyTracked) {
+            events.push({
+              id: `email-${log.id}`,
+              type: 'email_sent',
+              label: 'Email sent',
+              detail: log.subject,
+              timestamp: log.created_at,
+              actor: log.sent_by,
+            });
+          }
+        }
+
+        // Interview invite events from applications
+        for (const app of fetchedApps) {
+          if (app.interview_invited_at) {
+            const alreadyTracked = events.some(
+              (e) => e.type === 'interview_invited' && Math.abs(new Date(e.timestamp).getTime() - new Date(app.interview_invited_at!).getTime()) < 60000,
+            );
+            if (!alreadyTracked) {
+              events.push({
+                id: `inv-${app.id}`,
+                type: 'interview_invited',
+                label: 'Interview invite sent',
+                detail: app.position?.title || null,
+                timestamp: app.interview_invited_at,
+                actor: null,
+              });
+            }
+          }
+        }
+
+        // Document uploads
+        for (const doc of (docsResult.data || []) as ApplicationDocument[]) {
+          events.push({
+            id: `doc-${doc.id}`,
+            type: 'document_uploaded',
+            label: 'Document uploaded',
+            detail: doc.file_name,
+            timestamp: doc.created_at,
+            actor: null,
+          });
+        }
+
+        // Sort newest first
+        events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setActivityEvents(events);
       }
     } catch (err) {
       console.error('Failed to load person profile:', err);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadMember() {
+    if (!studentId || !hospitalPage?.id) return;
+    setMemberLoading(true);
+
+    // Find by user_id (not application_id) to get any membership
+    const { data, error } = await supabase
+      .from('clinic_members')
+      .select('*')
+      .eq('clinic_id', hospitalPage.id)
+      .eq('user_id', studentId)
+      .maybeSingle();
+    if (error) console.error('[membership] fetch failed', error);
+    const m = (data as ClinicMember) || null;
+    setMember(m);
+
+    if (m?.tracker_category_id) {
+      const { data: cat } = await supabase
+        .from('volunteer_tracker_categories')
+        .select('name')
+        .eq('id', m.tracker_category_id)
+        .maybeSingle();
+      setRoleName((cat as { name: string } | null)?.name ?? null);
+    } else {
+      setRoleName(null);
+    }
+    setMemberLoading(false);
+  }
+
+  async function loadTrackerCategories() {
+    if (!hospitalPage?.id) return;
+    const { data } = await supabase
+      .from('volunteer_tracker_categories')
+      .select('id, name, color, sort_order')
+      .eq('clinic_id', hospitalPage.id)
+      .order('sort_order');
+    setTrackerCategories((data as TrackerCategory[]) || []);
   }
 
   const handleStatusChange = useCallback(
@@ -237,6 +454,7 @@ export default function ApplicantPersonPage() {
               email: app.applicant_email || null,
             });
             if (promoteErr) toast.error('Accepted, but failed to add to Staff: ' + promoteErr);
+            else await loadMember(); // Refresh role tab
           }
         }
       } catch (err: any) {
@@ -319,6 +537,142 @@ export default function ApplicantPersonPage() {
     },
     [studentId],
   );
+
+  // ── Email helpers ────────────────────────────────────────────────────────
+
+  const loadTemplate = (id: string) => {
+    setLoadedTemplateId(id);
+    const t = templates.find((tmpl) => tmpl.id === id);
+    if (!t) return;
+    setEmailSubject(t.subject);
+    const html = t.body
+      .split('\n')
+      .map((line) => (line.trim() ? `<p>${line}</p>` : '<p><br></p>'))
+      .join('');
+    const sanitized = sanitizeRichHtml(html);
+    setEmailHtml(sanitized);
+    if (editorRef.current) editorRef.current.innerHTML = sanitized;
+  };
+
+  const applyFormat = (command: string, value?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(command, false, value);
+    const current = editorRef.current?.innerHTML ?? DEFAULT_EMAIL_HTML;
+    setEmailHtml(sanitizeRichHtml(current));
+  };
+
+  const handleSendEmail = async () => {
+    if (applications.length === 0) return;
+    if (!emailSubject.trim()) { toast.error('Subject is required'); return; }
+    const plainBody = stripHtml(emailHtml);
+    if (!plainBody.trim()) { toast.error('Message body is required'); return; }
+
+    setSendingEmail(true);
+    try {
+      const res = await supabase.functions.invoke('send-position-interview-invites', {
+        body: {
+          hospitalPageId: hospitalPage!.id,
+          applicationIds: applications.map((a) => a.id),
+          emailType: 'general',
+          subject: emailSubject.trim(),
+          body: plainBody.trim(),
+          htmlBody: sanitizeRichHtml(emailHtml),
+        },
+      });
+
+      const { data, error } = res;
+      if (data?.code === 'rate_limited' || (error && String((error as any)?.status) === '429')) {
+        toast.error('Email rate limit reached — please wait before sending again.', { duration: 6000 });
+        return;
+      }
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Failed to send');
+      const sent = data?.sent ?? 0;
+      if (sent > 0) toast.success(`Email sent successfully`);
+      // Reset form
+      setEmailSubject('');
+      setEmailHtml(DEFAULT_EMAIL_HTML);
+      setLoadedTemplateId('');
+      if (editorRef.current) editorRef.current.innerHTML = DEFAULT_EMAIL_HTML;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send email');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  // ── Role helpers ─────────────────────────────────────────────────────────
+
+  const handleAssignRole = async (categoryId: string) => {
+    if (!member || !hospitalPage?.id) return;
+    setAssigningRole(true);
+    try {
+      // Update clinic_members tracker_category_id
+      const { error } = await supabase
+        .from('clinic_members')
+        .update({ tracker_category_id: categoryId })
+        .eq('id', member.id);
+      if (error) throw error;
+
+      // Also create/update volunteer_tracker_entries row
+      const { data: existingEntry } = await supabase
+        .from('volunteer_tracker_entries')
+        .select('id')
+        .eq('clinic_id', hospitalPage.id)
+        .eq('volunteer_user_id', studentId!)
+        .maybeSingle();
+
+      if (existingEntry) {
+        await supabase
+          .from('volunteer_tracker_entries')
+          .update({ category_id: categoryId })
+          .eq('id', existingEntry.id);
+      } else {
+        const maxSortResult = await supabase
+          .from('volunteer_tracker_entries')
+          .select('sort_order')
+          .eq('category_id', categoryId)
+          .order('sort_order', { ascending: false })
+          .limit(1);
+        const maxSort = (maxSortResult.data?.[0] as any)?.sort_order ?? -1;
+
+        await supabase
+          .from('volunteer_tracker_entries')
+          .insert({
+            clinic_id: hospitalPage.id,
+            category_id: categoryId,
+            volunteer_name: profile?.full_name || member.full_name || 'Unknown',
+            volunteer_user_id: studentId!,
+            sort_order: maxSort + 1,
+          });
+      }
+
+      toast.success('Role assigned');
+      await loadMember();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to assign role');
+    } finally {
+      setAssigningRole(false);
+    }
+  };
+
+  const handleMemberStatus = async (next: 'alumni' | 'active') => {
+    if (!member) return;
+    setMemberBusy(true);
+    try {
+      const { error } = await supabase
+        .from('clinic_members')
+        .update({ status: next })
+        .eq('id', member.id);
+      if (error) throw error;
+      toast.success(next === 'alumni' ? 'Marked as alumni' : 'Reactivated as staff');
+      await loadMember();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update status');
+    } finally {
+      setMemberBusy(false);
+    }
+  };
 
   // ── Derived values ────────────────────────────────────────────────────────
 
@@ -470,30 +824,13 @@ export default function ApplicantPersonPage() {
                 )}
               </div>
 
-              {/* Action buttons */}
+              {/* Status badges + action buttons */}
               <div className="flex flex-wrap items-center gap-2 mt-3">
                 {applications.map((app) => (
                   <Badge key={app.id} variant="outline" className={`text-[10px] ${STATUS_COLORS[app.status] ?? ''}`}>
                     {APPLICATION_STATUS_LABELS[app.status]} — {app.position?.title ?? ''}
                   </Badge>
                 ))}
-                {email && (
-                  <>
-                    <Button size="sm" variant="outline" className="gap-1.5 h-6 text-xs px-2" onClick={() => setEmailDialogOpen(true)}>
-                      <Mail className="h-3 w-3" />
-                      Email
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5 h-6 text-xs px-2 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
-                      onClick={() => setInterviewDialogOpen(true)}
-                    >
-                      <CalendarCheck className="h-3 w-3" />
-                      Interview Invite
-                    </Button>
-                  </>
-                )}
                 {profile?.resume_url && (
                   <Button size="sm" variant="outline" className="gap-1.5 h-6 text-xs px-2" asChild>
                     <a href={profile.resume_url} target="_blank" rel="noopener noreferrer">
@@ -517,11 +854,12 @@ export default function ApplicantPersonPage() {
               <TabsTrigger value="responses" className="shrink-0">Responses</TabsTrigger>
               <TabsTrigger value="notes" className="shrink-0">Notes</TabsTrigger>
               <TabsTrigger value="documents" className="shrink-0">Documents</TabsTrigger>
-              <TabsTrigger value="interview" className="shrink-0">Interview</TabsTrigger>
-              <TabsTrigger value="contact-history" className="shrink-0">Contact History</TabsTrigger>
+              <TabsTrigger value="email" className="shrink-0">Email</TabsTrigger>
               {hospitalPage?.id && (
-                <TabsTrigger value="staff" className="shrink-0">Staff</TabsTrigger>
+                <TabsTrigger value="role" className="shrink-0">Role</TabsTrigger>
               )}
+              <TabsTrigger value="activity" className="shrink-0">Activity</TabsTrigger>
+              <TabsTrigger value="contact-history" className="shrink-0">Contact History</TabsTrigger>
             </TabsList>
 
             {/* ── Decision ──────────────────────────────────────────── */}
@@ -692,118 +1030,375 @@ export default function ApplicantPersonPage() {
               )}
             </TabsContent>
 
-            {/* ── Interview ─────────────────────────────────────────── */}
-            <TabsContent value="interview" className="mt-4 space-y-4">
-              {applications.map((app) => (
-                <div key={app.id} className="rounded-md border border-border/40 p-4 space-y-3 text-sm">
-                  {applications.length > 1 && (
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{appLabel(app)}</p>
-                  )}
-                  {app.interview_invited_at ? (
-                    <>
-                      <div className="flex items-center gap-2 text-emerald-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Invite sent {format(new Date(app.interview_invited_at), "MMM d, yyyy 'at' h:mm a")}</span>
+            {/* ── Email ────────────────────────────────────────────── */}
+            <TabsContent value="email" className="mt-4 space-y-4">
+              {!email ? (
+                <EmptyState icon={Mail} message="No email address on file" />
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    <span>Sending to: <span className="font-medium text-foreground">{email}</span></span>
+                  </div>
+
+                  {/* Interview invite shortcut */}
+                  <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+                    <CalendarCheck className="h-4 w-4 text-amber-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-amber-300">Interview Invite</p>
+                      <p className="text-xs text-muted-foreground">
+                        {applications.some((a) => a.interview_invited_at)
+                          ? `Last sent ${formatDateShort(applications.find((a) => a.interview_invited_at)?.interview_invited_at ?? null)}`
+                          : 'No invite sent yet'}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                      onClick={() => setInterviewDialogOpen(true)}
+                    >
+                      <CalendarCheck className="h-3.5 w-3.5" />
+                      {applications.some((a) => a.interview_invited_at) ? 'Resend' : 'Send'} Invite
+                    </Button>
+                  </div>
+
+                  {/* Inline email composer */}
+                  <div className="rounded-md border border-border/40 p-4 space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Compose Email</p>
+
+                    {/* Template picker */}
+                    {templates.length > 0 && (
+                      <Select value={loadedTemplateId} onValueChange={loadTemplate}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Load from template..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {templates.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              <span className="flex items-center gap-2">
+                                {t.name}
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[10px] py-0 h-4 ${TEMPLATE_CATEGORY_COLORS[t.category as TemplateCategory]}`}
+                                >
+                                  {TEMPLATE_CATEGORIES[t.category as TemplateCategory]}
+                                </Badge>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+
+                    {/* Subject */}
+                    <Input
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                      placeholder="Subject line..."
+                    />
+
+                    {/* Rich text editor */}
+                    <div className="rounded-md border border-input bg-background overflow-hidden">
+                      <div className="border-b border-border p-1.5 flex flex-wrap gap-0.5">
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('bold')}>
+                          <Bold className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('italic')}>
+                          <Italic className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('underline')}>
+                          <Underline className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('strikeThrough')}>
+                          <Strikethrough className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('insertUnorderedList')}>
+                          <List className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('insertOrderedList')}>
+                          <ListOrdered className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => {
+                            const url = window.prompt('Paste URL');
+                            if (url?.trim()) applyFormat('createLink', url.trim());
+                          }}
+                        >
+                          <Link2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                      {app.interview_confirmed_at && (
-                        <div className="flex items-center gap-2 text-emerald-400">
-                          <CheckCircle className="h-4 w-4" />
-                          <span>Confirmed {format(new Date(app.interview_confirmed_at), "MMM d, yyyy 'at' h:mm a")}</span>
-                        </div>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
-                        onClick={() => setInterviewDialogOpen(true)}
-                      >
-                        <CalendarCheck className="h-3.5 w-3.5" />
-                        Resend Invite
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground space-y-2">
-                      <Calendar className="h-10 w-10 mx-auto opacity-40" />
-                      <p>No interview invite sent yet.</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
-                        onClick={() => setInterviewDialogOpen(true)}
-                      >
-                        <CalendarCheck className="h-3.5 w-3.5" />
-                        Send Interview Invite
+                      <div
+                        ref={editorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        className="min-h-[140px] max-h-[260px] overflow-y-auto p-3 text-sm focus:outline-none [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
+                        onInput={(e) => setEmailHtml(sanitizeRichHtml(e.currentTarget.innerHTML))}
+                      />
+                    </div>
+
+                    {/* Send */}
+                    <div className="flex justify-end gap-2">
+                      <Button onClick={handleSendEmail} disabled={sendingEmail} className="gap-1.5">
+                        {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        Send Email
                       </Button>
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                </>
+              )}
             </TabsContent>
 
-            {/* ── Contact History ───────────────────────────────────── */}
-            <TabsContent value="contact-history" className="mt-4">
-              {emailLogs.length === 0 ? (
-                <EmptyState icon={Mail} message="No emails sent yet" />
-              ) : (
-                <div className="space-y-2">
-                  {emailLogs.map((log) => (
-                    <div key={log.id} className="flex items-start justify-between text-sm py-2 border-b border-border/30 last:border-0">
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{log.subject}</p>
-                        {log.template_name && <p className="text-xs text-muted-foreground">Template: {log.template_name}</p>}
-                        <p className="text-xs text-muted-foreground">From: {log.sent_by}</p>
+            {/* ── Role ─────────────────────────────────────────────── */}
+            {hospitalPage?.id && (
+              <TabsContent value="role" className="mt-4 space-y-4">
+                {memberLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Loading...
+                  </div>
+                ) : !member ? (
+                  <div className="text-center py-8 text-muted-foreground space-y-2">
+                    <Shield className="h-10 w-10 mx-auto opacity-40" />
+                    {applications.some((a) => a.status === 'accepted') ? (
+                      <>
+                        <p className="text-sm">This person was accepted but no staff record was found.</p>
+                        <p className="text-xs">Try refreshing — it should be created automatically.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm">Not on staff yet.</p>
+                        <p className="text-xs">Set their application status to <span className="font-medium text-foreground">Accepted</span> to add them.</p>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Current status */}
+                    <div className="rounded-md border border-border/40 p-4 space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Membership Status</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className={`text-xs ${MEMBER_STATUS_COLORS[member.status]}`}>
+                          {MEMBER_STATUS_LABELS[member.status]}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          Joined {new Date(member.join_date).toLocaleDateString()}
+                        </span>
                       </div>
-                      <span className="text-xs text-muted-foreground shrink-0 ml-4">{formatDateShort(log.created_at)}</span>
+                      <div className="flex flex-wrap gap-2">
+                        {member.status === 'alumni' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={memberBusy}
+                            onClick={() => handleMemberStatus('active')}
+                            className="gap-1.5"
+                          >
+                            {memberBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                            Reactivate as Staff
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={memberBusy}
+                            onClick={() => handleMemberStatus('alumni')}
+                            className="gap-1.5 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10"
+                          >
+                            {memberBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GraduationCap className="h-3.5 w-3.5" />}
+                            Mark as Alumni
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Current role */}
+                    <div className="rounded-md border border-border/40 p-4 space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Current Role</p>
+                      {roleName ? (
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-3 w-3 rounded-full shrink-0"
+                            style={{
+                              backgroundColor: trackerCategories.find(
+                                (c) => c.id === member.tracker_category_id,
+                              )?.color || '#6366f1',
+                            }}
+                          />
+                          <span className="text-sm font-medium">{roleName}</span>
+                          {member.status === 'alumni' && (
+                            <Badge variant="outline" className="text-[10px] text-indigo-300 border-indigo-500/30">Alumni</Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No role assigned yet</p>
+                      )}
+
+                      {/* Assign / change role */}
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs text-muted-foreground">
+                          {roleName ? 'Change role:' : 'Assign a role (also places them in Tracker):'}
+                        </p>
+                        {trackerCategories.length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic">
+                            No roles defined yet. Create roles in the Tracker tab first.
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {trackerCategories.map((cat) => {
+                              const isActive = member.tracker_category_id === cat.id;
+                              return (
+                                <Button
+                                  key={cat.id}
+                                  size="sm"
+                                  variant={isActive ? 'default' : 'outline'}
+                                  disabled={assigningRole || isActive}
+                                  onClick={() => handleAssignRole(cat.id)}
+                                  className="gap-1.5 text-xs"
+                                >
+                                  <div
+                                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: cat.color }}
+                                  />
+                                  {cat.name}
+                                  {isActive && <CheckCircle className="h-3 w-3" />}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {assigningRole && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Assigning role...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+            )}
+
+            {/* ── Activity (Timeline) ──────────────────────────────── */}
+            <TabsContent value="activity" className="mt-4">
+              {activityEvents.length === 0 ? (
+                <EmptyState icon={History} message="No activity recorded yet" />
+              ) : (
+                <div className="relative space-y-0">
+                  {/* Vertical line */}
+                  <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border/40" />
+
+                  {activityEvents.map((event, i) => (
+                    <div key={event.id} className="relative flex items-start gap-3 py-2.5">
+                      {/* Dot */}
+                      <div className={`relative z-10 mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${
+                        event.type === 'status_change' ? 'bg-blue-400' :
+                        event.type === 'email_sent' ? 'bg-emerald-400' :
+                        event.type === 'interview_invited' ? 'bg-amber-400' :
+                        event.type === 'document_uploaded' ? 'bg-cyan-400' :
+                        event.type === 'note_added' ? 'bg-violet-400' :
+                        'bg-muted-foreground/50'
+                      }`} style={{ marginLeft: '5px' }} />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">{event.label}</p>
+                            {event.detail && (
+                              <p className="text-xs text-muted-foreground truncate">{event.detail}</p>
+                            )}
+                            {event.actor && (
+                              <p className="text-[11px] text-muted-foreground/70">by {event.actor}</p>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-muted-foreground shrink-0 mt-0.5">
+                            {format(new Date(event.timestamp), "MMM d, yyyy 'at' h:mm a")}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </TabsContent>
 
-            {/* ── Staff ─────────────────────────────────────────────── */}
-            {hospitalPage?.id && (
-              <TabsContent value="staff" className="mt-4 space-y-4">
-                {applications.map((app) => (
-                  <div key={app.id} className="space-y-2">
-                    {applications.length > 1 && (
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{appLabel(app)}</p>
-                    )}
-                    <PersonMembershipActions
-                      clinicId={hospitalPage.id}
-                      application={asStudentApp(app)}
-                      applicantName={displayName}
-                      applicantEmail={email || null}
-                    />
+            {/* ── Contact History ───────────────────────────────────── */}
+            <TabsContent value="contact-history" className="mt-4">
+              {(() => {
+                // Merge email logs and interview invite events
+                const contactEvents: { id: string; type: 'email' | 'interview_invite'; subject: string; detail: string | null; from: string | null; date: string }[] = [];
+
+                for (const log of emailLogs) {
+                  contactEvents.push({
+                    id: log.id,
+                    type: 'email',
+                    subject: log.subject,
+                    detail: log.template_name ? `Template: ${log.template_name}` : null,
+                    from: log.sent_by,
+                    date: log.created_at,
+                  });
+                }
+
+                for (const app of applications) {
+                  if (app.interview_invited_at) {
+                    contactEvents.push({
+                      id: `inv-${app.id}`,
+                      type: 'interview_invite',
+                      subject: 'Interview Invite',
+                      detail: app.position?.title || null,
+                      from: null,
+                      date: app.interview_invited_at,
+                    });
+                  }
+                }
+
+                contactEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                if (contactEvents.length === 0) {
+                  return <EmptyState icon={Mail} message="No emails or invites sent yet" />;
+                }
+
+                return (
+                  <div className="space-y-2">
+                    {contactEvents.map((evt) => (
+                      <div key={evt.id} className="flex items-start justify-between gap-3 text-sm py-2.5 border-b border-border/30 last:border-0">
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${
+                            evt.type === 'email' ? 'bg-emerald-400' : 'bg-amber-400'
+                          }`} />
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{evt.subject}</p>
+                            {evt.detail && <p className="text-xs text-muted-foreground">{evt.detail}</p>}
+                            {evt.from && <p className="text-xs text-muted-foreground">From: {evt.from}</p>}
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground shrink-0">{formatDateShort(evt.date)}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </TabsContent>
-            )}
+                );
+              })()}
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
 
       {/* ── Dialogs ──────────────────────────────────────────────────── */}
       {hospitalPage && firstApp && (
-        <>
-          <RichEmailDialog
-            open={emailDialogOpen}
-            onOpenChange={setEmailDialogOpen}
-            hospitalPageId={hospitalPage.id}
-            hospitalName={hospitalPage.name || 'ClinicalHours'}
-            senderEmail={hospitalPage.gmail_email}
-            selectedApplicationIds={applications.map((a) => a.id)}
-            applications={applications.map(asStudentApp)}
-          />
-          <InterviewInviteDialog
-            open={interviewDialogOpen}
-            onOpenChange={setInterviewDialogOpen}
-            hospitalPageId={hospitalPage.id}
-            hospitalName={hospitalPage.name || 'ClinicalHours'}
-            bookingUrl={hospitalPage.interview_booking_url || ''}
-            selectedApplicationIds={applications.map((a) => a.id)}
-            applications={applications.map(asStudentApp)}
-          />
-        </>
+        <InterviewInviteDialog
+          open={interviewDialogOpen}
+          onOpenChange={setInterviewDialogOpen}
+          hospitalPageId={hospitalPage.id}
+          hospitalName={hospitalPage.name || 'ClinicalHours'}
+          bookingUrl={hospitalPage.interview_booking_url || ''}
+          selectedApplicationIds={applications.map((a) => a.id)}
+          applications={applications.map(asStudentApp)}
+        />
       )}
     </div>
   );
