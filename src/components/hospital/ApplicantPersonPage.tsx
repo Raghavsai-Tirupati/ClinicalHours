@@ -174,7 +174,7 @@ export default function ApplicantPersonPage() {
       ]);
 
       setProfile(profileResult.data as PersonProfile | null);
-      const fetchedApps = (appsResult.data || []) as PersonApplication[];
+      const fetchedApps = (appsResult.data || []) as unknown as PersonApplication[];
       setApplications(fetchedApps);
 
       if (fetchedApps.length > 0) {
@@ -207,7 +207,7 @@ export default function ApplicantPersonPage() {
             : Promise.resolve({ data: [] }),
         ]);
 
-        setResponses((answersResult.data || []) as ResponseRow[]);
+        setResponses((answersResult.data || []) as unknown as ResponseRow[]);
         setNotes((notesResult.data || []) as NoteRow[]);
         setDocuments((docsResult.data || []) as ApplicationDocument[]);
         setEmailLogs((emailLogsResult.data || []) as EmailLogRow[]);
