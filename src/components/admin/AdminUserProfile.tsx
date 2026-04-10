@@ -275,7 +275,7 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
         .eq('student_id', user.id)
         .order('submitted_at', { ascending: false });
 
-      const fetchedApps: ApplicationRow[] = (appRows ?? []) as ApplicationRow[];
+      const fetchedApps: ApplicationRow[] = (appRows ?? []) as unknown as ApplicationRow[];
       setApplications(fetchedApps);
 
       // Use application IDs to batch-fetch dependent data
@@ -301,7 +301,7 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
             .in('application_id', appIds),
         ]);
 
-        setResponses((responsesResult.data ?? []) as ResponseRow[]);
+        setResponses((responsesResult.data ?? []) as unknown as ResponseRow[]);
         setNotes((notesResult.data ?? []) as NoteRow[]);
         setDocuments((documentsResult.data ?? []) as DocumentRow[]);
       }
