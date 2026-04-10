@@ -14,7 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
-import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { autoPromoteToStaff, buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from '@/types/positions';
 import type { ApplicationStatus, PositionStatus } from '@/types/positions';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,6 +82,22 @@ export default function HospitalOverview() {
       if (error) throw error;
       toast.success(`Status updated to ${APPLICATION_STATUS_LABELS[newStatus]}`);
       updateApplicationLocally(appId, { status: newStatus });
+
+      // Auto-promote to staff when accepted
+      if (newStatus === 'accepted' && hospitalPage?.id) {
+        const app = applications.find((a) => a.id === appId);
+        if (app) {
+          const name = app.applicant_name?.trim() || app.student_profile?.full_name?.trim() || app.applicant_email?.split('@')[0] || 'Unknown';
+          const { error: promoteErr } = await autoPromoteToStaff({
+            clinicId: hospitalPage.id,
+            applicationId: appId,
+            studentId: app.student_id || null,
+            fullName: name,
+            email: app.applicant_email || app.student_profile?.email || null,
+          });
+          if (promoteErr) toast.error('Accepted, but failed to add to Staff: ' + promoteErr);
+        }
+      }
     } catch {
       toast.error('Failed to update status');
     } finally {

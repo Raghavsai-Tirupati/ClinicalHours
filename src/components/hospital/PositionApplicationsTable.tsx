@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePositionApplications } from '@/hooks/usePositionApplications';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
-import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { autoPromoteToStaff, buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
 import EmailDialog from './EmailDialog';
@@ -134,6 +134,22 @@ export default function PositionApplicationsTable({ positionId }: Props) {
       }
       toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);
       updateApplicationLocally(appId, { status: newStatus });
+
+      // Auto-promote to staff when accepted
+      if (newStatus === 'accepted' && hospitalPage?.id) {
+        const app = allApplications.find((a) => a.id === appId);
+        if (app) {
+          const name = normalizeDisplayName(app.applicant_name) || normalizeDisplayName(app.student_profile?.full_name) || app.applicant_email?.split('@')[0] || 'Unknown';
+          const { error: promoteErr } = await autoPromoteToStaff({
+            clinicId: hospitalPage.id,
+            applicationId: appId,
+            studentId: app.student_id || null,
+            fullName: name,
+            email: app.applicant_email || app.student_profile?.email || null,
+          });
+          if (promoteErr) toast.error('Accepted, but failed to add to Staff: ' + promoteErr);
+        }
+      }
     } catch (err: any) {
       console.error('Failed to update status:', err);
       toast.error(err?.message || 'Failed to update status');

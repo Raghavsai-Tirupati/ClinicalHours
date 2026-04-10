@@ -29,7 +29,7 @@ import {
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { autoPromoteToStaff, buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import {
   APPLICATION_STATUS_LABELS,
   type ApplicationStatus,
@@ -314,6 +314,19 @@ export default function ApplicationKanban({
         toast.success(
           `Moved to ${APPLICATION_STATUS_LABELS[newStatus]}`,
         );
+
+        // Auto-promote to staff when accepted
+        if (newStatus === 'accepted' && hospitalPage?.id && app) {
+          const name = app.applicant_name?.trim() || app.student_profile?.full_name?.trim() || app.applicant_email?.split('@')[0] || 'Unknown';
+          const { error: promoteErr } = await autoPromoteToStaff({
+            clinicId: hospitalPage.id,
+            applicationId: appId,
+            studentId: app.student_id || null,
+            fullName: name,
+            email: app.applicant_email || app.student_profile?.email || null,
+          });
+          if (promoteErr) toast.error('Accepted, but failed to add to Staff: ' + promoteErr);
+        }
 
         // If moved to Interview, auto-send interview invite
         if (newStatus === 'interview' && hospitalPage?.id) {

@@ -29,7 +29,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
-import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { autoPromoteToStaff, buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationAvailability, ApplicationDocument, ApplicationStatus, SchedulingAnswer, StudentApplication } from '@/types/positions';
 import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
@@ -379,54 +379,18 @@ export default function ApplicantProfilePage() {
           .eq('id', application.id);
         if (error) throw error;
 
-        // ── Auto-promote to staff when accepted ──────────────────
-        // Creates a clinic_member row with no role (tracker_category_id
-        // stays NULL until they're assigned a role in the Tracker tab).
+        // Auto-promote to staff when accepted
         if (newStatus === 'accepted' && hospitalPage?.id) {
-          // Check by application_id OR by student user_id to avoid dupes.
-          const { data: existingByApp } = await supabase
-            .from('clinic_members')
-            .select('id')
-            .eq('clinic_id', hospitalPage.id)
-            .eq('application_id', application.id)
-            .maybeSingle();
-
-          const { data: existingByUser } = !existingByApp && application.student_id
-            ? await supabase
-                .from('clinic_members')
-                .select('id')
-                .eq('clinic_id', hospitalPage.id)
-                .eq('user_id', application.student_id)
-                .maybeSingle()
-            : { data: null };
-
-          if (!existingByApp && !existingByUser) {
-            const appName = getApplicantName(application);
-            const appEmail =
-              application.applicant_email ||
-              application.student_profile?.email ||
-              null;
-            const { error: insertErr } = await supabase.from('clinic_members').insert({
-              clinic_id: hospitalPage.id,
-              user_id: application.student_id || null,
-              application_id: application.id,
-              full_name: appName,
-              email: appEmail,
-              status: 'active',
-              onboarding_source: 'new_applicant',
-              join_date: new Date().toISOString().slice(0, 10),
-            });
-            if (insertErr) {
-              console.error('Failed to auto-promote to staff:', insertErr);
-              toast.error('Accepted, but failed to add to Staff: ' + insertErr.message);
-            }
-          } else if (existingByUser && !existingByApp) {
-            // Link the existing member to this application
-            await supabase
-              .from('clinic_members')
-              .update({ application_id: application.id, status: 'active' })
-              .eq('id', existingByUser.id);
-          }
+          const appName = getApplicantName(application);
+          const appEmail = application.applicant_email || application.student_profile?.email || null;
+          const { error: promoteErr } = await autoPromoteToStaff({
+            clinicId: hospitalPage.id,
+            applicationId: application.id,
+            studentId: application.student_id || null,
+            fullName: appName,
+            email: appEmail,
+          });
+          if (promoteErr) toast.error('Accepted, but failed to add to Staff: ' + promoteErr);
         }
 
         toast.success(`Application ${APPLICATION_STATUS_LABELS[newStatus].toLowerCase()}`);

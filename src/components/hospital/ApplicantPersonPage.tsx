@@ -33,7 +33,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
-import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { autoPromoteToStaff, buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
 import { APPLICATION_STATUS_LABELS, STATUS_COLORS } from '@/types/positions';
 import type { ApplicationDocument, ApplicationStatus, StudentApplication } from '@/types/positions';
 import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
@@ -243,13 +243,29 @@ export default function ApplicantPersonPage() {
         setApplications((prev) =>
           prev.map((a) => (a.id === applicationId ? { ...a, status: newStatus } : a)),
         );
+
+        // Auto-promote to staff when accepted
+        if (newStatus === 'accepted' && hospitalPage?.id) {
+          const app = applications.find((a) => a.id === applicationId);
+          if (app) {
+            const name = app.applicant_name?.trim() || app.student_profile?.full_name?.trim() || app.applicant_email?.split('@')[0] || 'Unknown';
+            const { error: promoteErr } = await autoPromoteToStaff({
+              clinicId: hospitalPage.id,
+              applicationId,
+              studentId: app.student_id || null,
+              fullName: name,
+              email: app.applicant_email || app.student_profile?.email || null,
+            });
+            if (promoteErr) toast.error('Accepted, but failed to add to Staff: ' + promoteErr);
+          }
+        }
       } catch (err: any) {
         toast.error(err?.message || 'Failed to update status');
       } finally {
         setUpdatingStatus(null);
       }
     },
-    [],
+    [applications, hospitalPage?.id],
   );
 
   const handleFileUpload = useCallback(
