@@ -87,19 +87,25 @@ export async function autoPromoteToStaff({
  * Single source of truth for status changes.
  * Handles all side-effects so callers don't need to coordinate:
  *  - Updates student_applications.status (+ reviewed_at for terminal statuses)
+ *  - If moving TO accepted: auto-promotes to Staff (clinic_members)
  *  - If moving AWAY from accepted: removes tracker entry so they leave the Tracker
- *  - If moving TO accepted: no action needed — Staff/Tracker derive live from applications
  */
 export async function changeApplicationStatus({
   applicationId,
   studentId,
   newStatus,
   clinicId,
+  applicantName,
+  applicantEmail,
 }: {
   applicationId: string;
   studentId: string | null;
   newStatus: ApplicationStatus;
   clinicId: string | undefined;
+  /** Required for auto-promotion when accepting — pass applicant's display name */
+  applicantName?: string;
+  /** Required for auto-promotion when accepting — pass applicant's email */
+  applicantEmail?: string | null;
 }): Promise<{ error?: string }> {
   // 1. Update the application status
   const payload = buildStudentApplicationStatusUpdate(newStatus);
@@ -110,7 +116,21 @@ export async function changeApplicationStatus({
 
   if (error) return { error: error.message };
 
-  // 2. If de-accepting, remove from volunteer tracker so they leave the Tracker grid
+  // 2. If accepting, auto-promote to Staff (clinic_members)
+  if (newStatus === 'accepted' && clinicId) {
+    const { error: promoteErr } = await autoPromoteToStaff({
+      clinicId,
+      applicationId,
+      studentId,
+      fullName: applicantName || 'Unknown',
+      email: applicantEmail ?? null,
+    });
+    if (promoteErr) {
+      console.warn('Accepted but auto-promote failed:', promoteErr);
+    }
+  }
+
+  // 3. If de-accepting, remove from volunteer tracker so they leave the Tracker grid
   if (newStatus !== 'accepted' && studentId && clinicId) {
     await supabase
       .from('volunteer_tracker_entries')

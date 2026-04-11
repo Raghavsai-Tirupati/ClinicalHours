@@ -687,10 +687,42 @@ export default function ApplicantPersonPage() {
                     <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading...
                   </div>
                 ) : !member ? (
-                  <div className="text-center py-8 text-muted-foreground space-y-2">
+                  <div className="text-center py-8 text-muted-foreground space-y-3">
                     <Shield className="h-10 w-10 mx-auto opacity-40" />
                     <p className="text-sm">Not on staff yet.</p>
-                    <p className="text-xs">Set their application status to <span className="font-medium text-foreground">Accepted</span> to add them.</p>
+                    <p className="text-xs">Set their application status to <span className="font-medium text-foreground">Accepted</span> to add them, or manually add:</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={memberBusy}
+                      onClick={async () => {
+                        if (!hospitalPage?.id || !studentId) return;
+                        setMemberBusy(true);
+                        try {
+                          const { error: insertErr } = await supabase.from('clinic_members').insert({
+                            clinic_id: hospitalPage.id,
+                            user_id: studentId,
+                            application_id: firstApp?.id || null,
+                            full_name: displayName,
+                            email: email || null,
+                            status: 'active',
+                            onboarding_source: 'existing_staff',
+                            join_date: new Date().toISOString().slice(0, 10),
+                          });
+                          if (insertErr) throw insertErr;
+                          toast.success('Added to staff');
+                          await loadMember();
+                        } catch (err: any) {
+                          toast.error(err?.message || 'Failed to add to staff');
+                        } finally {
+                          setMemberBusy(false);
+                        }
+                      }}
+                      className="gap-1.5"
+                    >
+                      {memberBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <User className="h-3.5 w-3.5" />}
+                      Add to Staff Manually
+                    </Button>
                   </div>
                 ) : (
                   <>

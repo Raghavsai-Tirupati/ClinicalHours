@@ -78,6 +78,8 @@ export default function ApplicationReviewPanel({
       studentId: app.student_id || null,
       newStatus,
       clinicId: hospitalPage.id,
+      applicantName: name,
+      applicantEmail: email,
     });
     setSavingStatus(false);
     if (error) {

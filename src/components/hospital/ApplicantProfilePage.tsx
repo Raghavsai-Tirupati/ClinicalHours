@@ -376,6 +376,8 @@ export default function ApplicantProfilePage() {
         studentId: application.student_id || null,
         newStatus,
         clinicId: hospitalPage?.id,
+        applicantName: application.applicant_name?.trim() || application.student_profile?.full_name?.trim() || 'Unknown',
+        applicantEmail: application.applicant_email || application.student_profile?.email || null,
       });
       setUpdatingStatus(false);
       if (error) {
