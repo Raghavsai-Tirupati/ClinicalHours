@@ -72,6 +72,15 @@ function getApplicantName(app: StudentApplication): string {
   );
 }
 
+interface PersonGroup {
+  key: string;
+  student_id: string | null;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  applications: StudentApplication[];
+}
+
 interface PeopleTabProps {
   clinicId: string;
 }
@@ -83,56 +92,90 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | 'all'>('all');
 
   // ── Selection & Bulk Actions ──────────────────────────────────
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
 
-  const filtered = useMemo(() => {
+  // Group filtered applications by person (student_id, falling back to email)
+  const grouped = useMemo<PersonGroup[]>(() => {
     const q = search.trim().toLowerCase();
-    return applications
-      .filter((a) => statusFilter === 'all' || a.status === statusFilter)
-      .filter((a) => {
-        if (!q) return true;
+
+    const matching = applications.filter((a) => {
+      if (statusFilter !== 'all' && a.status !== statusFilter) return false;
+      if (q) {
         const name = getApplicantName(a).toLowerCase();
         const email = (a.applicant_email || a.student_profile?.email || '').toLowerCase();
         const pos = (a.position?.title || '').toLowerCase();
         return name.includes(q) || email.includes(q) || pos.includes(q);
-      })
-      .sort(
-        (a, b) =>
-          new Date(b.submitted_at || 0).getTime() -
-          new Date(a.submitted_at || 0).getTime(),
+      }
+      return true;
+    });
+
+    const map = new Map<string, PersonGroup>();
+    for (const app of matching) {
+      const key = app.student_id || app.applicant_email || app.student_profile?.email || app.id;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          student_id: app.student_id || null,
+          name: getApplicantName(app),
+          email: app.applicant_email || app.student_profile?.email || '',
+          avatarUrl: app.student_profile?.avatar_url,
+          applications: [],
+        });
+      }
+      map.get(key)!.applications.push(app);
+    }
+
+    const groups = [...map.values()];
+    // Sort each person's apps newest first, then sort persons by most recent app
+    for (const g of groups) {
+      g.applications.sort(
+        (a, b) => new Date(b.submitted_at || 0).getTime() - new Date(a.submitted_at || 0).getTime(),
       );
+    }
+    groups.sort(
+      (a, b) =>
+        new Date(b.applications[0]?.submitted_at || 0).getTime() -
+        new Date(a.applications[0]?.submitted_at || 0).getTime(),
+    );
+    return groups;
   }, [applications, search, statusFilter]);
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
+  const toggleSelect = (key: string) => {
+    setSelectedKeys((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filtered.length && filtered.length > 0) {
-      setSelectedIds(new Set());
+    if (selectedKeys.size === grouped.length && grouped.length > 0) {
+      setSelectedKeys(new Set());
     } else {
-      setSelectedIds(new Set(filtered.map((a) => a.id)));
+      setSelectedKeys(new Set(grouped.map((g) => g.key)));
     }
   };
 
-  // Clear selection when filters change
   const handleSearchChange = (v: string) => {
     setSearch(v);
-    setSelectedIds(new Set());
+    setSelectedKeys(new Set());
   };
   const handleStatusChange = (v: string) => {
     setStatusFilter(v as ApplicationStatus | 'all');
-    setSelectedIds(new Set());
+    setSelectedKeys(new Set());
   };
 
-  const selectedApplicationIds = useMemo(() => [...selectedIds], [selectedIds]);
+  // Collect all application IDs from selected persons for bulk actions
+  const selectedApplicationIds = useMemo(
+    () =>
+      grouped
+        .filter((g) => selectedKeys.has(g.key))
+        .flatMap((g) => g.applications.map((a) => a.id)),
+    [grouped, selectedKeys],
+  );
 
   return (
     <div className="space-y-4">
@@ -161,14 +204,14 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground ml-auto">
-          {filtered.length} {filtered.length === 1 ? 'application' : 'applications'}
+          {grouped.length} {grouped.length === 1 ? 'profile' : 'profiles'}
         </p>
       </div>
 
       {/* Bulk action bar */}
-      {selectedIds.size > 0 && (
+      {selectedKeys.size > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2">
-          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <span className="text-sm font-medium">{selectedKeys.size} selected</span>
           <div className="ml-auto flex items-center gap-2">
             <Button
               size="sm"
@@ -191,7 +234,7 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setSelectedIds(new Set())}
+              onClick={() => setSelectedKeys(new Set())}
               className="text-xs"
             >
               Clear
@@ -207,15 +250,14 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
             <TableRow>
               <TableHead className="w-10">
                 <Checkbox
-                  checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                  checked={grouped.length > 0 && selectedKeys.size === grouped.length}
                   onCheckedChange={toggleSelectAll}
                   className="h-3.5 w-3.5"
                 />
               </TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead className="hidden md:table-cell">Position</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden lg:table-cell">Submitted</TableHead>
+              <TableHead>Person</TableHead>
+              <TableHead className="hidden md:table-cell">Applications</TableHead>
+              <TableHead className="hidden lg:table-cell">Last Applied</TableHead>
               <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
@@ -223,98 +265,99 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={5}>
                     <Skeleton className="h-6 w-full" />
                   </TableCell>
                 </TableRow>
               ))
-            ) : filtered.length === 0 ? (
+            ) : grouped.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-10">
-                  No people match your filters yet.
+                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-10">
+                  No profiles match your filters yet.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((app) => {
-                const name = getApplicantName(app);
-                const email = app.applicant_email || app.student_profile?.email || '';
-                const href = app.student_id ? `${basePath}/people/${app.student_id}` : null;
+              grouped.map((person) => {
+                const href = person.student_id ? `${basePath}/people/${person.student_id}` : null;
+                const avatarColor = emailToColor(person.email || person.name);
                 return (
-                  <TableRow key={app.id} className="cursor-pointer">
+                  <TableRow key={person.key} className="cursor-pointer">
                     <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
-                        checked={selectedIds.has(app.id)}
-                        onCheckedChange={() => toggleSelect(app.id)}
+                        checked={selectedKeys.has(person.key)}
+                        onCheckedChange={() => toggleSelect(person.key)}
                         className="h-3.5 w-3.5"
                       />
                     </TableCell>
+
+                    {/* Person */}
                     <TableCell>
                       {href ? (
                         <Link to={href} className="flex items-center gap-3">
                           <Avatar className="h-8 w-8 shrink-0">
-                            {app.student_profile?.avatar_url && (
-                              <AvatarImage src={app.student_profile.avatar_url} alt={name} />
+                            {person.avatarUrl && (
+                              <AvatarImage src={person.avatarUrl} alt={person.name} />
                             )}
-                            <AvatarFallback
-                              className={`text-xs font-semibold text-white ${emailToColor(email || name)}`}
-                            >
-                              {getInitials(name)}
+                            <AvatarFallback className={`text-xs font-semibold text-white ${avatarColor}`}>
+                              {getInitials(person.name)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <div className="font-medium hover:underline">{name}</div>
-                            {email && (
-                              <div className="text-xs text-muted-foreground break-all">{email}</div>
+                            <div className="font-medium hover:underline">{person.name}</div>
+                            {person.email && (
+                              <div className="text-xs text-muted-foreground break-all">{person.email}</div>
                             )}
                           </div>
                         </Link>
                       ) : (
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8 shrink-0">
-                            <AvatarFallback
-                              className={`text-xs font-semibold text-white ${emailToColor(email || name)}`}
-                            >
-                              {getInitials(name)}
+                            <AvatarFallback className={`text-xs font-semibold text-white ${avatarColor}`}>
+                              {getInitials(person.name)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <div className="font-medium">{name}</div>
-                            {email && (
-                              <div className="text-xs text-muted-foreground break-all">{email}</div>
+                            <div className="font-medium">{person.name}</div>
+                            {person.email && (
+                              <div className="text-xs text-muted-foreground break-all">{person.email}</div>
                             )}
                           </div>
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      {href ? (
-                        <Link to={href} className="block">{app.position?.title || '—'}</Link>
-                      ) : (
-                        <span>{app.position?.title || '—'}</span>
-                      )}
+
+                    {/* Applications (position + status per app) */}
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex flex-col gap-1">
+                        {person.applications.map((app) => (
+                          <div key={app.id} className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {app.position?.title || '—'}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${STATUS_COLORS[app.status] || ''}`}
+                            >
+                              {APPLICATION_STATUS_LABELS[app.status] || app.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
                     </TableCell>
-                    <TableCell>
-                      {href ? (
-                        <Link to={href} className="block">
-                          <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[app.status] || ''}`}>
-                            {APPLICATION_STATUS_LABELS[app.status] || app.status}
-                          </Badge>
-                        </Link>
-                      ) : (
-                        <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[app.status] || ''}`}>
-                          {APPLICATION_STATUS_LABELS[app.status] || app.status}
-                        </Badge>
-                      )}
-                    </TableCell>
+
+                    {/* Last applied date */}
                     <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                      {app.submitted_at ? format(new Date(app.submitted_at), 'MMM d, yyyy') : '—'}
+                      {person.applications[0]?.submitted_at
+                        ? format(new Date(person.applications[0].submitted_at), 'MMM d, yyyy')
+                        : '—'}
                     </TableCell>
+
                     <TableCell>
                       {href && (
                         <Link
                           to={href}
                           className="text-muted-foreground hover:text-foreground"
-                          aria-label={`Open ${name}'s profile`}
+                          aria-label={`Open ${person.name}'s profile`}
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         </Link>
@@ -344,7 +387,7 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
             open={interviewDialogOpen}
             onOpenChange={(open) => {
               setInterviewDialogOpen(open);
-              if (!open) setSelectedIds(new Set());
+              if (!open) setSelectedKeys(new Set());
             }}
             hospitalPageId={hospitalPage.id}
             hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}

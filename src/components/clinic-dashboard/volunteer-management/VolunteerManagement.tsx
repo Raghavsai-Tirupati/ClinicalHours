@@ -65,7 +65,7 @@ export default function VolunteerManagement() {
         <TabsList className="grid w-full grid-cols-3 max-w-lg">
           <TabsTrigger value="people" className="gap-1.5 text-xs">
             <Users className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">People</span>
+            <span className="hidden sm:inline">Profiles</span>
           </TabsTrigger>
           <TabsTrigger value="members" className="gap-1.5 text-xs">
             <UserCheck className="h-3.5 w-3.5" />
