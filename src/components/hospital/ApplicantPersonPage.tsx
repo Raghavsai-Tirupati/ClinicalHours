@@ -2,22 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
-  Bold,
-  Calendar,
   CalendarCheck,
   Camera,
   CheckCircle,
   Clock,
   ExternalLink,
-  Eye,
   FileText,
   GraduationCap,
   History,
-  Italic,
-  Link2,
   Linkedin,
-  List,
-  ListOrdered,
   Loader2,
   Mail,
   MessageSquare,
@@ -25,8 +18,6 @@ import {
   RotateCcw,
   Send,
   Shield,
-  Strikethrough,
-  Underline,
   Upload,
   User,
 } from 'lucide-react';
@@ -36,7 +27,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -51,10 +41,8 @@ import { APPLICATION_STATUS_LABELS, STATUS_COLORS } from '@/types/positions';
 import type { ApplicationDocument, ApplicationStatus, StudentApplication } from '@/types/positions';
 import ApplicantDocuments from '@/components/clinic-dashboard/applications/ApplicantDocuments';
 import PersonNotesPanel from '@/components/clinic-dashboard/applications/PersonNotesPanel';
+import RichEmailDialog from '@/components/hospital/RichEmailDialog';
 import InterviewInviteDialog from '@/components/hospital/InterviewInviteDialog';
-import { useEmailTemplates } from '@/components/clinic-dashboard/email-communication/hooks';
-import type { TemplateCategory } from '@/components/clinic-dashboard/email-communication/types';
-import { TEMPLATE_CATEGORY_COLORS, TEMPLATE_CATEGORIES } from '@/components/clinic-dashboard/email-communication/types';
 import {
   MEMBER_STATUS_COLORS,
   MEMBER_STATUS_LABELS,
@@ -76,25 +64,6 @@ function emailToColor(email: string): string {
 function formatDateShort(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-const DEFAULT_EMAIL_HTML = '<p><br></p>';
-
-function stripHtml(value: string): string {
-  if (!value) return '';
-  const doc = new DOMParser().parseFromString(value, 'text/html');
-  return doc.body.textContent?.trim() ?? '';
-}
-
-function sanitizeRichHtml(value: string): string {
-  const doc = new DOMParser().parseFromString(value, 'text/html');
-  doc.querySelectorAll('script,style').forEach((n) => n.remove());
-  doc.body.querySelectorAll('*').forEach((el) => {
-    Array.from(el.attributes).forEach((attr) => {
-      if (attr.name.toLowerCase().startsWith('on')) el.removeAttribute(attr.name);
-    });
-  });
-  return doc.body.innerHTML || DEFAULT_EMAIL_HTML;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -179,6 +148,7 @@ export default function ApplicantPersonPage() {
   const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
   const [emailLogs, setEmailLogs] = useState<EmailLogRow[]>([]);
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadAppId, setUploadAppId] = useState('');
@@ -188,14 +158,6 @@ export default function ApplicantPersonPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // Email tab state
-  const [emailSubject, setEmailSubject] = useState('');
-  const [emailHtml, setEmailHtml] = useState(DEFAULT_EMAIL_HTML);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [loadedTemplateId, setLoadedTemplateId] = useState('');
-  const editorRef = useRef<HTMLDivElement | null>(null);
-
   // Role tab state
   const [member, setMember] = useState<ClinicMember | null>(null);
   const [memberLoading, setMemberLoading] = useState(true);
@@ -203,8 +165,6 @@ export default function ApplicantPersonPage() {
   const [trackerCategories, setTrackerCategories] = useState<TrackerCategory[]>([]);
   const [roleName, setRoleName] = useState<string | null>(null);
   const [assigningRole, setAssigningRole] = useState(false);
-
-  const { templates } = useEmailTemplates(hospitalPage?.id ?? '');
 
   useEffect(() => {
     if (!studentId || !hospitalPage?.id) return;
@@ -536,69 +496,6 @@ export default function ApplicantPersonPage() {
     [studentId],
   );
 
-  // ── Email helpers ────────────────────────────────────────────────────────
-
-  const loadTemplate = (id: string) => {
-    setLoadedTemplateId(id);
-    const t = templates.find((tmpl) => tmpl.id === id);
-    if (!t) return;
-    setEmailSubject(t.subject);
-    const html = t.body
-      .split('\n')
-      .map((line) => (line.trim() ? `<p>${line}</p>` : '<p><br></p>'))
-      .join('');
-    const sanitized = sanitizeRichHtml(html);
-    setEmailHtml(sanitized);
-    if (editorRef.current) editorRef.current.innerHTML = sanitized;
-  };
-
-  const applyFormat = (command: string, value?: string) => {
-    editorRef.current?.focus();
-    document.execCommand(command, false, value);
-    const current = editorRef.current?.innerHTML ?? DEFAULT_EMAIL_HTML;
-    setEmailHtml(sanitizeRichHtml(current));
-  };
-
-  const handleSendEmail = async () => {
-    if (applications.length === 0) return;
-    if (!emailSubject.trim()) { toast.error('Subject is required'); return; }
-    const plainBody = stripHtml(emailHtml);
-    if (!plainBody.trim()) { toast.error('Message body is required'); return; }
-
-    setSendingEmail(true);
-    try {
-      const res = await supabase.functions.invoke('send-position-interview-invites', {
-        body: {
-          hospitalPageId: hospitalPage!.id,
-          applicationIds: applications.map((a) => a.id),
-          emailType: 'general',
-          subject: emailSubject.trim(),
-          body: plainBody.trim(),
-          htmlBody: sanitizeRichHtml(emailHtml),
-        },
-      });
-
-      const { data, error } = res;
-      if (data?.code === 'rate_limited' || (error && String((error as any)?.status) === '429')) {
-        toast.error('Email rate limit reached — please wait before sending again.', { duration: 6000 });
-        return;
-      }
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || 'Failed to send');
-      const sent = data?.sent ?? 0;
-      if (sent > 0) toast.success(`Email sent successfully`);
-      // Reset form
-      setEmailSubject('');
-      setEmailHtml(DEFAULT_EMAIL_HTML);
-      setLoadedTemplateId('');
-      if (editorRef.current) editorRef.current.innerHTML = DEFAULT_EMAIL_HTML;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to send email');
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
   // ── Role helpers ─────────────────────────────────────────────────────────
 
   const handleAssignRole = async (categoryId: string) => {
@@ -860,7 +757,7 @@ export default function ApplicantPersonPage() {
             </TabsList>
 
             {/* ── Responses ─────────────────────────────────────────── */}
-            <TabsContent value="responses" className="mt-4 space-y-4">
+            <TabsContent value="responses" className="mt-4 space-y-6">
               {responses.length === 0 ? (
                 <EmptyState icon={MessageSquare} message="No application responses on record" />
               ) : (
@@ -870,19 +767,31 @@ export default function ApplicantPersonPage() {
                     .sort((a, b) => (a.question?.display_order ?? 0) - (b.question?.display_order ?? 0));
                   if (appResponses.length === 0) return null;
                   return (
-                    <div key={app.id} className="rounded-md border border-border/40 p-4 space-y-4">
+                    <div key={app.id} className="space-y-5">
                       {applications.length > 1 && (
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{appLabel(app)}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[app.status] ?? ''}`}>
+                            {APPLICATION_STATUS_LABELS[app.status]}
+                          </Badge>
+                          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{appLabel(app)}</span>
+                        </div>
                       )}
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                        Application Responses
+                      </h3>
                       {appResponses.map((r) => (
-                        <div key={r.id} className="border-b border-border/30 pb-3 last:border-0 last:pb-0 space-y-1">
-                          <p className="text-sm font-medium text-muted-foreground">{r.question?.question_text ?? 'Question'}</p>
+                        <div key={r.id} className="space-y-1.5">
+                          <p className="text-sm font-medium text-foreground">
+                            {r.question?.question_text ?? 'Question'}
+                          </p>
                           {r.answer_file_url ? (
                             <a href={r.answer_file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary underline underline-offset-2">
                               {r.answer_text?.trim() || 'View file'} <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : (
-                            <p className="text-sm whitespace-pre-wrap">{r.answer_text ?? (r.answer_options?.join(', ') ?? '—')}</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap rounded-md bg-muted/30 px-3 py-2 border border-border/30">
+                              {r.answer_text || r.answer_options?.join(', ') || <span className="italic opacity-50">No response</span>}
+                            </p>
                           )}
                         </div>
                       ))}
@@ -980,118 +889,58 @@ export default function ApplicantPersonPage() {
             <TabsContent value="email" className="mt-4 space-y-4">
               {!email ? (
                 <EmptyState icon={Mail} message="No email address on file" />
+              ) : applications.length === 0 ? (
+                <EmptyState icon={Mail} message="No applications found — cannot send email without an application on file" />
               ) : (
                 <>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <Mail className="h-4 w-4" />
-                    <span>Sending to: <span className="font-medium text-foreground">{email}</span></span>
+                    <span>Recipient: <span className="font-medium text-foreground">{email}</span></span>
                   </div>
 
-                  {/* Interview invite shortcut */}
-                  <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
-                    <CalendarCheck className="h-4 w-4 text-amber-400 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-amber-300">Interview Invite</p>
-                      <p className="text-xs text-muted-foreground">
-                        {applications.some((a) => a.interview_invited_at)
-                          ? `Last sent ${formatDateShort(applications.find((a) => a.interview_invited_at)?.interview_invited_at ?? null)}`
-                          : 'No invite sent yet'}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
-                      onClick={() => setInterviewDialogOpen(true)}
-                    >
-                      <CalendarCheck className="h-3.5 w-3.5" />
-                      {applications.some((a) => a.interview_invited_at) ? 'Resend' : 'Send'} Invite
-                    </Button>
-                  </div>
-
-                  {/* Inline email composer */}
+                  {/* Send email */}
                   <div className="rounded-md border border-border/40 p-4 space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Compose Email</p>
-
-                    {/* Template picker */}
-                    {templates.length > 0 && (
-                      <Select value={loadedTemplateId} onValueChange={loadTemplate}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Load from template..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {templates.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              <span className="flex items-center gap-2">
-                                {t.name}
-                                <Badge
-                                  variant="outline"
-                                  className={`text-[10px] py-0 h-4 ${TEMPLATE_CATEGORY_COLORS[t.category as TemplateCategory]}`}
-                                >
-                                  {TEMPLATE_CATEGORIES[t.category as TemplateCategory]}
-                                </Badge>
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-
-                    {/* Subject */}
-                    <Input
-                      value={emailSubject}
-                      onChange={(e) => setEmailSubject(e.target.value)}
-                      placeholder="Subject line..."
-                    />
-
-                    {/* Rich text editor */}
-                    <div className="rounded-md border border-input bg-background overflow-hidden">
-                      <div className="border-b border-border p-1.5 flex flex-wrap gap-0.5">
-                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('bold')}>
-                          <Bold className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('italic')}>
-                          <Italic className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('underline')}>
-                          <Underline className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('strikeThrough')}>
-                          <Strikethrough className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('insertUnorderedList')}>
-                          <List className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => applyFormat('insertOrderedList')}>
-                          <ListOrdered className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2"
-                          onClick={() => {
-                            const url = window.prompt('Paste URL');
-                            if (url?.trim()) applyFormat('createLink', url.trim());
-                          }}
-                        >
-                          <Link2 className="h-3.5 w-3.5" />
-                        </Button>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                        <Mail className="h-5 w-5 text-primary" />
                       </div>
-                      <div
-                        ref={editorRef}
-                        contentEditable
-                        suppressContentEditableWarning
-                        className="min-h-[140px] max-h-[260px] overflow-y-auto p-3 text-sm focus:outline-none [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline"
-                        onInput={(e) => setEmailHtml(sanitizeRichHtml(e.currentTarget.innerHTML))}
-                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">Send Email</p>
+                        <p className="text-xs text-muted-foreground">Compose and send a custom email with rich text formatting and templates</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => setEmailDialogOpen(true)}
+                        className="gap-1.5"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        Compose
+                      </Button>
                     </div>
+                  </div>
 
-                    {/* Send */}
-                    <div className="flex justify-end gap-2">
-                      <Button onClick={handleSendEmail} disabled={sendingEmail} className="gap-1.5">
-                        {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        Send Email
+                  {/* Interview invite */}
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15">
+                        <CalendarCheck className="h-5 w-5 text-amber-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-amber-300">Interview Invite</p>
+                        <p className="text-xs text-muted-foreground">
+                          {applications.some((a) => a.interview_invited_at)
+                            ? `Last sent ${formatDateShort(applications.find((a) => a.interview_invited_at)?.interview_invited_at ?? null)}`
+                            : 'No invite sent yet'}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                        onClick={() => setInterviewDialogOpen(true)}
+                      >
+                        <CalendarCheck className="h-3.5 w-3.5" />
+                        {applications.some((a) => a.interview_invited_at) ? 'Resend' : 'Send'}
                       </Button>
                     </div>
                   </div>
@@ -1336,15 +1185,26 @@ export default function ApplicantPersonPage() {
 
       {/* ── Dialogs ──────────────────────────────────────────────────── */}
       {hospitalPage && firstApp && (
-        <InterviewInviteDialog
-          open={interviewDialogOpen}
-          onOpenChange={setInterviewDialogOpen}
-          hospitalPageId={hospitalPage.id}
-          hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
-          bookingUrl={hospitalPage.interview_booking_url || ''}
-          selectedApplicationIds={applications.map((a) => a.id)}
-          applications={applications.map(asStudentApp)}
-        />
+        <>
+          <RichEmailDialog
+            open={emailDialogOpen}
+            onOpenChange={setEmailDialogOpen}
+            hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.opportunity?.name || hospitalPage.name || 'ClinicalHours'}
+            senderEmail={hospitalPage.gmail_email}
+            selectedApplicationIds={applications.map((a) => a.id)}
+            applications={applications.map(asStudentApp)}
+          />
+          <InterviewInviteDialog
+            open={interviewDialogOpen}
+            onOpenChange={setInterviewDialogOpen}
+            hospitalPageId={hospitalPage.id}
+            hospitalName={hospitalPage.opportunity?.name || hospitalPage.name || 'ClinicalHours'}
+            bookingUrl={hospitalPage.interview_booking_url || ''}
+            selectedApplicationIds={applications.map((a) => a.id)}
+            applications={applications.map(asStudentApp)}
+          />
+        </>
       )}
     </div>
   );
