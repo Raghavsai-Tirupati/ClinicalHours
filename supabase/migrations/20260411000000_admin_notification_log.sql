@@ -23,10 +23,8 @@ CREATE POLICY "Platform admins can read notification log"
     )
   );
 
--- Service role inserts (edge functions use service role key)
-CREATE POLICY "Service role can insert notification log"
-  ON admin_notification_log FOR INSERT
-  WITH CHECK (true);
+-- No INSERT policy needed: edge functions use the service role key which bypasses RLS.
+-- Leaving INSERT blocked for all non-service-role callers intentionally.
 
 CREATE INDEX idx_admin_notification_log_sent_at ON admin_notification_log(sent_at DESC);
 CREATE INDEX idx_admin_notification_log_hospital_page_id ON admin_notification_log(hospital_page_id);
