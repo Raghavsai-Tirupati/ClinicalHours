@@ -161,7 +161,7 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground ml-auto">
-          {filtered.length} {filtered.length === 1 ? 'person' : 'people'}
+          {filtered.length} {filtered.length === 1 ? 'application' : 'applications'}
         </p>
       </div>
 
@@ -238,7 +238,7 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
               filtered.map((app) => {
                 const name = getApplicantName(app);
                 const email = app.applicant_email || app.student_profile?.email || '';
-                const href = `${basePath}/people/${app.student_id}`;
+                const href = app.student_id ? `${basePath}/people/${app.student_id}` : null;
                 return (
                   <TableRow key={app.id} className="cursor-pointer">
                     <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
@@ -249,57 +249,76 @@ export default function PeopleTab({ clinicId: _clinicId }: PeopleTabProps) {
                       />
                     </TableCell>
                     <TableCell>
-                      <Link to={href} className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8 shrink-0">
-                          {app.student_profile?.avatar_url && (
-                            <AvatarImage src={app.student_profile.avatar_url} alt={name} />
-                          )}
-                          <AvatarFallback
-                            className={`text-xs font-semibold text-white ${emailToColor(email || name)}`}
-                          >
-                            {getInitials(name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="font-medium hover:underline">{name}</div>
-                          {email && (
-                            <div className="text-xs text-muted-foreground break-all">
-                              {email}
-                            </div>
-                          )}
+                      {href ? (
+                        <Link to={href} className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8 shrink-0">
+                            {app.student_profile?.avatar_url && (
+                              <AvatarImage src={app.student_profile.avatar_url} alt={name} />
+                            )}
+                            <AvatarFallback
+                              className={`text-xs font-semibold text-white ${emailToColor(email || name)}`}
+                            >
+                              {getInitials(name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="font-medium hover:underline">{name}</div>
+                            {email && (
+                              <div className="text-xs text-muted-foreground break-all">{email}</div>
+                            )}
+                          </div>
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8 shrink-0">
+                            <AvatarFallback
+                              className={`text-xs font-semibold text-white ${emailToColor(email || name)}`}
+                            >
+                              {getInitials(name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="font-medium">{name}</div>
+                            {email && (
+                              <div className="text-xs text-muted-foreground break-all">{email}</div>
+                            )}
+                          </div>
                         </div>
-                      </Link>
+                      )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">
-                      <Link to={href} className="block">
-                        {app.position?.title || '—'}
-                      </Link>
+                      {href ? (
+                        <Link to={href} className="block">{app.position?.title || '—'}</Link>
+                      ) : (
+                        <span>{app.position?.title || '—'}</span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <Link to={href} className="block">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${STATUS_COLORS[app.status] || ''}`}
-                        >
+                      {href ? (
+                        <Link to={href} className="block">
+                          <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[app.status] || ''}`}>
+                            {APPLICATION_STATUS_LABELS[app.status] || app.status}
+                          </Badge>
+                        </Link>
+                      ) : (
+                        <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[app.status] || ''}`}>
                           {APPLICATION_STATUS_LABELS[app.status] || app.status}
                         </Badge>
-                      </Link>
+                      )}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                      <Link to={href} className="block">
-                        {app.submitted_at
-                          ? format(new Date(app.submitted_at), 'MMM d, yyyy')
-                          : '—'}
-                      </Link>
+                      {app.submitted_at ? format(new Date(app.submitted_at), 'MMM d, yyyy') : '—'}
                     </TableCell>
                     <TableCell>
-                      <Link
-                        to={href}
-                        className="text-muted-foreground hover:text-foreground"
-                        aria-label={`Open ${name}'s profile`}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </Link>
+                      {href && (
+                        <Link
+                          to={href}
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label={`Open ${name}'s profile`}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

@@ -136,6 +136,7 @@ export default function PositionApplyPage() {
   const [submitted, setSubmitted] = useState(false);
   const [hospitalName, setHospitalName] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [alreadyApplied, setAlreadyApplied] = useState(false);
 
   const askForAvailability = position?.ask_for_availability !== false;
   const steps = useMemo(
@@ -144,6 +145,20 @@ export default function PositionApplyPage() {
   );
   const currentStep = steps[stepIndex];
   const requirementItems = useMemo(() => parseRequirements(position?.requirements ?? null), [position?.requirements]);
+
+  // Check if user already applied to this position
+  useEffect(() => {
+    if (!user || !positionId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('student_applications')
+        .select('id')
+        .eq('position_id', positionId)
+        .eq('student_id', user.id)
+        .maybeSingle();
+      if (data) setAlreadyApplied(true);
+    })();
+  }, [user, positionId]);
 
   useEffect(() => {
     if (!user) return;
@@ -566,6 +581,24 @@ export default function PositionApplyPage() {
           <div className="pa-section-body">
             <Link to={`/auth?redirect=/apply/${positionId}`} className="pa-btn pa-btn-primary w-full justify-center">
               Sign in
+            </Link>
+          </div>
+        </div>
+      </div>,
+    );
+  }
+
+  if (alreadyApplied) {
+    return layout(
+      <div className="pa-page flex min-h-[60vh] flex-col items-center justify-center text-center">
+        <div className="pa-section-card w-full max-w-md">
+          <div className="pa-section-head">
+            <h2>Already applied</h2>
+            <p>You have already submitted an application for this position.</p>
+          </div>
+          <div className="pa-section-body">
+            <Link to="/" className="pa-btn pa-btn-primary w-full justify-center">
+              Back to home
             </Link>
           </div>
         </div>

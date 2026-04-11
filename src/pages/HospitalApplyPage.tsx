@@ -193,6 +193,21 @@ export default function HospitalApplyPage() {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="container mx-auto px-4 py-12 text-center max-w-md">
+          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Sign in required</h2>
+          <p className="text-muted-foreground mb-6">You need an account to apply to this opportunity.</p>
+          <Button onClick={() => navigate(`/auth?redirect=/apply/${slug}`)}>Sign in or create account</Button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   if (notFound) {
     return (
       <div className="min-h-screen bg-background">
