@@ -94,9 +94,41 @@ When refining the dashboard in Lovable, preserve the super-admin behavior: allow
 
 ---
 
+## Hospital notification log (apply migration + verify)
+
+A new feature was added: every time a student submits an application, the `submit-position-application` edge function emails the hospital admin via Resend **and** logs the attempt to a new `admin_notification_log` table. Site admins can view this log under **Admin → Hospitals → Notifications**.
+
+### What to do in Lovable
+
+1. **Run the migration** — apply `supabase/migrations/20260411000000_admin_notification_log.sql` via the Supabase dashboard (SQL editor) or `supabase db push`. This creates the `admin_notification_log` table with RLS.
+
+2. **Deploy the edge function** — `supabase/functions/submit-position-application/index.ts` now inserts a row into `admin_notification_log` after each Resend call. Redeploy via `supabase functions deploy submit-position-application`.
+
+3. **The UI is already wired** — `src/components/admin/AdminHospitalsTab.tsx` has a third "Notifications" tab (`HospitalNotificationsSection`) that queries and paginates `admin_notification_log`. No UI changes needed.
+
+4. **Verify** — After deploying, submit a test application. The Notifications tab should show a row with status `sent` (or `failed` if Resend is misconfigured).
+
+### Schema reference
+
+```sql
+admin_notification_log (
+  id            UUID PRIMARY KEY,
+  sent_at       TIMESTAMPTZ,
+  hospital_name TEXT,
+  hospital_page_id UUID,   -- FK → hospital_pages(id)
+  admin_email   TEXT,
+  applicant_name  TEXT,
+  applicant_email TEXT,
+  position_title  TEXT,
+  status        TEXT       -- 'sent' | 'failed'
+)
+```
+
+---
+
 ## Repo-specific note for developers
 
-After pulling this repository, apply pending Supabase migrations (including `20260323230000_student_interview_confirmed_legacy_page_admin_update.sql` and `20260323240000_super_admin_rls.sql`) so `student_applications.interview_confirmed_at`, legacy hospital-page admin update policy, and super-admin RLS exist in production.
+After pulling this repository, apply pending Supabase migrations (including `20260323230000_student_interview_confirmed_legacy_page_admin_update.sql`, `20260323240000_super_admin_rls.sql`, and `20260411000000_admin_notification_log.sql`) so `student_applications.interview_confirmed_at`, legacy hospital-page admin update policy, super-admin RLS, and the notification log table exist in production.
 
 ## Calendly webhook (optional)
 
