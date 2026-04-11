@@ -1,11 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { HospitalPageWithOpportunity } from '@/types/positions';
 
+function readCache<T>(key: string): T | null {
+  try { return JSON.parse(sessionStorage.getItem(key) ?? 'null') as T | null; } catch { return null; }
+}
+function writeCache<T>(key: string, value: T): void {
+  try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
 export function useHospitalPage(pageId: string | undefined) {
-  const [hospitalPage, setHospitalPage] = useState<HospitalPageWithOpportunity | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = pageId ? `ch:hp:${pageId}` : null;
+  const cached = cacheKey ? readCache<HospitalPageWithOpportunity>(cacheKey) : null;
+
+  const [hospitalPage, setHospitalPage] = useState<HospitalPageWithOpportunity | null>(cached);
+  // Only show loading spinner when there is genuinely no data to show yet
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
+  const hasDataRef = useRef(!!cached);
 
   const fetchPage = useCallback(async () => {
     if (!pageId) {
@@ -13,7 +25,8 @@ export function useHospitalPage(pageId: string | undefined) {
       return;
     }
 
-    setLoading(true);
+    // Only block the UI with a spinner when there is no data to show yet
+    if (!hasDataRef.current) setLoading(true);
     setError(null);
 
     try {
@@ -46,7 +59,7 @@ export function useHospitalPage(pageId: string | undefined) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const d = data as any;
         const opp = d.opportunities;
-        setHospitalPage({
+        const fresh: HospitalPageWithOpportunity = {
           id: data.id,
           hospital_id: data.hospital_id,
           admin_email: data.admin_email,
@@ -66,7 +79,10 @@ export function useHospitalPage(pageId: string | undefined) {
             logo_url: opp?.logo_url || null,
             description: opp?.description || null,
           },
-        });
+        };
+        if (cacheKey) writeCache(cacheKey, fresh);
+        hasDataRef.current = true;
+        setHospitalPage(fresh);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load hospital page');

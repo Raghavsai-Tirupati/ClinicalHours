@@ -1,6 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { StudentApplication, ApplicationStatus, HospitalPosition, QuestionType } from '@/types/positions';
+
+function readCache<T>(key: string): T | null {
+  try { return JSON.parse(sessionStorage.getItem(key) ?? 'null') as T | null; } catch { return null; }
+}
+function writeCache<T>(key: string, value: T): void {
+  try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 
@@ -19,17 +26,24 @@ const LEGACY_STATUS_MAP: Record<string, ApplicationStatus> = {
   rejected: 'rejected',
 };
 
+interface ApplicationsCache { applications: StudentApplication[]; positions: HospitalPosition[]; }
+
 export function useAllApplications(hospitalPageId: string | undefined) {
-  const [applications, setApplications] = useState<StudentApplication[]>([]);
-  const [positions, setPositions] = useState<HospitalPosition[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = hospitalPageId ? `ch:apps:${hospitalPageId}` : null;
+  const cachedData = cacheKey ? readCache<ApplicationsCache>(cacheKey) : null;
+
+  const [applications, setApplications] = useState<StudentApplication[]>(cachedData?.applications ?? []);
+  const [positions, setPositions] = useState<HospitalPosition[]>(cachedData?.positions ?? []);
+  const [loading, setLoading] = useState(!cachedData);
+  const hasDataRef = useRef(!!cachedData);
 
   const fetchAll = useCallback(async () => {
     if (!hospitalPageId) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    // Only show skeletons when there is no data to show yet
+    if (!hasDataRef.current) setLoading(true);
     try {
       // ── 1. New system: hospital_positions → student_applications ─────────────
       const { data: posData, error: posError } = await supabase
@@ -288,7 +302,10 @@ export function useAllApplications(hospitalPageId: string | undefined) {
       });
 
       // Combined: new system first (most recent), then legacy
-      setApplications([...newSystemApps, ...legacyApps]);
+      const combined = [...newSystemApps, ...legacyApps];
+      if (cacheKey) writeCache(cacheKey, { applications: combined, positions: allPositions });
+      hasDataRef.current = true;
+      setApplications(combined);
     } catch (err) {
       console.error('Failed to fetch all applications:', err);
       setApplications([]);
