@@ -146,17 +146,56 @@ export default function PositionApplyPage() {
   const currentStep = steps[stepIndex];
   const requirementItems = useMemo(() => parseRequirements(position?.requirements ?? null), [position?.requirements]);
 
-  // Check if user already applied to this position
+  // Check if user already applied (new system or legacy)
   useEffect(() => {
     if (!user || !positionId) return;
     (async () => {
-      const { data } = await supabase
+      // New system check
+      const { data: newApp } = await supabase
         .from('student_applications')
         .select('id')
         .eq('position_id', positionId)
         .eq('student_id', user.id)
         .maybeSingle();
-      if (data) setAlreadyApplied(true);
+      if (newApp) { setAlreadyApplied(true); return; }
+
+      // Legacy check: position → hospital_page → opportunity → hospital_account → hospital_applications
+      const { data: posRow } = await supabase
+        .from('hospital_positions')
+        .select('hospital_page_id')
+        .eq('id', positionId)
+        .maybeSingle();
+      if (!posRow?.hospital_page_id) return;
+
+      const { data: hpRow } = await supabase
+        .from('hospital_pages')
+        .select('hospital_id')
+        .eq('id', posRow.hospital_page_id)
+        .maybeSingle();
+      if (!hpRow?.hospital_id) return;
+
+      const { data: oppRow } = await supabase
+        .from('opportunities')
+        .select('hospital_id')
+        .eq('id', hpRow.hospital_id)
+        .maybeSingle();
+      if (!oppRow?.hospital_id) return;
+
+      const { data: acctRow } = await supabase
+        .from('hospital_accounts')
+        .select('id')
+        .eq('hospital_id', oppRow.hospital_id)
+        .maybeSingle();
+      if (!acctRow?.id) return;
+
+      const { data: legacyApp } = await supabase
+        .from('hospital_applications')
+        .select('id')
+        .eq('account_id', acctRow.id)
+        .eq('opportunity_id', hpRow.hospital_id)
+        .eq('student_id', user.id)
+        .maybeSingle();
+      if (legacyApp) setAlreadyApplied(true);
     })();
   }, [user, positionId]);
 

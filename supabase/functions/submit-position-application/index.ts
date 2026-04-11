@@ -78,6 +78,65 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Block duplicate new-system application
+    const { data: existingNewApp } = await supabaseAdmin
+      .from("student_applications")
+      .select("id")
+      .eq("position_id", position_id)
+      .eq("student_id", auth.user.id)
+      .maybeSingle();
+    if (existingNewApp) {
+      return new Response(JSON.stringify({ error: "You have already applied to this position." }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Block cross-system duplicate: check legacy hospital_applications for same opportunity
+    {
+      const { data: pageRow } = await supabaseAdmin
+        .from("hospital_positions")
+        .select("hospital_page_id")
+        .eq("id", position_id)
+        .maybeSingle();
+      if (pageRow?.hospital_page_id) {
+        const { data: hpRow } = await supabaseAdmin
+          .from("hospital_pages")
+          .select("hospital_id")
+          .eq("id", pageRow.hospital_page_id)
+          .maybeSingle();
+        if (hpRow?.hospital_id) {
+          const { data: oppRow } = await supabaseAdmin
+            .from("opportunities")
+            .select("hospital_id")
+            .eq("id", hpRow.hospital_id)
+            .maybeSingle();
+          if (oppRow?.hospital_id) {
+            const { data: acctRow } = await supabaseAdmin
+              .from("hospital_accounts")
+              .select("id")
+              .eq("hospital_id", oppRow.hospital_id)
+              .maybeSingle();
+            if (acctRow?.id) {
+              const { data: legacyApp } = await supabaseAdmin
+                .from("hospital_applications")
+                .select("id")
+                .eq("account_id", acctRow.id)
+                .eq("opportunity_id", hpRow.hospital_id)
+                .eq("student_id", auth.user.id)
+                .maybeSingle();
+              if (legacyApp) {
+                return new Response(JSON.stringify({ error: "You have already applied to this opportunity." }), {
+                  status: 409,
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Check spots available
     if (position.spots_available != null) {
       const { count } = await supabaseAdmin
