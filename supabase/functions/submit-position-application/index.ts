@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
             <p style="color:#9ca3af;font-size:12px;">The ClinicalHours Team</p>
           </div>`;
 
-        await fetch("https://api.resend.com/emails", {
+        const emailRes = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${RESEND_API_KEY}`,
@@ -227,6 +227,17 @@ Deno.serve(async (req) => {
             subject: `New application received — ${safePositionTitle}`,
             html,
           }),
+        });
+
+        const logStatus = emailRes.ok ? "sent" : "failed";
+        await supabaseAdmin.from("admin_notification_log").insert({
+          hospital_name: (hospitalPage.opportunity as any)?.name ?? "Unknown Hospital",
+          hospital_page_id: positionDetail.hospital_page_id,
+          admin_email: hospitalPage.admin_email,
+          applicant_name: applicantName,
+          applicant_email: applicantEmail,
+          position_title: positionDetail.title,
+          status: logStatus,
         });
       } catch (e) {
         console.warn("[notify-admin] failed silently:", e);

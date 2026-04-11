@@ -39,6 +39,7 @@ import {
   Pause,
   Play,
   Archive,
+  Bell,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -108,6 +109,7 @@ export default function AdminHospitalsTab() {
       <TabsList>
         <TabsTrigger value="pages">Hospital Pages</TabsTrigger>
         <TabsTrigger value="accounts">Hospital Accounts</TabsTrigger>
+        <TabsTrigger value="notifications">Notifications</TabsTrigger>
       </TabsList>
       <TabsContent value="pages">
         <HospitalPagesSection />
@@ -115,7 +117,135 @@ export default function AdminHospitalsTab() {
       <TabsContent value="accounts">
         <HospitalAccountsSection />
       </TabsContent>
+      <TabsContent value="notifications">
+        <HospitalNotificationsSection />
+      </TabsContent>
     </Tabs>
+  );
+}
+
+// ── Hospital Notifications Log ──────────────────────────────
+
+interface NotificationLogRow {
+  id: string;
+  sent_at: string;
+  hospital_name: string;
+  hospital_page_id: string | null;
+  admin_email: string;
+  applicant_name: string | null;
+  applicant_email: string | null;
+  position_title: string | null;
+  status: string;
+}
+
+function HospitalNotificationsSection() {
+  const [rows, setRows] = useState<NotificationLogRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE_NOTIF = 50;
+
+  async function fetchLogs(p = page) {
+    setLoading(true);
+    const from = p * PAGE_SIZE_NOTIF;
+    const to = from + PAGE_SIZE_NOTIF - 1;
+    const { data, count, error } = await supabase
+      .from('admin_notification_log')
+      .select('*', { count: 'exact' })
+      .order('sent_at', { ascending: false })
+      .range(from, to);
+    if (!error) {
+      setRows((data as NotificationLogRow[]) ?? []);
+      setTotal(count ?? 0);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { fetchLogs(0); }, []);
+
+  function handlePage(next: number) {
+    setPage(next);
+    fetchLogs(next);
+  }
+
+  const totalPages = Math.ceil(total / PAGE_SIZE_NOTIF);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Hospital Notification Log
+          </CardTitle>
+          <CardDescription>
+            Every email sent to a hospital admin when a new application is received.
+          </CardDescription>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => fetchLogs(page)} disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : rows.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8 text-sm">No notifications sent yet.</p>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Sent At</TableHead>
+                  <TableHead>Hospital</TableHead>
+                  <TableHead>Admin Email</TableHead>
+                  <TableHead>Applicant</TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map(row => (
+                  <TableRow key={row.id}>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {format(new Date(row.sent_at), 'MMM d, yyyy h:mm a')}
+                    </TableCell>
+                    <TableCell className="font-medium">{row.hospital_name}</TableCell>
+                    <TableCell className="text-sm">{row.admin_email}</TableCell>
+                    <TableCell className="text-sm">
+                      <div>{row.applicant_name ?? '—'}</div>
+                      {row.applicant_email && (
+                        <div className="text-xs text-muted-foreground">{row.applicant_email}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">{row.position_title ?? '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={row.status === 'sent' ? 'default' : 'destructive'}>
+                        {row.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                <span>{total} total</span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handlePage(page - 1)} disabled={page === 0}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="px-2 py-1">Page {page + 1} of {totalPages}</span>
+                  <Button variant="outline" size="sm" onClick={() => handlePage(page + 1)} disabled={page >= totalPages - 1}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
