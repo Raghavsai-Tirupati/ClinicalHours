@@ -1,205 +1,160 @@
-# Integrations
+# External Integrations
 
-## Databases
+**Analysis Date:** 2026-04-11
 
-**Supabase PostgreSQL (Primary)**
-- **Project ID:** sysbtcikrbrrgafffody
-- **Version:** PostgreSQL 13.0.5
-- **Access:** PostgREST API via @supabase/supabase-js client
-- **URL:** https://sysbtcikrbrrgafffody.supabase.co
+## APIs & External Services
 
-**Primary Tables:**
-- `profiles` - User profile information (id, email_verified, etc.)
-- `opportunities` - Medical opportunities (hospitals, clinics, hospices, EMT services)
-- `opportunities_with_ratings` - View with aggregated opportunity ratings
-- `applications` - Student applications to opportunities
-- `experience_entries` - Logged clinical hours and experiences
-- `hospital_accounts` - Hospital organization profiles (new)
-- `email_verification_tokens` - Email verification token tracking
-- `discussion_votes` - Community discussion voting (upvotes/downvotes)
-- `hospital_members` - Hospital staff members (new)
-- Additional tables for audit logs, feedback, reviews, etc.
+**Payment Processing:**
+- Stripe (v14 API version)
+  - SDK: `stripe@14` (Deno import from `https://esm.sh/stripe@14?target=deno`)
+  - Auth: Environment variable `STRIPE_SECRET_KEY`
+  - Webhook Secret: `STRIPE_WEBHOOK_SECRET`
+  - Price ID: `STRIPE_PRICE_ID`
+  - Functions: `supabase/functions/create-checkout-session/`, `supabase/functions/stripe-webhook/`, `supabase/functions/cancel-subscription/`
 
-**Database Features:**
-- Row-level security (RLS) policies for multi-tenant access control
-- Stored procedures (RPC functions) for complex queries:
-  - `get_opportunities_by_distance()` - Server-side distance filtering
-  - `count_opportunities()` - Pagination support
-  - `link_opportunity_to_hospital()` - Hospital-opportunity associations
-- Views for computed data (e.g., opportunities_with_ratings)
+**Email Services:**
+- Resend (email API)
+  - SDK: Resend HTTP API
+  - Auth: Environment variable `RESEND_API_KEY`
+  - Functions: `supabase/functions/send-contact-email/`, `supabase/functions/send-verification-email/`, `supabase/functions/send-password-reset/`, `supabase/functions/send-mass-email/`, `supabase/functions/send-hospital-applicant-email/`, `supabase/functions/send-clinic-bulk-email/`
 
-## Authentication
+**Maps & Geolocation:**
+- Mapbox GL (v3.16.0)
+  - SDK: `mapbox-gl@3.16.0` (npm)
+  - Client: `src/components/HomeGlobe.tsx`, `src/components/ImmersiveMap.tsx`
+  - Auth: Public token `VITE_MAPBOX_PUBLIC_TOKEN` (publishable key, safe to include)
+  - Features: Interactive maps, tile layers, distance-based sorting
+  - Dependencies: Nominatim (OpenStreetMap) for reverse geocoding in queries
 
-**Supabase Auth**
-- **Type:** JWT-based authentication with session management
-- **Methods:** Email/password, magic links, OAuth (configured but details not shown)
-- **Session Storage:** Dynamic adapter (localStorage when "remember me" enabled, sessionStorage otherwise)
-- **Token Persistence:** Auto-refresh enabled, session detection from URL
-- **Security Features:**
-  - httpOnly cookies for token storage (via auth-cookie edge function)
-  - CSRF token injection for state-changing requests
-  - Session timeout: 30 minutes of inactivity
-  - Rate limiting: 3 verification emails per user per hour
-  - Origin validation on all edge function calls
+**OAuth & Social Auth:**
+- Google OAuth
+  - Functions: `supabase/functions/gmail-oauth-initiate/`, `supabase/functions/gmail-oauth-callback/`, `supabase/functions/gmail-disconnect/`
+  - Features: Gmail account linking for bulk email capabilities
+  - Scope: Read/send email via Gmail API
 
-**Authentication Edge Functions:**
-- `auth-cookie` - Exchange JWT for httpOnly session cookie
-- `csrf-token` - Generate and return CSRF tokens
-- `restore-session` - Restore user session from httpOnly cookie
-- `logout` - Clear session cookies and log out
-- `send-verification-email` - Send email verification link (Resend API)
-- `verify-email` - Verify email tokens and update profile status
-- `send-password-reset` - Send password reset link (Resend API)
-- `reset-password` - Process password reset with token validation
+## Data Storage
 
-**User Types:**
-- Authenticated students/healthcare professionals
-- Hospital account administrators
-- Platform administrators (super users)
-- Guest users (browse opportunities without login)
+**Databases:**
+- PostgreSQL (via Supabase)
+  - Connection: `SUPABASE_URL` environment variable
+  - Client: `@supabase/supabase-js@2.89.0`
+  - Location: Supabase project `sysbtcikrbrrgafffody`
+  - ORM: Supabase JS client (direct SQL queries + RPC functions)
+  - Tables include: opportunities, hospital_page_positions, applications, users, hospital_pages, profiles, and more
 
-## External APIs
+**File Storage:**
+- Supabase Storage (bucket-based)
+  - Used for: Hospital logos, hospital images, documents
+  - Accessed via: Supabase JS client file APIs
+  - Project ID: `sysbtcikrbrrgafffody`
 
-**Resend (Email Service)**
-- **API Key:** RESEND_API_KEY (environment variable)
-- **Purpose:** Transactional emails
-- **Use Cases:**
-  - Email verification during signup
-  - Password reset emails
-  - Contact form notifications
-  - Application status notifications
-  - Mass email campaigns (admin tool)
-  - Hospital approval/rejection notifications
-  - Appointment reminders
+**Caching:**
+- React Query (`@tanstack/react-query@5.90.16`)
+  - Client-side cache for API responses
+  - Invalidation patterns in place for mutations
 
-**Mapbox (Maps & Geolocation)**
-- **Public Token:** [REDACTED — stored in VITE_MAPBOX_PUBLIC_TOKEN env var]
-- **Environment Variable:** VITE_MAPBOX_PUBLIC_TOKEN
-- **Features:**
-  - Interactive map visualization of healthcare opportunities
-  - Marker clustering by opportunity type
-  - Popup details on marker click
-  - Circle radius filtering (1, 5, 10, 25, 50, 100, 200 miles)
-  - Custom pin placement (user can pin custom location)
-  - User geolocation via navigator.geolocation API
-  - Distance-based sorting of opportunities
-- **API Endpoints:**
-  - Map tiles: https://*.tiles.mapbox.com
-  - API: https://api.mapbox.com
-  - Events: https://events.mapbox.com
+## Authentication & Identity
 
-**OpenStreetMap Nominatim (Geocoding)**
-- **Purpose:** City search and reverse geocoding
-- **Rate Limit:** 1 request per second
-- **API Endpoint:** https://nominatim.openstreetmap.org
-- **Use Cases:**
-  - City autocomplete in location search
-  - Address to coordinates conversion
-  - Coordinates to address conversion
-- **Features:** Address details parsing (city, state, country)
+**Auth Provider:**
+- Supabase Auth
+  - Implementation: JWT-based authentication
+  - Storage: Dynamic adapter using `localStorage` (if "remember me") or `sessionStorage`
+  - Flow: Email/password, OAuth (Google), magic links
+  - Session Management: `supabase/functions/auth-cookie/`, `supabase/functions/restore-session/`, `supabase/functions/logout/`
+  - CSRF Protection: Custom CSRF token handling in `src/lib/csrf.ts`
+  - Client: `src/integrations/supabase/client.ts`
 
-## File Storage / CDN
+## Monitoring & Observability
 
-**Supabase Storage**
-- Integrated with PostgreSQL backend
-- Resume file uploads for applications (resume_url in applications table)
-- No explicit CDN configured in code; uses Supabase's built-in file serving
-- CSP allows image loading from: data:, blob:, Supabase domain (*.supabase.co)
+**Error Tracking:**
+- Not detected - no Sentry, Rollbar, or similar integration
 
-**Storage Providers in CSP:**
-- Google Cloud Storage (https://storage.googleapis.com) - Lovable Cloud assets
-- Cloudflare R2 (https://*.r2.dev) - Additional CDN support
-- Mapbox tiles: https://*.tiles.mapbox.com
+**Logs:**
+- Console logging via custom logger (`src/lib/logger.ts`)
+- Supabase Edge Functions emit logs visible in Supabase dashboard
 
-## Email / Notifications
+**Analytics:**
+- Track event function: `supabase/functions/track/`
+- Page view tracking: `src/components/PageViewTracker.tsx`
+- Guest session tracking: Admin dashboard includes guest session stats
 
-**Email Service (Resend)**
-- Fully integrated via Supabase Edge Functions
-- Email sending functions:
-  - `send-verification-email` - User signup email verification
-  - `send-password-reset` - Password recovery emails
-  - `send-contact-email` - Contact form notifications to admin
-  - `send-mass-email` - Bulk email campaigns for administrators
-  - `send-reminders` - Automated reminder emails (scheduled via cron)
-  - `notify-application-status` - Application decision notifications
+## CI/CD & Deployment
 
-**Toast Notifications (Client-side)**
-- **Library:** Sonner 1.7.4
-- **Purpose:** In-app user feedback messages
-- **Types:** Success, error, info, warning states
+**Hosting:**
+- Vercel (frontend)
+  - Configuration: `vercel.json` with CSP headers, rewrite rules, Permissions Policy
+  - Security headers enforced at edge
 
-**Analytics & Tracking**
-- **Service:** Custom tracking edge function
-- **Event Types:** page_view, button_click, guest_conversion, signup, login
-- **Storage:** Custom tracking events table in Supabase
-- **Rate Limiting:** 60 events per minute per session
-- **Client Tracking Library:** Custom `tracking.ts` utility
-- **Session Tracking:** UUID-based session IDs (localStorage: clinicalhours_tracking_session_id)
-- **Data Collected:**
-  - Session ID, event type, page URL, referrer URL
-  - User agent, screen dimensions, timezone
-  - User ID (if authenticated), custom metadata
-  - Device/browser information
-- **Disabled by Default:** In development unless VITE_ENABLE_TRACKING=true
-- **Edge Function:** `track` endpoint at /functions/v1/track
+**CI Pipeline:**
+- Not explicitly configured in repository
+- Build command: `vite build`
+- Preview command: `vite preview`
 
-## Other Services
+**Backend Deployment:**
+- Supabase Edge Functions (Deno runtime)
+- Deployment via Supabase CLI
+- Function configuration in `supabase/config.toml`
 
-**Hospital Account Management**
-- Hospital onboarding and signup via `hospital-signup` edge function
-- Hospital profile management (new integration)
-- Hospital staff member management (new integration)
-- Hospital approval workflow by administrators:
-  - `hospital-review` edge function for approval/rejection
-  - Admin notifications on status changes
-  - Notes and reason tracking for rejections
+## Environment Configuration
 
-**Data Import Tools (Administrative)**
-- CSV hospital import via `import-csv-hospitals` edge function
-- Texas hospital data import via `import-texas-hospitals` edge function
-- Bulk opportunity-to-hospital linking via RPC function
-- Duplicate hospital record removal via `remove-duplicates` edge function
-- Coordinate fixing for map accuracy via `fix-coordinates` edge function
-- Missing state/location data population via `fix-missing-states` edge function
+**Required Frontend Environment Variables:**
+- `VITE_SUPABASE_URL` - Supabase project URL
+- `VITE_SUPABASE_PUBLISHABLE_KEY` - Supabase public anon key
+- `VITE_MAPBOX_PUBLIC_TOKEN` - Mapbox public token
 
-**Content Search & Discovery**
-- City search with Nominatim (autocomplete)
-- Opportunity full-text search (name, location via ilike patterns)
-- Search filtering by opportunity type (hospital, clinic, hospice, emt)
-- Pagination support (limit, offset parameters)
+**Required Backend Environment Variables (Supabase Edge Functions):**
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` - Service role key for admin operations
+- `STRIPE_SECRET_KEY` - Stripe secret API key
+- `STRIPE_WEBHOOK_SECRET` - Webhook signature secret
+- `STRIPE_PRICE_ID` - Stripe subscription price ID
+- `RESEND_API_KEY` - Resend email API key
+- `GOOGLE_OAUTH_CLIENT_ID` - Google OAuth client ID
+- `GOOGLE_OAUTH_CLIENT_SECRET` - Google OAuth client secret
 
-**Security & Validation**
-- **Origin Validation:** All edge functions validate request origin
-- **Rate Limiting:** Per-user and per-session rate limiting
-- **Input Sanitization:** Search term and query parameter validation
-- **CSRF Protection:** Token validation on state-changing requests
-- **JWT Validation:** Optional JWT verification on edge functions (configurable per function)
+**Secrets Location:**
+- Environment variables stored in Vercel project settings (for frontend)
+- Supabase project secrets stored in Supabase dashboard
 
-**Admin Tools**
-- `admin-get-users` - Retrieve paginated user list
-- `admin-get-user-profile` - Fetch detailed user profile and statistics
-- Guest session statistics tracking
-- Hospital management dashboard
-- Pending approval review interface
-- Tools for email campaigns and system management
+## Webhooks & Callbacks
 
-**Database Scripts & Migrations**
-- Supabase migrations directory for schema versioning
-- TypeScript data import scripts:
-  - importHospitals.ts - Hospital CSV import
-  - import-texas-hospitals.ts - Texas-specific hospital data
-  - remove-duplicates.ts - Data quality cleanup
-  - fix-map-coordinates.ts - Coordinate accuracy
-  - discoverFields.ts - CSV field mapping discovery
-- Seed data script: seed_hospital.sql
+**Incoming:**
+- Stripe Webhook: `supabase/functions/stripe-webhook/`
+  - Endpoint: `{SUPABASE_URL}/functions/v1/stripe-webhook`
+  - Events: `checkout.session.completed`, `customer.subscription.deleted`
+  - Signature verification required
 
-**Audit & Logging**
-- Custom audit logger utility (`auditLogger.ts`)
-- Authentication event logging (signup, login, logout)
-- Admin action tracking
-- Data modification audit trails (in database)
+- Calendly Webhook: `supabase/functions/calendly-webhook/`
+  - Endpoint: `{SUPABASE_URL}/functions/v1/calendly-webhook`
+  - Purpose: Interview scheduling integration
 
-**Monitoring & Health**
-- Platform health statistics (users, opportunities, applications)
-- Guest session monitoring
-- Application status tracking by type and stage
+- Gmail OAuth Callback: `supabase/functions/gmail-oauth-callback/`
+  - Endpoint: `{SUPABASE_URL}/functions/v1/gmail-oauth-callback`
+  - Purpose: OAuth token exchange for Gmail integration
+
+**Outgoing:**
+- Email notifications via Resend
+- Stripe webhook callbacks for subscription status
+- Google OAuth redirects to Gmail callback handler
+
+## API Integration Patterns
+
+**Client-Side:**
+- Supabase JS client for direct database access
+  - Path: `src/integrations/supabase/client.ts`
+  - Custom fetch wrapper with CSRF token handling
+  - Automatic JWT injection in Authorization header
+
+**Edge Function Pattern:**
+- Deno TypeScript functions
+- CORS handling via `validateOrigin()` and `getCorsHeaders()` from `supabase/functions/_shared/auth.ts`
+- Service role authentication for admin operations
+- Rate limiting on public endpoints (e.g., contact form limited to 3 requests/minute)
+
+**RPC Calls:**
+- Supabase RPC for complex queries (e.g., `fetch_opportunities_with_distance`)
+- Located in database functions, called via `supabase.rpc()`
+
+---
+
+*Integration audit: 2026-04-11*

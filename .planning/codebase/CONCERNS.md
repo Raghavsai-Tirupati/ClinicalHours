@@ -1,356 +1,231 @@
-# Concerns
+# Codebase Concerns
 
-## Technical Debt
+**Analysis Date:** 2026-04-11
 
-### 1. Type Safety Issues (Low Priority)
-- Multiple `any` type casts throughout codebase:
-  - `OpportunityMap.tsx:509` - `catch (err: any)`
-  - `AuthTest.tsx` - Multiple `catch (error: any)` blocks (6+ instances)
-  - `hooks/useHospitalMember.ts` - Data casting with `as any` (lines 65-67)
-  - `lib/opportunityPrefetch.ts` - Window object pollution with `(window as any)`
-  - `lib/GlobeTransitionManager.ts` - Window object pollution for transition tracking
-  - `pages/Dashboard.tsx:375` - Row data casting `(row as any).opportunities`
+## Tech Debt
 
-**Impact**: Reduced type safety, harder to catch runtime errors during development. These should be typed properly.
+**Type Safety - Extensive Use of `any` Type:**
+- Issue: 68+ instances of `as any` or `: any` type assertions bypass TypeScript safety
+- Files: Scattered across `src/components/`, `src/hooks/`, `src/lib/`
+- Impact: Runtime errors not caught at compile time; refactoring becomes dangerous; team loses type safety benefits
+- Fix approach: Systematically replace `any` with proper types. Start with frequently-changed files like `src/components/admin/` (1156 lines) and `src/services/`. Use type inference or explicit interfaces from `src/types/`.
 
-### 2. Window Object Pollution (Medium Priority)
-- Global state stored directly on `window` object:
-  - `lib/opportunityPrefetch.ts` - Prefetch cache using `(window as any)[CACHE_KEY]`
-  - `lib/GlobeTransitionManager.ts` - Transition flag using `(window as any).__globeTransition`
-  - `pages/MapView.tsx:10` - Reading from `(window as any).__globeTransition`
+**Logging Disabled in Production:**
+- Issue: Error logger only outputs in development mode via console; production errors are silent
+- Files: `src/lib/logger.ts` (lines 6-13), referenced from `src/services/opportunities.ts` and throughout codebase
+- Impact: Production bugs go undetected; no observability into user-facing errors; customers can't report issues with context
+- Fix approach: Integrate error tracking service (e.g., Sentry). Uncomment and configure the Sentry capture blocks already in place but commented out.
 
-**Impact**: Potential naming collisions, not isolated, breaks encapsulation. Consider using a proper state management system or context.
+**No Centralized Error Handling:**
+- Issue: Error handling spread across components with inconsistent patterns. Some components use `.catch(() => {})` silently, others throw
+- Files: `src/App.tsx` (chunk reload retry), `src/hooks/useAuth.tsx` (multiple catch blocks with swallow-on-error), `src/components/DashboardVideoCarousel.tsx`, `src/components/HeroVideoCarousel.tsx`
+- Impact: Errors hidden from user and developers; difficult to debug issues; poor user experience
+- Fix approach: Create standardized error handling utilities in `src/lib/errorUtils.ts`. Use error boundaries consistently.
 
-### 3. Empty Catch Blocks (Medium Priority)
-- Numerous empty catch blocks that silently ignore errors:
-  - `src/integrations/supabase/client.ts` - Multiple catch blocks (lines 25, 43, 61)
-  - `src/hooks/useAuth.tsx` - Multiple catch blocks (lines 40, 56, 190, etc.)
-  - `src/lib/opportunityPrefetch.ts:50` - Silent failure on prefetch
-  - `src/lib/inputValidation.ts` - Silent catch blocks
+**Unverified Type Coercions:**
+- Issue: Several files use untyped data mapping where shape isn't guaranteed to match expectations
+- Files: `src/components/admin/AdminUserProfile.tsx` (line 237: `(data as any).logo_url`)
+- Impact: If database schema changes, silent data loss occurs
+- Fix approach: Use Zod or similar validation library to parse API responses before mapping
 
-**Impact**: Hard to debug, errors swallowed, makes troubleshooting production issues difficult.
+## Known Bugs
 
-### 4. Console Logging Left in Production Code (Low Priority)
-- Multiple debug console.log statements present:
-  - `src/integrations/supabase/client.ts:113` - CSRF token logging
-  - `src/hooks/useAuth.tsx:154, 228, 232, 273` - Auth flow logging
-  - `src/lib/csrf.ts:17, 23, 26, 28` - CSRF token operations
-  - `src/lib/auditLogger.ts:62` - Audit event logging
-  - `src/lib/tracking.ts` - Tracking event logging
+**CSRF Token State Management:**
+- Symptoms: In-memory CSRF token (`csrfToken` variable at module scope in `src/hooks/useAuth.tsx` line 12) can desync from server; retry logic in `src/lib/api/interceptor.ts` tries to recover but may fail if token rotated
+- Files: `src/hooks/useAuth.tsx` (line 12: `let csrfToken`), `src/lib/api/interceptor.ts` (lines 63-76, 117-126)
+- Trigger: Token refresh happens on auth state change, but if multiple simultaneous requests occur or token expires between check and use, requests fail
+- Workaround: Requests retry once automatically; users may need to refresh page if repeated 403 errors occur
 
-**Impact**: Potential information disclosure in browser console, can be seen by users, increases noise in production environments.
+**Session Timeout Checker Has Race Condition:**
+- Symptoms: Session timeout check runs every 60 seconds but uses closure-captured state that may be stale
+- Files: `src/hooks/useAuth.tsx` (lines 224-229: interval check calls `checkSessionTimeout()` which reads from `lastActivityRef` but state could have changed)
+- Trigger: Rapid user activity followed by 60-second inactivity window; timeout may fire even if user was just active
+- Workaround: Activity timer reset prevents most timeout issues; mainly affects edge case of exactly 30 min inactivity with async check
 
----
+**Promise.all() Missing Error Handling:**
+- Symptoms: Multiple Promise.all() calls don't handle partial failures gracefully
+- Files: `src/components/admin/AdminActivityTab.tsx`, `src/components/admin/AdminHospitalsTab.tsx`, `src/components/admin/AdminOverviewTab.tsx`, `src/components/admin/AdminPremiumTab.tsx`
+- Trigger: If one of N parallel API calls fails, entire Promise.all() rejects and component may not display partial data
+- Workaround: None; users see loading spinner indefinitely or error screen
 
-## Security Issues
+**Unmanaged Event Listeners in useAuth:**
+- Symptoms: Activity event listeners added in `src/hooks/useAuth.tsx` (line 221) registered in capture phase but cleanup may not fire if component unmounts unexpectedly
+- Files: `src/hooks/useAuth.tsx` (lines 219-222, cleanup at 418-420)
+- Trigger: Browser tab closed, hard refresh, or component error before cleanup runs
+- Impact: Listeners remain attached, consuming memory and potentially firing stale callbacks
 
-### 1. Weak SSL Certificate Validation (Medium Priority)
-**File**: `lib/db.ts:25`
-```javascript
-...(isRemote ? { ssl: { rejectUnauthorized: false } } : {})
-```
-- Disables SSL certificate validation for remote Supabase connections
-- Vulnerable to Man-in-the-Middle (MITM) attacks
-- Should use proper certificate validation or trusted CA bundle
+## Security Considerations
 
-**Recommendation**: Enable proper SSL validation or document why this was necessary.
+**CSRF Protection Incomplete:**
+- Risk: CSRF token stored in memory (`csrfToken` variable); can be lost on page refresh; retry logic depends on token being available
+- Files: `src/hooks/useAuth.tsx` (line 12), `src/lib/api/interceptor.ts`
+- Current mitigation: httpOnly cookies prevent XSS access to session tokens; token rotated on each auth state change
+- Recommendations: (1) Consider using only httpOnly cookies without in-memory token copy. (2) Add CSRF token endpoint cache-busting. (3) Implement SameSite cookie policy verification.
 
-### 2. CSRF Token Management (Medium Priority)
-- CSRF token stored in memory via module-level variable in `src/hooks/useAuth.tsx:11`
-- Potential race conditions in concurrent requests
-- Token refresh logic complex with multiple fallback paths (`src/hooks/useAuth.tsx:282-334`)
-- No clear invalidation strategy on error scenarios
+**localStorage Access Without Try-Catch in Certain Paths:**
+- Risk: Private browsing mode or quota exceeded can cause localStorage access to throw; some code doesn't guard all access
+- Files: `src/hooks/useAuth.tsx` has guards (lines 38-42, 50-57, 65-68, etc.) but other components may not
+- Current mitigation: useAuth functions wrap localStorage access in try-catch
+- Recommendations: Audit all localStorage usage across codebase; consider utility wrapper that handles quota errors gracefully
 
-**Risk**: Concurrent request handling, potential token stale/refresh issues.
+**Dependency Injection of CSRF Token:**
+- Risk: CSRF token obtained via dynamic import `src/lib/csrf` in multiple places
+- Files: `src/hooks/useAuth.tsx` (lines 312, 325, 341), which may be called at different times
+- Current mitigation: getCSRFToken() endpoint provides fresh tokens
+- Recommendations: Consider pre-loading CSRF token on app init rather than lazy-loading
 
-### 3. Session Timeout Incomplete (Medium Priority)
-**File**: `src/hooks/useAuth.tsx:178-193`
-- Session timeout implementation checks but doesn't validate session state properly
-- Inactivity detection relies on event listeners that may not fire reliably
-- Only checks every 60 seconds (could be bypassed with tab background)
+**Type Safety in Auth State:**
+- Risk: `user` and `session` can be null; components may not properly handle null cases
+- Files: Scattered across components that use `useAuth()` hook
+- Current mitigation: Components using useAuth typically check `if (user)` before rendering
+- Recommendations: Create typed wrapper hooks that guarantee non-null state (e.g., `useAuthRequired()` throws if user is null)
 
-**Recommendation**: Consider more robust session validation, especially for sensitive operations.
+## Performance Bottlenecks
 
-### 4. Guest Mode Session Tracking (Low Priority)
-**File**: `src/hooks/useAuth.tsx:131-158`
-- Guest session UUIDs generated client-side without cryptographic randomness
-- Uses `Math.random()` which is not cryptographically secure
-```javascript
-const r = Math.random() * 16 | 0;
-```
-- Guest sessions logged to database without rate limiting
+**Large Components with No Code Splitting:**
+- Problem: `AdminUserProfile.tsx` (1156 lines), `AdminActivityTab.tsx` (1047 lines), `GuestSessionsTab.tsx` (989 lines) are bundled as single chunks
+- Files: `src/components/admin/AdminUserProfile.tsx`, `src/components/admin/AdminActivityTab.tsx`, `src/components/admin/GuestSessionsTab.tsx`
+- Cause: These are imported via `lazyRetry()` in `src/App.tsx` but contain massive inline templates and state
+- Improvement path: Break into sub-components; extract large lists/tables into separate files; use virtualization for long lists (AdminUserProfile renders many tabs)
 
-**Recommendation**: Use `crypto.getRandomValues()` for cryptographically secure UUIDs.
+**Multiple Promise.all() Queries Without Pagination:**
+- Problem: Admin dashboard tabs load all data at once via Promise.all()
+- Files: `src/components/admin/AdminActivityTab.tsx` (line), `src/components/admin/AdminHospitalsTab.tsx`, `src/components/admin/AdminOverviewTab.tsx`
+- Cause: No offset/limit parameters; fetches entire result set
+- Improvement path: Implement pagination or lazy-load-on-scroll for admin tables; add `limit` and `offset` query parameters
 
-### 5. CORS Credentials Handling (Medium Priority)
-**File**: `src/integrations/supabase/client.ts:94-96`
-- Conditional credentials mode for edge functions
-- Complex logic deciding when to include credentials
-- May fail silently if credentials needed but not included
+**No React Query Caching Strategy for Admin Queries:**
+- Problem: Admin dashboard makes new queries every time tab is visited even if data is recent
+- Files: `src/components/admin/` (all admin tabs), but `@tanstack/react-query` is installed but underutilized
+- Cause: Direct supabase queries instead of useQuery hooks with staleTime
+- Improvement path: Migrate admin queries to React Query with appropriate staleTime and cacheTime configs
 
-**Recommendation**: Simplify or add explicit error handling for credential mode mismatches.
-
-### 6. Password Reset Flow Not Fully Tested
-**File**: `src/pages/Auth.tsx`
-- Password reset invokes Supabase function without visible error handling
-- Rate limiting mentioned in error handling but not enforced client-side
-- No verification of reset token validity before submission
-
----
-
-## Performance Concerns
-
-### 1. Expensive Database Queries Without Pagination (Medium Priority)
-**File**: `src/components/OpportunityMap.tsx:97-116`
-- Prefetch operations load all 6,050+ opportunities from database
-- Pagination implemented with 1000-row batches but still loads entire dataset into memory
-- No query result caching besides simple TTL check
-
-**Recommendation**: Implement proper server-side caching, use viewport-based queries, or implement virtual scrolling.
-
-### 2. Opportunity Data Re-fetched Multiple Times (Medium Priority)
-**File**: `src/lib/opportunityPrefetch.ts` vs `src/components/OpportunityMap.tsx`
-- Opportunities prefetched globally, but also fetched again in map component
-- Map component has separate caching logic with distance filtering
-- Potential duplicate network requests if prefetch cache missed
-
-**Recommendation**: Unify data fetching and caching strategy.
-
-### 3. No Request Debouncing for Real-time Searches (Medium Priority)
-**File**: `src/components/AsyncSearchInput.tsx`, `src/components/CityAutocomplete.tsx`
-- Search inputs trigger database queries on input change
-- Uses `.then().catch()` pattern without explicit debouncing visible in component
-
-**Recommendation**: Add explicit debouncing/throttling for search inputs.
-
-### 4. Poll Interval Too Aggressive (Low Priority)
-**File**: `src/components/admin/AdminPendingApprovalsTab.tsx:70`
-- Polling set to 60 seconds with no backoff strategy
-- All admin tabs likely polling simultaneously if multiple open
-
-**Recommendation**: Increase poll interval to 5-10 minutes or implement exponential backoff.
-
-### 5. No Memoization on Expensive Computations (Medium Priority)
-- Many components with `useCallback` and `useMemo` (245 instances found)
-- GeoJSON conversion happens on every render: `src/components/OpportunityMap.tsx:36-60`
-- User activity timer reset happens on every event (mousedown, mousemove, keypress, scroll, touchstart, click)
-
-**Recommendation**: Ensure expensive operations are properly memoized.
-
----
+**Session Storage Access in Every Route Change:**
+- Problem: Activity tracker checks session timeout every 60 seconds; each check reads from ref and makes async call
+- Files: `src/hooks/useAuth.tsx` (line 225-229)
+- Cause: Interval runs regardless of activity; checks are synchronous but trigger async validation
+- Improvement path: Increase interval to 5+ minutes or switch to activity-triggered timeout checks
 
 ## Fragile Areas
 
-### 1. Authentication State Management (High Priority)
-**File**: `src/hooks/useAuth.tsx` (427 lines)
-- Complex multi-stage initialization with multiple flags (`initializingRef`, `exchangeInProgress`)
-- Race conditions possible with `isMounted` flag and async operations
-- Session restoration logic has 4 different code paths
-- Token exchange happens in multiple places (initialization, state change, cookie restore)
+**Auth State Initialization Sequence:**
+- Files: `src/hooks/useAuth.tsx` (lines 212-423)
+- Why fragile: Complex initialization with 4+ async operations (getSession, restoreFromCookie, setSession, exchangeTokenForCookie). Race conditions possible if user navigates away during init. `initializingRef` prevents double-init but does not handle rapid provider remounts.
+- Safe modification: Do not change the initialization order without thorough testing. Add integration tests for: (1) Cold start with valid cookie. (2) Cold start without cookie. (3) Session refresh mid-flight. (4) Rapid remounts.
+- Test coverage: Only one test file exists: `src/components/admin/__tests__/AdminUserProfile.utils.test.ts` (utility functions only). No tests for useAuth initialization sequence.
 
-**Recommendation**: Simplify to state machine pattern or use library like XState.
+**Hotel Session State Synchronization:**
+- Files: `src/hooks/useAuth.tsx` (sessionRef.current vs state, lines 182-185)
+- Why fragile: `sessionRef` used for closure capture; state-based `session` used for renders; they can desync if setSession doesn't fire reliably
+- Safe modification: Always use state, not refs, for data that affects renders. Use ref only for callbacks that need latest value without re-triggering effects.
+- Test coverage: No tests for ref/state synchronization
 
-### 2. Circular Dependencies (Medium Priority)
-- `src/lib/csrf.ts` imports from `src/hooks/useAuth.tsx`
-- `src/hooks/useAuth.tsx` imports from `src/lib/authCookie.ts`
-- `src/integrations/supabase/client.ts` dynamically imports csrf module to avoid circular dependency
+**Guest Session Tracking with localStorage:**
+- Files: `src/hooks/useAuth.tsx` (guest session ID generation and storage, lines 26-57)
+- Why fragile: localStorage may fail silently; UUID generation is not cryptographically secure (uses Math.random)
+- Safe modification: Add explicit error logging if localStorage write fails. Consider using a secure random generator.
+- Test coverage: No tests for guest session creation or fallback behavior
 
-**Recommendation**: Refactor authentication module structure to eliminate circular dependencies.
+**Promise.all() without SettledResult:**
+- Files: Multiple admin tabs (`AdminActivityTab.tsx`, `AdminHospitalsTab.tsx`, etc.)
+- Why fragile: If one promise in the array rejects, entire Promise.all() throws; component enters error state
+- Safe modification: Use `Promise.allSettled()` instead; check results before mapping
+- Test coverage: No error case tests for Promise.all() failures
 
-### 3. Storage Adapter Complexity (Medium Priority)
-**File**: `src/integrations/supabase/client.ts:32-75`
-- Dynamic storage adapter switches between localStorage and sessionStorage
-- Must check "remember me" preference on every getItem/setItem call
-- No error recovery if storage quota exceeded
+## Scaling Limits
 
-**Recommendation**: Simplify or make storage selection explicit during initialization.
+**No Pagination in Admin Queries:**
+- Current capacity: Loads all records into memory
+- Limit: If hospitals or applications table grows to 10k+ records, page becomes unresponsive
+- Scaling path: (1) Add limit/offset parameters to Supabase queries. (2) Implement infinite-scroll or cursor-based pagination. (3) Add filters to reduce result set.
 
-### 4. Missing Error Boundaries in Admin Components (Low Priority)
-- AdminDashboard and tabs lack explicit error boundaries
-- If any tab crashes, could crash entire admin dashboard
-- Many `.catch()` handlers just log to console
+**Session Timeout Check Interval:**
+- Current capacity: 60-second interval for checking session validity
+- Limit: If many users are logged in, backend must process validation for each user every minute
+- Scaling path: Move timeout check to server-side (validate token on each request), or increase interval to 5-10 minutes for lower-risk scenarios
 
-**Recommendation**: Add error boundaries and proper error UI for each admin tab.
+**localStorage for Guest Tracking:**
+- Current capacity: Guest session IDs stored in localStorage; no cleanup
+- Limit: localStorage quota is ~5-10MB per origin; if guests fill with many sessions, quota exceeded errors occur
+- Scaling path: Use server-side session tracking instead of localStorage; implement auto-cleanup for old sessions
 
-### 5. Hospital Approval Flow (Medium Priority)
-**File**: `src/components/admin/AdminPendingApprovalsTab.tsx`
-- Optimistic updates before confirmation (lines 137-142)
-- If approval fails, UI may show inconsistent state
-- No rollback mechanism if email notification fails
+## Dependencies at Risk
 
-**Recommendation**: Wait for confirmation before updating UI or implement proper rollback.
+**Supabase Auth Sessions Storage Location Unknown:**
+- Risk: useAuth assumes session stored in sessionStorage; not documented where Supabase stores sessions
+- Impact: If Supabase changes storage mechanism, restoration logic breaks
+- Migration plan: Add integration test that verifies session storage and restoration; document assumption in useAuth
 
----
+**Next-themes with forcedTheme Hardcoded:**
+- Risk: `src/App.tsx` line 254 uses `forcedTheme="dark"` which disables theme switching
+- Impact: Theme toggle UI may appear but have no effect; confuses users
+- Migration plan: Remove `forcedTheme` prop or add conditional based on user preference
 
-## Missing Features / Incomplete Work
+**React Router v6 Nested Routes Complexity:**
+- Risk: Hospital dashboard has two separate route definitions (lines 169-192 and 206-222 in `src/App.tsx`) that do the same thing
+- Impact: Code duplication; maintenance burden increases; bug fixes must be applied twice
+- Migration plan: Consolidate routes into single definition; use params/layout wrapper
 
-### 1. Audit Logging Incomplete (Medium Priority)
-**File**: `src/lib/auditLogger.ts`
-- Audit events logged to console only in development
-- Production implementation commented out (lines 73-82)
-- No actual audit log storage to database table
-- Comments indicate audit table not created in migration
+## Missing Critical Features
 
-**Recommendation**: Implement actual audit log storage for compliance and security.
+**No Error Recovery UI:**
+- Problem: When API calls fail, components show spinners indefinitely or generic error messages
+- Blocks: Users can't retry failed operations; no clear indication of what went wrong
+- Fix: Add retry buttons to error states; show specific error messages
 
-### 2. Admin Authentication Not Fully Enforced (Medium Priority)
-**File**: `src/components/admin/AdminPendingApprovalsTab.tsx:107-110`
-- Admin functions check token existence but not admin role
-- Token check happens after function call initiated
-- No RLS (Row Level Security) verification shown
+**No Offline Detection:**
+- Problem: App doesn't detect network failures; requests timeout silently
+- Blocks: Users on slow connections or poor reception get stuck
+- Fix: Detect offline state; show banner; queue operations for retry
 
-**Recommendation**: Add explicit role-based access control checks before operations.
+**No Activity Logging in Production:**
+- Problem: Errors in production are unobservable
+- Blocks: Can't debug user-reported issues without logs
+- Fix: Integrate error tracking (Sentry, LogRocket, etc.)
 
-### 3. Rate Limiting Not Implemented Client-Side (Low Priority)
-- Password reset mentions rate limiting in error handling
-- No actual rate limiting visible in auth code
-- Guest session logging has no rate limit check
+**No Rate Limit Handling:**
+- Problem: Supabase RPC calls and API endpoints may rate-limit; no exponential backoff
+- Blocks: Under high load, requests fail permanently instead of retrying
+- Fix: Implement exponential backoff in API interceptor
 
-**Recommendation**: Implement client-side rate limiting for sensitive operations.
+## Test Coverage Gaps
 
-### 4. Testing Page Still in Production (Medium Priority)
-**File**: `src/pages/AuthTest.tsx`
-- Interactive testing interface with test credentials
-- Suggests routes to `/auth-test` (line 7)
-- Should be removed before production deployment
+**No Unit Tests for Core Hooks:**
+- What's not tested: `useAuth.tsx` (463 lines, handles critical session state), `useAllApplications.ts`, `usePositionApplications.ts`
+- Files: No test files in `src/hooks/__tests__/`
+- Risk: Auth bugs go undetected; changes to useAuth can break session restoration, cookie exchange, timeout logic
+- Priority: High — useAuth is critical for all authenticated features
 
-**Recommendation**: Remove or gate behind admin-only access.
+**No Integration Tests for Admin Flows:**
+- What's not tested: Admin user search, hospital list loading, premium user management
+- Files: Only `src/components/admin/__tests__/AdminUserProfile.utils.test.ts` exists (utility functions only)
+- Risk: Admin dashboard bugs affect hospital staff; can't safely refactor large admin components
+- Priority: High — admin features directly impact customer experience
 
-### 5. Import Scripts in Package.json (Low Priority)
-**File**: `package.json:12-17`
-- Multiple data import scripts still present:
-  - `import:texas` - Import Texas hospitals
-  - `import:hospitals` - Generic import
-  - `remove:duplicates` - Cleanup
-  - `fix:coordinates` - Data correction
+**No E2E Tests:**
+- What's not tested: Full user journeys (sign up → apply → view application)
+- Files: No e2e test directory
+- Risk: Integration issues between components/pages only found in production
+- Priority: Medium — would catch most user-facing bugs
 
-**Recommendation**: Document purpose or remove if no longer needed.
+**No Tests for API Interceptor CSRF Logic:**
+- What's not tested: CSRF token refresh on 403, retry logic, token rotation
+- Files: `src/lib/api/interceptor.ts` (149 lines)
+- Risk: CSRF protection breaks silently; requests fail with 403 without clear reason
+- Priority: High — security-critical code
 
----
+**No Tests for Session Timeout Logic:**
+- What's not tested: Activity timer reset, timeout firing after 30 min inactivity, race conditions with simultaneous auth events
+- Files: `src/hooks/useAuth.tsx` (timeout logic at lines 193-208)
+- Risk: Sessions timeout unexpectedly or don't timeout when they should
+- Priority: Medium — affects user experience
 
-## Testing Gaps
-
-### 1. No Unit Tests Found (Critical)
-- No `.test.ts`, `.test.tsx`, `.spec.ts` files in codebase
-- Critical authentication flows untested
-- API interceptors untested
-- CSRF protection untested
-
-**Recommendation**: Add unit tests for:
-- Authentication flows (login, logout, token refresh)
-- Session timeout logic
-- CSRF token generation and validation
-- Admin approval workflows
-
-### 2. No E2E Tests for Auth Flow (High Priority)
-- Critical user journeys untested:
-  - Login → Hospital verification → Dashboard
-  - Guest mode → Login transition
-  - "Remember me" persistence
-  - Session timeout
-
-### 3. No Integration Tests (High Priority)
-- Database queries untested
-- API interactions untested
-- Supabase function calls untested
-
----
-
-## Dependencies
-
-### 1. Outdated or Pinned Dependencies (Low Priority)
-- No specific versions locked in package.json (uses `^` versions)
-- May receive breaking changes in minor/patch updates
-- `@supabase/supabase-js` at `^2.89.0` - Check for updates
-- `react-query` at `^5.90.16` - Deprecated in favor of `@tanstack/react-query`
-- `mapbox-gl` at `^3.16.0` - Proprietary library, licensing concerns
-
-### 2. Large Dependencies
-- `mapbox-gl` - Heavy map library (3.16.0)
-- `recharts` - Chart library may not be fully utilized
-- `@radix-ui/*` - Many individual packages (27+ components imported)
-
-**Recommendation**: Audit dependency usage, consider tree-shaking optimizations.
-
-### 3. Deprecated Patterns
-- `react-day-picker` - Used by shadcn/ui, but may have alternatives
-- Promise-based API calls instead of modern patterns in some places
-
-### 4. Missing Lockfile Verification (Low Priority)
-- `bun.lock` present (indicating Bun package manager)
-- `package-lock.json` also present (indicating npm)
-- Dual lockfiles may cause inconsistencies
-
-**Recommendation**: Choose single package manager (Bun or npm).
+**No Type Safety Tests:**
+- What's not tested: Components accept null/undefined where they shouldn't; `any` type assertions bypass checks
+- Files: 68+ `any` assertions across codebase
+- Risk: Runtime errors like "Cannot read property X of undefined"
+- Priority: Medium — fixes found during refactoring
 
 ---
 
-## Database & Schema
-
-### 1. No Migrations Strategy (High Priority)
-- MIGRATION_GUIDE.md is manual SQL, not automated
-- No version control for schema
-- Database.ts uses hardcoded connection string
-- No migration framework configured
-
-**Recommendation**: Implement Supabase migrations or Flyway.
-
-### 2. PostGIS Dependency Not Enforced (Medium Priority)
-**File**: `lib/db.ts:32-42`
-- PostGIS availability cached globally but:
-  - Not checked on startup
-  - Falls back silently to false if unavailable
-  - Distance-based queries will fail without PostGIS
-
-**Recommendation**: Validate PostGIS on application startup, not runtime.
-
-### 3. Connection Pool Not Closed (Medium Priority)
-- Global pool `_pool` created but never released
-- No `.end()` call on shutdown
-- May leave dangling connections
-
-**Recommendation**: Add shutdown handler to close pool on app termination.
-
----
-
-## Developer Experience
-
-### 1. Inconsistent Error Handling
-- Mix of console.log, console.error, and thrown errors
-- No standardized error response format
-- Some API calls use `.then().catch()`, others use async/await
-
-### 2. Documentation Gaps
-- MIGRATION_GUIDE.md is extensive but:
-  - No inline code comments for complex logic
-  - Auth flow documented but scattered across files
-  - CSRF implementation not explained
-
-### 3. Environment Configuration
-- No `.env.example` file found
-- Required environment variables spread across multiple files
-- No centralized config module
-
-### 4. Build Output Size Unknown
-- No bundle analysis tools configured
-- 32,421 lines of TypeScript/React code
-- Large number of dependencies may bloat bundle
-
----
-
-## Summary of High-Priority Issues
-
-1. **Missing Test Coverage** - No unit/integration/E2E tests for critical paths
-2. **Authentication Complexity** - useAuth hook too complex, race conditions possible
-3. **Incomplete Audit Logging** - Only logs to console, no database persistence
-4. **Weak SSL Validation** - `rejectUnauthorized: false` on production database
-5. **Session Management** - Timeout logic incomplete, inactivity detection fragile
-6. **Admin Access Control** - Role checks not consistently enforced
-7. **Database Migrations** - No automated migration framework
-
----
-
-**Generated**: 2026-03-06
-**Codebase Size**: 32,421 lines of TypeScript/React
-**Files Analyzed**: 50+ source files
-**Dependencies**: 29 production, 11 dev (40 total)
+*Concerns audit: 2026-04-11*

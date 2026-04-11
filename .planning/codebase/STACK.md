@@ -1,189 +1,135 @@
-# Stack
+# Technology Stack
 
-## Runtime & Language
+**Analysis Date:** 2026-04-11
 
-**Primary Runtime:** Node.js with TypeScript
-- **TypeScript Version:** 5.8.3
-- **ES Module Support:** Enabled (type: "module" in package.json)
-- **Target Runtime:** Browser (React) + Deno (Supabase Edge Functions)
+## Languages
+
+**Primary:**
+- TypeScript 5.8.3 - All source code, components, and edge functions
+- HTML5 / CSS3 - UI markup and styling
+
+**Secondary:**
+- SQL - Database migrations and queries in `supabase/migrations/`
+- Deno - Edge function runtime (TypeScript executed via Deno)
+
+## Runtime
+
+**Environment:**
+- Node.js (version specified in package.json via npm)
+- Browser (React 18.3.1 - client-side rendering)
+- Deno (for Supabase Edge Functions)
+
+**Package Manager:**
+- npm - Primary package manager
+- Lockfile: `package-lock.json` present
+- Alternative: `bun` lock file also present (`bun.lock`)
 
 ## Frameworks
 
-**Frontend Framework:** React 18.3.1
-- **Router:** React Router DOM 6.30.2
-- **UI Component Library:** shadcn/ui (Radix UI components)
-- **Form Handling:** React Hook Form 7.69.0 with Zod validation
-- **Query Client:** TanStack React Query 5.90.16
-- **Styling:** Tailwind CSS 3.4.17 with custom animations
+**Core:**
+- React 18.3.1 - UI library and component framework
+- React Router 6.30.2 - Client-side routing
+- Vite 5.4.19 - Build tool and dev server
 
-**Backend:** Supabase (PostgreSQL + Edge Functions)
-- **ORM/Query Builder:** PostgREST API (via @supabase/supabase-js)
-- **Database:** PostgreSQL 13.0.5 (via Supabase)
-- **Edge Functions Runtime:** Deno
-- **Authentication:** Supabase Auth with JWT tokens and httpOnly cookies
+**UI & Styling:**
+- Tailwind CSS 3.4.17 - Utility-first CSS framework
+- shadcn/ui - Component library built on Radix UI primitives
+- @radix-ui/* (comprehensive suite) - Accessible UI components
+  - Dialog, dropdown-menu, select, tabs, toast, accordion, avatar, checkbox, collapsible, context-menu, hover-card, label, menubar, navigation-menu, popover, progress, radio-group, scroll-area, separator, slider, switch, toggle, toggle-group, tooltip
 
-**Build Tool:** Vite 5.4.19
-- **React Plugin:** @vitejs/plugin-react-swc 3.11.0
-- **SWC Compiler:** For faster TypeScript transpilation
+**Forms & Validation:**
+- React Hook Form 7.69.0 - Form state management
+- @hookform/resolvers 3.10.0 - Form validation adapters
+- Zod 3.25.76 - Schema validation and type-safe parsing
 
-## Key Dependencies
+**Data Fetching & State:**
+- @tanstack/react-query 5.90.16 - Server state management and caching
+- @supabase/supabase-js 2.89.0 - Supabase client library
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| @supabase/supabase-js | 2.89.0 | Database & Auth client |
-| react | 18.3.1 | UI framework |
-| react-dom | 18.3.1 | DOM rendering |
-| react-router-dom | 6.30.2 | Client-side routing |
-| @tanstack/react-query | 5.90.16 | Server state management |
-| react-hook-form | 7.69.0 | Form state management |
-| zod | 3.25.76 | Schema validation |
-| @radix-ui/* | 1.x | Accessible UI components (23 packages) |
-| mapbox-gl | 3.16.0 | Interactive maps |
-| recharts | 2.15.4 | Charts & data visualization |
-| tailwindcss | 3.4.17 | Utility-first CSS |
-| tailwindcss-animate | 1.0.7 | Animation utilities |
-| class-variance-authority | 0.7.1 | Component variants |
-| sonner | 1.7.4 | Toast notifications |
-| date-fns | 3.6.0 | Date manipulation |
-| next-themes | 0.4.6 | Dark mode support |
-| lucide-react | 0.462.0 | Icon library |
-| @fontsource-variable/* | 5.2.8 | Variable font families (3 packages: DM Sans, Inter, Plus Jakarta Sans) |
-| pg | 8.13.1 | PostgreSQL client (for scripts) |
-| clsx | 2.1.1 | Conditional className utility |
-| dotenv | 17.2.3 | Environment variable loading |
-| vaul | 0.9.9 | Drawer component |
-| embla-carousel-react | 8.6.0 | Carousel component |
-| input-otp | 1.4.2 | OTP input component |
-| react-day-picker | 9.1.3 | Date picker calendar |
-| react-resizable-panels | 2.1.9 | Resizable layout panels |
-| react-helmet-async | 2.0.5 | Document head management |
-| tailwind-merge | 2.6.0 | Tailwind className merging |
+**Mapping & Visualization:**
+- Mapbox GL 3.16.0 - Interactive maps
+- Recharts 2.15.4 - Chart and graph components
+- Embla Carousel 8.6.0 - Carousel component
+- @dnd-kit/* - Drag and drop utilities (core, sortable, modifiers, utilities)
 
-## Dev Dependencies
+**Mobile & Native:**
+- @capacitor/core 8.2.0 - Native mobile runtime
+- @capacitor/ios 8.2.0 - iOS support
+- @capacitor/cli 8.2.0 - Capacitor CLI tools
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| typescript | 5.8.3 | Type checking |
-| @types/react | 19.0.0 | React type definitions |
-| @types/react-dom | 19.0.0 | React DOM type definitions |
-| @types/node | 22.16.5 | Node.js type definitions |
-| @types/pg | 8.11.10 | PostgreSQL client types |
-| eslint | 9.32.0 | Code linting |
-| typescript-eslint | 8.38.0 | TypeScript ESLint support |
-| eslint-plugin-react-hooks | 5.2.0 | React hooks linting |
-| eslint-plugin-react-refresh | 0.4.20 | React refresh linting |
-| vite | 5.4.19 | Build tool |
-| @vitejs/plugin-react-swc | 3.11.0 | Vite React plugin with SWC |
-| tailwindcss | 3.4.17 | CSS framework |
-| postcss | 8.5.6 | CSS processor |
-| autoprefixer | 10.4.21 | Vendor prefix automation |
-| postcss-nested | 6.0.1 | Nested CSS support |
-| @tailwindcss/typography | 0.5.16 | Typography plugin |
-| tsx | 4.21.0 | TypeScript executor (for scripts) |
-| csv-parse | 6.1.0 | CSV parsing (for data import scripts) |
-| lovable-tagger | 1.1.11 | Component tagging for Lovable Cloud |
+**Other Libraries:**
+- Next Themes 0.4.6 - Dark mode / theme switching
+- React Helmet Async 2.0.5 - Document head management
+- Sonner 1.7.4 - Toast notifications
+- class-variance-authority 0.7.1 - Variant-based component styling
+- React Day Picker 9.1.3 - Date picker
+- React Resizable Panels 2.1.9 - Resizable UI panels
+- Input OTP 1.4.2 - OTP input component
+- Vaul 0.9.9 - Drawer/sheet component
+- Date-fns 3.6.0 - Date utilities
+- pg 8.13.1 - PostgreSQL driver (for backend utilities)
+
+**Testing:**
+- Vitest 4.1.4 - Unit test runner
+- @testing-library/react 16.3.2 - React component testing utilities
+- @testing-library/jest-dom 6.9.1 - DOM matchers
+- @testing-library/user-event 14.6.1 - User interaction simulation
+- jsdom 29.0.2 - DOM environment for testing
+
+**Build & Development:**
+- @vitejs/plugin-react-swc 3.11.0 - React + SWC support for Vite
+- TypeScript ESLint 8.38.0 - TypeScript linting
+- ESLint 9.32.0 - Code linting
+- Autoprefixer 10.4.21 - CSS vendor prefixing
+- PostCSS 8.5.6 - CSS transformation
+- tsx 4.21.0 - TypeScript execution for scripts
+- lovable-tagger 1.1.11 - Component tagging for Lovable integration
+- CSV Parse 6.1.0 - CSV parsing for data imports
+
+**Fonts:**
+- @fontsource-variable/inter - Variable Inter font
+- @fontsource-variable/dm-sans - Variable DM Sans font
+- @fontsource-variable/plus-jakarta-sans - Variable Plus Jakarta Sans font
+- @fontsource-variable/geist-mono - Variable Geist Mono font
+- @fontsource/lora - Lora serif font
 
 ## Configuration
 
-**Environment Variables (Frontend - VITE_*):**
-- `VITE_SUPABASE_URL` - Supabase project URL (defaults to sysbtcikrbrrgafffody.supabase.co)
-- `VITE_SUPABASE_PUBLISHABLE_KEY` - Supabase anon public key (JWT token in package)
-- `VITE_MAPBOX_PUBLIC_TOKEN` - Mapbox public token (defaults to configured key)
-- `VITE_ENABLE_TRACKING` - Enable/disable event tracking (development only)
+**Environment:**
+- Vite environment variables prefixed with `VITE_` (e.g., `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_MAPBOX_PUBLIC_TOKEN`)
+- Environment variables are injected at build time via Vite
+- Fallback values provided in `vite.config.ts` for Lovable Cloud builds
+- `.env` files are listed in `.gitignore`
 
-**Environment Variables (Edge Functions - Deno):**
-- `SUPABASE_URL` - Supabase project URL
-- `SUPABASE_SERVICE_ROLE_KEY` - Admin authentication key
-- `RESEND_API_KEY` - Email service API key
+**Build Configuration:**
+- `vite.config.ts` - Main Vite configuration with CSP security headers, manual chunk splitting, and optimization settings
+- `tsconfig.json` - TypeScript configuration with path aliases (`@/*` → `./src/*`)
+- `tsconfig.app.json` - App-specific TypeScript configuration
+- `tsconfig.node.json` - Node/build script TypeScript configuration
+- `tailwind.config.ts` - Tailwind CSS configuration with custom colors, animations, and font families
+- `postcss.config.js` - PostCSS configuration (used by Tailwind)
+- `eslint.config.js` - ESLint configuration for TypeScript and React
+- `vercel.json` - Vercel deployment configuration with security headers and routing rules
+- `components.json` - shadcn/ui component configuration
 
-**TypeScript Configuration:**
-- Base URL: `.` (project root)
-- Path aliases: `@/*` → `./src/*`
-- Strict checks disabled for development flexibility
-- Allow JavaScript files for mixed JS/TS projects
-- Skip library type checking for faster compilation
+**Supabase Edge Functions:**
+- `supabase/config.toml` - Project configuration with function verify_jwt settings
+- Edge functions runtime: Deno
+- Functions use explicit CORS handling and origin validation
 
-**Tailwind Configuration:**
-- Dark mode: Class-based switching
-- Content paths: src/**, pages/**, components/**, app/**
-- Custom fonts: Inter, DM Sans, Plus Jakarta Sans (via @fontsource-variable)
-- Custom animations: accordion, fade-in, scale-in, float, pulse-glow
-- Sidebar color system with multiple shades
+## Platform Requirements
 
-**PostCSS Configuration:**
-- Tailwind CSS plugin
-- Autoprefixer for vendor prefixes
+**Development:**
+- Node.js (npm) or Bun for package management
+- TypeScript knowledge for all code
+- Vite dev server running on `localhost:8080` (configurable)
 
-## Build & Dev Tooling
+**Production:**
+- Vercel for frontend hosting (indicated by `vercel.json`)
+- Supabase for backend (PostgreSQL database, authentication, Edge Functions)
+- Browser support: Modern browsers (Chrome, Firefox, Safari, Edge)
+- iOS support via Capacitor native build
 
-**Vite:**
-- Dev server: http://localhost:8080
-- Hot Module Replacement (HMR)
-- Build output: `dist/` directory
-- Chunk splitting strategy:
-  - React vendors: react, react-dom, react-router-dom
-  - UI vendors: @radix-ui dialog, dropdown, select
-  - Query vendor: @tanstack/react-query
-  - Map vendor: mapbox-gl
-  - Code splitting: map components
-- Asset inlining: 4KB threshold for base64 encoding
-- Minification: esbuild
-- Chunk size warning limit: 1000KB
+---
 
-**Security Headers (Vite Plugin):**
-- Content Security Policy (CSP) with nonce support
-- X-Content-Type-Options: nosniff
-- X-Frame-Options: DENY
-- X-XSS-Protection: 1; mode=block
-- Referrer-Policy: strict-origin-when-cross-origin
-- Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
-- Permissions-Policy: Geolocation allowed, camera/microphone disabled
-- CORS headers for allowed origins
-- Development: More permissive CSP for Vite HMR
-- Production: Stricter CSP with unsafe-inline only for React bundles
-
-**ESLint:**
-- Base config: ESLint recommended + TypeScript recommended
-- React Hooks plugin with recommended rules
-- React Refresh plugin for fast refresh
-- Ignores: dist/ directory
-- Disabled: @typescript-eslint/no-unused-vars (flexible during development)
-
-**Scripts:**
-- `npm run dev` - Start development server (Vite)
-- `npm run build` - Production build
-- `npm run build:dev` - Development build with full source maps
-- `npm run lint` - ESLint checks
-- `npm run preview` - Preview production build locally
-- `npm run import:texas` - Import Texas hospital data (tsx script)
-- `npm run remove:duplicates` - Remove duplicate hospitals (tsx script)
-- `npm run fix:coordinates` - Fix hospital map coordinates (tsx script)
-- `npm run fix:coordinates:direct` - Direct coordinate fixing (tsx script)
-- `npm run discover:fields` - Discover CSV field mappings (tsx script)
-- `npm run import:hospitals` - Import hospital CSV data (tsx script)
-
-**Dependency Optimization:**
-- Vite pre-bundling: react, react-dom, react-router-dom
-- Development dependency tree: 40+ dev dependencies
-- Node modules: ~500MB (typical for large React projects)
-
-## Additional Features
-
-**Container Support:**
-- Sidebar component system with resizable panels
-- Modal dialogs via Radix UI
-- Toast notifications via Sonner
-- Dropdown menus and context menus
-- Tooltips and popovers
-- Progress indicators
-- Select dropdowns with search
-- Tabs and accordions
-- Avatar and badge components
-- Carousels with Embla
-
-**API Client Setup:**
-- Supabase JavaScript client with custom fetch wrapper
-- CSRF token injection for state-changing requests
-- Dynamic storage (localStorage vs sessionStorage based on "remember me")
-- Session persistence with auto token refresh
-- OAuth token detection from URL
+*Stack analysis: 2026-04-11*

@@ -1,278 +1,343 @@
-# Structure
+# Codebase Structure
+
+**Analysis Date:** 2026-04-11
 
 ## Directory Layout
 
 ```
 ClinicalHours/
-├── src/
-│   ├── main.tsx                          # React DOM entry point
-│   ├── App.tsx                           # App root, routing, providers
-│   ├── App.css                           # Global styles (minimal, mostly Tailwind)
-│   ├── index.css                         # Tailwind imports and CSS resets
-│   ├── assets/                           # Images and static assets
-│   │   ├── auth-background.png
-│   │   └── carousel-bg.png
-│   ├── pages/                            # Page components (lazy-loaded)
-│   │   ├── Home.tsx
-│   │   ├── Opportunities.tsx
-│   │   ├── OpportunityDetail.tsx
-│   │   ├── Projects.tsx
-│   │   ├── Contact.tsx
-│   │   ├── Auth.tsx
-│   │   ├── Profile.tsx
-│   │   ├── Dashboard.tsx
-│   │   ├── MapView.tsx
-│   │   ├── AdminDashboard.tsx
-│   │   ├── AdminHospitals.tsx
-│   │   ├── ApplicationForm.tsx
-│   │   ├── HospitalAdmin.tsx
-│   │   ├── HospitalDashboard.tsx
-│   │   ├── HospitalOnboarding.tsx
-│   │   ├── HospitalAuth.tsx
-│   │   ├── HospitalApply.tsx
-│   │   ├── HospitalProfile.tsx
-│   │   ├── Terms.tsx
-│   │   ├── Privacy.tsx
-│   │   ├── CheckEmail.tsx
-│   │   ├── VerifyEmail.tsx
-│   │   ├── ResetPassword.tsx
-│   │   ├── PendingApproval.tsx
-│   │   ├── TestHeaders.tsx
-│   │   ├── AuthTest.tsx
-│   │   └── NotFound.tsx
-│   ├── components/                       # Reusable components
-│   │   ├── admin/                        # Admin-specific components
-│   │   │   ├── AdminOverviewTab.tsx      # Dashboard overview with stats
-│   │   │   ├── AdminHospitalsTab.tsx     # Hospital management
-│   │   │   ├── AdminPendingApprovalsTab.tsx  # Approve/reject flow
-│   │   │   ├── AdminToolsTab.tsx         # Admin utilities
-│   │   │   ├── AdminUserList.tsx         # User list with search/filter
-│   │   │   ├── AdminUserProfile.tsx      # User detail drawer
-│   │   │   └── GuestSessionStats.tsx     # Guest analytics
-│   │   ├── tutorial/                     # Tutorial components (onboarding)
-│   │   ├── ui/                           # shadcn/ui base components
-│   │   │   ├── button.tsx, dialog.tsx, form.tsx, input.tsx, card.tsx
-│   │   │   ├── select.tsx, badge.tsx, tabs.tsx, drawer.tsx
-│   │   │   ├── combobox.tsx, command.tsx, calendar.tsx, toast.tsx
-│   │   │   ├── sonner.tsx, popover.tsx, tooltip.tsx, etc.
-│   │   ├── Navigation.tsx                # Header/navbar
-│   │   ├── Footer.tsx                    # Footer
-│   │   ├── ErrorBoundary.tsx             # Error boundary wrapper
-│   │   ├── ScrollToTop.tsx               # Scroll-to-top on route change
-│   │   ├── ExperienceBuilder.tsx         # Build clinical experience
-│   │   ├── ExperienceCard.tsx            # Experience display card
-│   │   ├── AddMomentDialog.tsx           # Add experience moment dialog
-│   │   ├── OpportunityMap.tsx            # Mapbox map component
-│   │   ├── DashboardPreview.tsx          # Dashboard preview
-│   │   ├── DashboardVideoCarousel.tsx    # Video carousel
-│   │   ├── HeroBanner.tsx, HeroVideoCarousel.tsx, HeroBrowserCarousel.tsx
-│   │   ├── FeatureShowcase.tsx, FeatureShowcaseRail.tsx, FeatureGrid.tsx
-│   │   ├── HowItWorksTimeline.tsx        # Timeline component
-│   │   ├── HomeGlobe.tsx                 # 3D globe animation
-│   │   ├── Breadcrumbs.tsx               # Navigation breadcrumbs
-│   │   ├── AnimatedCounter.tsx           # Counter animation
-│   │   ├── AsyncSearchInput.tsx          # Async search with debounce
-│   │   ├── AutocompleteCombobox.tsx      # Combobox with autocomplete
-│   │   ├── AutocompleteInput.tsx         # Input with autocomplete
-│   │   ├── CityAutocomplete.tsx          # City search autocomplete
-│   │   ├── DatalistInput.tsx             # Datalist-based input
-│   │   ├── GuestGate.tsx                 # Guest mode gate component
-│   │   ├── OpportunitiesList.tsx         # Opportunities list view
-│   │   └── [60+ more components]         # Various feature components
-│   ├── hooks/                            # Custom React hooks
-│   │   ├── useAuth.tsx                   # Auth state management
-│   │   ├── useAdminCheck.ts              # Admin access check
-│   │   ├── useHospitalAccount.ts         # Hospital account info
-│   │   ├── useHospitalMember.ts          # Hospital member check
-│   │   ├── useOpportunities.ts           # Opportunities data
-│   │   ├── useOpportunitiesQuery.ts      # React Query wrapper
-│   │   ├── useAutoSave.tsx               # Auto-save form data
-│   │   ├── useAutoSaveProfile.ts         # Profile auto-save
-│   │   ├── useDebounce.ts                # Debounce values
-│   │   ├── useDebouncedCallback.ts       # Debounce callbacks
-│   │   ├── useProfileComplete.ts         # Profile completion check
-│   │   ├── useInView.ts                  # Intersection Observer
-│   │   ├── use-toast.ts                  # Toast notifications
-│   │   └── use-mobile.tsx                # Mobile breakpoint detection
-│   ├── services/                         # Business logic & data access
-│   │   ├── opportunities.ts              # Fetch/search/sort opportunities
-│   │   └── savedOpportunities.ts         # Manage saved opportunities
-│   ├── integrations/
-│   │   └── supabase/                     # Supabase integration
-│   │       ├── client.ts                 # Supabase client (with custom storage & CSRF)
-│   │       └── types.ts                  # Supabase type definitions
-│   ├── lib/                              # Utility functions
+├── src/                           # Application source code
+│   ├── main.tsx                   # React DOM entry point
+│   ├── App.tsx                    # Root app component with routing
+│   ├── index.css                  # Global Tailwind + custom styles
+│   │
+│   ├── pages/                     # Page components (lazy-loaded routes)
+│   │   ├── Home.tsx               # Landing page
+│   │   ├── Auth.tsx               # Login/signup
+│   │   ├── Dashboard.tsx          # Student dashboard
+│   │   ├── Opportunities.tsx      # Browse opportunities list
+│   │   ├── OpportunityDetail.tsx  # Single opportunity detail
+│   │   ├── Settings.tsx           # User settings/profile
+│   │   ├── AdminDashboard.tsx     # Admin control panel
+│   │   ├── HospitalAdmin.tsx      # Hospital admin page (legacy)
+│   │   ├── HospitalApplyPage.tsx  # Apply to position form
+│   │   ├── PositionApplyPage.tsx  # Apply to specific position
+│   │   ├── MyApplications.tsx     # Student's applications list
+│   │   ├── Premium.tsx            # Premium features landing
+│   │   ├── PremiumPurchase.tsx    # Checkout page
+│   │   ├── HourTracker.tsx        # Track volunteering hours
+│   │   ├── LORTracker.tsx         # Letter of recommendation tracker
+│   │   ├── AMCASGenerator.tsx     # AMCAS application helper
+│   │   ├── MapView.tsx            # Map of opportunities
+│   │   └── [20+ more premium feature pages]
+│   │
+│   ├── components/                # Reusable React components
+│   │   ├── ui/                    # shadcn/ui + Radix UI components
+│   │   │   ├── button.tsx         # Button component
+│   │   │   ├── dialog.tsx         # Modal dialog
+│   │   │   ├── input.tsx          # Text input
+│   │   │   ├── card.tsx           # Card container
+│   │   │   ├── [30+ more UI components]
+│   │   │
+│   │   ├── admin/                 # Admin-only components
+│   │   │   ├── AdminDuplicateHospitals.tsx
+│   │   │   ├── AdminHospitalsTab.tsx
+│   │   │   ├── AdminUserList.tsx
+│   │   │   ├── AdminPremiumTab.tsx
+│   │   │   ├── GuestSessionsTab.tsx
+│   │   │   ├── ActivityFeed.tsx
+│   │   │   └── [more admin tabs]
+│   │   │
+│   │   ├── hospital/              # Hospital admin components
+│   │   │   ├── PositionsHub.tsx   # Manage positions
+│   │   │   ├── PositionForm.tsx   # Create/edit position
+│   │   │   ├── PositionDetail.tsx # View position applications
+│   │   │   ├── ApplicationsHub.tsx# List all applications
+│   │   │   ├── ApplicantProfilePage.tsx
+│   │   │   ├── InterviewsPage.tsx
+│   │   │   └── [more hospital pages]
+│   │   │
+│   │   ├── clinic-dashboard/      # Hospital-specific dashboard
+│   │   │   ├── applications/      # Application management
+│   │   │   │   ├── ApplicantDocuments.tsx
+│   │   │   │   ├── ApplicationNotesPanel.tsx
+│   │   │   │   └── ResumeScoreBadge.tsx
+│   │   │   ├── email-communication/
+│   │   │   │   ├── EmailCommunication.tsx
+│   │   │   │   ├── BulkEmailDialog.tsx
+│   │   │   │   └── EmailTemplates.tsx
+│   │   │   ├── volunteer-management/
+│   │   │   │   ├── VolunteerManagement.tsx
+│   │   │   │   └── FileSystem.tsx
+│   │   │   └── waitlist/
+│   │   │       └── WaitlistModule.tsx
+│   │   │
+│   │   ├── dashboard/             # Dashboard-specific components
+│   │   │   ├── StatCard.tsx
+│   │   │   ├── OpportunityCard.tsx
+│   │   │   └── ReflectionBlock.tsx
+│   │   │
+│   │   ├── application/           # Application form components
+│   │   │   ├── DocumentUpload.tsx
+│   │   │   └── SchedulingQuestionsForm.tsx
+│   │   │
+│   │   ├── layout/                # Shared layout components
+│   │   │   ├── Navigation.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   └── Breadcrumbs.tsx
+│   │   │
+│   │   ├── StudentOnlyRoute.tsx    # Auth guard for students
+│   │   ├── HospitalOnlyRoute.tsx   # Auth guard for hospital admins
+│   │   ├── AdminOnlyRoute.tsx      # Auth guard for super admins
+│   │   ├── ErrorBoundary.tsx       # Error boundary wrapper
+│   │   └── [30+ more components]
+│   │
+│   ├── hooks/                     # Custom React hooks
+│   │   ├── useAuth.tsx            # Global auth context + session mgmt
+│   │   ├── useAuthCheck.ts        # Check if user is authenticated
+│   │   ├── useAdminCheck.ts       # Check if user is admin
+│   │   ├── useHospitalAccount.ts  # Hospital membership check
+│   │   ├── useHospitalPage.ts     # Get hospital page by ID
+│   │   ├── useHospitalPageByUser.ts # Get hospital pages for current user
+│   │   ├── useOpportunitiesQuery.ts # Fetch opportunities (cached)
+│   │   ├── useOpportunities.ts    # Fetch + search opportunities
+│   │   ├── useAllApplications.ts  # Fetch all applications
+│   │   ├── usePositionApplications.ts
+│   │   ├── usePremiumStatus.ts    # Check premium subscription
+│   │   ├── useActivityLog.ts      # Fetch audit logs
+│   │   ├── useAutoSave.tsx        # Auto-save form data
+│   │   ├── useAutoSaveProfile.ts  # Auto-save profile changes
+│   │   ├── useDebounce.ts         # Debounce hook
+│   │   ├── useDebouncedCallback.ts
+│   │   ├── useInView.ts           # Intersection observer
+│   │   └── [20+ more hooks]
+│   │
+│   ├── contexts/                  # React contexts (global state)
+│   │   └── HospitalPageContext.tsx # Hospital page context
+│   │
+│   ├── layouts/                   # Page layout wrappers
+│   │   └── HospitalDashboardLayout.tsx # Sidebar layout for hospital admin
+│   │
+│   ├── integrations/              # External service integrations
+│   │   └── supabase/
+│   │       ├── client.ts          # Supabase client init + custom fetch
+│   │       └── types.ts           # Database schema types (auto-generated)
+│   │
+│   ├── lib/                       # Utility functions and services
 │   │   ├── api/
-│   │   │   ├── citySearch.ts             # City autocomplete API
-│   │   │   └── interceptor.ts            # HTTP interceptor
-│   │   ├── data/                         # Static lookup data
-│   │   │   ├── graduationYears.ts
-│   │   │   ├── majors.ts
-│   │   │   ├── universities.ts
-│   │   │   └── usStates.ts
-│   │   ├── auditLogger.ts                # Auth event audit logging
-│   │   ├── authCookie.ts                 # Cookie-based session persistence
-│   │   ├── calendar.ts                   # Calendar utilities
-│   │   ├── csrf.ts                       # CSRF token generation
-│   │   ├── errorUtils.ts                 # Error handling & serialization
-│   │   ├── geolocation.ts                # Browser geolocation wrapper
-│   │   ├── GlobeTransitionManager.ts     # 3D globe animation state
-│   │   ├── inputValidation.ts            # Form input validation
-│   │   ├── logger.ts                     # Console logging
-│   │   ├── opportunityPrefetch.ts        # Opportunity data prefetch
-│   │   ├── rateLimit.ts                  # Client-side rate limiting
-│   │   ├── toastHelpers.ts               # Toast notification helpers
-│   │   ├── tracking.ts                   # Analytics/event tracking
-│   │   └── utils.ts                      # General utilities
-│   └── types/
-│       └── index.ts                      # Central TypeScript definitions
-├── public/                               # Static assets
-│   ├── favicon.ico
-│   ├── robots.txt
-│   ├── placeholder.svg
-│   ├── hero/
-│   │   └── clinicalhours-hero-bg.webp
-│   ├── screenshots/                      # Demo screenshots/videos
-│   ├── data/                             # Hospital CSV data
-│   └── email-assets/                     # Email template assets
-├── dist/                                 # Build output (generated)
-├── node_modules/                         # Dependencies (generated)
-├── scripts/                              # Utility scripts
-│   ├── importHospitals.ts                # Hospital data import
-│   ├── import-texas-hospitals.ts         # Texas-specific import
-│   ├── remove-duplicates.ts              # Clean duplicate hospitals
-│   ├── fix-map-coordinates.ts            # Geo-coordinate fixes
-│   ├── fix-coordinates-direct.ts         # Direct coordinate fixes
-│   ├── discoverFields.ts                 # Explore data schema
-│   ├── directImport.ts                   # Direct Supabase import
-│   └── [migration scripts]               # Database migrations
-├── index.html                            # HTML entry point
-├── vite.config.ts                        # Vite build configuration
-├── tsconfig.json                         # TypeScript configuration
-├── tsconfig.app.json                     # App TypeScript configuration
-├── tsconfig.node.json                    # Build TypeScript configuration
-├── package.json                          # Project metadata & dependencies
-├── bun.lock                              # Bun lockfile
-├── components.json                       # shadcn/ui configuration
-├── postcss.config.js                     # PostCSS configuration
-├── tailwind.config.js                    # Tailwind CSS configuration
-├── eslint.config.js                      # ESLint rules
-├── .gitignore                            # Git ignore rules
-└── [docs, guides, configs]               # Documentation and configs
+│   │   │   ├── interceptor.ts     # CSRF-protected fetch wrapper
+│   │   │   ├── adminAnalytics.ts  # Admin stats queries
+│   │   │   └── citySearch.ts      # City autocomplete API
+│   │   │
+│   │   ├── data/
+│   │   │   ├── [seed data files]
+│   │   │
+│   │   ├── applicationFilters.ts  # Filter + search opportunities
+│   │   ├── applicationStatus.ts   # Application status utilities
+│   │   ├── auditLogger.ts         # Log user actions
+│   │   ├── authCookie.ts          # Cookie-based auth helpers
+│   │   ├── csrf.ts                # CSRF token management
+│   │   ├── errorUtils.ts          # Error handling utilities
+│   │   ├── geolocation.ts         # Get user location
+│   │   ├── guestMigration.ts      # Guest to auth migration
+│   │   ├── inputValidation.ts     # Form input validation
+│   │   ├── localStore.ts          # localStorage abstraction
+│   │   ├── logger.ts              # Console logging
+│   │   ├── premium.ts             # Premium feature checks
+│   │   ├── rateLimit.ts           # Rate limiting logic
+│   │   ├── toastHelpers.ts        # Toast notification helpers
+│   │   ├── tracking.ts            # Analytics tracking
+│   │   └── utils.ts               # Misc utilities
+│   │
+│   ├── services/                  # Business logic layer
+│   │   ├── opportunities.ts       # Opportunity service
+│   │   └── savedOpportunities.ts  # Saved opportunities service
+│   │
+│   ├── types/                     # TypeScript type definitions
+│   │   ├── index.ts               # Main types (Opportunity, SavedOpportunity, etc.)
+│   │   └── positions.ts           # Position types (PositionType, ApplicationStatus, etc.)
+│   │
+│   └── assets/                    # Static assets (images, icons, fonts)
+│
+├── public/                        # Static files served as-is
+│   └── [images, favicons]
+│
+├── supabase/                      # Supabase configuration
+│   ├── functions/                 # Edge function code
+│   └── migrations/                # Database migrations
+│
+├── scripts/                       # Node scripts
+│   ├── import-texas-hospitals.ts
+│   ├── import-hospitals.ts
+│   ├── remove-duplicates.ts
+│   ├── fix-map-coordinates.ts
+│   └── discoverFields.ts
+│
+├── package.json                   # Dependencies + npm scripts
+├── vite.config.ts                 # Vite bundler config
+├── tsconfig.json                  # TypeScript config
+├── tailwind.config.js             # Tailwind CSS config
+├── postcss.config.js              # PostCSS config
+├── eslint.config.js               # ESLint rules
+├── components.json                # shadcn/ui config
+├── index.html                     # HTML entry point
+└── dist/                          # Build output (generated)
 ```
 
-## Key Locations
+## Directory Purposes
 
-| Purpose | Path |
-|---------|------|
-| **Pages (Entry Points)** | `src/pages/` |
-| **Reusable Components** | `src/components/` |
-| **Admin Components** | `src/components/admin/` |
-| **Base UI Components** | `src/components/ui/` |
-| **Custom Hooks** | `src/hooks/` |
-| **Services** | `src/services/` |
-| **Supabase Client** | `src/integrations/supabase/client.ts` |
-| **Shared Types** | `src/types/index.ts` |
-| **Utilities** | `src/lib/` |
-| **API Integrations** | `src/lib/api/` |
-| **Static Data** | `src/lib/data/` |
-| **HTML Root** | `index.html` |
-| **Build Configuration** | `vite.config.ts` |
-| **TypeScript Config** | `tsconfig.json` |
-| **App Routing** | `src/App.tsx` |
-| **React Root** | `src/main.tsx` |
+**`src/pages/`:**
+- Purpose: Page-level components matching routes in `src/App.tsx`
+- Contains: One component per route; handles data fetching for the page; composes smaller components
+- Key files: `Home.tsx`, `Dashboard.tsx`, `Auth.tsx`, `AdminDashboard.tsx`, premium feature pages
+
+**`src/components/`:**
+- Purpose: Reusable UI components and feature-specific component trees
+- Contains: React components, organized by feature (admin, hospital, dashboard, etc.)
+- Key files: `ui/` for design system, `hospital/` for hospital admin features, `admin/` for super admin
+
+**`src/hooks/`:**
+- Purpose: Custom React hooks for data fetching and stateful logic
+- Contains: `useQuery()` wrappers via TanStack Query, context hooks, validation hooks
+- Pattern: Each hook exports a single primary hook; may export utility functions
+
+**`src/lib/`:**
+- Purpose: Utility functions, validators, and business logic
+- Contains: Pure functions (filters, transformers), API interceptors, logging, validation rules
+- Organized by concern: `api/` for server communication, `data/` for seed data
+
+**`src/integrations/supabase/`:**
+- Purpose: Supabase client initialization and database types
+- Contains: `client.ts` (singleton Supabase client), `types.ts` (auto-generated database schema)
+- Key detail: Dynamic storage adapter (localStorage vs sessionStorage based on "remember me" pref)
+
+**`src/types/`:**
+- Purpose: Central TypeScript type definitions
+- Contains: `index.ts` (Opportunity, SavedOpportunity, Question, Answer, Review)
+- Contains: `positions.ts` (PositionType, ApplicationStatus, QuestionType)
+
+**`src/components/ui/`:**
+- Purpose: Reusable UI library components (shadcn/ui + Radix)
+- Contains: Button, Dialog, Input, Card, Select, Tabs, Toast, etc.
+- Pattern: Each component is a self-contained file; imported via barrel exports in parent dirs
+
+**`src/components/admin/`:**
+- Purpose: Admin-only dashboard components
+- Contains: Tab components (AdminHospitalsTab, AdminUserList, etc.), activity feed, monitoring tools
+
+**`src/components/hospital/`:**
+- Purpose: Hospital admin dashboard features
+- Contains: Position management (PositionsHub, PositionForm), application review, candidate profiles
+
+**`src/components/clinic-dashboard/`:**
+- Purpose: Nested hospital features (applications, email, volunteer tracking)
+- Organized by feature: `applications/`, `email-communication/`, `volunteer-management/`, `waitlist/`
+
+## Key File Locations
+
+**Entry Points:**
+- `src/main.tsx`: React DOM render entry point
+- `src/App.tsx`: Root app component with routing and providers
+- `index.html`: HTML document shell
+
+**Configuration:**
+- `package.json`: Dependencies, scripts, project metadata
+- `vite.config.ts`: Vite bundler (dev server, build output)
+- `tsconfig.json`: TypeScript compiler options
+- `tailwind.config.js`: Tailwind CSS theme customization
+- `components.json`: shadcn/ui component registry
+- `eslint.config.js`: Linting rules
+
+**Core Logic:**
+- `src/hooks/useAuth.tsx`: Authentication context (global state)
+- `src/integrations/supabase/client.ts`: Supabase client singleton
+- `src/lib/api/interceptor.ts`: CSRF-protected fetch wrapper
+- `src/types/index.ts`: Main type definitions
+
+**Testing:**
+- `src/components/admin/__tests__/AdminUserProfile.utils.test.ts`: Example test file
 
 ## Naming Conventions
 
-### Files & Directories
-- **Page Components**: PascalCase with .tsx extension (e.g., `Home.tsx`, `AdminDashboard.tsx`)
-- **Components**: PascalCase with .tsx extension (e.g., `Navigation.tsx`, `ExperienceBuilder.tsx`)
-- **Hooks**: camelCase with `use` prefix and .ts/.tsx extension (e.g., `useAuth.tsx`, `useDebounce.ts`)
-- **Services**: camelCase plural noun with .ts extension (e.g., `opportunities.ts`)
-- **Utilities**: camelCase descriptive name with .ts extension (e.g., `errorUtils.ts`, `toastHelpers.ts`)
-- **Types**: Grouped in single `types/index.ts` file
-- **UI Components**: PascalCase, imported from shadcn/ui library
+**Files:**
+- Page components: PascalCase with ".tsx" (e.g., `Dashboard.tsx`, `Home.tsx`)
+- Components: PascalCase with ".tsx" (e.g., `Button.tsx`, `Navigation.tsx`)
+- Hooks: camelCase starting with "use", with ".ts" or ".tsx" (e.g., `useAuth.tsx`, `useQuery.ts`)
+- Utilities/services: camelCase with ".ts" (e.g., `applicationFilters.ts`, `auditLogger.ts`)
+- Contexts: PascalCase with ".tsx" (e.g., `HospitalPageContext.tsx`)
 
-### TypeScript Interfaces & Types
-- **Interfaces**: PascalCase nouns (e.g., `Opportunity`, `SavedOpportunity`, `Review`)
-- **Type Aliases**: PascalCase nouns (e.g., `SupabaseClient`, `ErrorDetails`)
-- **Enums**: PascalCase nouns (rare in this codebase)
-- **Props Interfaces**: ComponentName + "Props" (e.g., `NavigationProps`)
+**Directories:**
+- Feature-based grouping: lowercase with hyphens (e.g., `clinic-dashboard`, `email-communication`)
+- Type categories: lowercase (e.g., `components`, `hooks`, `lib`, `types`)
 
-### Component & Function Naming
-- **React Components**: PascalCase function names (e.g., `function Home() {}`, `const Navigation = () => {}`)
-- **Event Handlers**: camelCase with action prefix (e.g., `handleSubmit()`, `onOpenModal()`)
-- **Custom Hooks**: `use` + camelCase (e.g., `useAuth()`, `useDebounce()`)
-- **Service Functions**: camelCase verbs (e.g., `fetchOpportunities()`, `saveOpportunity()`)
+**Variables/Functions:**
+- Constants: UPPER_SNAKE_CASE (e.g., `SESSION_TIMEOUT_MS`, `REMEMBER_ME_KEY`)
+- Functions/hooks: camelCase (e.g., `getGuestSessionId()`, `lazyRetry()`)
+- React components: PascalCase (e.g., `Dashboard`, `Navigation`)
+- Types/interfaces: PascalCase (e.g., `Opportunity`, `SavedOpportunity`)
 
-### CSS & Styling
-- **Classes**: Kebab-case with BEM-inspired structure (e.g., `.opportunity-card`, `.admin-header__title`)
-- **Variables**: Tailwind CSS utility-first approach (inline classes)
-- **CSS Modules**: Not used; all styling via Tailwind + component props
+## Where to Add New Code
 
-### Constants & Configuration
-- **Environment Variables**: VITE_ prefix (Vite convention) (e.g., `VITE_SUPABASE_URL`, `VITE_MAPBOX_PUBLIC_TOKEN`)
-- **Constants**: UPPER_SNAKE_CASE when used across multiple files (e.g., `SESSION_TIMEOUT_MS`, `REMEMBER_ME_KEY`)
+**New Page/Route:**
+- Create file: `src/pages/MyNewPage.tsx`
+- Add route in `src/App.tsx`: `const MyNewPage = lazyRetry(() => import("./pages/MyNewPage"));` + route definition
+- Follow pattern: Import hooks, fetch data, render layout + components
 
-## Co-location Patterns
+**New Component:**
+- If UI-only: `src/components/ui/MyComponent.tsx` (simple, no logic)
+- If feature-specific: `src/components/[feature]/MyComponent.tsx` (e.g., `src/components/hospital/MyHospitalComponent.tsx`)
+- If used across app: `src/components/MySharedComponent.tsx` (e.g., `Navigation.tsx`, `Breadcrumbs.tsx`)
 
-### Component Organization
-- **Component-scoped logic**: Hooks and utilities often kept near where they're used
-  - Example: `useAuth()` hook lives in `src/hooks/` but closely tied to auth pages
-- **Shared logic**: Common hooks and services extracted to `src/hooks/` and `src/services/`
+**New Hook:**
+- Location: `src/hooks/useMyHook.ts` (or `.tsx` if it returns JSX)
+- If it wraps `useQuery()`: Place in `src/hooks/`, follow pattern of `useOpportunitiesQuery.ts`
+- Export as default or named export; document parameters and return type
 
-### Types
-- **Centralized types**: All shared types in `src/types/index.ts`
-- **Local types**: Component-local types defined in same file using `interface ComponentProps {}`
-- **Database row types**: Kept in `src/types/index.ts` (e.g., `OpportunityRow`)
+**New Service/Utility:**
+- Simple transformation: `src/lib/myUtility.ts` (e.g., `applicationFilters.ts`)
+- Business logic: `src/services/myService.ts` (e.g., `opportunities.ts`)
+- API-specific: `src/lib/api/myAPI.ts` (e.g., `interceptor.ts`)
 
-### Styles
-- **No CSS files per component**: All styling via inline Tailwind classes
-- **Global styles**: `src/index.css` for Tailwind imports and CSS resets
-- **Component-specific styles**: Rare; use `className` props with Tailwind
+**New Type:**
+- Add to `src/types/index.ts` if general (Opportunity, SavedOpportunity, Question, etc.)
+- Add to `src/types/positions.ts` if position/application specific (PositionType, ApplicationStatus, etc.)
+- For domain-specific types: can create new file `src/types/myDomain.ts`
 
-### Tests
-- **No test files visible**: Not present in current codebase structure
-- **Testing strategy**: Would follow pattern of `ComponentName.test.tsx` or `ComponentName/__tests__/` if added
+**Styling:**
+- Global styles: `src/index.css` (Tailwind + custom utilities)
+- Component styles: Use Tailwind className attribute (no separate CSS files)
+- shadcn/ui components: Tailwind classes built-in; extend via `tailwind.config.js`
 
-### Assets
-- **Component-used assets**: Imported directly (e.g., `import carouselBg from '@/assets/carousel-bg.png'`)
-- **Public assets**: Placed in `public/` for static linking
-- **Font assets**: Self-hosted via `@fontsource-variable` packages
+## Special Directories
 
-## Architecture Patterns
+**`src/assets/`:**
+- Purpose: Static assets (images, icons, fonts)
+- Generated: No
+- Committed: Yes
 
-### Page → Hook → Service → Supabase
-1. Page component mounts and renders UI
-2. Uses custom hook (e.g., `useAuth()`, `useOpportunitiesQuery()`)
-3. Hook calls service function (e.g., `fetchOpportunities()`)
-4. Service queries Supabase client
-5. Results returned and cached via React Query
+**`src/components/ui/`:**
+- Purpose: Design system components (shadcn/ui + Radix UI)
+- Generated: No (maintained manually, though scaffolded via `shadcn-ui` CLI)
+- Committed: Yes
 
-### Component Composition
-- Large pages composed of smaller components
-- Example: `AdminDashboard.tsx` composed of:
-  - `AdminOverviewTab.tsx`
-  - `AdminHospitalsTab.tsx`
-  - `AdminPendingApprovalsTab.tsx`
-  - `AdminToolsTab.tsx`
+**`dist/`:**
+- Purpose: Built output from Vite
+- Generated: Yes (via `npm run build`)
+- Committed: No (in `.gitignore`)
 
-### UI Kit Integration
-- All UI components from shadcn/ui (Radix UI + Tailwind)
-- Custom components build on top of base UI components
-- Example: `Button`, `Dialog`, `Form` from shadcn/ui used extensively
+**`node_modules/`:**
+- Purpose: npm dependencies
+- Generated: Yes (via `npm install` from `package-lock.json`)
+- Committed: No (in `.gitignore`)
 
-### Provider Nesting (App.tsx)
-1. `HelmetProvider` (outermost)
-2. `QueryClientProvider` (React Query)
-3. `ThemeProvider` (next-themes)
-4. `ErrorBoundary` (error handling)
-5. `BrowserRouter` (routing)
-6. `Routes` (page definitions)
+**`supabase/`:**
+- Purpose: Supabase configuration and edge functions
+- Generated: Partially (migrations auto-generated, functions manually written)
+- Committed: Yes
 
-## Import Aliases
+**`.env` files:**
+- Purpose: Environment variables (Supabase URL, keys, etc.)
+- Generated: No (user-provided)
+- Committed: No (in `.gitignore` for security)
+- Note: Supabase keys are public (VITE_SUPABASE_*); no secrets stored in this repo
 
-- `@/*` maps to `src/`
-  - `import { useAuth } from '@/hooks/useAuth'` (instead of `../../../hooks/useAuth`)
-  - Improves readability and refactoring safety
-  - Configured in `tsconfig.json` and `vite.config.ts`

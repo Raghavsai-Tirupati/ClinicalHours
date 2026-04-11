@@ -1,366 +1,255 @@
-# Testing
+# Testing Patterns
 
-## Framework
+**Analysis Date:** 2026-04-11
 
-### Current Testing Setup
-**Status**: No dedicated test framework currently configured
+## Test Framework
 
-**Missing Test Infrastructure**:
-- No Vitest, Jest, or other unit test framework installed
-- No test scripts in package.json
-- No test files in source directory (src/)
-- No test configuration files (vitest.config.ts, jest.config.js)
-- No testing libraries (@testing-library/react, etc.)
+**Runner:**
+- `vitest` 4.1.4
+- Config: `vite.config.ts` (lines 255-259)
+- Environment: `jsdom` (browser-like environment for React testing)
+- Globals: enabled (no need to import `describe`, `it`, `expect`)
 
-### Available Development Tools
-- **Node Types**: `@types/node` and `@types/react` for type checking
-- **TypeScript**: Full TypeScript support with strict checks disabled
-- **ESLint**: For code quality and style enforcement
-- **Vite**: For development and build with HMR support
+**Assertion Library:**
+- Built-in vitest assertions (via `expect`)
+- `@testing-library/react` 16.3.2 for component testing
+- `@testing-library/jest-dom` 6.9.1 for DOM matchers
+- `@testing-library/user-event` 14.6.1 for user interaction simulation
+
+**Run Commands:**
+```bash
+npm run test              # Run tests in watch mode
+npm run test:run          # Run tests once (CI mode)
+```
+
+## Test File Organization
+
+**Location:**
+- Co-located pattern: Test files placed in `__tests__` subdirectory next to source files
+- Example: `src/components/admin/__tests__/AdminUserProfile.utils.test.ts` tests utilities from `src/components/admin/AdminUserProfile.tsx`
+
+**Naming:**
+- Pattern: `{ComponentName}.utils.test.ts` for utility functions
+- Pattern: `{ComponentName}.test.tsx` for component tests
+- Suffix: `.test.ts` or `.test.tsx` required for vitest discovery
+
+**Structure:**
+```
+src/
+├── components/
+│   └── admin/
+│       ├── AdminUserProfile.tsx
+│       └── __tests__/
+│           └── AdminUserProfile.utils.test.ts
+├── lib/
+│   ├── errorUtils.ts
+│   └── logger.ts
+└── types/
+    └── index.ts
+```
 
 ## Test Structure
 
-### Where Tests Should Live
-Following common conventions for React/TypeScript projects:
-- **Unit Tests**: `src/**/__tests__/*.test.ts(x)` or `src/**/*.test.ts(x)`
-- **Integration Tests**: `src/__integration__/*.test.ts(x)` or separate directory
-- **E2E Tests**: `e2e/` or `tests/e2e/` directory with Playwright/Cypress
-- **Test Fixtures**: `src/__fixtures__/` for test data
-
-### Naming Conventions (Recommended)
-- **Test Files**: `*.test.ts` or `*.test.tsx` for unit/integration
-- **Spec Files**: `*.spec.ts` or `*.spec.tsx` (alternative)
-- **Test Suites**: Group related tests in describe blocks
-- **Test Cases**: Descriptive names with "should" pattern
-  - Example: `should sanitize error message and remove service references`
-
-### Test Organization Pattern
+**Suite Organization:**
 ```typescript
-describe('ComponentName', () => {
-  describe('with default props', () => {
-    it('should render correctly', () => {
-      // test
-    });
+import { describe, it, expect } from 'vitest';
+import { formatLastFirst, emailToColor } from '../AdminUserProfile';
+
+describe('formatLastFirst', () => {
+  it('formats "Shivam Kanodia" as "Kanodia, Shivam"', () => {
+    expect(formatLastFirst('Shivam Kanodia')).toBe('Kanodia, Shivam');
   });
 
-  describe('with custom props', () => {
-    it('should apply custom styles', () => {
-      // test
-    });
+  it('handles multi-word first names: "Mary Jo Smith" → "Smith, Mary Jo"', () => {
+    expect(formatLastFirst('Mary Jo Smith')).toBe('Smith, Mary Jo');
+  });
+
+  it('returns the raw value when there is no space', () => {
+    expect(formatLastFirst('Madonna')).toBe('Madonna');
+  });
+});
+
+describe('emailToColor', () => {
+  it('returns a valid Tailwind bg color class', () => {
+    const validColors = [
+      'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
+      'bg-rose-500', 'bg-cyan-500', 'bg-fuchsia-500', 'bg-orange-500',
+    ];
+    const result = emailToColor('shivam@example.com');
+    expect(validColors).toContain(result);
+  });
+
+  it('returns the same color for the same email (deterministic)', () => {
+    expect(emailToColor('a@b.com')).toBe(emailToColor('a@b.com'));
+  });
+
+  it('returns different colors for different emails (likely)', () => {
+    const c1 = emailToColor('alice@example.com');
+    const c2 = emailToColor('bob@example.com');
+    expect(c1).toMatch(/^bg-\w+-500$/);
+    expect(c2).toMatch(/^bg-\w+-500$/);
   });
 });
 ```
 
-## Mocking Patterns
+**Patterns observed:**
+- One `describe()` block per function being tested
+- Descriptive test names using `it()` that explain both input and expected output
+- Arrange-Act-Assert pattern (implicit in examples)
+- Edge case testing (e.g., multi-word names, single-word names, determinism, variation)
 
-### Mocking Strategy (To Be Implemented)
+## Setup and Teardown
 
-#### Supabase Client Mocking
+**Global Setup:**
+- File: `src/test-setup.ts` (configured in `vite.config.ts` setupFiles)
+- Content: `import '@testing-library/jest-dom'`
+- Purpose: Provides DOM matchers like `.toBeInTheDocument()`, `.toHaveClass()`, etc.
+
+**Per-test setup/teardown:**
+- Not currently visible in examined test files
+- Would use `beforeEach()`, `afterEach()`, `beforeAll()`, `afterAll()` if needed
+
+## Mocking
+
+**Framework:** vitest's built-in mocking (no separate library required)
+
+**Current usage:**
+- No mocking examples found in analyzed test files
+- API mocking capabilities available but not yet implemented
+
+**Patterns if needed:**
 ```typescript
-// Mock supabase client for tests
-import { supabase } from '@/integrations/supabase/client';
-
-jest.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: jest.fn(),
-    auth: {
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn(),
-    },
-    functions: {
-      invoke: jest.fn(),
-    },
-  },
+// For modules
+import { vi } from 'vitest';
+vi.mock('@/lib/someModule', () => ({
+  functionName: vi.fn(() => 'mock result'),
 }));
+
+// For functions
+const mockFn = vi.fn().mockReturnValue('result');
+
+// For async functions
+const mockAsyncFn = vi.fn().mockResolvedValue({ data: 'result' });
 ```
 
-#### React Router Mocking
+**What to Mock:**
+- External API calls (supabase, mapbox, etc.)
+- Third-party service integrations
+- Browser APIs if testing in isolation
+- File system operations
+
+**What NOT to Mock:**
+- Pure utility functions (test them directly)
+- React hooks (use `@testing-library/react` instead)
+- DOM APIs in component tests (let jsdom handle)
+
+## Fixtures and Factories
+
+**Test Data:**
+- Not extensively used in current codebase
+- Direct inline data creation in tests (e.g., email strings, name strings)
+
+**Location:**
+- Typically placed in same `__tests__` directory
+- Could create `fixtures.ts` or `testData.ts` in `__tests__/` if patterns emerge
+
+**Example pattern (not currently used but recommended):**
 ```typescript
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
-
-// Wrap component in MemoryRouter for navigation testing
-const wrapper = ({ children }) => (
-  <MemoryRouter initialEntries={['/']}>
-    {children}
-  </MemoryRouter>
-);
-```
-
-#### React Query Mocking
-```typescript
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-const wrapper = ({ children }) => (
-  <QueryClientProvider client={createTestQueryClient()}>
-    {children}
-  </QueryClientProvider>
-);
-```
-
-#### Form/Validation Mocking
-```typescript
-// Mock Zod schema validation
-const mockAuthSchema = {
-  parse: jest.fn((data) => data),
+// __tests__/fixtures.ts
+export const mockUser = {
+  id: 'user-123',
+  email: 'test@example.com',
+  name: 'Test User',
 };
 
-// Mock Toast notifications
-import { toast } from 'sonner';
-jest.mock('sonner', () => ({
-  toast: {
-    error: jest.fn(),
-    success: jest.fn(),
-    info: jest.fn(),
-  },
-}));
-```
-
-#### Component Rendering Patterns
-```typescript
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-
-describe('Auth Component', () => {
-  it('should handle sign in', async () => {
-    const user = userEvent.setup();
-
-    render(<Auth />);
-
-    const emailInput = screen.getByPlaceholderText('you@example.com');
-    await user.type(emailInput, 'test@example.com');
-
-    const button = screen.getByRole('button', { name: /sign in/i });
-    await user.click(button);
-
-    // Assert results
-  });
-});
+export const mockOpportunity = {
+  id: 'opp-123',
+  name: 'Test Clinic',
+  location: 'Boston, MA',
+};
 ```
 
 ## Coverage
 
-### Areas Requiring Test Coverage
+**Requirements:** No coverage threshold enforced
 
-#### High Priority (Core Functionality)
-- **Authentication Module** (`src/pages/Auth.tsx`)
-  - Sign up validation (email, password requirements)
-  - Sign in error handling
-  - Password reset flow
-  - Email enumeration prevention
-  - Hospital signup flow
-  - "Remember me" functionality
-  - OAuth callback handling
-
-- **Error Handling** (`src/lib/errorUtils.ts`)
-  - Error message sanitization
-  - Database error code mapping (23505, 23503, 23514)
-  - JWT/token error detection
-  - Network error handling
-  - Rate limit detection
-
-- **Supabase Integration** (`src/integrations/supabase/client.ts`)
-  - Dynamic storage adapter (localStorage vs sessionStorage)
-  - CSRF token injection
-  - Custom fetch wrapper behavior
-  - Environment variable validation
-  - Session persistence
-
-- **Forms with Validation**
-  - Zod schema validation
-  - Field-level validation
-  - Form submission prevention (double-click)
-  - Error message display
-
-#### Medium Priority (UI Components)
-- **ErrorBoundary Component**
-  - Error catching and display
-  - Recovery actions (Try Again, Go Home)
-  - Development vs production error display
-  - Error logging trigger
-
-- **Loading States** (`src/components/LoadingSpinner.tsx`)
-  - Size variants (sm, md, lg)
-  - Text display
-  - Full screen mode
-  - CSS animation classes
-
-- **UI Components** (`src/components/ui/`)
-  - Button variants and states
-  - Form inputs and labels
-  - Dialog/Modal open/close
-  - Select and dropdown behavior
-
-- **Utility Functions**
-  - `cn()` class merging
-  - `sanitizeErrorMessage()` error transformation
-  - Date/time utilities
-  - Validation helpers
-
-#### Lower Priority (Integration/E2E)
-- **Multi-page Flows** (E2E)
-  - Complete sign-up → verification → login flow
-  - Hospital registration approval flow
-  - Dashboard navigation
-  - Permission-based routing
-
-- **API Integration** (Integration Tests)
-  - Supabase query builder calls
-  - Edge function invocations
-  - Error response handling
-  - Token refresh flows
-
-### Coverage Gaps & Recommendations
-- **No Unit Tests**: Add tests for utilities, error handling, validation
-- **No Component Tests**: Add tests for reusable UI components
-- **No Integration Tests**: Test component interactions and API calls
-- **No E2E Tests**: Playwright or Cypress for user flow testing
-- **No Mock Data**: Create fixtures for test data (users, opportunities, hospitals)
-
-### Current Coverage: 0%
-- No test files present in source directory
-- No test execution configured
-- No coverage reporting tools installed
-
-## Running Tests
-
-### Recommended Test Setup
-
-#### 1. Install Testing Dependencies
+**View Coverage:**
 ```bash
-# Unit testing framework
-npm install -D vitest @vitest/ui
-npm install -D @testing-library/react @testing-library/jest-dom
-npm install -D @testing-library/user-event
-npm install -D @vitest/coverage-v8
-
-# Optional: E2E testing
-npm install -D playwright @playwright/test
-npm install -D @percy/cli
+npm run test:run -- --coverage
 ```
 
-#### 2. Create Configuration Files
+**Current state:** Coverage measurement available but not required
 
-**vitest.config.ts**
+## Test Types
+
+**Unit Tests:**
+- Scope: Individual functions and utilities
+- Approach: Direct function calls with test inputs, assertion on outputs
+- Example: `AdminUserProfile.utils.test.ts` tests pure functions like `formatLastFirst()` and `emailToColor()`
+- Tools: vitest with `expect()`
+
+**Integration Tests:**
+- Not extensively implemented yet
+- Would test interactions between multiple modules (e.g., Auth + Storage)
+- Could use vitest + react-testing-library for component integration
+
+**E2E Tests:**
+- Framework: Not currently implemented
+- Could use: Playwright or Cypress for end-to-end testing
+- Not in package.json dependencies
+
+**Component Tests:**
+- Framework: React Testing Library (via `@testing-library/react`)
+- Approach: Render components, simulate user interactions, assert on DOM
+- Not yet extensively implemented in codebase
+
+## Common Patterns
+
+**Async Testing:**
 ```typescript
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react-swc';
-import path from 'path';
+it('awaits async operations', async () => {
+  const result = await fetchAdminActivityFeed();
+  expect(result).toBeDefined();
+});
 
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./src/tests/setup.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'src/tests/'],
-    },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+// With user-event for async interactions
+import { userEvent } from '@testing-library/user-event';
+const user = userEvent.setup();
+await user.click(button);
+```
+
+**Error Testing:**
+```typescript
+it('handles errors gracefully', () => {
+  const mockError = new Error('Test error');
+  const result = sanitizeErrorMessage(mockError);
+  expect(result).toBe('An unexpected error occurred. Please try again.');
+});
+
+it('sanitizes specific database errors', () => {
+  const dupError = new Error('error 23505 duplicate');
+  expect(sanitizeErrorMessage(dupError)).toContain('already exists');
 });
 ```
 
-#### 3. Create Setup File
-**src/tests/setup.ts**
-```typescript
-import '@testing-library/jest-dom';
-import { expect, afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
+**Snapshot Testing:**
+- Not currently used
+- Available via vitest if needed: `expect(component).toMatchSnapshot()`
 
-// Cleanup after each test
-afterEach(() => cleanup());
+## Test Standards
 
-// Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
+**Conventions:**
+- Test files import test utilities at top: `import { describe, it, expect } from 'vitest'`
+- Descriptive test names that serve as documentation
+- Each test should be independent and pass/fail on its own
+- Use simple data for unit tests, comprehensive fixtures for integration tests
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-};
-global.localStorage = localStorageMock as any;
-```
+**Best Practices:**
+- Keep tests focused on one behavior per test
+- Avoid testing implementation details; test behavior instead
+- Use meaningful assertions with clear failure messages
+- Group related tests in describe blocks
 
-#### 4. Add Test Scripts to package.json
-```json
-{
-  "scripts": {
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
-    "test:watch": "vitest --watch"
-  }
-}
-```
+---
 
-### Running Tests
-```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with UI dashboard
-npm run test:ui
-
-# Generate coverage report
-npm run test:coverage
-```
-
-### CI/CD Integration
-**GitHub Actions Example** (.github/workflows/test.yml)
-```yaml
-name: Tests
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - run: npm ci
-      - run: npm run test:coverage
-      - uses: codecov/codecov-action@v3
-```
-
-### Best Practices
-1. **Arrange-Act-Assert Pattern**: Organize tests clearly
-2. **Descriptive Names**: Test names should explain what they test
-3. **Isolation**: Each test should be independent
-4. **Minimal Mocks**: Only mock external dependencies
-5. **User-Centric**: Test from user perspective, not implementation
-6. **Async Handling**: Use async/await and waitFor for async operations
-7. **Coverage Goals**: Aim for 80%+ coverage on critical paths
+*Testing analysis: 2026-04-11*

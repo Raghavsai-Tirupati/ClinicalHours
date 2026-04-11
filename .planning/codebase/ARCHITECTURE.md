@@ -1,255 +1,199 @@
 # Architecture
 
-## Pattern
-**React SPA with Vite** - Modern single-page application using React 18.3, TypeScript, and Vite as the build tool. Heavy use of component-based architecture with UI kit integration (shadcn/ui via Radix UI). Dark theme enforced.
+**Analysis Date:** 2026-04-11
 
-## Entry Points
+## Pattern Overview
 
-### Application Entry
-- **`src/main.tsx`** - React DOM root initialization, imports fonts and renders App component
-- **`src/App.tsx`** - Main application wrapper with routing, providers, and error boundaries
-  - BrowserRouter from react-router-dom
-  - QueryClientProvider (TanStack React Query)
-  - ThemeProvider (next-themes - dark theme enforced)
-  - HelmetProvider (react-helmet-async for document metadata)
-  - ErrorBoundary wrapper
+**Overall:** Multi-tier React application with role-based routing, Supabase backend integration, and lazy-loaded pages.
 
-### Routing (Client-Side)
-- **App.tsx** defines all routes using react-router-dom
-- Pages are lazy-loaded with React.lazy() for code splitting
-- 20+ routes including:
-  - Public: `/`, `/opportunities`, `/opportunities/:slug`, `/projects`, `/contact`, `/auth`, `/terms`, `/privacy`, `/map`
-  - User: `/profile`, `/dashboard`
-  - Hospital: `/hospital-dashboard`, `/opportunities/:slug/application`, `/opportunities/:slug/admin`
-  - Admin: `/admin`, `/admin` (dashboard with tabs)
-  - Auth flows: `/check-email`, `/verify-email`, `/verify`, `/reset-password`
-  - Utility: `/test-headers`, `/auth-test`, `/pending-approval`, `*` (404)
-
-### Build Configuration
-- **`vite.config.ts`** - Build configuration with security headers, CSP policy, chunk optimization
-- **`tsconfig.json`** - TypeScript configuration with path alias `@/*` mapping to `./src/*`
-- **`index.html`** - HTML entry point with `<div id="root"></div>`
+**Key Characteristics:**
+- Client-side routing via React Router with code-splitting for performance
+- Context-based authentication and authorization (student, hospital admin, super admin)
+- Supabase as primary data layer with custom CSRF-protected edge function calls
+- React Query (TanStack Query) for server state management
+- Tailwind CSS + shadcn/ui for component styling
+- TypeScript with strict types throughout
+- Support for both authenticated and guest (unauthenticated) user flows
 
 ## Layers
 
-### Layer 1: Presentation (Pages & Components)
-- **`src/pages/`** - Page-level components (lazy-loaded)
-  - Home, Opportunities, OpportunityDetail, Projects, Contact
-  - Auth, Profile, Dashboard, MapView
-  - AdminDashboard, HospitalAdmin, HospitalDashboard, ApplicationForm
-  - Terms, Privacy, NotFound, etc.
+**Presentation Layer:**
+- Purpose: UI components and page layouts
+- Location: `src/components/`, `src/pages/`, `src/layouts/`
+- Contains: React components (TSX), page routes, layout wrappers, UI library components
+- Depends on: Hooks layer, Context layer, Services layer
+- Used by: Entry point (`src/App.tsx`, `src/main.tsx`)
 
-- **`src/components/`** - Reusable UI components
-  - **`ui/`** - Base UI components from shadcn/ui (Button, Dialog, Form, Input, Card, etc.)
-  - **`admin/`** - Admin-specific components (AdminOverviewTab, AdminHospitalsTab, AdminPendingApprovalsTab, AdminToolsTab, AdminUserList, AdminUserProfile, GuestSessionStats)
-  - **`tutorial/`** - Tutorial components
-  - General components: Navigation, Footer, ErrorBoundary, ScrollToTop, HeroBanner, ExperienceBuilder, etc.
+**Hooks/State Management Layer:**
+- Purpose: Custom React hooks for data fetching, auth, and component logic
+- Location: `src/hooks/`
+- Contains: `useAuth()` context hook, `useQuery()` hooks via TanStack Query, custom state logic
+- Depends on: Services layer, Integrations layer
+- Used by: Components and pages
 
-### Layer 2: Hooks (State & Side Effects)
-- **`src/hooks/`** - Custom React hooks
-  - **Auth & Access**: `useAuth()`, `useAdminCheck()`, `useHospitalAccount()`, `useHospitalMember()`
-  - **Data Fetching**: `useOpportunities()`, `useOpportunitiesQuery()`
-  - **Form & Input**: `useAutoSave()`, `useAutoSaveProfile()`, `useDebounce()`, `useDebouncedCallback()`
-  - **UI**: `useInView()`, `use-mobile()`, `use-toast()`
-  - **Profile**: `useProfileComplete()`
+**Services/Business Logic Layer:**
+- Purpose: Data transformation, filtering, and business rules
+- Location: `src/services/`, `src/lib/`
+- Contains: Utility functions (`applicationFilters.ts`, `premium.ts`), data transformers, validation logic
+- Depends on: Integrations layer, Types layer
+- Used by: Hooks, Components
 
-Key pattern: Hooks manage local state, side effects, and integration with external services. `useAuth()` is central for authentication flow.
+**Data/API Layer:**
+- Purpose: Communication with backend and data fetching
+- Location: `src/lib/api/`, `src/integrations/supabase/`
+- Contains: Supabase client initialization, CSRF-protected fetch wrappers, API interceptors
+- Depends on: Types layer, configuration via environment variables
+- Used by: Services and Hooks
 
-### Layer 3: Services (Business Logic & Data Access)
-- **`src/services/`** - Centralized business logic and data fetching
-  - **`opportunities.ts`** - Fetch, filter, search, and distance-sort opportunities
-  - **`savedOpportunities.ts`** - Manage user's saved opportunities
+**Context/Authentication Layer:**
+- Purpose: Global application state for auth and user session
+- Location: `src/contexts/`, `src/hooks/useAuth.tsx`
+- Contains: Auth context provider, guest session management, CSRF token handling
+- Depends on: Integrations (Supabase)
+- Used by: App root wrapper, all authenticated pages/components
 
-Pattern: Services encapsulate Supabase queries and return standardized result objects with `{ data, error, count }` shape.
-
-### Layer 4: API & Data Integration
-- **`src/integrations/supabase/`** - Supabase client setup
-  - **`client.ts`** - Supabase client initialization with custom storage adapter (localStorage vs sessionStorage based on "remember me" preference), CSRF token handling, custom fetch interceptor
-  - **`types.ts`** - Supabase type definitions
-
-- **`src/lib/api/`** - Additional API utilities
-  - **`citySearch.ts`** - City autocomplete via external API
-  - **`interceptor.ts`** - HTTP request/response interceptor
-
-### Layer 5: Utilities & Configuration
-- **`src/lib/`** - Utility functions and helpers
-  - **`auditLogger.ts`** - Audit logging for auth events
-  - **`authCookie.ts`** - Cookie-based session persistence (exchange JWT for HttpOnly cookie)
-  - **`calendar.ts`** - Calendar utilities
-  - **`csrf.ts`** - CSRF token generation and validation
-  - **`errorUtils.ts`** - Error handling utilities
-  - **`geolocation.ts`** - Browser geolocation API wrapper
-  - **`GlobeTransitionManager.ts`** - 3D globe animation management
-  - **`inputValidation.ts`** - Form input validation
-  - **`logger.ts`** - Console logging with environment checks
-  - **`rateLimit.ts`** - Client-side rate limiting
-  - **`toastHelpers.ts`** - Toast notification helpers
-  - **`tracking.ts`** - Analytics/event tracking
-  - **`utils.ts`** - General utility functions
-
-- **`src/lib/data/`** - Static lookup data
-  - `graduationYears.ts`, `majors.ts`, `universities.ts`, `usStates.ts`
-
-### Layer 6: Types
-- **`src/types/index.ts`** - Centralized TypeScript definitions
-  - Core: `Opportunity`, `SavedOpportunity`, `Question`, `Answer`, `Review`, `UserLocation`
-  - Error handling: `SupabaseError`, `ErrorDetails`
-  - Utility: `PaginationOptions`, `SearchOptions`, `OpportunityRow`
+**Types/Models Layer:**
+- Purpose: TypeScript type definitions and interfaces
+- Location: `src/types/`
+- Contains: `Opportunity`, `SavedOpportunity`, `ApplicationStatus`, `PositionType`, database row types
+- Depends on: None (foundational)
+- Used by: All other layers
 
 ## Data Flow
 
-### Authentication Flow
-1. User navigates to `/auth`
-2. `Auth` page component renders sign-up/login forms
-3. `useAuth()` hook manages auth state (user, session, loading)
-4. Supabase client in `src/integrations/supabase/client.ts` handles OTP/password auth
-5. Session stored in localStorage (if "remember me") or sessionStorage
-6. CSRF token generated via `src/lib/csrf.ts` and exchanged for HttpOnly cookie via `src/lib/authCookie.ts`
-7. User redirected to `/dashboard` upon successful auth
-8. Subsequent requests include CSRF token via custom fetch interceptor
+**Initial Page Load:**
 
-### Opportunity Data Flow
-1. User navigates to `/opportunities` or `/map`
-2. `Opportunities` or `MapView` page component mounts
-3. Component calls `useOpportunitiesQuery()` hook
-4. Hook calls `fetchOpportunities()` from `src/services/opportunities.ts`
-5. Service queries Supabase `opportunities_with_ratings` table
-6. Results fetched with filters (type, search, distance)
-7. Data mapped to `Opportunity` type
-8. Component renders UI with data
-9. User can save opportunities → triggers `savedOpportunities` service → Supabase insert
+1. Entry point (`src/main.tsx`) renders App root
+2. `src/App.tsx` wraps application in providers (QueryClientProvider, ThemeProvider, AuthProvider, HelmetProvider)
+3. AuthProvider in `src/hooks/useAuth.tsx` initializes Supabase client and restores session
+4. BrowserRouter enables client-side routing
+5. Routes lazy-load pages using `lazyRetry()` wrapper (handles chunk-loading failures)
+6. Guard components (`StudentOnlyRoute`, `HospitalOnlyRoute`, `AdminOnlyRoute`) enforce role-based access
 
-### Profile Update Flow
-1. User navigates to `/profile`
-2. `Profile` component displays form with current data
-3. User edits fields
-4. `useAutoSaveProfile()` hook auto-saves changes with debounce
-5. `supabase.from('profiles').update()` persists data
-6. Success/error toast displayed
+**Data Fetching Flow:**
 
-### Admin Dashboard Flow
-1. Admin navigates to `/admin`
-2. `AdminDashboard` page loads (access protected by `useAdminCheck()`)
-3. Renders tabbed interface:
-   - Overview: `AdminOverviewTab` - platform health stats
-   - Students: `AdminUserList` - users with detail drawer `AdminUserProfile`
-   - Hospitals: `AdminHospitalsTab` - hospital management
-   - Pending Approvals: `AdminPendingApprovalsTab` - approve/reject hospital applications
-   - Tools: `AdminToolsTab` - admin utilities
-4. Tab components fetch data via Supabase queries
-5. Admin actions (approve, reject, delete) trigger mutations
-6. Toast notifications confirm actions
+1. Component calls custom hook (e.g., `useOpportunitiesQuery()`, `useAllApplications()`)
+2. Hook uses `useQuery()` from TanStack Query with Supabase select statements
+3. Initial fetch calls `supabase.from(table).select(columns)...`
+4. TanStack Query caches result with configurable staleTime (5 minutes default)
+5. Retry logic: 2 retries with exponential backoff (up to 30 seconds)
+6. Component receives `{ data, isLoading, error }` from hook
+7. Fallback UI shown during loading; data displayed on success; toast shown on error
+
+**State-Changing Operations:**
+
+1. Component calls mutation function from service layer
+2. Mutation prepares payload and calls Supabase function or direct insert/update
+3. For edge functions: `invokeFunctionWithCSRF()` in `src/lib/api/interceptor.ts` wraps call
+4. CSRF token fetched from `src/lib/csrf.ts` (double-submit pattern)
+5. Token sent in `X-CSRF-Token` header; credentials included for cookie auth
+6. On 403 CSRF error: token refreshed and request retried once
+7. Response parsed and cached via TanStack Query (optimistic update pattern used in some places)
+8. Toast notification displays success/error
+
+**Authentication State:**
+
+- User logs in via `Auth.tsx` page (email/password or OAuth)
+- Supabase returns session with JWT token
+- `useAuth()` hook stores session in dynamic storage (localStorage if "remember me", sessionStorage otherwise)
+- CSRF token cached in memory (not localStorage to prevent XSS)
+- Guest sessions: UUID v4 generated and stored in sessionStorage, tracked server-side
+- Session timeout: 30 minutes of inactivity triggers logout
+- Role determined by checking `hospital_pages` and admin flag in user metadata
 
 ## Key Abstractions
 
-### Custom Hooks Pattern
-Hooks encapsulate complex state logic:
-- `useAuth()` - Single source of truth for auth state with session timeout
-- `useOpportunitiesQuery()` - TanStack React Query wrapper around `fetchOpportunities`
-- `useAutoSave()` - Generic auto-save with debounce for forms
+**useAuth Hook:**
+- Purpose: Global authentication state and session management
+- Examples: `src/hooks/useAuth.tsx`, exported context for use in components
+- Pattern: React Context + useContext; manages Supabase session, guest mode, CSRF tokens
 
-### Supabase Integration Pattern
-- Centralized client in `src/integrations/supabase/client.ts`
-- Custom storage adapter based on "remember me" preference
-- CSRF token injection via custom fetch
-- Services act as business logic layer over Supabase queries
+**Route Guards:**
+- Purpose: Enforce role-based access control
+- Examples: `src/components/StudentOnlyRoute.tsx`, `src/components/HospitalOnlyRoute.tsx`, `src/components/AdminOnlyRoute.tsx`
+- Pattern: Wrapper components that check `useAuth()` state and redirect to `/auth` if unauthorized
 
-### ErrorBoundary & Error Handling
-- `ErrorBoundary` component wraps entire app
-- Catches React errors and displays fallback UI
-- `errorUtils.ts` provides error serialization and logging
+**TanStack Query Hooks:**
+- Purpose: Server state management for data fetching and caching
+- Examples: `src/hooks/useOpportunitiesQuery.ts`, `src/hooks/useAllApplications.ts`, `src/hooks/useHospitalPageByUser.ts`
+- Pattern: Custom hooks that wrap `useQuery()` with Supabase selects; provide refetch/invalidation methods
 
-### Lazy Loading & Code Splitting
-- All pages lazy-loaded with React.lazy()
-- `PageLoader` component shown during load
-- Vite configured with manual chunk splitting for vendors and large components
+**Service Layer Utilities:**
+- Purpose: Business logic decoupled from components
+- Examples: `src/lib/applicationFilters.ts`, `src/lib/premium.ts`, `src/services/opportunities.ts`
+- Pattern: Pure functions that transform or filter data; used by hooks and components
 
-### Toast Notifications
-- `sonner` library for notifications (dark theme compatible)
-- Unified toast helpers in `src/lib/toastHelpers.ts`
-- Accessible via `use-toast()` hook or direct `toast` function
+**UI Component Library:**
+- Purpose: Reusable styled components
+- Examples: `src/components/ui/button.tsx`, `src/components/ui/dialog.tsx`, `src/components/ui/card.tsx`
+- Pattern: shadcn/ui + Radix UI + Tailwind; imported via barrel exports
 
-### Theme Management
-- `next-themes` provider with dark theme forced
-- Class-based theming (Tailwind CSS)
-- Theme context available to all components
+## Entry Points
 
-## State Management
+**Browser Entry:**
+- Location: `src/main.tsx`
+- Triggers: App load in browser
+- Responsibilities: React DOM render, mount to root element
 
-### Client-Side State
-**React Query (TanStack React Query)**
-- Primary pattern for server state (opportunities, reviews, etc.)
-- Configured with default retry (2x) and stale time (5 min)
-- Caching, background refetching, and synchronization built-in
-- Used in `useOpportunitiesQuery()` hook
+**App Root:**
+- Location: `src/App.tsx`
+- Triggers: main.tsx render
+- Responsibilities: Provider setup (Query, Theme, Auth, Helmet), router configuration, lazy page loading, error boundary
 
-**Local Component State**
-- useState() for UI state (form inputs, modals, tabs, filters)
-- useCallback() for memoized event handlers
-- Kept minimal to avoid prop drilling
+**Page Routes:**
+- Location: `src/pages/` (examples: `Home.tsx`, `Dashboard.tsx`, `Auth.tsx`)
+- Triggers: Router navigation
+- Responsibilities: Page-specific data fetching, layout composition, user interaction handling
 
-**Custom Hooks**
-- `useAuth()` returns `{ user, session, loading, error }`
-- Manages session persistence via Supabase client
-- Handles session timeout (30 min inactivity)
+**Admin Dashboard:**
+- Location: `src/pages/AdminDashboard.tsx`
+- Triggers: `/admin` route (requires admin role)
+- Responsibilities: User management, activity logs, hospital verification, premium management
 
-### Server State (Supabase)
-- Real-time subscriptions possible via Supabase PostgREST
-- Mutations via `supabase.from(table).insert/update/delete()`
-- RPC calls for complex operations (e.g., distance-sorted queries)
+**Hospital Admin Dashboard:**
+- Location: `src/components/hospital/`, `src/layouts/HospitalDashboardLayout.tsx`
+- Triggers: `/hospital/:id/` or `/hospital-dashboard/` routes (requires hospital membership)
+- Responsibilities: Position management, application review, candidate communication, volunteer tracking
 
-### Caching Strategy
-- React Query handles HTTP caching
-- localStorage/sessionStorage for auth tokens (dynamic per "remember me" setting)
-- Opportunity prefetch utilities in `src/lib/opportunityPrefetch.ts`
+## Error Handling
 
-## Security Measures
+**Strategy:** Layered error handling with user-facing toasts and console logging
 
-### Authentication & Session
-- Email/password auth via Supabase
-- OTP for email verification
-- JWT tokens with automatic refresh
-- Session timeout: 30 minutes inactivity
-- HttpOnly cookie for sensitive tokens
-- CSRF token generation and validation
+**Patterns:**
 
-### Request Protection
-- Custom fetch interceptor adds CSRF tokens to state-changing requests
-- Credentials mode for edge functions
-- Request validation in services
+- **Client Errors:** Caught at component level, displayed as toast notifications via `useToast()`
+- **API Errors:** Supabase errors converted to user-friendly messages in error boundary
+- **Network Errors:** TanStack Query retry mechanism (2 retries); if all fail, error state in component
+- **Session Errors:** Auth errors trigger automatic redirect to `/auth` page
+- **CSRF Failures:** Automatic token refresh and retry (up to 1 retry in `invokeFunctionWithCSRF()`)
+- **Chunk Load Failures:** `lazyRetry()` wrapper in App.tsx reloads page once, then shows error boundary
+- **Boundary Fallback:** `src/components/ErrorBoundary.tsx` catches React render errors and displays fallback UI
 
-### Content Security Policy (CSP)
-- Configured in vite.config.ts
-- Restricts script execution to `'self'` and `'unsafe-inline'` (React requirement)
-- Blocks inline event handlers
-- Allows Supabase, Mapbox, OpenStreetMap APIs
+## Cross-Cutting Concerns
 
-### Data Validation
-- Input validation in `src/lib/inputValidation.ts`
-- Zod for form schema validation
-- Type safety via TypeScript
+**Logging:** 
+- Audit logging via `src/lib/auditLogger.ts` (captures user actions for admin review)
+- Console logging for development debugging
+- Analytics tracking via `src/lib/tracking.ts` (page views, user interactions)
 
-### Error Logging
-- Audit logging for auth events via `src/lib/auditLogger.ts`
-- Error context captured and logged
-- No sensitive data logged to console in production
+**Validation:** 
+- Form validation via React Hook Form + Zod schema validation
+- Input sanitization in `src/lib/inputValidation.ts` (email, phone, text cleaning)
+- Server-side validation enforced by Supabase RLS policies
 
-## Performance Optimizations
+**Authentication:** 
+- Session initialization in `useAuth()` on app load
+- Guest session generation for unauthenticated access
+- "Remember me" preference stored locally; otherwise cleared on tab close
+- 30-minute session timeout with inactivity tracking
 
-### Build Time
-- Vite for fast development and production builds
-- Manual chunk splitting for vendors and large components
-- React SWC compiler for fast transpilation
+**Authorization:**
+- Role-based route guards (Student, Hospital, Admin)
+- Supabase Row Level Security (RLS) policies enforce database-level access control
+- Hospital membership verified via `hospital_members` table join
 
-### Runtime
-- Code splitting via lazy loading
-- React Query caching and background sync
-- Debounced input (search, form updates)
-- Intersection Observer for lazy rendering (useInView hook)
-- Memoization of components and callbacks
+**State Management:**
+- Global: Auth context via `useAuth()`, Theme via `next-themes`
+- Server: TanStack Query with 5-minute staleTime default
+- Local: Component state via `useState()` for UI-only data (form inputs, modals, etc.)
 
-### Bundle Size
-- Tree-shaking enabled
-- Only necessary Radix UI components imported
-- Self-hosted fonts (no external CDN)
-- Asset inlining for small files (<4KB)
