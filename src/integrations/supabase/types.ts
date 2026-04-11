@@ -76,6 +76,50 @@ export type Database = {
           },
         ]
       }
+      admin_notification_log: {
+        Row: {
+          admin_email: string
+          applicant_email: string | null
+          applicant_name: string | null
+          hospital_name: string
+          hospital_page_id: string | null
+          id: string
+          position_title: string | null
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          admin_email: string
+          applicant_email?: string | null
+          applicant_name?: string | null
+          hospital_name: string
+          hospital_page_id?: string | null
+          id?: string
+          position_title?: string | null
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          admin_email?: string
+          applicant_email?: string | null
+          applicant_name?: string | null
+          hospital_name?: string
+          hospital_page_id?: string | null
+          id?: string
+          position_title?: string | null
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notification_log_hospital_page_id_fkey"
+            columns: ["hospital_page_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_answers: {
         Row: {
           answer_file_url: string | null
