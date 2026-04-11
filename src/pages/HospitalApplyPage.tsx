@@ -49,6 +49,7 @@ export default function HospitalApplyPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -63,6 +64,21 @@ export default function HospitalApplyPage() {
       setEmail(user.email);
     }
   }, [user?.email, email]);
+
+  // Check if user already applied to this opportunity
+  useEffect(() => {
+    if (!user || !accountId || !opportunity) return;
+    (async () => {
+      const { data } = await supabase
+        .from('hospital_applications')
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('opportunity_id', opportunity.id)
+        .eq('student_id', user.id)
+        .maybeSingle();
+      if (data) setAlreadyApplied(true);
+    })();
+  }, [user, accountId, opportunity]);
 
   useEffect(() => {
     if (!slug) {
@@ -202,6 +218,25 @@ export default function HospitalApplyPage() {
           <h2 className="text-xl font-bold mb-2">Sign in required</h2>
           <p className="text-muted-foreground mb-6">You need an account to apply to this opportunity.</p>
           <Button onClick={() => navigate(`/auth?redirect=/apply/${slug}`)}>Sign in or create account</Button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (alreadyApplied) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="container mx-auto px-4 py-12 text-center max-w-md">
+          <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Already applied</h2>
+          <p className="text-muted-foreground mb-6">
+            You've already submitted an application to {opportunity?.name ?? 'this opportunity'}.
+          </p>
+          <Button variant="outline" onClick={() => navigate(`/opportunities/${slug}`)}>
+            Back to opportunity
+          </Button>
         </div>
         <Footer />
       </div>
