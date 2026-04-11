@@ -1190,7 +1190,7 @@ export default function ApplicantPersonPage() {
             open={emailDialogOpen}
             onOpenChange={setEmailDialogOpen}
             hospitalPageId={hospitalPage.id}
-            hospitalName={hospitalPage.opportunity?.name || hospitalPage.name || 'ClinicalHours'}
+hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
             senderEmail={hospitalPage.gmail_email}
             selectedApplicationIds={applications.map((a) => a.id)}
             applications={applications.map(asStudentApp)}
@@ -1199,7 +1199,7 @@ export default function ApplicantPersonPage() {
             open={interviewDialogOpen}
             onOpenChange={setInterviewDialogOpen}
             hospitalPageId={hospitalPage.id}
-            hospitalName={hospitalPage.opportunity?.name || hospitalPage.name || 'ClinicalHours'}
+            hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
             bookingUrl={hospitalPage.interview_booking_url || ''}
             selectedApplicationIds={applications.map((a) => a.id)}
             applications={applications.map(asStudentApp)}

@@ -260,7 +260,7 @@ export default function ApplicationReviewPanel({
         open={emailOpen}
         onOpenChange={setEmailOpen}
         hospitalPageId={hospitalPage.id}
-        hospitalName={hospitalPage.name || 'ClinicalHours'}
+hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
         senderEmail={hospitalPage.gmail_email}
         selectedApplicationIds={[app.id]}
         applications={applications}
@@ -269,7 +269,7 @@ export default function ApplicationReviewPanel({
         open={interviewOpen}
         onOpenChange={setInterviewOpen}
         hospitalPageId={hospitalPage.id}
-        hospitalName={hospitalPage.name || 'ClinicalHours'}
+        hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
         bookingUrl={hospitalPage.interview_booking_url || ''}
         selectedApplicationIds={[app.id]}
         applications={applications}

@@ -262,7 +262,7 @@ export default function ApplicationsHub() {
             open={emailDialogOpen}
             onOpenChange={setEmailDialogOpen}
             hospitalPageId={hospitalPage.id}
-            hospitalName={hospitalPage.name || 'ClinicalHours'}
+hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
             senderEmail={hospitalPage.gmail_email}
             selectedApplicationIds={selectedApplicationIds}
             applications={applications}
@@ -271,7 +271,7 @@ export default function ApplicationsHub() {
             open={interviewDialogOpen}
             onOpenChange={(open) => { setInterviewDialogOpen(open); if (!open) setSelectedIds(new Set()); }}
             hospitalPageId={hospitalPage.id}
-            hospitalName={hospitalPage.name || 'ClinicalHours'}
+            hospitalName={hospitalPage.opportunity?.name || 'ClinicalHours'}
             bookingUrl={hospitalPage.interview_booking_url || ''}
             selectedApplicationIds={selectedApplicationIds}
             applications={applications}
