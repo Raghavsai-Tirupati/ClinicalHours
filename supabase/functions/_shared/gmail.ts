@@ -43,7 +43,7 @@ export async function sendViaGmail({
   const accessToken = await refreshGmailAccessToken(refreshToken);
 
   const rawEmail = [
-    `From: ${fromEmail}`,
+    `From: ${fromEmail} <${fromEmail}>`,
     `To: ${toEmail}`,
     `Subject: ${subject}`,
     `MIME-Version: 1.0`,
