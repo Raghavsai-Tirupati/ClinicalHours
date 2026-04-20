@@ -60,6 +60,7 @@ const GoogleAuthCallback = lazyRetry(() => import("./pages/GoogleAuthCallback"))
 // Hospital admin dashboard (position system)
 const HospitalDashboardLayout = lazyRetry(() => import("./layouts/HospitalDashboardLayout"));
 const PositionForm = lazyRetry(() => import("./components/hospital/PositionForm"));
+const CopyPositionForm = lazyRetry(() => import("./components/hospital/CopyPositionForm"));
 const PositionDetail = lazyRetry(() => import("./components/hospital/PositionDetail"));
 const ApplicantProfilePage = lazyRetry(() => import("./components/hospital/ApplicantProfilePage"));
 const ApplicantPersonPage = lazyRetry(() => import("./components/hospital/ApplicantPersonPage"));
@@ -177,6 +178,7 @@ function AppContent() {
                 <Route index element={<ApplicationsHub />} />
                 <Route path="positions" element={<PositionsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
+                <Route path="positions/copy" element={<CopyPositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
                 <Route path="applicants/:applicationId" element={<ApplicantProfilePage />} />
@@ -207,6 +209,7 @@ function AppContent() {
                 <Route index element={<ApplicationsHub />} />
                 <Route path="positions" element={<PositionsHub />} />
                 <Route path="positions/new" element={<PositionForm />} />
+                <Route path="positions/copy" element={<CopyPositionForm />} />
                 <Route path="positions/:positionId" element={<PositionDetail />} />
                 <Route path="positions/:positionId/edit" element={<PositionForm />} />
                 <Route path="applicants/:applicationId" element={<ApplicantProfilePage />} />

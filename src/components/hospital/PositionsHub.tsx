@@ -9,12 +9,21 @@ import {
   Clock,
   MapPin,
   GripVertical,
+  Copy,
+  FilePlus,
+  ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { useAllApplications } from '@/hooks/useAllApplications';
 import { supabase } from '@/integrations/supabase/client';
@@ -151,12 +160,29 @@ export default function PositionsHub() {
             Manage positions and review applicants
           </p>
         </div>
-        <Button asChild className="shrink-0 self-start sm:self-auto">
-          <Link to={`${basePath}/positions/new`}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Position
-          </Link>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="shrink-0 self-start sm:self-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              New Position
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem asChild>
+              <Link to={`${basePath}/positions/new`} className="flex items-center gap-2 cursor-pointer">
+                <FilePlus className="h-4 w-4" />
+                Create a New Position
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to={`${basePath}/positions/copy`} className="flex items-center gap-2 cursor-pointer">
+                <Copy className="h-4 w-4" />
+                Copy an Existing Position
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Search */}
