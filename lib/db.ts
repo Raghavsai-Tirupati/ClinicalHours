@@ -22,7 +22,7 @@ export function getPool(): pg.Pool {
     _pool = new pg.Pool({
       connectionString: DATABASE_URL,
       max: 10,
-      ...(isRemote ? { ssl: { rejectUnauthorized: false } } : {}),
+      ...(isRemote ? { ssl: { rejectUnauthorized: true } } : {}),
     });
   }
   return _pool;
