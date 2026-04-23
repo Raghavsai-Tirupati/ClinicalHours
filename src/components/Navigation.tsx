@@ -30,14 +30,9 @@ const freeToolsLinks = [
 ];
 
 const premiumToolsLinks = [
-  { name: "PathFinder — AI Matcher", path: "/quiz" },
   { name: "AMCAS Activity Writer", path: "/amcas" },
   { name: "AAMC Competency Tracker", path: "/competencies" },
-  { name: "Letter of Rec Manager", path: "/lor" },
-  { name: "Application Timeline", path: "/timeline" },
   { name: "Secondary Essay Coach", path: "/secondaries" },
-  { name: "School List Builder", path: "/school-list" },
-  { name: "Direct Application Finder", path: "/apply-finder" },
 ];
 
 const Navigation = () => {

@@ -19,17 +19,13 @@ import {
   Clock,
   FileText,
   Star,
-  GraduationCap,
-  HeadphonesIcon,
 } from "lucide-react";
 
 const FEATURES = [
-  { icon: Brain, text: "AI-Powered Opportunity Matching" },
-  { icon: Clock, text: "Hour Tracking & Analytics" },
+  { icon: Clock, text: "Hour Tracking & Analytics (Journal)" },
   { icon: FileText, text: "AMCAS Activity Description Generator" },
   { icon: Star, text: "AAMC Competency Mapper" },
-  { icon: GraduationCap, text: "School List Builder" },
-  { icon: HeadphonesIcon, text: "Priority Support" },
+  { icon: Brain, text: "Secondary Essay Coach" },
 ];
 
 function formatDate(isoString: string): string {

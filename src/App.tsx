@@ -84,15 +84,10 @@ const HospitalDashboardRedirect = lazyRetry(() => import("./components/HospitalD
 const Premium = lazyRetry(() => import("./pages/Premium"));
 const PremiumPurchase = lazyRetry(() => import("./pages/PremiumPurchase"));
 const HourTracker = lazyRetry(() => import("./pages/HourTracker"));
-const OpportunityQuiz = lazyRetry(() => import("./pages/OpportunityQuiz"));
 const CompetencyMapper = lazyRetry(() => import("./pages/CompetencyMapper"));
 const AMCASGenerator = lazyRetry(() => import("./pages/AMCASGenerator"));
-const LORTracker = lazyRetry(() => import("./pages/LORTracker"));
-const TimelinePlanner = lazyRetry(() => import("./pages/TimelinePlanner"));
 const SecondaryEngine = lazyRetry(() => import("./pages/SecondaryEngine"));
 const CostSimulator = lazyRetry(() => import("./pages/CostSimulator"));
-const SchoolListBuilder = lazyRetry(() => import("./pages/SchoolListBuilder"));
-const DirectApplicationFinder = lazyRetry(() => import("./pages/DirectApplicationFinder"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -233,15 +228,10 @@ function AppContent() {
               <Route path="/premium" element={<Premium />} />
               <Route path="/premium/purchase" element={<PremiumPurchase />} />
               <Route path="/hours" element={<HourTracker />} />
-              <Route path="/quiz" element={<OpportunityQuiz />} />
               <Route path="/competencies" element={<CompetencyMapper />} />
               <Route path="/amcas" element={<AMCASGenerator />} />
-              <Route path="/lor" element={<LORTracker />} />
-              <Route path="/timeline" element={<TimelinePlanner />} />
               <Route path="/secondaries" element={<SecondaryEngine />} />
               <Route path="/costs" element={<CostSimulator />} />
-              <Route path="/school-list" element={<SchoolListBuilder />} />
-              <Route path="/apply-finder" element={<DirectApplicationFinder />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ErrorBoundary>
