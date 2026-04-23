@@ -261,7 +261,7 @@ export default function PremiumPurchase() {
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Try Again — $4.99/month
+                    Try Again — $9.99/month
                   </>
                 )}
               </Button>
@@ -433,7 +433,7 @@ export default function PremiumPurchase() {
             <h1 className="text-4xl sm:text-5xl font-bold text-foreground font-heading mb-3">
               Upgrade to Premium
             </h1>
-            <p className="text-2xl font-semibold text-amber-400 mb-3">$4.99/month</p>
+            <p className="text-2xl font-semibold text-amber-400 mb-3">$9.99/month</p>
             <p className="text-muted-foreground max-w-lg mx-auto">
               The complete pre-med toolkit. AI-powered tools to find opportunities, track hours,
               write AMCAS descriptions, and plan your entire application.
@@ -475,7 +475,7 @@ export default function PremiumPurchase() {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  Subscribe — $4.99/month
+                  Subscribe — $9.99/month
                 </>
               )}
             </Button>

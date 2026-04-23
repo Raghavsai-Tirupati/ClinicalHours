@@ -61,14 +61,14 @@ export function PremiumGate({
             <>
               <Button className="gap-2" onClick={() => setVerificationGateOpen(true)}>
                 <Sparkles className="h-4 w-4" />
-                Upgrade — $4.99/month
+                Upgrade — $9.99/month
               </Button>
             </>
           ) : (
             <Button asChild className="gap-2">
               <Link to={user ? "/premium/purchase" : "/auth"}>
                 <Sparkles className="h-4 w-4" />
-                {user ? "Upgrade — $4.99/month" : "Sign Up to Get Started"}
+                {user ? "Upgrade — $9.99/month" : "Sign Up to Get Started"}
               </Link>
             </Button>
           )}

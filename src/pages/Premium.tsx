@@ -46,7 +46,7 @@ const PLANS = [
   },
   {
     name: "Premium",
-    price: "$4.99",
+    price: "$9.99",
     period: "/ month",
     description: "The complete pre-med toolkit. AI-powered tools to maximize your application.",
     cta: "Upgrade to Premium",
@@ -123,7 +123,7 @@ const Premium = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Helmet>
         <title>Premium — ClinicalHours</title>
-        <meta name="description" content="Unlock AI-powered tools for pre-med students: PathFinder opportunity matching, AMCAS Activity Writer, AAMC Competency Tracker, and more. Starting at $4.99/month." />
+        <meta name="description" content="Unlock AI-powered tools for pre-med students: PathFinder opportunity matching, AMCAS Activity Writer, AAMC Competency Tracker, and more. Starting at $9.99/month." />
       </Helmet>
       <Navigation />
 
