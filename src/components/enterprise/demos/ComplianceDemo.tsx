@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { CheckCircle2, AlertCircle, Clock, Download, RefreshCw } from "lucide-react";
 import { DemoStage } from "./DemoStage";
+import { DemoCursor } from "./DemoCursor";
 
 /**
  * Animated mock of the compliance dashboard:
@@ -26,6 +27,15 @@ const STEPS = [
 
 type StepId = (typeof STEPS)[number]["id"];
 
+const CURSOR: Record<StepId, { x: string; y: string; click?: boolean }> = {
+  counting: { x: "18%", y: "32%" },
+  idle: { x: "55%", y: "62%" },
+  running: { x: "22%", y: "88%", click: true },
+  checked: { x: "30%", y: "88%" },
+  exporting: { x: "82%", y: "88%", click: true },
+  exported: { x: "82%", y: "92%" },
+};
+
 export function ComplianceDemo() {
   const reduce = useReducedMotion();
   const [stepIdx, setStepIdx] = useState(reduce ? STEPS.length - 1 : 0);
@@ -49,7 +59,7 @@ export function ComplianceDemo() {
 
   return (
     <DemoStage title="compliance · memorial health · all credentials">
-      <div className="px-5 py-5 h-full flex flex-col gap-3">
+      <div className="relative px-5 py-5 h-full flex flex-col gap-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -136,6 +146,7 @@ export function ComplianceDemo() {
             )}
           </div>
         </div>
+        {!reduce && <DemoCursor {...CURSOR[step]} />}
       </div>
     </DemoStage>
   );

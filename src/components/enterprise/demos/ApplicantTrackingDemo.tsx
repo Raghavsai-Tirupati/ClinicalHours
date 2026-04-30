@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Check, Filter } from "lucide-react";
 import { DemoStage } from "./DemoStage";
+import { DemoCursor } from "./DemoCursor";
 
 /**
  * Animated mock of the applicant-tracking flow:
@@ -26,6 +27,15 @@ const STEPS = [
 ] as const;
 
 type StepId = (typeof STEPS)[number]["id"];
+
+const CURSOR: Record<StepId, { x: string; y: string; click?: boolean }> = {
+  idle: { x: "20%", y: "88%" },
+  filter: { x: "88%", y: "8%", click: true },
+  hover: { x: "32%", y: "38%" },
+  accept: { x: "85%", y: "38%", click: true },
+  promote: { x: "60%", y: "78%" },
+  settled: { x: "62%", y: "82%" },
+};
 
 interface Applicant {
   id: string;
@@ -62,7 +72,7 @@ export function ApplicantTrackingDemo() {
 
   return (
     <DemoStage title="applications · pediatrics volunteer · memorial health">
-      <div className="px-5 py-5 h-full flex flex-col gap-3">
+      <div className="relative px-5 py-5 h-full flex flex-col gap-3">
         {/* Header row */}
         <div className="flex items-center justify-between">
           <div>
@@ -139,6 +149,7 @@ export function ApplicantTrackingDemo() {
             )}
           </div>
         </div>
+        {!reduce && <DemoCursor {...CURSOR[step]} />}
       </div>
     </DemoStage>
   );

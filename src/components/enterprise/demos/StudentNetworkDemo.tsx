@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Sparkles, GraduationCap } from "lucide-react";
 import { DemoStage } from "./DemoStage";
+import { DemoCursor } from "./DemoCursor";
 
 /**
  * Animated mock of the pre-health student network match flow:
@@ -24,6 +25,14 @@ const STEPS = [
 ] as const;
 
 type StepId = (typeof STEPS)[number]["id"];
+
+const CURSOR: Record<StepId, { x: string; y: string; click?: boolean }> = {
+  counting: { x: "26%", y: "22%" },
+  position: { x: "55%", y: "32%" },
+  routing: { x: "85%", y: "52%" },
+  ranked: { x: "75%", y: "68%" },
+  settled: { x: "78%", y: "78%" },
+};
 
 const CANDIDATES = [
   { id: "c1", name: "Maya Patel", school: "UCLA '26", match: 94 },
@@ -51,7 +60,7 @@ export function StudentNetworkDemo() {
 
   return (
     <DemoStage title="student network · live match · clinicalhours">
-      <div className="px-5 py-5 h-full flex flex-col gap-3">
+      <div className="relative px-5 py-5 h-full flex flex-col gap-3">
         {/* Counter header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -136,6 +145,7 @@ export function StudentNetworkDemo() {
             ))}
           </div>
         </div>
+        {!reduce && <DemoCursor {...CURSOR[step]} />}
       </div>
     </DemoStage>
   );

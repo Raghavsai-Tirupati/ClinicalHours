@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { FileText, Loader2, Check, ShieldCheck } from "lucide-react";
 import { DemoStage } from "./DemoStage";
+import { DemoCursor } from "./DemoCursor";
 
 /**
  * Animated mock of the credentialing automation flow:
@@ -29,6 +30,16 @@ const STEPS = [
 
 type StepId = (typeof STEPS)[number]["id"];
 
+const CURSOR: Record<StepId, { x: string; y: string; click?: boolean }> = {
+  idle: { x: "10%", y: "85%" },
+  "pdf-drop": { x: "22%", y: "55%", click: true },
+  extracting: { x: "26%", y: "60%" },
+  fields: { x: "70%", y: "40%" },
+  "npi-typing": { x: "80%", y: "70%" },
+  verifying: { x: "30%", y: "92%" },
+  verified: { x: "32%", y: "92%" },
+};
+
 export function CredentialingDemo() {
   const reduce = useReducedMotion();
   const [stepIdx, setStepIdx] = useState(reduce ? STEPS.length - 1 : 0);
@@ -48,7 +59,7 @@ export function CredentialingDemo() {
 
   return (
     <DemoStage title="credentialing case · sarah chen, md">
-      <div className="px-5 py-5 h-full flex flex-col gap-3">
+      <div className="relative px-5 py-5 h-full flex flex-col gap-3">
         {/* Header row */}
         <div className="flex items-center justify-between">
           <div>
@@ -165,6 +176,7 @@ export function CredentialingDemo() {
             )}
           </div>
         </div>
+        {!reduce && <DemoCursor {...CURSOR[step]} />}
       </div>
     </DemoStage>
   );
