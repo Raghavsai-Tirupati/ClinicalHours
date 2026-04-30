@@ -1,12 +1,11 @@
-import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState, type ComponentType } from "react";
-import { ArrowRight, type LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { FadeUp } from "@/components/enterprise/animations/FadeUp";
 import { VideoSlot } from "@/components/enterprise/animations/VideoSlot";
 import { cn } from "@/lib/utils";
 
 interface PlatformFeature {
-  icon: LucideIcon;
+  /** Uppercase eyebrow shown above the title — e.g. "Applicant tracking". */
+  eyebrow?: string;
   title: string;
   body: string;
   video: string;
@@ -18,270 +17,115 @@ interface PlatformSectionProps {
 }
 
 /**
- * Sticky-scroll storytelling pattern for the platform features.
- *
- * Desktop (md+): the 4 feature blocks stack vertically in the left column
- * with generous spacing. The right column is `sticky` and shows the demo
- * video for whichever feature is currently centered in the viewport. As
- * the user scrolls past each block, the right-side video cross-fades to
- * the next.
- *
- * Mobile: the sticky pattern doesn't make sense at narrow widths, so each
- * feature is rendered as a stacked block with its video inline beneath it.
+ * OpenLine-style feature showcase: each feature gets its own row with the
+ * copy on one side and the demo video on the other, alternating sides for
+ * visual rhythm. On mobile everything stacks; the video always sits below
+ * its block so reading order is preserved.
  */
 export function PlatformSection({ features }: PlatformSectionProps) {
   return (
     <section id="platform" className="py-28 sm:py-36 px-6 sm:px-8">
       <div className="max-w-6xl mx-auto">
-        <div className="max-w-3xl mb-16 sm:mb-24">
+        <div className="max-w-3xl mb-20 sm:mb-28">
           <FadeUp>
-            <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-emerald-400/80 mb-6">
+            <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-emerald-400/80 mb-6 flex items-center gap-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
               The platform
             </p>
           </FadeUp>
           <FadeUp delay={0.1}>
-            <h2 className="font-mono text-3xl sm:text-4xl md:text-5xl font-medium leading-[1.1] tracking-tight">
-              One platform.
-              <br />
-              Every workforce operation.
+            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.02em]">
+              <span className="text-white/40">One platform.</span>{" "}
+              <span className="text-white">Every workforce operation.</span>
             </h2>
           </FadeUp>
         </div>
 
-        <DesktopStickyScroll features={features} />
-        <MobileStack features={features} />
+        <div className="space-y-28 sm:space-y-36 lg:space-y-44">
+          {features.map((feature, i) => (
+            <FeatureRow key={feature.slotName} feature={feature} index={i} />
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
-function DesktopStickyScroll({ features }: PlatformSectionProps) {
-  const [activeIdx, setActiveIdx] = useState(0);
-  const blockRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const reduce = useReducedMotion();
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const observers: IntersectionObserver[] = [];
-    blockRefs.current.forEach((el, i) => {
-      if (!el) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) setActiveIdx(i);
-        },
-        // Activate when the block crosses the centre 30% of viewport
-        { rootMargin: "-35% 0px -35% 0px", threshold: 0 },
-      );
-      observer.observe(el);
-      observers.push(observer);
-    });
-
-    return () => observers.forEach((o) => o.disconnect());
-  }, [features.length]);
-
-  return (
-    <div className="hidden md:grid grid-cols-12 gap-12 lg:gap-16">
-      {/* Left column — feature blocks */}
-      <div className="col-span-7 space-y-32 lg:space-y-40">
-        {features.map((feature, i) => (
-          <FeatureBlock
-            key={feature.slotName}
-            feature={feature}
-            isActive={i === activeIdx}
-            onMount={(el) => {
-              blockRefs.current[i] = el;
-            }}
-            index={i}
-          />
-        ))}
-      </div>
-
-      {/* Right column — sticky video stack with cross-fade */}
-      <div className="col-span-5">
-        <div className="sticky top-24">
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border/40 bg-gradient-to-br from-muted/20 to-muted/5">
-            {features.map((feature, i) => (
-              <motion.div
-                key={feature.slotName}
-                initial={false}
-                animate={{ opacity: i === activeIdx ? 1 : 0 }}
-                transition={{
-                  duration: reduce ? 0 : 0.4,
-                  ease: [0.21, 0.47, 0.32, 0.98],
-                }}
-                className="absolute inset-0"
-                aria-hidden={i !== activeIdx}
-              >
-                {/* Render each video without its own border so they layer cleanly */}
-                <BareVideoSlot
-                  src={feature.video}
-                  slotName={feature.slotName}
-                  paused={i !== activeIdx}
-                />
-              </motion.div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between text-xs uppercase tracking-[0.25em] text-muted-foreground">
-            <span>30-second demo</span>
-            <span aria-live="polite">
-              {String(activeIdx + 1).padStart(2, "0")} / {String(features.length).padStart(2, "0")}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface FeatureBlockProps {
+interface FeatureRowProps {
   feature: PlatformFeature;
-  isActive: boolean;
-  onMount: (el: HTMLDivElement | null) => void;
   index: number;
 }
 
-function FeatureBlock({ feature, isActive, onMount, index }: FeatureBlockProps) {
-  const Icon = feature.icon;
+function FeatureRow({ feature, index }: FeatureRowProps) {
+  const reversed = index % 2 === 1;
+  const numberLabel = String(index + 1).padStart(2, "0");
+
   return (
     <div
-      ref={onMount}
       className={cn(
-        "transition-opacity duration-300",
-        isActive ? "opacity-100" : "opacity-50 hover:opacity-80",
+        "grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center",
       )}
     >
-      <div className="flex items-center gap-3 mb-6">
-        <span className="font-mono text-xs text-emerald-400/60 tabular-nums">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-        <span className="h-px flex-1 bg-white/10" />
-      </div>
-      <Icon className="h-7 w-7 text-emerald-400 mb-6" strokeWidth={1.5} />
-      <h3 className="font-mono text-2xl lg:text-3xl mb-5 tracking-tight">
-        {feature.title}
-      </h3>
-      <p className="text-base lg:text-lg text-white/65 leading-relaxed mb-6 max-w-md">
-        {feature.body}
-      </p>
-      <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-white/50 hover:text-white transition-colors duration-150 cursor-default">
-        Learn more
-        <ArrowRight className="h-3 w-3" />
-      </span>
-    </div>
-  );
-}
-
-function MobileStack({ features }: PlatformSectionProps) {
-  return (
-    <div className="md:hidden space-y-20">
-      {features.map((feature) => {
-        const Icon = feature.icon;
-        return (
-          <FadeUp key={feature.slotName}>
-            <div>
-              <Icon className="h-6 w-6 text-emerald-400 mb-5" strokeWidth={1.5} />
-              <h3 className="font-mono text-xl mb-4 tracking-tight">
-                {feature.title}
-              </h3>
-              <p className="text-sm text-white/65 leading-relaxed mb-6">
-                {feature.body}
-              </p>
-              <VideoSlot
-                src={feature.video}
-                slotName={feature.slotName}
-                caption="30-second demo"
-              />
-            </div>
-          </FadeUp>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * Variant of VideoSlot without the outer border / caption — used inside the
- * sticky cross-fade where the parent container already provides the frame.
- */
-function BareVideoSlot({
-  src,
-  slotName,
-  paused,
-}: {
-  src: string;
-  slotName: string;
-  paused?: boolean;
-}) {
-  const [exists, setExists] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(src, { method: "HEAD" })
-      .then((res) => {
-        if (cancelled) return;
-        // Vite's SPA fallback returns 200 + text/html for missing static
-        // assets — require a video/* content-type before we trust the path.
-        const contentType = res.headers.get("content-type") ?? "";
-        setExists(res.ok && contentType.startsWith("video/"));
-      })
-      .catch(() => {
-        if (!cancelled) setExists(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [src]);
-
-  if (exists === false) {
-    return (
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground"
-        data-video-slot={slotName}
+      {/* Copy column */}
+      <FadeUp
+        y={20}
+        className={cn(
+          "lg:col-span-5",
+          reversed ? "lg:order-2" : "lg:order-1",
+        )}
       >
-        <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
-        <PlaceholderIcon />
-        <span className="relative text-xs uppercase tracking-wider">
-          Demo video — recording in progress
+        <div className="flex items-center gap-3 mb-6">
+          <span className="font-mono text-xs text-emerald-400/70 tabular-nums">
+            {numberLabel}
+          </span>
+          <span className="h-px w-8 bg-white/15" />
+          {feature.eyebrow ? (
+            <span className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-white/55">
+              {feature.eyebrow}
+            </span>
+          ) : null}
+        </div>
+        <h3 className="font-display text-3xl sm:text-4xl lg:text-[44px] leading-[1.05] tracking-[-0.02em] mb-6 text-white">
+          {feature.title}
+        </h3>
+        <p className="text-base lg:text-lg text-white/60 leading-relaxed mb-8 max-w-md">
+          {feature.body}
+        </p>
+        <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-white/55 hover:text-white transition-colors duration-150 cursor-default">
+          Learn more
+          <ArrowRight className="h-3 w-3" />
         </span>
-      </div>
-    );
-  }
+      </FadeUp>
 
-  if (exists) {
-    return (
-      <video
-        key={src}
-        src={src}
-        autoPlay={!paused}
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        className="absolute inset-0 h-full w-full object-cover"
-        data-video-slot={slotName}
-        onError={() => setExists(false)}
-      />
-    );
-  }
-
-  return null;
+      {/* Mockup column */}
+      <FadeUp
+        delay={0.15}
+        y={24}
+        className={cn(
+          "lg:col-span-7",
+          reversed ? "lg:order-1" : "lg:order-2",
+        )}
+      >
+        <div className="relative">
+          {/* Soft emerald glow behind the video, more pronounced under the active row */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-8 -z-10 opacity-40"
+            style={{
+              background:
+                "radial-gradient(60% 60% at 50% 50%, rgba(52,211,153,0.10) 0%, transparent 70%)",
+              filter: "blur(40px)",
+            }}
+          />
+          <VideoSlot
+            src={feature.video}
+            slotName={feature.slotName}
+            caption="30-second demo"
+          />
+        </div>
+      </FadeUp>
+    </div>
+  );
 }
-
-const PlaceholderIcon: ComponentType = () => (
-  <svg
-    className="relative h-12 w-12 opacity-30"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <circle cx="12" cy="12" r="10" />
-    <polygon points="10 8 16 12 10 16 10 8" />
-  </svg>
-);
 
 export default PlatformSection;

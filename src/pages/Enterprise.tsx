@@ -1,16 +1,7 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
-import {
-  ArrowRight,
-  BadgeCheck,
-  GraduationCap,
-  Inbox,
-  LayoutDashboard,
-  Lock,
-  Network,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, Lock, Network, ShieldCheck } from "lucide-react";
 import Footer from "@/components/Footer";
 import { FadeUp } from "@/components/enterprise/animations/FadeUp";
 import {
@@ -37,29 +28,29 @@ const PRODUCES = [
 
 const FEATURES = [
   {
-    icon: Inbox,
-    title: "Applicant tracking",
+    eyebrow: "Applicant tracking",
+    title: "Email and DocuSign, replaced.",
     body: "Posting positions, reviewing applications, scheduling interviews, sending decisions. Every step that used to live in email, spreadsheets, and DocuSign — in one place.",
     video: "/enterprise/applicant-tracking.mp4",
     slotName: "applicant-tracking",
   },
   {
-    icon: BadgeCheck,
-    title: "Credentialing automation",
+    eyebrow: "Credentialing automation",
+    title: "Three-week onboarding, in under one.",
     body: "Verify HIPAA training, immunizations, BLS cards, and TB clearances directly from uploaded documents. Cross-check NPI numbers against the federal NPPES registry. Cut onboarding from three weeks to under one.",
     video: "/enterprise/credentialing-automation.mp4",
     slotName: "credentialing-automation",
   },
   {
-    icon: LayoutDashboard,
-    title: "Compliance dashboard",
+    eyebrow: "Compliance dashboard",
+    title: "Audit-ready, every day.",
     body: "A live view of every credentialed worker's status. Audit-ready CSV exports. Automated expiration tracking. Designed against NCQA and Joint Commission standards.",
     video: "/enterprise/compliance-dashboard.mp4",
     slotName: "compliance-dashboard",
   },
   {
-    icon: GraduationCap,
-    title: "Pre-health student network",
+    eyebrow: "Pre-health student network",
+    title: "A built-in supply of qualified workers.",
     body: "Over 1,000 pre-health students from universities across the country use ClinicalHours to find clinical experience. Post a position; we route qualified students to your clinic.",
     video: "/enterprise/student-network.mp4",
     slotName: "student-network",
