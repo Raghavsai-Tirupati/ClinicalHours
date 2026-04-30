@@ -78,7 +78,7 @@ export function VideoSlot({
         )}
       </div>
       {caption ? (
-        <figcaption className="text-[10px] uppercase tracking-[0.28em] text-zinc-500">
+        <figcaption className="text-sm text-zinc-500 leading-relaxed">
           {caption}
         </figcaption>
       ) : null}

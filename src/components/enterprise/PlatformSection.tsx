@@ -10,6 +10,8 @@ interface PlatformFeature {
   body: string;
   video: string;
   slotName: string;
+  /** One-line description of what's actually in the demo video. */
+  demoCaption?: string;
 }
 
 interface PlatformSectionProps {
@@ -33,7 +35,7 @@ export function PlatformSection({ features }: PlatformSectionProps) {
             </p>
           </FadeUp>
           <FadeUp delay={0.1}>
-            <h2 className="font-display text-4xl sm:text-5xl md:text-[56px] leading-[1.05] tracking-[-0.02em]">
+            <h2 className="font-sans text-3xl sm:text-4xl md:text-[40px] font-semibold leading-[1.15] tracking-tight">
               <span className="text-zinc-400">One platform.</span>{" "}
               <span className="text-zinc-900">Every workforce operation.</span>
             </h2>
@@ -80,10 +82,10 @@ function FeatureRow({ feature, index }: FeatureRowProps) {
             </span>
           ) : null}
         </div>
-        <h3 className="font-display text-3xl sm:text-4xl lg:text-[44px] leading-[1.05] tracking-[-0.02em] mb-6 text-zinc-900">
+        <h3 className="font-sans text-2xl sm:text-3xl lg:text-[32px] font-semibold leading-[1.2] tracking-tight mb-5 text-zinc-900">
           {feature.title}
         </h3>
-        <p className="text-base lg:text-lg text-zinc-600 leading-relaxed mb-8 max-w-md">
+        <p className="text-sm sm:text-base text-zinc-600 leading-relaxed mb-8 max-w-md">
           {feature.body}
         </p>
         <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-zinc-500 hover:text-zinc-900 transition-colors duration-150 cursor-default">
@@ -105,7 +107,7 @@ function FeatureRow({ feature, index }: FeatureRowProps) {
           <VideoSlot
             src={feature.video}
             slotName={feature.slotName}
-            caption="30-second demo"
+            caption={feature.demoCaption ?? "30-second demo"}
           />
         </div>
       </FadeUp>

@@ -31,6 +31,7 @@ const FEATURES = [
     body: "Posting positions, reviewing applications, scheduling interviews, sending decisions. Every step that used to live in email, spreadsheets, and DocuSign — in one place.",
     video: "/enterprise/applicant-tracking.mp4",
     slotName: "applicant-tracking",
+    demoCaption: "Filter applications, accept a candidate, watch them auto-promote into your team",
   },
   {
     eyebrow: "Credentialing automation",
@@ -38,6 +39,7 @@ const FEATURES = [
     body: "Verify HIPAA training, immunizations, BLS cards, and TB clearances directly from uploaded documents. Cross-check NPI numbers against the federal NPPES registry. Cut onboarding from three weeks to under one.",
     video: "/enterprise/credentialing-automation.mp4",
     slotName: "credentialing-automation",
+    demoCaption: "Upload a HIPAA PDF, Claude extracts the fields, NPI verifies live against NPPES",
   },
   {
     eyebrow: "Compliance dashboard",
@@ -45,6 +47,7 @@ const FEATURES = [
     body: "A live view of every credentialed worker's status. Audit-ready CSV exports. Automated expiration tracking. Designed against NCQA and Joint Commission standards.",
     video: "/enterprise/compliance-dashboard.mp4",
     slotName: "compliance-dashboard",
+    demoCaption: "Live status across every worker, daily checks, one-click CSV export for audits",
   },
   {
     eyebrow: "Pre-health student network",
@@ -52,6 +55,7 @@ const FEATURES = [
     body: "Over 1,000 pre-health students from universities across the country use ClinicalHours to find clinical experience. Post a position; we route qualified students to your clinic.",
     video: "/enterprise/student-network.mp4",
     slotName: "student-network",
+    demoCaption: "1,247 students surfaced as ranked applicants the moment a position opens",
   },
 ];
 
@@ -196,8 +200,8 @@ const Enterprise = () => {
         </div>
       </header>
 
-      {/* HERO — full-bleed dark photograph with text on the left, Rogo-style */}
-      <section className="relative bg-black text-white overflow-hidden min-h-[680px] lg:min-h-[760px]">
+      {/* HERO — full-viewport dark photograph with text anchored on the left */}
+      <section className="relative bg-black text-white overflow-hidden min-h-screen flex flex-col">
         {/* Photograph fills the hero; gradient mask anchors text on the left */}
         <div aria-hidden className="absolute inset-0">
           <img
@@ -212,12 +216,12 @@ const Enterprise = () => {
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 30%, rgba(0,0,0,0.30) 65%, rgba(0,0,0,0.10) 100%), linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.55) 100%)",
+                "linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 30%, rgba(0,0,0,0.30) 65%, rgba(0,0,0,0.10) 100%), linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.55) 100%)",
             }}
           />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-10 pt-32 sm:pt-36 lg:pt-48 pb-32 lg:pb-44">
+        <div className="relative flex-1 flex items-center max-w-7xl w-full mx-auto px-6 lg:px-10 pt-28 pb-20 lg:pt-32 lg:pb-28">
           <div className="max-w-xl lg:max-w-2xl">
             <FadeUp delay={0} y={6}>
               <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.28em] text-white/50 mb-7">
@@ -261,49 +265,13 @@ const Enterprise = () => {
             </FadeUp>
           </div>
         </div>
-
-        {/* Logo strip: thin band fading into the bottom of the hero */}
-        <div className="relative border-t border-white/10 bg-black/60 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-6 lg:px-10 py-7 sm:py-8">
-            <FadeUp>
-              <p className="text-[10px] uppercase tracking-[0.28em] text-white/35 text-center mb-5 sm:mb-6">
-                Trusted by clinics serving underserved communities
-              </p>
-            </FadeUp>
-            <StaggerContainer
-              className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 items-center"
-              stagger={0.08}
-            >
-              <StaggerItem className="flex justify-center">
-                <span className="font-display text-base sm:text-lg text-white/85 text-center leading-tight">
-                  BCS Free Health Clinic
-                </span>
-              </StaggerItem>
-              <StaggerItem className="flex justify-center">
-                <span className="text-[10px] uppercase tracking-[0.28em] text-white/25">
-                  Coming soon
-                </span>
-              </StaggerItem>
-              <StaggerItem className="flex justify-center">
-                <span className="text-[10px] uppercase tracking-[0.28em] text-white/25">
-                  Coming soon
-                </span>
-              </StaggerItem>
-              <StaggerItem className="flex justify-center">
-                <span className="text-[10px] uppercase tracking-[0.28em] text-white/25">
-                  Coming soon
-                </span>
-              </StaggerItem>
-            </StaggerContainer>
-          </div>
-        </div>
       </section>
 
       {/* PROBLEM — light */}
       <section id="problem" className="bg-white py-28 sm:py-36 px-6 sm:px-8 scroll-mt-16">
         <div className="max-w-3xl mx-auto">
           <FadeUp>
-            <h2 className="font-display text-4xl sm:text-5xl md:text-[56px] leading-[1.05] tracking-[-0.02em] mb-14">
+            <h2 className="font-sans text-3xl sm:text-4xl md:text-[40px] font-semibold leading-[1.15] tracking-tight mb-14">
               <span className="text-zinc-400">
                 Free clinics run on volunteer labor.
               </span>{" "}
@@ -318,13 +286,13 @@ const Enterprise = () => {
                 <AnimatedCounter
                   to={1400}
                   suffix="+"
-                  className="text-zinc-900 font-display"
+                  className="text-zinc-900 font-semibold"
                 />{" "}
                 free and charitable clinics serve over{" "}
                 <AnimatedCounter
                   to={2}
                   suffix=" million"
-                  className="text-zinc-900 font-display"
+                  className="text-zinc-900 font-semibold"
                 />{" "}
                 patients a year. They don't run on full-time staff. They run
                 on rotating part-time clinicians, physician volunteers, and
@@ -371,7 +339,7 @@ const Enterprise = () => {
             </p>
           </FadeUp>
           <FadeUp delay={0.1}>
-            <h2 className="font-display text-4xl sm:text-5xl md:text-[56px] leading-[1.05] tracking-[-0.02em] mb-14 text-zinc-900">
+            <h2 className="font-sans text-3xl sm:text-4xl md:text-[40px] font-semibold leading-[1.15] tracking-tight mb-14 text-zinc-900">
               What ClinicalHours produces
             </h2>
           </FadeUp>
@@ -402,7 +370,7 @@ const Enterprise = () => {
       <section className="bg-white py-28 sm:py-36 px-6 sm:px-8">
         <div className="max-w-5xl mx-auto">
           <FadeUp>
-            <h2 className="font-display text-4xl sm:text-5xl md:text-[56px] leading-[1.05] tracking-[-0.02em] mb-16 max-w-2xl text-zinc-900">
+            <h2 className="font-sans text-3xl sm:text-4xl md:text-[40px] font-semibold leading-[1.15] tracking-tight mb-16 max-w-2xl text-zinc-900">
               Built for healthcare from day one
             </h2>
           </FadeUp>
@@ -416,7 +384,7 @@ const Enterprise = () => {
                   className="h-5 w-5 text-zinc-900 mb-5"
                   strokeWidth={1.5}
                 />
-                <p className="font-display text-lg sm:text-xl leading-snug text-zinc-900">
+                <p className="font-sans text-base sm:text-lg font-semibold leading-snug text-zinc-900">
                   {label}
                 </p>
               </StaggerItem>
@@ -442,7 +410,7 @@ const Enterprise = () => {
       <section className="bg-white py-28 sm:py-36 px-6 sm:px-8">
         <div className="max-w-3xl mx-auto">
           <FadeUp>
-            <h2 className="font-display text-4xl sm:text-5xl md:text-[56px] leading-[1.05] tracking-[-0.02em] mb-12 text-zinc-900">
+            <h2 className="font-sans text-3xl sm:text-4xl md:text-[40px] font-semibold leading-[1.15] tracking-tight mb-12 text-zinc-900">
               Built by people who've worked the front desk
             </h2>
           </FadeUp>
@@ -470,7 +438,7 @@ const Enterprise = () => {
             whileInView={{ opacity: 1, scale: [0.98, 1.02, 1] }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.9, ease: [0.21, 0.47, 0.32, 0.98] }}
-            className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-[80px] leading-[1] tracking-[-0.02em] mb-12 text-zinc-900"
+            className="font-sans text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight tracking-tight mb-12 text-zinc-900"
           >
             Ready to see it?
           </motion.h2>
