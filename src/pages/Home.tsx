@@ -90,12 +90,18 @@ const Home = () => {
             opportunities across the country.
           </p>
 
-          <div className="mt-7 sm:mt-8 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
             <Link
               to="/auth"
               className="inline-flex items-center justify-center text-xs font-medium uppercase tracking-widest px-8 sm:px-10 py-3 sm:py-3.5 bg-white text-black hover:bg-white/90 transition-all duration-300"
             >
               Find Clinical Hours Near You
+            </Link>
+            <Link
+              to="/enterprise"
+              className="inline-flex items-center justify-center text-xs font-medium uppercase tracking-widest px-8 sm:px-10 py-3 sm:py-3.5 border border-white/40 text-white hover:bg-white/10 hover:border-white/60 transition-all duration-300"
+            >
+              For Healthcare Facilities
             </Link>
           </div>
         </div>
