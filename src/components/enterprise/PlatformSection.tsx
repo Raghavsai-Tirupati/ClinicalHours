@@ -220,7 +220,10 @@ function BareVideoSlot({
     fetch(src, { method: "HEAD" })
       .then((res) => {
         if (cancelled) return;
-        setExists(res.ok);
+        // Vite's SPA fallback returns 200 + text/html for missing static
+        // assets — require a video/* content-type before we trust the path.
+        const contentType = res.headers.get("content-type") ?? "";
+        setExists(res.ok && contentType.startsWith("video/"));
       })
       .catch(() => {
         if (!cancelled) setExists(false);

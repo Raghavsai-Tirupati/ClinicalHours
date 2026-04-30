@@ -34,7 +34,10 @@ export function VideoSlot({
     fetch(src, { method: "HEAD" })
       .then((res) => {
         if (cancelled) return;
-        setExists(res.ok);
+        // Vite's SPA fallback returns 200 + text/html for missing static
+        // assets, so res.ok alone is not enough. Require a video/* MIME.
+        const contentType = res.headers.get("content-type") ?? "";
+        setExists(res.ok && contentType.startsWith("video/"));
       })
       .catch(() => {
         if (!cancelled) setExists(false);
