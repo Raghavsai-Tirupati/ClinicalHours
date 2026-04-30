@@ -36,6 +36,7 @@ function lazyRetry<T extends React.ComponentType<any>>(
 }
 
 const Home = lazyRetry(() => import("./pages/Home"));
+const Enterprise = lazyRetry(() => import("./pages/Enterprise"));
 const Opportunities = lazyRetry(() => import("./pages/Opportunities"));
 const OpportunityDetail = lazyRetry(() => import("./pages/OpportunityDetail"));
 const Projects = lazyRetry(() => import("./pages/Projects"));
@@ -128,6 +129,7 @@ function AppContent() {
           <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/enterprise" element={<Enterprise />} />
               <Route path="/opportunities" element={<StudentOnlyRoute><Opportunities /></StudentOnlyRoute>} />
               <Route path="/opportunities/:slug" element={<StudentOnlyRoute><OpportunityDetail /></StudentOnlyRoute>} />
               <Route path="/projects" element={<Projects />} />
