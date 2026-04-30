@@ -19,8 +19,8 @@ import {
 } from "@/components/enterprise/animations/StaggerContainer";
 import { AnimatedCounter } from "@/components/enterprise/animations/AnimatedCounter";
 import { WordReveal } from "@/components/enterprise/animations/WordReveal";
-import { VideoSlot } from "@/components/enterprise/animations/VideoSlot";
 import { ScrollProgress } from "@/components/enterprise/animations/ScrollProgress";
+import { ImageSlot } from "@/components/enterprise/animations/ImageSlot";
 import { PlatformSection } from "@/components/enterprise/PlatformSection";
 
 const DEMO_MAILTO =
@@ -163,117 +163,141 @@ const Enterprise = () => {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative pt-40 pb-28 sm:pt-48 sm:pb-32 px-6 sm:px-8 overflow-hidden">
-        {/* Hero glow — radial emerald wash, softly blurred */}
+      {/* Hero — Rogo-style two-column: editorial text on the left, photograph on the right */}
+      <section className="relative overflow-hidden bg-black">
+        {/* Soft emerald wash anchored to the left side, behind the text */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-24 h-[680px] -z-0"
+          className="pointer-events-none absolute -left-40 top-24 h-[680px] w-[720px] -z-0"
           style={{
             background:
-              "radial-gradient(60% 60% at 50% 30%, rgba(52,211,153,0.10) 0%, rgba(52,211,153,0.04) 35%, transparent 70%)",
+              "radial-gradient(60% 60% at 30% 30%, rgba(52,211,153,0.10) 0%, rgba(52,211,153,0.04) 35%, transparent 70%)",
             filter: "blur(40px)",
           }}
         />
-        <div className="relative max-w-5xl mx-auto">
-          <FadeUp delay={0} y={8}>
-            <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-emerald-400/80 mb-8">
-              For healthcare facilities
-            </p>
-          </FadeUp>
+        <div className="relative max-w-7xl mx-auto px-6 sm:px-8 pt-32 sm:pt-40 pb-32 lg:pt-48 lg:pb-40">
+          <div className="grid lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+            {/* Text column */}
+            <div className="lg:col-span-6 xl:col-span-7">
+              <FadeUp delay={0} y={8}>
+                <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-emerald-400/80 mb-8 flex items-center gap-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+                  For healthcare facilities
+                </p>
+              </FadeUp>
 
-          <h1 className="font-mono text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-medium leading-[1.05] tracking-tight">
-            <WordReveal text={"Workforce operations\nfor safety-net clinics."} stagger={0.05} delay={0.1} />
-          </h1>
+              <h1 className="font-display text-[44px] sm:text-6xl lg:text-[80px] xl:text-[96px] leading-[0.98] tracking-[-0.02em] text-white">
+                <WordReveal
+                  text={"Workforce operations\nfor safety-net clinics."}
+                  stagger={0.05}
+                  delay={0.1}
+                />
+              </h1>
 
-          <FadeUp delay={0.6}>
-            <p className="mt-8 text-base sm:text-lg md:text-xl text-white/60 max-w-2xl leading-relaxed">
-              ClinicalHours is the operating system for the people who keep
-              community health clinics running. Onboarding, credentialing,
-              compliance, and supply — in one place.
-            </p>
-          </FadeUp>
+              <FadeUp delay={0.6}>
+                <p className="mt-8 text-base sm:text-lg lg:text-xl text-white/55 max-w-xl leading-relaxed">
+                  ClinicalHours is the operating system for the people who
+                  keep community health clinics running. Onboarding,
+                  credentialing, compliance, and supply — in one place.
+                </p>
+              </FadeUp>
 
-          <FadeUp delay={0.85}>
-            <div className="mt-12 flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <a
-                href={DEMO_MAILTO}
-                className="group inline-flex items-center justify-center gap-2 text-xs uppercase tracking-[0.25em] px-8 py-4 bg-white text-black hover:bg-white/90 transition-colors duration-150"
-              >
-                Request a demo
-                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
-              </a>
-              <a
-                href="#problem"
-                onClick={handleScrollToProblem}
-                className="inline-flex items-center justify-center text-xs uppercase tracking-[0.25em] px-8 py-4 border border-white/30 text-white hover:border-white/60 hover:bg-white/5 transition-colors duration-150"
-              >
-                See how it works
-              </a>
+              <FadeUp delay={0.85}>
+                <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <a
+                    href={DEMO_MAILTO}
+                    className="group inline-flex items-center justify-center gap-2 text-xs uppercase tracking-[0.25em] px-8 py-4 bg-white text-black hover:bg-white/90 transition-colors duration-150"
+                  >
+                    Request a demo
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
+                  </a>
+                  <a
+                    href="#problem"
+                    onClick={handleScrollToProblem}
+                    className="inline-flex items-center justify-center text-xs uppercase tracking-[0.25em] px-8 py-4 border border-white/25 text-white hover:border-white/60 hover:bg-white/5 transition-colors duration-150"
+                  >
+                    See how it works
+                  </a>
+                </div>
+              </FadeUp>
             </div>
-          </FadeUp>
 
-          <FadeUp delay={1.05}>
-            <div className="mt-20">
-              <VideoSlot
-                src="/enterprise/hero-loop.mp4"
-                slotName="hero-loop"
-                caption="10-second product loop"
-              />
-            </div>
-          </FadeUp>
+            {/* Image column — photographic moody hero, anchored right */}
+            <FadeUp
+              delay={0.4}
+              y={20}
+              className="lg:col-span-6 xl:col-span-5 relative"
+            >
+              <div className="relative">
+                <ImageSlot
+                  src="/enterprise/hero-image.jpg"
+                  alt="Inside a community health clinic — a wide architectural shot of the workspace"
+                  slotName="hero-image"
+                  loading="eager"
+                  className="aspect-[4/5] w-full"
+                />
+                {/* Subtle vignette to anchor the image into the dark page */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 25%, transparent 75%, rgba(0,0,0,0.35) 100%), linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.4) 100%)",
+                  }}
+                />
+              </div>
+            </FadeUp>
+          </div>
+        </div>
+
+        {/* Logo strip — embedded into the bottom of the hero, fades into the page */}
+        <div className="relative border-t border-white/10">
+          <div className="max-w-7xl mx-auto px-6 sm:px-8 py-10 sm:py-12">
+            <FadeUp>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-white/35 text-center mb-8">
+                Trusted by clinics serving underserved communities
+              </p>
+            </FadeUp>
+            <StaggerContainer
+              className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 items-center"
+              stagger={0.08}
+            >
+              <StaggerItem className="flex justify-center">
+                <span className="font-display text-lg sm:text-xl text-white/90 text-center leading-tight">
+                  BCS Free Health Clinic
+                </span>
+              </StaggerItem>
+              <StaggerItem className="flex justify-center">
+                <span className="text-[10px] uppercase tracking-[0.3em] text-white/25">
+                  Coming soon
+                </span>
+              </StaggerItem>
+              <StaggerItem className="flex justify-center">
+                <span className="text-[10px] uppercase tracking-[0.3em] text-white/25">
+                  Coming soon
+                </span>
+              </StaggerItem>
+              <StaggerItem className="flex justify-center">
+                <span className="text-[10px] uppercase tracking-[0.3em] text-white/25">
+                  Coming soon
+                </span>
+              </StaggerItem>
+            </StaggerContainer>
+          </div>
         </div>
       </section>
-
-      <hr className="border-white/10" />
-
-      {/* Logo wall */}
-      <section className="py-20 sm:py-24 px-6 sm:px-8">
-        <div className="max-w-5xl mx-auto">
-          <FadeUp>
-            <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-white/40 text-center mb-12">
-              Trusted by clinics serving underserved communities
-            </p>
-          </FadeUp>
-          <StaggerContainer
-            className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 items-center"
-            stagger={0.08}
-          >
-            <StaggerItem className="col-span-2 md:col-span-1 flex justify-center md:justify-start">
-              <span className="font-mono text-lg sm:text-xl text-white text-center md:text-left leading-tight">
-                BCS Free
-                <br />
-                Health Clinic
-              </span>
-            </StaggerItem>
-            <StaggerItem className="flex justify-center">
-              <span className="text-xs uppercase tracking-[0.25em] text-white/25">
-                Coming soon
-              </span>
-            </StaggerItem>
-            <StaggerItem className="flex justify-center">
-              <span className="text-xs uppercase tracking-[0.25em] text-white/25">
-                Coming soon
-              </span>
-            </StaggerItem>
-            <StaggerItem className="flex justify-center">
-              <span className="text-xs uppercase tracking-[0.25em] text-white/25">
-                Coming soon
-              </span>
-            </StaggerItem>
-          </StaggerContainer>
-        </div>
-      </section>
-
-      <hr className="border-white/10" />
 
       {/* Problem */}
       <section id="problem" className="py-28 sm:py-36 px-6 sm:px-8 scroll-mt-16">
         <div className="max-w-3xl mx-auto">
           <FadeUp>
-            <h2 className="font-mono text-3xl sm:text-4xl md:text-5xl font-medium leading-[1.1] tracking-tight mb-14">
-              Free clinics run on volunteer labor. Software was built for
-              everyone else.
+            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.02em] mb-14">
+              <span className="text-white/40">
+                Free clinics run on volunteer labor.
+              </span>{" "}
+              <span className="text-white">
+                Software was built for everyone else.
+              </span>
             </h2>
           </FadeUp>
           <div className="space-y-8 text-base sm:text-lg text-white/70 leading-relaxed">
@@ -334,7 +358,7 @@ const Enterprise = () => {
             </p>
           </FadeUp>
           <FadeUp delay={0.1}>
-            <h2 className="font-mono text-3xl sm:text-4xl md:text-5xl font-medium leading-[1.1] tracking-tight mb-14">
+            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.02em] mb-14">
               What ClinicalHours produces
             </h2>
           </FadeUp>
@@ -365,7 +389,7 @@ const Enterprise = () => {
       <section className="py-28 sm:py-36 px-6 sm:px-8">
         <div className="max-w-5xl mx-auto">
           <FadeUp>
-            <h2 className="font-mono text-3xl sm:text-4xl md:text-5xl font-medium leading-[1.1] tracking-tight mb-16 max-w-2xl">
+            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.02em] mb-16 max-w-2xl">
               Built for healthcare from day one
             </h2>
           </FadeUp>
@@ -405,7 +429,7 @@ const Enterprise = () => {
       <section className="py-28 sm:py-36 px-6 sm:px-8">
         <div className="max-w-3xl mx-auto">
           <FadeUp>
-            <h2 className="font-mono text-3xl sm:text-4xl md:text-5xl font-medium leading-[1.1] tracking-tight mb-14">
+            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.02em] mb-14">
               Built by people who've worked the front desk
             </h2>
           </FadeUp>
@@ -436,7 +460,7 @@ const Enterprise = () => {
             }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.9, ease: [0.21, 0.47, 0.32, 0.98] }}
-            className="font-mono text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-medium leading-[1.05] tracking-tight mb-12"
+            className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-[88px] leading-[1] tracking-[-0.02em] mb-12"
           >
             Ready to see it?
           </motion.h2>
