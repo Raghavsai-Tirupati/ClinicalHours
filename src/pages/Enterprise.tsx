@@ -21,6 +21,7 @@ import { AnimatedCounter } from "@/components/enterprise/animations/AnimatedCoun
 import { WordReveal } from "@/components/enterprise/animations/WordReveal";
 import { VideoSlot } from "@/components/enterprise/animations/VideoSlot";
 import { ScrollProgress } from "@/components/enterprise/animations/ScrollProgress";
+import { PlatformSection } from "@/components/enterprise/PlatformSection";
 
 const DEMO_MAILTO =
   "mailto:enterprise@clinicalhours.org?subject=ClinicalHours%20Enterprise%20Demo%20Request";
@@ -320,54 +321,7 @@ const Enterprise = () => {
 
       <hr className="border-white/10" />
 
-      {/* Platform — 2x2 grid for now (sticky scroll storytelling lands in next commit) */}
-      <section id="platform" className="py-28 sm:py-36 px-6 sm:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="max-w-3xl mb-16 sm:mb-20">
-            <FadeUp>
-              <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-emerald-400/80 mb-6">
-                The platform
-              </p>
-            </FadeUp>
-            <FadeUp delay={0.1}>
-              <h2 className="font-mono text-3xl sm:text-4xl md:text-5xl font-medium leading-[1.1] tracking-tight">
-                One platform.
-                <br />
-                Every workforce operation.
-              </h2>
-            </FadeUp>
-          </div>
-          <StaggerContainer
-            className="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/10"
-            stagger={0.1}
-          >
-            {FEATURES.map(({ icon: Icon, title, body, video, slotName }) => (
-              <StaggerItem
-                key={title}
-                className="bg-black p-8 sm:p-10 md:p-12 group transition-colors duration-150 hover:bg-white/[0.02]"
-              >
-                <Icon
-                  className="h-6 w-6 text-emerald-400 mb-6 transition-transform duration-150 group-hover:-translate-y-0.5"
-                  strokeWidth={1.5}
-                />
-                <h3 className="font-mono text-xl sm:text-2xl mb-4 tracking-tight">
-                  {title}
-                </h3>
-                <p className="text-sm sm:text-base text-white/60 leading-relaxed mb-6">
-                  {body}
-                </p>
-                <div className="mb-6">
-                  <VideoSlot src={video} slotName={slotName} caption="30-second demo" />
-                </div>
-                <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-white/50 group-hover:text-white transition-colors duration-150">
-                  Learn more
-                  <ArrowRight className="h-3 w-3 transition-transform duration-150 group-hover:translate-x-0.5" />
-                </span>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
+      <PlatformSection features={FEATURES} />
 
       <hr className="border-white/10" />
 
