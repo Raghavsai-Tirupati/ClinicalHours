@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { PlayCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,8 @@ interface VideoSlotProps {
   className?: string;
   /** Tag the slot for grep-ability when wiring real recordings. */
   slotName?: string;
+  /** Rendered in place of the shimmer placeholder when no real video is available yet. */
+  fallback?: ReactNode;
 }
 
 /**
@@ -26,6 +28,7 @@ export function VideoSlot({
   paused = false,
   className,
   slotName,
+  fallback,
 }: VideoSlotProps) {
   const [exists, setExists] = useState<boolean | null>(null);
 
@@ -52,8 +55,8 @@ export function VideoSlot({
       className={cn("flex flex-col gap-3", className)}
       data-video-slot={slotName}
     >
-      <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white">
-        {exists ? (
+      {exists ? (
+        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white">
           <video
             key={src}
             src={src}
@@ -65,18 +68,20 @@ export function VideoSlot({
             className="absolute inset-0 h-full w-full object-cover"
             onError={() => setExists(false)}
           />
-        ) : (
-          <>
-            <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-zinc-100/60 to-transparent" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-zinc-400">
-              <PlayCircle className="h-12 w-12" strokeWidth={1.25} />
-              <span className="text-[10px] uppercase tracking-[0.25em]">
-                Demo video — recording in progress
-              </span>
-            </div>
-          </>
-        )}
-      </div>
+        </div>
+      ) : fallback ? (
+        <div className="w-full">{fallback}</div>
+      ) : (
+        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white">
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-zinc-100/60 to-transparent" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-zinc-400">
+            <PlayCircle className="h-12 w-12" strokeWidth={1.25} />
+            <span className="text-[10px] uppercase tracking-[0.25em]">
+              Demo video — recording in progress
+            </span>
+          </div>
+        </div>
+      )}
       {caption ? (
         <figcaption className="text-sm text-zinc-500 leading-relaxed">
           {caption}

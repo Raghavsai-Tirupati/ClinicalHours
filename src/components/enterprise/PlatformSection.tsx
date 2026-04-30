@@ -1,7 +1,21 @@
+import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { FadeUp } from "@/components/enterprise/animations/FadeUp";
 import { VideoSlot } from "@/components/enterprise/animations/VideoSlot";
+import {
+  ApplicantTrackingDemo,
+  CredentialingDemo,
+  ComplianceDemo,
+  StudentNetworkDemo,
+} from "@/components/enterprise/demos";
 import { cn } from "@/lib/utils";
+
+const DEMO_BY_SLOT: Record<string, ReactNode> = {
+  "applicant-tracking": <ApplicantTrackingDemo />,
+  "credentialing-automation": <CredentialingDemo />,
+  "compliance-dashboard": <ComplianceDemo />,
+  "student-network": <StudentNetworkDemo />,
+};
 
 interface PlatformFeature {
   /** Eyebrow shown above the title — e.g. "Applicant tracking". */
@@ -108,6 +122,7 @@ function FeatureRow({ feature, index }: FeatureRowProps) {
             src={feature.video}
             slotName={feature.slotName}
             caption={feature.demoCaption ?? "30-second demo"}
+            fallback={DEMO_BY_SLOT[feature.slotName]}
           />
         </div>
       </FadeUp>
