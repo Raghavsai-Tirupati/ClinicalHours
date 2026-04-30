@@ -11,9 +11,7 @@ import { AnimatedCounter } from "@/components/enterprise/animations/AnimatedCoun
 import { WordReveal } from "@/components/enterprise/animations/WordReveal";
 import { ScrollProgress } from "@/components/enterprise/animations/ScrollProgress";
 import { PlatformSection } from "@/components/enterprise/PlatformSection";
-
-const DEMO_MAILTO =
-  "mailto:enterprise@clinicalhours.org?subject=ClinicalHours%20Enterprise%20Demo%20Request";
+import { DemoRequestDialog } from "@/components/enterprise/DemoRequestDialog";
 
 const PRODUCES = [
   "Credentialed, ready-to-work volunteers in under 7 days",
@@ -171,8 +169,9 @@ const Enterprise = () => {
               </motion.span>
             </Link>
             {/* CTA button — light variant over hero, dark variant over light bg */}
-            <a
-              href={DEMO_MAILTO}
+            <DemoRequestDialog>
+            <button
+              type="button"
               className="relative inline-flex items-center text-[11px] uppercase tracking-[0.2em] px-4 py-2 transition-colors duration-150"
             >
               <motion.span
@@ -195,7 +194,8 @@ const Enterprise = () => {
               >
                 Request demo
               </motion.span>
-            </a>
+            </button>
+            </DemoRequestDialog>
           </nav>
         </div>
       </header>
@@ -247,13 +247,15 @@ const Enterprise = () => {
 
             <FadeUp delay={0.85}>
               <div className="mt-9 flex flex-col sm:flex-row gap-3">
-                <a
-                  href={DEMO_MAILTO}
-                  className="group inline-flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] px-6 py-3 bg-white text-black hover:bg-white/90 transition-colors duration-150"
-                >
-                  Request a demo
-                  <ArrowRight className="h-3 w-3 transition-transform duration-150 group-hover:translate-x-0.5" />
-                </a>
+                <DemoRequestDialog>
+                  <button
+                    type="button"
+                    className="group inline-flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] px-6 py-3 bg-white text-black hover:bg-white/90 transition-colors duration-150"
+                  >
+                    Request a demo
+                    <ArrowRight className="h-3 w-3 transition-transform duration-150 group-hover:translate-x-0.5" />
+                  </button>
+                </DemoRequestDialog>
                 <a
                   href="#problem"
                   onClick={handleScrollToProblem}
@@ -443,39 +445,41 @@ const Enterprise = () => {
             Ready to see it?
           </motion.h2>
           <FadeUp delay={0.2}>
-            <motion.a
-              href={DEMO_MAILTO}
-              className="relative inline-flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] px-9 py-4 bg-zinc-900 text-white overflow-hidden group"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              animate={{
-                boxShadow: [
-                  "0 0 0 0 rgba(24,24,27,0)",
-                  "0 0 0 6px rgba(24,24,27,0.08)",
-                  "0 0 0 0 rgba(24,24,27,0)",
-                ],
-              }}
-              transition={{
-                boxShadow: {
-                  duration: 2.4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                },
-              }}
-            >
-              <span className="relative z-10">Request a demo</span>
-              <ArrowRight className="relative z-10 h-3 w-3 transition-transform duration-150 group-hover:translate-x-0.5" />
-              <span
-                aria-hidden
-                className="absolute inset-0 -translate-x-full bg-white/10 transition-transform duration-300 ease-out group-hover:translate-x-0"
-              />
-            </motion.a>
+            <DemoRequestDialog>
+              <motion.button
+                type="button"
+                className="relative inline-flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] px-9 py-4 bg-zinc-900 text-white overflow-hidden group"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                animate={{
+                  boxShadow: [
+                    "0 0 0 0 rgba(24,24,27,0)",
+                    "0 0 0 6px rgba(24,24,27,0.08)",
+                    "0 0 0 0 rgba(24,24,27,0)",
+                  ],
+                }}
+                transition={{
+                  boxShadow: {
+                    duration: 2.4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  },
+                }}
+              >
+                <span className="relative z-10">Request a demo</span>
+                <ArrowRight className="relative z-10 h-3 w-3 transition-transform duration-150 group-hover:translate-x-0.5" />
+                <span
+                  aria-hidden
+                  className="absolute inset-0 -translate-x-full bg-white/10 transition-transform duration-300 ease-out group-hover:translate-x-0"
+                />
+              </motion.button>
+            </DemoRequestDialog>
           </FadeUp>
           <FadeUp delay={0.3}>
             <p className="mt-8 text-sm text-zinc-500">
               Or email us directly at{" "}
               <a
-                href={DEMO_MAILTO}
+                href="mailto:enterprise@clinicalhours.org"
                 className="text-zinc-900 hover:text-zinc-700 transition-colors duration-150 underline-offset-4 hover:underline"
               >
                 enterprise@clinicalhours.org
@@ -503,12 +507,14 @@ const Enterprise = () => {
               <Link to="/" className="hover:text-zinc-900 transition-colors">
                 For students
               </Link>
-              <a
-                href={DEMO_MAILTO}
-                className="hover:text-zinc-900 transition-colors"
-              >
-                Request demo
-              </a>
+              <DemoRequestDialog>
+                <button
+                  type="button"
+                  className="hover:text-zinc-900 transition-colors text-left"
+                >
+                  Request demo
+                </button>
+              </DemoRequestDialog>
               <a
                 href="mailto:enterprise@clinicalhours.org"
                 className="hover:text-zinc-900 transition-colors"
