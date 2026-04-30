@@ -31,13 +31,13 @@ export function DemoStage({ title, children, className }: DemoStageProps) {
   return (
     <div
       className={cn(
-        "relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-300/40 shadow-[0_2px_24px_rgba(0,0,0,0.06)]",
-        "p-4 sm:p-5",
+        "relative aspect-video w-full overflow-hidden rounded-2xl border border-zinc-300/40 shadow-[0_2px_24px_rgba(0,0,0,0.06)]",
+        "p-7 sm:p-9",
         className,
       )}
       style={{ backgroundImage: DESKTOP_WALLPAPER }}
     >
-      <div className="relative w-full h-full overflow-hidden rounded-lg border border-zinc-300/70 bg-white shadow-[0_18px_40px_-12px_rgba(15,23,42,0.55),0_4px_12px_-4px_rgba(15,23,42,0.3)]">
+      <div className="relative w-full h-full overflow-hidden rounded-2xl border border-zinc-300/70 bg-white shadow-[0_22px_50px_-12px_rgba(15,23,42,0.6),0_4px_14px_-4px_rgba(15,23,42,0.35)]">
         {/* Fake window chrome — macOS traffic-light colors */}
         <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-1.5 px-3.5 py-2 border-b border-zinc-100 bg-zinc-50/85 backdrop-blur-sm">
           <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
