@@ -52,7 +52,7 @@ export function VideoSlot({
       className={cn("flex flex-col gap-3", className)}
       data-video-slot={slotName}
     >
-      <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border/40 bg-gradient-to-br from-muted/20 to-muted/5">
+      <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white">
         {exists ? (
           <video
             key={src}
@@ -67,10 +67,10 @@ export function VideoSlot({
           />
         ) : (
           <>
-            <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-white/[0.02] to-transparent" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-              <PlayCircle className="h-12 w-12 opacity-30" />
-              <span className="text-xs uppercase tracking-wider">
+            <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-zinc-100/60 to-transparent" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-zinc-400">
+              <PlayCircle className="h-12 w-12" strokeWidth={1.25} />
+              <span className="text-[10px] uppercase tracking-[0.25em]">
                 Demo video — recording in progress
               </span>
             </div>
@@ -78,7 +78,7 @@ export function VideoSlot({
         )}
       </div>
       {caption ? (
-        <figcaption className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+        <figcaption className="text-[10px] uppercase tracking-[0.28em] text-zinc-500">
           {caption}
         </figcaption>
       ) : null}

@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { ArrowRight, Lock, Network, ShieldCheck } from "lucide-react";
-import Footer from "@/components/Footer";
 import { FadeUp } from "@/components/enterprise/animations/FadeUp";
 import {
   StaggerContainer,
@@ -11,7 +10,6 @@ import {
 import { AnimatedCounter } from "@/components/enterprise/animations/AnimatedCounter";
 import { WordReveal } from "@/components/enterprise/animations/WordReveal";
 import { ScrollProgress } from "@/components/enterprise/animations/ScrollProgress";
-import { ImageSlot } from "@/components/enterprise/animations/ImageSlot";
 import { PlatformSection } from "@/components/enterprise/PlatformSection";
 
 const DEMO_MAILTO =
@@ -70,7 +68,7 @@ function DrawCheck({ className }: { className?: string }) {
     <svg
       viewBox="0 0 24 24"
       fill="none"
-      strokeWidth={2.5}
+      strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
@@ -93,8 +91,11 @@ function DrawCheck({ className }: { className?: string }) {
 
 const Enterprise = () => {
   const { scrollY } = useScroll();
-  const navOpacity = useTransform(scrollY, [0, 400, 600], [0, 0.4, 0.95]);
-  const navBorder = useTransform(scrollY, [400, 600], [0, 1]);
+  // Nav crossfades from "transparent over the dark hero" to "white over the
+  // light content below" once the user scrolls past ~400px.
+  const navLightBgOpacity = useTransform(scrollY, [0, 400, 600], [0, 0.4, 1]);
+  const navOverHeroOpacity = useTransform(scrollY, [0, 400, 600], [1, 0.4, 0]);
+  const navOverLightOpacity = useTransform(scrollY, [0, 400, 600], [0, 0.4, 1]);
 
   const handleScrollToProblem = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -104,7 +105,7 @@ const Enterprise = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white antialiased">
+    <div className="min-h-screen bg-white text-zinc-900 antialiased">
       <Helmet>
         <title>
           ClinicalHours for Healthcare Facilities — Workforce Operations for Safety-Net Clinics
@@ -117,159 +118,179 @@ const Enterprise = () => {
 
       <ScrollProgress />
 
-      {/* Sticky nav: transparent over hero, solid + blur once scrolled */}
+      {/* Sticky nav: transparent over the dark hero, white once scrolled into the light content */}
       <header className="fixed top-0 inset-x-0 z-50">
         <motion.div
           aria-hidden
-          className="absolute inset-0 bg-black/85 backdrop-blur-md"
-          style={{ opacity: navOpacity }}
+          className="absolute inset-0 bg-white/90 backdrop-blur-md"
+          style={{ opacity: navLightBgOpacity }}
         />
         <motion.div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 h-px bg-white/10"
-          style={{ opacity: navBorder }}
+          className="absolute inset-x-0 bottom-0 h-px bg-zinc-200"
+          style={{ opacity: navLightBgOpacity }}
         />
-        <div className="relative max-w-6xl mx-auto px-6 sm:px-8 h-14 flex items-center justify-between">
-          <Link to="/enterprise" className="font-mono text-sm tracking-wide">
-            <span className="text-white/70">Clinical</span>
-            <span className="text-white">Hours</span>
-            <span className="ml-2 text-[10px] uppercase tracking-[0.2em] text-emerald-400/80">
-              Enterprise
-            </span>
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
+          {/* Left: brand wordmark — two stacked copies, one for hero one for light bg */}
+          <Link to="/enterprise" className="relative font-mono text-sm tracking-wide">
+            <motion.span
+              style={{ opacity: navOverHeroOpacity }}
+              className="block"
+            >
+              <span className="text-white/70">Clinical</span>
+              <span className="text-white">Hours</span>
+            </motion.span>
+            <motion.span
+              style={{ opacity: navOverLightOpacity }}
+              className="absolute inset-0"
+            >
+              <span className="text-zinc-500">Clinical</span>
+              <span className="text-zinc-900">Hours</span>
+            </motion.span>
           </Link>
           <nav className="flex items-center gap-6">
             <Link
               to="/"
-              className="hidden sm:inline text-xs uppercase tracking-[0.2em] text-white/60 hover:text-white transition-colors"
+              className="relative hidden sm:inline-block text-[11px] uppercase tracking-[0.2em]"
             >
-              For students
+              <motion.span
+                style={{ opacity: navOverHeroOpacity }}
+                className="block text-white/60 hover:text-white transition-colors"
+              >
+                For students
+              </motion.span>
+              <motion.span
+                style={{ opacity: navOverLightOpacity }}
+                className="absolute inset-0 text-zinc-500 hover:text-zinc-900 transition-colors"
+              >
+                For students
+              </motion.span>
             </Link>
+            {/* CTA button — light variant over hero, dark variant over light bg */}
             <a
               href={DEMO_MAILTO}
-              className="inline-flex items-center text-xs uppercase tracking-[0.2em] px-4 py-2 bg-white text-black hover:bg-white/90 transition-colors duration-150"
+              className="relative inline-flex items-center text-[11px] uppercase tracking-[0.2em] px-4 py-2 transition-colors duration-150"
             >
-              Request demo
+              <motion.span
+                style={{ opacity: navOverHeroOpacity }}
+                className="absolute inset-0 bg-white"
+              />
+              <motion.span
+                style={{ opacity: navOverLightOpacity }}
+                className="absolute inset-0 bg-zinc-900"
+              />
+              <motion.span
+                style={{ opacity: navOverHeroOpacity }}
+                className="relative text-black"
+              >
+                Request demo
+              </motion.span>
+              <motion.span
+                style={{ opacity: navOverLightOpacity }}
+                className="absolute inset-0 flex items-center justify-center text-white"
+              >
+                Request demo
+              </motion.span>
             </a>
           </nav>
         </div>
       </header>
 
-      {/* Hero — Rogo-style two-column: editorial text on the left, photograph on the right */}
-      <section className="relative overflow-hidden bg-black">
-        {/* Soft emerald wash anchored to the left side, behind the text */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-40 top-24 h-[680px] w-[720px] -z-0"
-          style={{
-            background:
-              "radial-gradient(60% 60% at 30% 30%, rgba(52,211,153,0.10) 0%, rgba(52,211,153,0.04) 35%, transparent 70%)",
-            filter: "blur(40px)",
-          }}
-        />
-        <div className="relative max-w-7xl mx-auto px-6 sm:px-8 pt-32 sm:pt-40 pb-32 lg:pt-48 lg:pb-40">
-          <div className="grid lg:grid-cols-12 gap-12 lg:gap-10 items-center">
-            {/* Text column */}
-            <div className="lg:col-span-6 xl:col-span-7">
-              <FadeUp delay={0} y={8}>
-                <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-emerald-400/80 mb-8 flex items-center gap-3">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
-                  For healthcare facilities
-                </p>
-              </FadeUp>
+      {/* HERO — full-bleed dark photograph with text on the left, Rogo-style */}
+      <section className="relative bg-black text-white overflow-hidden min-h-[680px] lg:min-h-[760px]">
+        {/* Photograph fills the hero; gradient mask anchors text on the left */}
+        <div aria-hidden className="absolute inset-0">
+          <img
+            src="/enterprise/hero-image.jpg"
+            alt=""
+            loading="eager"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          {/* Heavy left gradient -> clean photo on the right; vertical fade on top/bottom */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 30%, rgba(0,0,0,0.30) 65%, rgba(0,0,0,0.10) 100%), linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.55) 100%)",
+            }}
+          />
+        </div>
 
-              <h1 className="font-display text-[44px] sm:text-6xl lg:text-[80px] xl:text-[96px] leading-[0.98] tracking-[-0.02em] text-white">
-                <WordReveal
-                  text={"Workforce operations\nfor safety-net clinics."}
-                  stagger={0.05}
-                  delay={0.1}
-                />
-              </h1>
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-10 pt-32 sm:pt-36 lg:pt-48 pb-32 lg:pb-44">
+          <div className="max-w-xl lg:max-w-2xl">
+            <FadeUp delay={0} y={6}>
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.28em] text-white/50 mb-7">
+                For healthcare facilities
+              </p>
+            </FadeUp>
 
-              <FadeUp delay={0.6}>
-                <p className="mt-8 text-base sm:text-lg lg:text-xl text-white/55 max-w-xl leading-relaxed">
-                  ClinicalHours is the operating system for the people who
-                  keep community health clinics running. Onboarding,
-                  credentialing, compliance, and supply — in one place.
-                </p>
-              </FadeUp>
+            <h1 className="font-display font-normal text-[40px] sm:text-5xl lg:text-[60px] xl:text-[68px] leading-[1.05] tracking-[-0.015em] text-white">
+              <WordReveal
+                text={"Workforce operations\nfor safety-net clinics."}
+                stagger={0.05}
+                delay={0.1}
+              />
+            </h1>
 
-              <FadeUp delay={0.85}>
-                <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <a
-                    href={DEMO_MAILTO}
-                    className="group inline-flex items-center justify-center gap-2 text-xs uppercase tracking-[0.25em] px-8 py-4 bg-white text-black hover:bg-white/90 transition-colors duration-150"
-                  >
-                    Request a demo
-                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
-                  </a>
-                  <a
-                    href="#problem"
-                    onClick={handleScrollToProblem}
-                    className="inline-flex items-center justify-center text-xs uppercase tracking-[0.25em] px-8 py-4 border border-white/25 text-white hover:border-white/60 hover:bg-white/5 transition-colors duration-150"
-                  >
-                    See how it works
-                  </a>
-                </div>
-              </FadeUp>
-            </div>
+            <FadeUp delay={0.6}>
+              <p className="mt-6 text-sm sm:text-[15px] lg:text-base text-white/65 max-w-md leading-relaxed">
+                ClinicalHours is the operating system for the people who keep
+                community health clinics running. Onboarding, credentialing,
+                compliance, and supply — in one place.
+              </p>
+            </FadeUp>
 
-            {/* Image column — photographic moody hero, anchored right */}
-            <FadeUp
-              delay={0.4}
-              y={20}
-              className="lg:col-span-6 xl:col-span-5 relative"
-            >
-              <div className="relative">
-                <ImageSlot
-                  src="/enterprise/hero-image.jpg"
-                  alt="Inside a community health clinic — a wide architectural shot of the workspace"
-                  slotName="hero-image"
-                  loading="eager"
-                  className="aspect-[4/5] w-full"
-                />
-                {/* Subtle vignette to anchor the image into the dark page */}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0"
-                  style={{
-                    background:
-                      "linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 25%, transparent 75%, rgba(0,0,0,0.35) 100%), linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.4) 100%)",
-                  }}
-                />
+            <FadeUp delay={0.85}>
+              <div className="mt-9 flex flex-col sm:flex-row gap-3">
+                <a
+                  href={DEMO_MAILTO}
+                  className="group inline-flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] px-6 py-3 bg-white text-black hover:bg-white/90 transition-colors duration-150"
+                >
+                  Request a demo
+                  <ArrowRight className="h-3 w-3 transition-transform duration-150 group-hover:translate-x-0.5" />
+                </a>
+                <a
+                  href="#problem"
+                  onClick={handleScrollToProblem}
+                  className="inline-flex items-center justify-center text-[11px] uppercase tracking-[0.22em] px-6 py-3 border border-white/25 text-white/85 hover:border-white/55 hover:bg-white/5 transition-colors duration-150"
+                >
+                  See how it works
+                </a>
               </div>
             </FadeUp>
           </div>
         </div>
 
-        {/* Logo strip — embedded into the bottom of the hero, fades into the page */}
-        <div className="relative border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-6 sm:px-8 py-10 sm:py-12">
+        {/* Logo strip: thin band fading into the bottom of the hero */}
+        <div className="relative border-t border-white/10 bg-black/60 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-6 lg:px-10 py-7 sm:py-8">
             <FadeUp>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-white/35 text-center mb-8">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-white/35 text-center mb-5 sm:mb-6">
                 Trusted by clinics serving underserved communities
               </p>
             </FadeUp>
             <StaggerContainer
-              className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 items-center"
+              className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 items-center"
               stagger={0.08}
             >
               <StaggerItem className="flex justify-center">
-                <span className="font-display text-lg sm:text-xl text-white/90 text-center leading-tight">
+                <span className="font-display text-base sm:text-lg text-white/85 text-center leading-tight">
                   BCS Free Health Clinic
                 </span>
               </StaggerItem>
               <StaggerItem className="flex justify-center">
-                <span className="text-[10px] uppercase tracking-[0.3em] text-white/25">
+                <span className="text-[10px] uppercase tracking-[0.28em] text-white/25">
                   Coming soon
                 </span>
               </StaggerItem>
               <StaggerItem className="flex justify-center">
-                <span className="text-[10px] uppercase tracking-[0.3em] text-white/25">
+                <span className="text-[10px] uppercase tracking-[0.28em] text-white/25">
                   Coming soon
                 </span>
               </StaggerItem>
               <StaggerItem className="flex justify-center">
-                <span className="text-[10px] uppercase tracking-[0.3em] text-white/25">
+                <span className="text-[10px] uppercase tracking-[0.28em] text-white/25">
                   Coming soon
                 </span>
               </StaggerItem>
@@ -278,32 +299,32 @@ const Enterprise = () => {
         </div>
       </section>
 
-      {/* Problem */}
-      <section id="problem" className="py-28 sm:py-36 px-6 sm:px-8 scroll-mt-16">
+      {/* PROBLEM — light */}
+      <section id="problem" className="bg-white py-28 sm:py-36 px-6 sm:px-8 scroll-mt-16">
         <div className="max-w-3xl mx-auto">
           <FadeUp>
-            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.02em] mb-14">
-              <span className="text-white/40">
+            <h2 className="font-display text-4xl sm:text-5xl md:text-[56px] leading-[1.05] tracking-[-0.02em] mb-14">
+              <span className="text-zinc-400">
                 Free clinics run on volunteer labor.
               </span>{" "}
-              <span className="text-white">
+              <span className="text-zinc-900">
                 Software was built for everyone else.
               </span>
             </h2>
           </FadeUp>
-          <div className="space-y-8 text-base sm:text-lg text-white/70 leading-relaxed">
+          <div className="space-y-7 text-base sm:text-lg text-zinc-600 leading-relaxed">
             <FadeUp>
               <p>
                 <AnimatedCounter
                   to={1400}
                   suffix="+"
-                  className="text-emerald-400 font-mono"
+                  className="text-zinc-900 font-display"
                 />{" "}
                 free and charitable clinics serve over{" "}
                 <AnimatedCounter
                   to={2}
                   suffix=" million"
-                  className="text-emerald-400 font-mono"
+                  className="text-zinc-900 font-display"
                 />{" "}
                 patients a year. They don't run on full-time staff. They run
                 on rotating part-time clinicians, physician volunteers, and
@@ -334,28 +355,29 @@ const Enterprise = () => {
         </div>
       </section>
 
-      <hr className="border-white/10" />
+      <hr className="border-zinc-200" />
 
+      {/* PLATFORM — light, OpenLine-style alternating blocks */}
       <PlatformSection features={FEATURES} />
 
-      <hr className="border-white/10" />
+      <hr className="border-zinc-200" />
 
-      {/* Concrete outputs */}
-      <section className="py-28 sm:py-36 px-6 sm:px-8">
+      {/* OUTPUTS — light */}
+      <section className="bg-white py-28 sm:py-36 px-6 sm:px-8">
         <div className="max-w-3xl mx-auto">
           <FadeUp>
-            <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-emerald-400/80 mb-6">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.28em] text-zinc-500 mb-6">
               Outputs
             </p>
           </FadeUp>
           <FadeUp delay={0.1}>
-            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.02em] mb-14">
+            <h2 className="font-display text-4xl sm:text-5xl md:text-[56px] leading-[1.05] tracking-[-0.02em] mb-14 text-zinc-900">
               What ClinicalHours produces
             </h2>
           </FadeUp>
           <StaggerContainer
             as="ul"
-            className="divide-y divide-white/10 border-y border-white/10"
+            className="divide-y divide-zinc-200 border-y border-zinc-200"
             stagger={0.06}
           >
             {PRODUCES.map((item) => (
@@ -364,8 +386,8 @@ const Enterprise = () => {
                 as="li"
                 className="flex items-start gap-4 py-5 sm:py-6"
               >
-                <DrawCheck className="h-5 w-5 text-emerald-400 mt-0.5 shrink-0" />
-                <span className="text-base sm:text-lg text-white/80 leading-relaxed">
+                <DrawCheck className="h-5 w-5 text-zinc-900 mt-0.5 shrink-0" />
+                <span className="text-base sm:text-lg text-zinc-700 leading-relaxed">
                   {item}
                 </span>
               </StaggerItem>
@@ -374,37 +396,37 @@ const Enterprise = () => {
         </div>
       </section>
 
-      <hr className="border-white/10" />
+      <hr className="border-zinc-200" />
 
-      {/* Security & compliance */}
-      <section className="py-28 sm:py-36 px-6 sm:px-8">
+      {/* SECURITY & COMPLIANCE — light */}
+      <section className="bg-white py-28 sm:py-36 px-6 sm:px-8">
         <div className="max-w-5xl mx-auto">
           <FadeUp>
-            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.02em] mb-16 max-w-2xl">
+            <h2 className="font-display text-4xl sm:text-5xl md:text-[56px] leading-[1.05] tracking-[-0.02em] mb-16 max-w-2xl text-zinc-900">
               Built for healthcare from day one
             </h2>
           </FadeUp>
           <StaggerContainer
-            className="grid grid-cols-1 md:grid-cols-3 gap-px bg-white/10 mb-12"
+            className="grid grid-cols-1 md:grid-cols-3 gap-px bg-zinc-200 mb-12 border border-zinc-200"
             stagger={0.08}
           >
             {SECURITY.map(({ icon: Icon, label }) => (
-              <StaggerItem key={label} className="bg-black p-8 sm:p-10">
+              <StaggerItem key={label} className="bg-white p-8 sm:p-10">
                 <Icon
-                  className="h-5 w-5 text-emerald-400 mb-5"
+                  className="h-5 w-5 text-zinc-900 mb-5"
                   strokeWidth={1.5}
                 />
-                <p className="font-mono text-base sm:text-lg leading-snug">
+                <p className="font-display text-lg sm:text-xl leading-snug text-zinc-900">
                   {label}
                 </p>
               </StaggerItem>
             ))}
           </StaggerContainer>
           <FadeUp>
-            <div className="flex items-center gap-3 text-xs sm:text-sm uppercase tracking-[0.25em] text-white/40">
+            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.25em] text-zinc-500">
               <motion.span
                 aria-hidden
-                className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+                className="h-1.5 w-1.5 rounded-full bg-zinc-700"
                 animate={{ opacity: [0.4, 1, 0.4] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               />
@@ -414,18 +436,18 @@ const Enterprise = () => {
         </div>
       </section>
 
-      <hr className="border-white/10" />
+      <hr className="border-zinc-200" />
 
-      {/* Founders */}
-      <section className="py-28 sm:py-36 px-6 sm:px-8">
+      {/* FOUNDERS — light */}
+      <section className="bg-white py-28 sm:py-36 px-6 sm:px-8">
         <div className="max-w-3xl mx-auto">
           <FadeUp>
-            <h2 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.02em] mb-14">
+            <h2 className="font-display text-4xl sm:text-5xl md:text-[56px] leading-[1.05] tracking-[-0.02em] mb-12 text-zinc-900">
               Built by people who've worked the front desk
             </h2>
           </FadeUp>
           <FadeUp delay={0.1}>
-            <p className="text-base sm:text-lg md:text-xl text-white/70 leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-zinc-600 leading-relaxed">
               ClinicalHours was built by a team of pre-health and computer
               science students from Texas A&amp;M who spent enough time inside
               free clinics to see, firsthand, how badly software fails the
@@ -438,34 +460,31 @@ const Enterprise = () => {
         </div>
       </section>
 
-      <hr className="border-white/10" />
+      <hr className="border-zinc-200" />
 
-      {/* Final CTA */}
-      <section className="py-32 sm:py-44 px-6 sm:px-8 text-center">
+      {/* FINAL CTA — light */}
+      <section className="bg-white py-32 sm:py-44 px-6 sm:px-8 text-center">
         <div className="max-w-3xl mx-auto">
           <motion.h2
             initial={{ opacity: 0, scale: 0.98 }}
-            whileInView={{
-              opacity: 1,
-              scale: [0.98, 1.02, 1],
-            }}
+            whileInView={{ opacity: 1, scale: [0.98, 1.02, 1] }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.9, ease: [0.21, 0.47, 0.32, 0.98] }}
-            className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-[88px] leading-[1] tracking-[-0.02em] mb-12"
+            className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-[80px] leading-[1] tracking-[-0.02em] mb-12 text-zinc-900"
           >
             Ready to see it?
           </motion.h2>
           <FadeUp delay={0.2}>
             <motion.a
               href={DEMO_MAILTO}
-              className="relative inline-flex items-center justify-center gap-2 text-xs uppercase tracking-[0.25em] px-10 py-4 bg-white text-black overflow-hidden group"
+              className="relative inline-flex items-center justify-center gap-2 text-[11px] uppercase tracking-[0.22em] px-9 py-4 bg-zinc-900 text-white overflow-hidden group"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               animate={{
                 boxShadow: [
-                  "0 0 0 0 rgba(52,211,153,0)",
-                  "0 0 0 6px rgba(52,211,153,0.18)",
-                  "0 0 0 0 rgba(52,211,153,0)",
+                  "0 0 0 0 rgba(24,24,27,0)",
+                  "0 0 0 6px rgba(24,24,27,0.08)",
+                  "0 0 0 0 rgba(24,24,27,0)",
                 ],
               }}
               transition={{
@@ -477,20 +496,19 @@ const Enterprise = () => {
               }}
             >
               <span className="relative z-10">Request a demo</span>
-              <ArrowRight className="relative z-10 h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
-              {/* Hover-fill wipe */}
+              <ArrowRight className="relative z-10 h-3 w-3 transition-transform duration-150 group-hover:translate-x-0.5" />
               <span
                 aria-hidden
-                className="absolute inset-0 -translate-x-full bg-emerald-400/15 transition-transform duration-300 ease-out group-hover:translate-x-0"
+                className="absolute inset-0 -translate-x-full bg-white/10 transition-transform duration-300 ease-out group-hover:translate-x-0"
               />
             </motion.a>
           </FadeUp>
           <FadeUp delay={0.3}>
-            <p className="mt-8 text-sm text-white/40">
+            <p className="mt-8 text-sm text-zinc-500">
               Or email us directly at{" "}
               <a
                 href={DEMO_MAILTO}
-                className="text-white/60 hover:text-white transition-colors duration-150"
+                className="text-zinc-900 hover:text-zinc-700 transition-colors duration-150 underline-offset-4 hover:underline"
               >
                 enterprise@clinicalhours.org
               </a>
@@ -499,7 +517,43 @@ const Enterprise = () => {
         </div>
       </section>
 
-      <Footer />
+      {/* FOOTER — minimal light variant for the enterprise page */}
+      <footer className="bg-white border-t border-zinc-200">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-12 sm:py-16">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-8">
+            <div>
+              <Link to="/enterprise" className="font-mono text-sm tracking-wide">
+                <span className="text-zinc-500">Clinical</span>
+                <span className="text-zinc-900">Hours</span>
+              </Link>
+              <p className="mt-4 text-sm text-zinc-500 max-w-sm leading-relaxed">
+                The operating system for safety-net clinics. Built in
+                College Station, Texas.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-6 sm:gap-10 text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+              <Link to="/" className="hover:text-zinc-900 transition-colors">
+                For students
+              </Link>
+              <a
+                href={DEMO_MAILTO}
+                className="hover:text-zinc-900 transition-colors"
+              >
+                Request demo
+              </a>
+              <a
+                href="mailto:enterprise@clinicalhours.org"
+                className="hover:text-zinc-900 transition-colors"
+              >
+                enterprise@clinicalhours.org
+              </a>
+            </div>
+          </div>
+          <div className="mt-12 pt-6 border-t border-zinc-100 text-[10px] uppercase tracking-[0.25em] text-zinc-400">
+            © {new Date().getFullYear()} ClinicalHours. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
