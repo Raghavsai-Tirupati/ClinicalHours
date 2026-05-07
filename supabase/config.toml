@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.score-resume-match]
 verify_jwt = false
+
+[functions.bcs-email-autoresponder]
+verify_jwt = false
