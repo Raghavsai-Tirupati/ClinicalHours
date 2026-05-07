@@ -10,22 +10,39 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const BCS_STAFF_NOTIFY_EMAIL = "admin@bcsclinic.org";
 const BCS_GMAIL_EMAIL = "admin@bcsclinic.org";
 const CLINICALHOURS_URL = "https://clinicalhours.org";
+const BCS_APPLY_URL = "https://clinicalhours.org/opportunities/bcs-free-health-clinic";
 
-const JOB_INQUIRY_PATTERNS = [
-  /volunteer/i, /volunteering/i, /apply\b/i, /application/i,
-  /\bposition\b/i, /\bopening\b/i, /\bopportunity\b/i, /internship/i,
-  /clinical hours/i, /pre-?med/i, /pre-?health/i, /shadow/i, /shadowing/i,
-  /\bjoin\b/i, /hiring/i, /available.*position/i,
-  /how do i (apply|get involved)/i,
-  /interested in (working|joining|volunteering)/i,
-  /looking for.*position/i, /looking to (volunteer|apply|join)/i,
-  /get involved/i, /work (at|with|for)/i, /\bstaff\b/i,
-  /\bemployment\b/i, /\bjob\b/i,
+const HIGH_CONFIDENCE_PATTERNS = [
+  /how (do i|can i|to) apply/i,
+  /how (do i|can i|to) (get involved|volunteer)/i,
+  /interested in (volunteering|applying|a position|the position|an opening)/i,
+  /looking to (volunteer|apply|join|get involved)/i,
+  /looking for (a position|an opening|volunteer|opportunities)/i,
+  /want to (volunteer|apply|join|get involved)/i,
+  /would like to (volunteer|apply|join|get involved)/i,
+  /apply(ing)? (for|to)/i,
+  /volunteer (position|opportunity|opening|application|role)/i,
+  /clinical (volunteer|hours|position|opportunity)/i,
+  /pre-?med.*volunteer/i,
+  /pre-?health.*volunteer/i,
+  /shadow(ing)? (opportunity|position|program)/i,
+  /internship (application|opportunity|opening|position)/i,
+  /available (position|opening|volunteer)/i,
+  /open (position|volunteer|application)/i,
+];
+
+const WEAK_PATTERNS = [
+  /\bvolunteer\b/i, /\bapplication\b/i, /\bposition\b/i, /\bopening\b/i,
+  /\bopportunity\b/i, /\binternship\b/i, /\bshadow\b/i, /\bshadowing\b/i,
+  /\bhiring\b/i, /\bjoin\b/i, /\bemployment\b/i, /\bjob\b/i, /\bstaff\b/i,
+  /pre-?med\b/i, /pre-?health\b/i, /get involved/i,
 ];
 
 function classifyEmail(subject: string, snippet: string): "job_inquiry" | "general" {
   const text = `${subject} ${snippet}`;
-  return JOB_INQUIRY_PATTERNS.some((re) => re.test(text)) ? "job_inquiry" : "general";
+  if (HIGH_CONFIDENCE_PATTERNS.some((re) => re.test(text))) return "job_inquiry";
+  const weakMatches = WEAK_PATTERNS.filter((re) => re.test(text)).length;
+  return weakMatches >= 2 ? "job_inquiry" : "general";
 }
 
 function escapeHtml(s: string): string {
@@ -46,18 +63,18 @@ function buildJobInquiryHtml(senderName: string): string {
     <p><strong>Thanks for your interest in volunteering!</strong></p>
     <p>Hi ${name},</p>
     <p>We appreciate you reaching out. BCS Free Health Clinic manages all volunteer and clinical positions through <strong>ClinicalHours</strong>, a platform built specifically for pre-health students looking for hands-on clinical experience.</p>
-    <p>To browse open positions and apply, visit our listing on ClinicalHours:</p>
-    <p><a href="${CLINICALHOURS_URL}" style="display:inline-block;padding:10px 16px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:6px;">View Open Positions on ClinicalHours</a></p>
-    <p>On ClinicalHours you can:</p>
+    <p>You can view our open positions and apply directly here:</p>
+    <p><a href="${BCS_APPLY_URL}" style="display:inline-block;padding:10px 16px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:6px;">Apply to BCS Free Health Clinic</a></p>
+    <p>Through ClinicalHours you can:</p>
     <ul>
-      <li>Browse all current volunteer and clinical openings at BCS</li>
-      <li>Submit your application directly through the platform</li>
-      <li>Track your application status and log your hours</li>
+      <li>See all current openings at BCS and apply in one place</li>
+      <li>Track your application status after submitting</li>
+      <li>Log your volunteer hours and build your clinical record</li>
     </ul>
-    <p>If you have any trouble or specific questions after visiting the platform, feel free to reply here.</p>
     <p>Best,<br/>BCS Free Health Clinic Team</p>
     <hr/>
     <p style="color:#666;font-size:12px;">This is an automated response. A member of our team will follow up if needed.</p>
+    <p style="color:#666;font-size:12px;">Not what you were emailing about? If we misread your message, just reply here and our team will follow up directly.</p>
   </body>
 </html>`;
 }
@@ -137,28 +154,13 @@ async function getMessage(accessToken: string, messageId: string): Promise<Gmail
 
 async function sendReply(accessToken: string, threadId: string, inReplyToMessageId: string, toEmail: string, fromEmail: string, subject: string, html: string): Promise<void> {
   const replySubject = subject.startsWith("Re:") ? subject : `Re: ${subject}`;
-  const rawEmail = [
-    `From: BCS Free Health Clinic <${fromEmail}>`,
-    `To: ${toEmail}`,
-    `Subject: ${replySubject}`,
-    `In-Reply-To: ${inReplyToMessageId}`,
-    `References: ${inReplyToMessageId}`,
-    `MIME-Version: 1.0`,
-    `Content-Type: text/html; charset=UTF-8`,
-    ``,
-    html,
-  ].join("\r\n");
-  const res = await gmailRequest(accessToken, `/messages/send`, {
-    method: "POST",
-    body: JSON.stringify({ raw: base64urlEncode(rawEmail), threadId }),
-  });
+  const rawEmail = [`From: BCS Free Health Clinic <${fromEmail}>`, `To: ${toEmail}`, `Subject: ${replySubject}`, `In-Reply-To: ${inReplyToMessageId}`, `References: ${inReplyToMessageId}`, `MIME-Version: 1.0`, `Content-Type: text/html; charset=UTF-8`, ``, html].join("\r\n");
+  const res = await gmailRequest(accessToken, `/messages/send`, { method: "POST", body: JSON.stringify({ raw: base64urlEncode(rawEmail), threadId }) });
   if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(`Gmail send reply failed (${res.status}): ${JSON.stringify((err as { error?: { message?: string } })?.error?.message ?? err)}`); }
 }
 
 async function markAsRead(accessToken: string, messageId: string): Promise<void> {
-  const res = await gmailRequest(accessToken, `/messages/${messageId}/modify`, {
-    method: "POST", body: JSON.stringify({ removeLabelIds: ["UNREAD"] }),
-  });
+  const res = await gmailRequest(accessToken, `/messages/${messageId}/modify`, { method: "POST", body: JSON.stringify({ removeLabelIds: ["UNREAD"] }) });
   if (!res.ok) { const err = await res.json().catch(() => ({})); console.error(`Failed to mark message ${messageId} as read:`, err); }
 }
 
@@ -167,66 +169,45 @@ async function notifyStaffViaResend(senderName: string, senderEmail: string, sub
   await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: "ClinicalHours <noreply@clinicalhours.org>",
-      to: [BCS_STAFF_NOTIFY_EMAIL],
-      reply_to: senderEmail,
-      subject: `[BCS Inbox] ${subject || "(no subject)"}`,
-      html: buildStaffNotificationHtml(senderName, senderEmail, subject, snippet),
-    }),
+    body: JSON.stringify({ from: "ClinicalHours <noreply@clinicalhours.org>", to: [BCS_STAFF_NOTIFY_EMAIL], reply_to: senderEmail, subject: `[BCS Inbox] ${subject || "(no subject)"}`, html: buildStaffNotificationHtml(senderName, senderEmail, subject, snippet) }),
   });
 }
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204 });
-
   const callerSecret = req.headers.get("x-autoresponder-secret");
   if (!AUTORESPONDER_SECRET || callerSecret !== AUTORESPONDER_SECRET) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
   }
-
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
-
   try {
-    const { data: page, error: pageError } = await supabase
-      .from("hospital_pages").select("gmail_refresh_token, gmail_email")
-      .eq("gmail_email", BCS_GMAIL_EMAIL).maybeSingle();
-
+    const { data: page, error: pageError } = await supabase.from("hospital_pages").select("gmail_refresh_token, gmail_email").eq("gmail_email", BCS_GMAIL_EMAIL).maybeSingle();
     if (pageError || !page?.gmail_refresh_token) {
       console.error("BCS Gmail credentials not found:", pageError?.message);
       return new Response(JSON.stringify({ error: "BCS Gmail credentials not configured" }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
-
     const accessToken = await refreshGmailAccessToken(page.gmail_refresh_token);
     const messages = await listUnreadMessages(accessToken);
-
     if (messages.length === 0) return new Response(JSON.stringify({ processed: 0 }), { status: 200, headers: { "Content-Type": "application/json" } });
-
     let processed = 0;
     let skipped = 0;
-
     for (const { id: messageId, threadId } of messages) {
       const { data: existing } = await supabase.from("bcs_autoresponder_log").select("id").eq("gmail_message_id", messageId).maybeSingle();
       if (existing) { skipped++; continue; }
-
       let message: GmailMessage;
       try { message = await getMessage(accessToken, messageId); }
       catch (err) { console.error(`Failed to fetch message ${messageId}:`, err); continue; }
-
       const headers = message.payload?.headers ?? [];
       const fromHeader = getHeader(headers, "From");
       const subject = getHeader(headers, "Subject");
       const gmailMessageId = getHeader(headers, "Message-ID");
       const snippet = message.snippet ?? "";
-
       if (fromHeader.includes(BCS_GMAIL_EMAIL)) { await markAsRead(accessToken, messageId); skipped++; continue; }
-
       const emailMatch = fromHeader.match(/<([^>]+)>/) ?? fromHeader.match(/(\S+@\S+)/);
       const senderEmail = emailMatch?.[1] ?? fromHeader.trim();
       const nameMatch = fromHeader.match(/^([^<]+)</);
       const senderName = nameMatch?.[1]?.trim() ?? senderEmail.split("@")[0];
       const category = classifyEmail(subject, snippet);
-
       try {
         const replyHtml = category === "job_inquiry" ? buildJobInquiryHtml(senderName) : buildGeneralContactHtml(senderName);
         await sendReply(accessToken, threadId, gmailMessageId || `<${messageId}>`, senderEmail, BCS_GMAIL_EMAIL, subject, replyHtml);
@@ -236,7 +217,6 @@ const handler = async (req: Request): Promise<Response> => {
         processed++;
       } catch (err) { console.error(`Failed to process message ${messageId}:`, err); }
     }
-
     return new Response(JSON.stringify({ processed, skipped }), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error: unknown) {
     console.error("bcs-email-autoresponder error:", error);
