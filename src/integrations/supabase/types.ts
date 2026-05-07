@@ -340,6 +340,33 @@ export type Database = {
           },
         ]
       }
+      bcs_autoresponder_log: {
+        Row: {
+          category: string
+          gmail_message_id: string
+          id: string
+          responded_at: string
+          sender_email: string
+          subject: string | null
+        }
+        Insert: {
+          category: string
+          gmail_message_id: string
+          id?: string
+          responded_at?: string
+          sender_email: string
+          subject?: string | null
+        }
+        Update: {
+          category?: string
+          gmail_message_id?: string
+          id?: string
+          responded_at?: string
+          sender_email?: string
+          subject?: string | null
+        }
+        Relationships: []
+      }
       clinic_files: {
         Row: {
           clinic_id: string
