@@ -82,7 +82,7 @@ export function buildGoogleOAuthUrl({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: "https://www.googleapis.com/auth/gmail.send email profile",
+    scope: "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify email profile",
     access_type: "offline",
     prompt: "consent",
     state,
