@@ -1402,6 +1402,24 @@ export type Database = {
         }
         Relationships: []
       }
+      oauth_states: {
+        Row: {
+          created_at: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       onboarding_progress: {
         Row: {
           completed_at: string | null
@@ -2896,6 +2914,16 @@ export type Database = {
           p_name: string
           p_opportunity_id?: string
           p_student_id?: string
+        }
+        Returns: string
+      }
+      submit_position_application_atomic: {
+        Args: {
+          p_applicant_email: string
+          p_applicant_name: string
+          p_availability_json?: Json
+          p_position_id: string
+          p_student_id: string
         }
         Returns: string
       }
