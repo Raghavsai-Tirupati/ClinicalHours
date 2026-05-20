@@ -58,11 +58,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Decode base64url state
     let hospitalPageId: string;
+    let csrfToken: string | undefined;
     try {
       const restored = state.replace(/-/g, "+").replace(/_/g, "/");
       const padded = restored + "=".repeat((4 - (restored.length % 4)) % 4);
       const decoded = JSON.parse(atob(padded));
       hospitalPageId = decoded.hospitalPageId;
+      csrfToken = typeof decoded.csrf === "string" ? decoded.csrf : undefined;
     } catch {
       return new Response(
         JSON.stringify({ success: false, error: "Invalid state parameter" }),
@@ -84,6 +86,40 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const userEmail = authData.user.email?.trim().toLowerCase();
+
+    // CSRF check: state token must exist server-side, belong to the current user,
+    // and have been created within the last 10 minutes. Then consume it.
+    if (!csrfToken) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid or expired OAuth state" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const { data: stateRow } = await supabaseAdmin
+      .from("oauth_states")
+      .select("user_id, created_at")
+      .eq("state", csrfToken)
+      .maybeSingle();
+
+    if (!stateRow) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid or expired OAuth state" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const stateAgeMs = Date.now() - new Date(stateRow.created_at).getTime();
+    if (stateAgeMs > 600_000 || stateRow.user_id !== authData.user.id) {
+      await supabaseAdmin.from("oauth_states").delete().eq("state", csrfToken);
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid or expired OAuth state" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    // One-time use: consume immediately.
+    await supabaseAdmin.from("oauth_states").delete().eq("state", csrfToken);
 
     const { data: hospitalPage, error: pageError } = await supabaseAdmin
       .from("hospital_pages")

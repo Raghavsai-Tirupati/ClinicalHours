@@ -137,22 +137,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check spots available
-    if (position.spots_available != null) {
-      const { count } = await supabaseAdmin
-        .from("student_applications")
-        .select("id", { count: "exact", head: true })
-        .eq("position_id", position_id)
-        .eq("status", "accepted");
-
-      if (count != null && count >= position.spots_available) {
-        return new Response(JSON.stringify({ error: "All spots for this position have been filled" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("full_name")
@@ -180,20 +164,35 @@ Deno.serve(async (req) => {
         : null;
     const availabilityJson = position.ask_for_availability === false ? null : requestedAvailability;
 
-    // Create application
-    const { data: app, error: appErr } = await supabaseAdmin
-      .from("student_applications")
-      .insert({
-        position_id,
-        student_id: auth.user.id,
-        applicant_name: applicantName,
-        applicant_email: applicantEmail,
-        availability_json: availabilityJson,
-      })
-      .select("*")
-      .single();
+    // Atomically check spots + insert in a single DB transaction to prevent
+    // concurrent submissions from overfilling a position.
+    const { data: createdAppId, error: rpcErr } = await supabaseAdmin.rpc(
+      "submit_position_application_atomic",
+      {
+        p_position_id: position_id,
+        p_student_id: auth.user.id,
+        p_applicant_name: applicantName,
+        p_applicant_email: applicantEmail,
+        p_availability_json: availabilityJson,
+      },
+    );
 
-    if (appErr) throw appErr;
+    if (rpcErr) {
+      if ((rpcErr.message ?? "").includes("SPOTS_FULL")) {
+        return new Response(
+          JSON.stringify({ error: "This position is no longer accepting applications — all spots are filled." }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      throw rpcErr;
+    }
+
+    const { data: app, error: appFetchErr } = await supabaseAdmin
+      .from("student_applications")
+      .select("*")
+      .eq("id", createdAppId as string)
+      .single();
+    if (appFetchErr || !app) throw appFetchErr ?? new Error("Failed to load created application");
 
     // Insert answers if provided. If this fails, remove the created application
     // so users do not end up with partial submissions.

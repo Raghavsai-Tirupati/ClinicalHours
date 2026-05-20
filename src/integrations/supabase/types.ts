@@ -1402,6 +1402,24 @@ export type Database = {
         }
         Relationships: []
       }
+      oauth_states: {
+        Row: {
+          created_at: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       onboarding_progress: {
         Row: {
           completed_at: string | null
@@ -1751,6 +1769,7 @@ export type Database = {
           city: string | null
           clinical_hours: number | null
           created_at: string
+          dashboard_tutorial_complete: boolean
           email_opt_in: boolean | null
           email_verified: boolean | null
           full_name: string
@@ -1764,6 +1783,7 @@ export type Database = {
           phone: string | null
           pre_med_track: string | null
           premium_expires_at: string | null
+          premium_source: Database["public"]["Enums"]["premium_source"] | null
           research_experience: string | null
           resume_url: string | null
           state: string | null
@@ -1780,6 +1800,7 @@ export type Database = {
           city?: string | null
           clinical_hours?: number | null
           created_at?: string
+          dashboard_tutorial_complete?: boolean
           email_opt_in?: boolean | null
           email_verified?: boolean | null
           full_name: string
@@ -1793,6 +1814,7 @@ export type Database = {
           phone?: string | null
           pre_med_track?: string | null
           premium_expires_at?: string | null
+          premium_source?: Database["public"]["Enums"]["premium_source"] | null
           research_experience?: string | null
           resume_url?: string | null
           state?: string | null
@@ -1809,6 +1831,7 @@ export type Database = {
           city?: string | null
           clinical_hours?: number | null
           created_at?: string
+          dashboard_tutorial_complete?: boolean
           email_opt_in?: boolean | null
           email_verified?: boolean | null
           full_name?: string
@@ -1822,6 +1845,7 @@ export type Database = {
           phone?: string | null
           pre_med_track?: string | null
           premium_expires_at?: string | null
+          premium_source?: Database["public"]["Enums"]["premium_source"] | null
           research_experience?: string | null
           resume_url?: string | null
           state?: string | null
@@ -2893,12 +2917,23 @@ export type Database = {
         }
         Returns: string
       }
+      submit_position_application_atomic: {
+        Args: {
+          p_applicant_email: string
+          p_applicant_name: string
+          p_availability_json?: Json
+          p_position_id: string
+          p_student_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       acceptance_likelihood: "high" | "medium" | "low"
       app_role: "admin" | "moderator" | "user"
       hospital_role: "owner" | "admin" | "viewer"
       opportunity_type: "hospital" | "clinic" | "hospice" | "emt" | "volunteer"
+      premium_source: "paid" | "promo_code" | "directly_added"
       volunteer_tracker_column_type:
         | "number"
         | "percentage"
@@ -3037,6 +3072,7 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       hospital_role: ["owner", "admin", "viewer"],
       opportunity_type: ["hospital", "clinic", "hospice", "emt", "volunteer"],
+      premium_source: ["paid", "promo_code", "directly_added"],
       volunteer_tracker_column_type: [
         "number",
         "percentage",

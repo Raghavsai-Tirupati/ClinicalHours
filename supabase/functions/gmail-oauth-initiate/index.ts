@@ -114,9 +114,22 @@ const handler = async (req: Request): Promise<Response> => {
       return jsonRateLimitResponse(corsHeaders, rl.retryAfterSeconds);
     }
 
-    // base64url encode state
-    const stateJson = JSON.stringify({ hospitalPageId });
+    // CSRF-protected state: random token persisted server-side and tied to the user.
+    // Also encode hospitalPageId in the state so the callback can resolve the target page.
+    const csrfToken = crypto.randomUUID();
+    const stateJson = JSON.stringify({ hospitalPageId, csrf: csrfToken });
     const state = btoa(stateJson).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+    const { error: stateInsertError } = await supabaseAdmin
+      .from("oauth_states")
+      .insert({ state: csrfToken, user_id: authData.user.id });
+    if (stateInsertError) {
+      console.error("gmail-oauth-initiate: failed to persist oauth state, HTTP status: 500");
+      return new Response(
+        JSON.stringify({ success: false, error: "Failed to initiate OAuth" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
 
     const url = buildGoogleOAuthUrl({
       clientId: GOOGLE_CLIENT_ID,
