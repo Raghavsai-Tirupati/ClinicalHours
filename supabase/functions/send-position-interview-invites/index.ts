@@ -39,6 +39,16 @@ function escapeHtml(unsafe: string): string {
     .replace(/'/g, "&#039;");
 }
 
+function sanitizeHtml(raw: string): string {
+  return raw
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, "")
+    .replace(/<object\b[^>]*>[\s\S]*?<\/object>/gi, "")
+    .replace(/<embed\b[^>]*>/gi, "")
+    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/href\s*=\s*["']\s*javascript:[^"']*["']/gi, 'href="#"');
+}
+
 function formatBodyHtml(body: string): string {
   return escapeHtml(body).replace(/\n/g, "<br>");
 }

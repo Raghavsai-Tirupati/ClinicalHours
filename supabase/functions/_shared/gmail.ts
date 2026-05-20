@@ -13,9 +13,11 @@ export async function refreshGmailAccessToken(refreshToken: string): Promise<str
     }),
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({} as Record<string, unknown>));
   if (!res.ok || !data.access_token) {
-    throw new Error(`Failed to refresh Gmail token: ${data.error_description ?? data.error ?? "unknown error"}`);
+    // Do not log the full body — it can contain sensitive material. Status only.
+    console.error("Gmail token refresh failed, HTTP status:", res.status);
+    throw new Error("Failed to refresh Gmail token");
   }
   return data.access_token as string;
 }
@@ -109,9 +111,11 @@ export async function exchangeCodeForTokens({
     }),
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({} as Record<string, unknown>));
   if (!res.ok || !data.access_token) {
-    throw new Error(`Token exchange failed: ${data.error_description ?? data.error ?? "unknown error"}`);
+    // Never log request/response bodies (they include client_secret / tokens). Status only.
+    console.error("Gmail token exchange failed, HTTP status:", res.status);
+    throw new Error("Token exchange failed");
   }
   if (!data.refresh_token) {
     throw new Error("No refresh_token returned. Ensure prompt=consent and access_type=offline.");
