@@ -307,7 +307,20 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { hospitalPageId, applicationIds, emailType, subject, body, htmlBody, customMessage, attachments, forceResend } = payload;
+    const { hospitalPageId, applicationIds, emailType, subject, body, htmlBody: rawHtmlBody, customMessage, attachments, forceResend } = payload;
+    let htmlBody: string | undefined = rawHtmlBody;
+    if (typeof rawHtmlBody === "string" && rawHtmlBody.length > 0) {
+      const safeHtml = sanitizeHtml(rawHtmlBody);
+      if (safeHtml !== rawHtmlBody) {
+        console.warn(
+          "Interview invite: htmlBody was sanitized before sending, original length:",
+          rawHtmlBody.length,
+          "sanitized length:",
+          safeHtml.length,
+        );
+      }
+      htmlBody = safeHtml;
+    }
     if (!hospitalPageId) {
       return new Response(
         JSON.stringify({ success: false, error: "hospitalPageId is required" }),
