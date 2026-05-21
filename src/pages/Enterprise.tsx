@@ -109,13 +109,16 @@ const Enterprise = () => {
   return (
     <div className="min-h-screen bg-white text-zinc-900 antialiased">
       <Helmet>
-        <title>
-          ClinicalHours for Healthcare Facilities — Workforce Operations for Safety-Net Clinics
-        </title>
+        <title>ClinicalHours for Healthcare Facilities</title>
         <meta
           name="description"
           content="ClinicalHours is the operating system for community health clinics. Onboarding, credentialing, compliance, and supply — in one place."
         />
+        <link rel="canonical" href="https://clinicalhours.lovable.app/enterprise" />
+        <meta property="og:title" content="ClinicalHours for Healthcare Facilities" />
+        <meta property="og:description" content="The operating system for community health clinics. Onboarding, credentialing, compliance, and supply — in one place." />
+        <meta property="og:url" content="https://clinicalhours.lovable.app/enterprise" />
+        <meta property="og:type" content="website" />
       </Helmet>
 
       <ScrollProgress />

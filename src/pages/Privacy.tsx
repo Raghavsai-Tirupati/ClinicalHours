@@ -8,6 +8,11 @@ const Privacy = () => {
       <Helmet>
         <title>Privacy Policy | ClinicalHours</title>
         <meta name="description" content="Learn how ClinicalHours collects, uses, stores, and safeguards your personal information." />
+        <link rel="canonical" href="https://clinicalhours.lovable.app/privacy" />
+        <meta property="og:title" content="Privacy Policy | ClinicalHours" />
+        <meta property="og:description" content="Learn how ClinicalHours collects, uses, stores, and safeguards your personal information." />
+        <meta property="og:url" content="https://clinicalhours.lovable.app/privacy" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <div className="min-h-screen bg-background">
         <Navigation />
