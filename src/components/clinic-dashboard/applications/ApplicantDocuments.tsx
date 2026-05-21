@@ -1,4 +1,4 @@
-import { ExternalLink, FileText, File, Award, BookOpen, Users, FileCheck, Download } from 'lucide-react';
+import { FileText, File, Award, BookOpen, Users, FileCheck, Download, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,9 +32,10 @@ function formatSize(bytes: number | null) {
 
 interface ApplicantDocumentsProps {
   documents: ApplicationDocument[];
+  onDelete?: (doc: ApplicationDocument) => void;
 }
 
-export default function ApplicantDocuments({ documents }: ApplicantDocumentsProps) {
+export default function ApplicantDocuments({ documents, onDelete }: ApplicantDocumentsProps) {
   if (!documents.length) {
     return (
       <Card className="border-border/50">
@@ -87,6 +88,17 @@ export default function ApplicantDocuments({ documents }: ApplicantDocumentsProp
                   <Download className="h-3.5 w-3.5" />
                 </a>
               </Button>
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                  aria-label="Delete document"
+                  onClick={() => onDelete(doc)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
           );
         })}

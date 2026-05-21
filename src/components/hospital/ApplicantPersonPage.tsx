@@ -377,6 +377,27 @@ export default function ApplicantPersonPage() {
     }
   };
 
+  const handleDocumentDelete = useCallback(async (doc: ApplicationDocument) => {
+    if (!confirm(`Delete "${doc.file_name}"? This cannot be undone.`)) return;
+    try {
+      const { error: dbError } = await supabase
+        .from('application_documents')
+        .delete()
+        .eq('id', doc.id);
+      if (dbError) throw dbError;
+
+      const pathMatch = doc.file_url.split('/clinic-files/')[1];
+      if (pathMatch) {
+        await supabase.storage.from('clinic-files').remove([pathMatch]);
+      }
+
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+      toast.success(`${doc.file_name} deleted`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Delete failed');
+    }
+  }, []);
+
   // ── Derived values ────────────────────────────────────────────────────────
 
   const loading = appsLoading || profileLoading;
@@ -622,7 +643,7 @@ export default function ApplicantPersonPage() {
                 </div>
               )}
 
-              <ApplicantDocuments documents={documents} />
+              <ApplicantDocuments documents={documents} onDelete={handleDocumentDelete} />
 
               {documents.length === 0 && answerFiles.length === 0 && (
                 <EmptyState icon={FileText} message="No documents yet" />
