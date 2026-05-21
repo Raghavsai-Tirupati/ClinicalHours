@@ -136,6 +136,7 @@ export default function ApplicantPersonPage() {
   const [uploadAppId, setUploadAppId] = useState('');
   const [uploadFileType, setUploadFileType] = useState<ApplicationDocument['file_type']>('other');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [documents, setDocuments] = useState<ApplicationDocument[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -155,12 +156,21 @@ export default function ApplicantPersonPage() {
     loadTrackerCategories();
   }, [studentId, hospitalPage?.id]);
 
-  // Load email logs & activity once we know the person's email
+  // Load email logs, activity, and documents once apps are loaded
   useEffect(() => {
     if (!studentId || !hospitalPage?.id || appsLoading) return;
     loadEmailLogs();
     loadActivity();
-    if (personApps.length > 0) setUploadAppId(personApps[0].id);
+    if (personApps.length > 0) {
+      setUploadAppId(personApps[0].id);
+      const appIds = personApps.map((a) => a.id);
+      supabase
+        .from('application_documents')
+        .select('*')
+        .in('application_id', appIds)
+        .order('created_at', { ascending: true })
+        .then(({ data }) => setDocuments((data || []) as ApplicationDocument[]));
+    }
   }, [studentId, hospitalPage?.id, appsLoading, personApps.length]);
 
   async function loadProfile() {
@@ -277,10 +287,13 @@ export default function ApplicantPersonPage() {
         const { error: uploadError } = await supabase.storage.from('clinic-files').upload(storagePath, file, { upsert: false });
         if (uploadError) throw uploadError;
         const { data: urlData } = supabase.storage.from('clinic-files').getPublicUrl(storagePath);
-        const { error: insertError } = await supabase
+        const { data: docRow, error: insertError } = await supabase
           .from('application_documents')
-          .insert({ application_id: uploadAppId, student_id: studentId, file_name: file.name, file_url: urlData.publicUrl, file_type: uploadFileType, file_size_bytes: file.size });
+          .insert({ application_id: uploadAppId, student_id: studentId, file_name: file.name, file_url: urlData.publicUrl, file_type: uploadFileType, file_size_bytes: file.size })
+          .select()
+          .single();
         if (insertError) throw insertError;
+        setDocuments((prev) => [...prev, docRow as ApplicationDocument]);
         toast.success(`${file.name} uploaded`);
       } catch (err: any) {
         toast.error(err?.message || 'Upload failed');
@@ -371,15 +384,6 @@ export default function ApplicantPersonPage() {
   const email = firstApp?.applicant_email?.trim() || firstApp?.student_profile?.email || '';
   const displayName = profile?.full_name?.trim() || firstApp?.applicant_name?.trim() || firstApp?.student_profile?.full_name?.trim() || `Student ${studentId?.slice(0, 8)}`;
   const initial = displayName.charAt(0).toUpperCase();
-
-  // Collect all documents from all apps
-  const allDocuments = useMemo(() => {
-    const docs: ApplicationDocument[] = [];
-    for (const app of personApps) {
-      if (app.documents) docs.push(...app.documents);
-    }
-    return docs;
-  }, [personApps]);
 
   // Collect answer file uploads from all apps
   const answerFiles = useMemo(() => {
@@ -618,9 +622,9 @@ export default function ApplicantPersonPage() {
                 </div>
               )}
 
-              <ApplicantDocuments documents={allDocuments} />
+              <ApplicantDocuments documents={documents} />
 
-              {allDocuments.length === 0 && answerFiles.length === 0 && (
+              {documents.length === 0 && answerFiles.length === 0 && (
                 <EmptyState icon={FileText} message="No documents yet" />
               )}
             </TabsContent>
