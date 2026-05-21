@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Helmet } from "react-helmet-async";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,6 +117,26 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Contact ClinicalHours — Support & Partnerships</title>
+        <meta name="description" content="Contact the ClinicalHours team for support, partnerships, or questions about clinical volunteer opportunities. We respond within 24-48 hours." />
+        <link rel="canonical" href="https://clinicalhours.lovable.app/contact" />
+        <meta property="og:title" content="Contact ClinicalHours — Support & Partnerships" />
+        <meta property="og:description" content="Contact the ClinicalHours team for support, partnerships, or questions about clinical volunteer opportunities." />
+        <meta property="og:url" content="https://clinicalhours.lovable.app/contact" />
+        <meta property="og:type" content="website" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            { "@type": "Question", name: "How do I add a new clinical opportunity?", acceptedAnswer: { "@type": "Answer", text: "If you know of a clinical opportunity that's not listed on our platform, please contact us with the details. We'll verify the information and add it to help other students." } },
+            { "@type": "Question", name: "Can I update information about an existing opportunity?", acceptedAnswer: { "@type": "Answer", text: "Yes! If you notice incorrect information about an opportunity, please let us know. We rely on our community to keep the platform accurate and up-to-date." } },
+            { "@type": "Question", name: "How can I contribute to ClinicalHours?", acceptedAnswer: { "@type": "Answer", text: "We welcome contributions! You can help by submitting reviews, sharing opportunities, answering questions, or suggesting new features. Reach out to discuss partnership opportunities." } },
+            { "@type": "Question", name: "Is ClinicalHours free to use?", acceptedAnswer: { "@type": "Answer", text: "Yes, ClinicalHours is completely free for students. Our mission is to make clinical opportunities accessible to all pre-med students, regardless of their background or resources." } },
+            { "@type": "Question", name: "I'm having trouble with my account. What should I do?", acceptedAnswer: { "@type": "Answer", text: "If you're experiencing account issues, please contact us with your email address and a description of the problem. We'll help you resolve it as quickly as possible." } },
+          ],
+        })}</script>
+      </Helmet>
       <Navigation />
 
       <div className="container mx-auto px-4 pt-28 pb-12">
