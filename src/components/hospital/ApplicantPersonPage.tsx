@@ -452,23 +452,6 @@ export default function ApplicantPersonPage() {
       <Card className="border-border/50">
         <CardContent className="pt-6 pb-6">
           <div className="flex items-start gap-5">
-            {/* Avatar */}
-            <div className="relative shrink-0 group">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt={displayName} className="h-20 w-20 rounded-full object-cover border-2 border-border/50" />
-              ) : (
-                <div className={`h-20 w-20 rounded-full flex items-center justify-center text-white text-2xl font-bold border-2 border-border/50 ${email ? emailToColor(email) : 'bg-primary'}`}>
-                  {initial}
-                </div>
-              )}
-              <input ref={avatarInputRef} type="file" className="hidden" accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }} />
-              <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={uploadingAvatar}
-                className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                {uploadingAvatar ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Camera className="h-5 w-5 text-white" />}
-              </button>
-            </div>
-
             {/* Name + info */}
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-semibold tracking-tight">{displayName}</h1>
