@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -331,6 +332,32 @@ const OpportunityDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{`${opportunity.name} — Clinical Volunteer Opportunity | ClinicalHours`.slice(0, 60)}</title>
+        <meta name="description" content={(opportunity.description || `Volunteer at ${opportunity.name} in ${opportunity.location}. See requirements, hours, and reviews from pre-med students.`).slice(0, 160)} />
+        <link rel="canonical" href={`https://clinicalhours.lovable.app/opportunities/${slug}`} />
+        <meta property="og:title" content={`${opportunity.name} — Clinical Volunteer Opportunity`} />
+        <meta property="og:description" content={(opportunity.description || `Volunteer at ${opportunity.name} in ${opportunity.location}.`).slice(0, 200)} />
+        <meta property="og:url" content={`https://clinicalhours.lovable.app/opportunities/${slug}`} />
+        <meta property="og:type" content="article" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "MedicalOrganization",
+          name: opportunity.name,
+          description: opportunity.description || undefined,
+          address: opportunity.location,
+          telephone: opportunity.phone || undefined,
+          email: opportunity.email || undefined,
+          url: opportunity.website || `https://clinicalhours.lovable.app/opportunities/${slug}`,
+          ...(opportunity.avg_rating && opportunity.review_count ? {
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: opportunity.avg_rating,
+              reviewCount: opportunity.review_count,
+            }
+          } : {}),
+        })}</script>
+      </Helmet>
       <Navigation />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Button

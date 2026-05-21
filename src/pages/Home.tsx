@@ -66,7 +66,12 @@ const Home = () => {
     <div className="min-h-screen">
       <Helmet>
         <title>ClinicalHours — Find Clinical Volunteering Opportunities</title>
-        <meta name="description" content="Browse thousands of clinical volunteering opportunities at hospitals, clinics, and hospices near you. Free tools for pre-med students to track hours and build competitive applications." />
+        <meta name="description" content="Browse clinical volunteer opportunities at hospitals, clinics, and hospices. Free tools for pre-med students to track hours and build applications." />
+        <link rel="canonical" href="https://clinicalhours.lovable.app/" />
+        <meta property="og:title" content="ClinicalHours — Find Clinical Volunteering Opportunities" />
+        <meta property="og:description" content="Browse clinical volunteer opportunities at hospitals, clinics, and hospices. Free tools for pre-med students to track hours and build applications." />
+        <meta property="og:url" content="https://clinicalhours.lovable.app/" />
+        <meta property="og:type" content="website" />
       </Helmet>
       <Navigation />
 

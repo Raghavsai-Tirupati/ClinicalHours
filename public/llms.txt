@@ -1,0 +1,17 @@
+# ClinicalHours
+
+> Free platform helping pre-med students discover clinical volunteer opportunities at hospitals, clinics, hospices, and EMT programs across the United States.
+
+ClinicalHours lets pre-med students search thousands of clinical volunteer opportunities by location, read reviews from other students, track their clinical hours, and apply directly to participating clinics. Healthcare facilities use ClinicalHours to recruit, credential, and manage volunteers.
+
+## Pages
+
+- [Home](/): Overview and search entry point for clinical opportunities.
+- [Enterprise](/enterprise): Workforce platform for hospitals and safety-net clinics — applicant tracking, credentialing, and compliance.
+- [Contact](/contact): Support contact, FAQ, and partnership inquiries.
+- [Privacy Policy](/privacy): How user data is collected, used, and protected.
+- [Terms of Service](/terms): Terms governing use of the ClinicalHours platform.
+
+## Optional
+
+- [Sign in](/auth): Account creation and login for students and clinics.
