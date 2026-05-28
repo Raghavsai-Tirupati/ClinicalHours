@@ -38,7 +38,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-export { formatLastFirst, emailToColor } from '@/lib/validation';
+import { formatLastFirst, emailToColor } from '@/lib/validation';
+export { formatLastFirst, emailToColor };
 
 interface UserProfile {
   id: string;
