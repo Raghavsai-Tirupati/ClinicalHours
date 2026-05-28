@@ -145,7 +145,7 @@ const Home = () => {
           aria-hidden="true"
           loading="lazy"
           decoding="async"
-          fetchpriority="low"
+          fetchPriority="low"
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
         
