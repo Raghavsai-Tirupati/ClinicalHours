@@ -378,6 +378,14 @@ function UserJourneyCard({
         </Button>
         <div className="flex-1">
           <h3 className="font-semibold text-foreground">{user.name}</h3>
+          {!user.isGuest && (() => {
+            const stage = getFunnelStage(userEvents);
+            return (
+              <Badge variant="outline" className={`text-[10px] ${stage.color}`}>
+                {stage.label}
+              </Badge>
+            );
+          })()}
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
             {user.isGuest ? (
               <span className="flex items-center gap-1"><Ghost className="h-3 w-3" /> Guest Session</span>
@@ -581,6 +589,18 @@ function UserJourneyCard({
       </div>
     </div>
   );
+}
+
+function getFunnelStage(events: TrackingEvent[]): { label: string; color: string } {
+  const hasApply = events.some((e) => e.event_type === "apply_link_clicked");
+  const hasSaved = events.some((e) => e.event_type === "opportunity_saved");
+  const hasSearch = events.some((e) => e.event_type === "opportunity_search");
+  const hasOppView = events.some((e) => e.event_type === "opportunity_viewed");
+
+  if (hasApply) return { label: "Applied", color: "text-green-400 border-green-500/30 bg-green-500/10" };
+  if (hasSaved) return { label: "Saved, not applied", color: "text-amber-400 border-amber-500/30 bg-amber-500/10" };
+  if (hasOppView || hasSearch) return { label: "Browsing", color: "text-blue-400 border-blue-500/30 bg-blue-500/10" };
+  return { label: "Passive", color: "text-muted-foreground border-border bg-muted/30" };
 }
 
 // ── Main Component ──────────────────────────────────────────
@@ -1020,6 +1040,15 @@ export function AdminActivityTab() {
                         {user.isGuest && guestSessionsMap.get(user.sessionId)?.converted_to_user_id && (
                           <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-400">Converted</Badge>
                         )}
+                        {!user.isGuest && (() => {
+                          const userEvents = events.filter((e) => user.id ? e.user_id === user.id : e.session_id === user.sessionId);
+                          const stage = getFunnelStage(userEvents);
+                          return (
+                            <Badge variant="outline" className={`text-[10px] ${stage.color}`}>
+                              {stage.label}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <p className="line-clamp-2 break-words text-[11px] text-muted-foreground">
                         {user.pages.slice(0, 4).join(" → ")}

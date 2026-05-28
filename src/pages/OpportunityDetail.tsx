@@ -19,6 +19,7 @@ import { QASection } from "@/components/QASection";
 import { GuestGate } from "@/components/GuestGate";
 import { VerificationGate } from "@/components/VerificationGate";
 import { logger } from "@/lib/logger";
+import { trackApplyLinkClicked } from "@/lib/tracking";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
@@ -545,7 +546,7 @@ const OpportunityDetail = () => {
                     </div>
                   </div>
                   <Button
-                    onClick={() => navigate(`/apply/${pos.id}`)}
+                    onClick={() => { trackApplyLinkClicked(pos.id, user?.id); navigate(`/apply/${pos.id}`); }}
                     className="shrink-0"
                   >
                     Apply Now

@@ -6,7 +6,19 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 // Valid event types
-const VALID_EVENT_TYPES = ["page_view", "button_click", "guest_conversion", "signup", "login"];
+const VALID_EVENT_TYPES = [
+  "page_view",
+  "button_click",
+  "guest_conversion",
+  "signup",
+  "login",
+  "opportunity_viewed",
+  "opportunity_search",
+  "opportunity_saved",
+  "opportunity_unsaved",
+  "apply_link_clicked",
+  "profile_incomplete_bounce",
+];
 
 // Rate limiting: max events per session per minute
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute

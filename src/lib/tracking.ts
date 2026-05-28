@@ -109,12 +109,18 @@ function getDeviceInfo() {
 /**
  * Event types
  */
-export type TrackingEventType = 
-  | "page_view" 
-  | "button_click" 
-  | "guest_conversion" 
-  | "signup" 
-  | "login";
+export type TrackingEventType =
+  | "page_view"
+  | "button_click"
+  | "guest_conversion"
+  | "signup"
+  | "login"
+  | "opportunity_viewed"
+  | "opportunity_search"
+  | "opportunity_saved"
+  | "opportunity_unsaved"
+  | "apply_link_clicked"
+  | "profile_incomplete_bounce";
 
 export interface TrackingMetadata {
   button_name?: string;
@@ -240,6 +246,31 @@ export function trackSignup(userId: string, source?: string): void {
  */
 export function trackLogin(userId: string, method?: string): void {
   trackEvent("login", { method: method || "email" }, userId);
+}
+
+export function trackOpportunityViewed(opportunityId: string, userId?: string): void {
+  trackEvent("opportunity_viewed", { opportunity_id: opportunityId }, userId);
+}
+
+export function trackOpportunitySearch(query: string, resultCount: number, userId?: string): void {
+  if (!query || query.trim().length < 2) return;
+  trackEvent("opportunity_search", { query: query.trim(), result_count: resultCount }, userId);
+}
+
+export function trackOpportunitySaved(opportunityId: string, userId: string): void {
+  trackEvent("opportunity_saved", { opportunity_id: opportunityId }, userId);
+}
+
+export function trackOpportunityUnsaved(opportunityId: string, userId: string): void {
+  trackEvent("opportunity_unsaved", { opportunity_id: opportunityId }, userId);
+}
+
+export function trackApplyLinkClicked(opportunityId: string, userId?: string): void {
+  trackEvent("apply_link_clicked", { opportunity_id: opportunityId }, userId);
+}
+
+export function trackProfileIncompleteBounce(step: string, fromPage: string, userId?: string): void {
+  trackEvent("profile_incomplete_bounce", { step, from_page: fromPage }, userId);
 }
 
 /**

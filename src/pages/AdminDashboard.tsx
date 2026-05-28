@@ -17,6 +17,7 @@ import {
   Ghost,
   Crown,
   Laptop,
+  TrendingDown,
 } from 'lucide-react';
 import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
@@ -29,6 +30,7 @@ import AdminLogosTab from '@/components/admin/AdminLogosTab';
 import GuestSessionsTab from '@/components/admin/GuestSessionsTab';
 import AdminPremiumTab from '@/components/admin/AdminPremiumTab';
 import AdminHospitalConsoleTab from '@/components/admin/AdminHospitalConsoleTab';
+import AdminFunnelTab from '@/components/admin/AdminFunnelTab';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -67,6 +69,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="overview" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
                 <BarChart3 className="h-4 w-4 shrink-0" />
                 <span className="hidden sm:inline">Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="funnel" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
+                <TrendingDown className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Funnel</span>
               </TabsTrigger>
               <TabsTrigger value="students" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
                 <Users className="h-4 w-4 shrink-0" />
@@ -114,6 +120,12 @@ export default function AdminDashboard() {
             <TabsContent value="overview">
               <TabErrorBoundary tabName="Overview">
                 <AdminOverviewTab />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            <TabsContent value="funnel">
+              <TabErrorBoundary tabName="Funnel">
+                <AdminFunnelTab />
               </TabErrorBoundary>
             </TabsContent>
 

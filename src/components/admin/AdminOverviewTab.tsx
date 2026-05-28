@@ -7,7 +7,6 @@ import {
   Users,
   Building2,
   Briefcase,
-  FileText,
   Clock,
   Activity,
   RefreshCw,
@@ -24,9 +23,7 @@ interface OverviewStats {
   pendingHospitals: number;
   rejectedHospitals: number;
   totalOpportunities: number;
-  totalApplications: number;
   totalHoursLogged: number;
-  activeUsers7d: number;
   activeUsers30d: number;
 }
 
@@ -58,10 +55,8 @@ export default function AdminOverviewTab() {
         { count: pendingHospitals },
         { count: rejectedHospitals },
         { count: totalOpportunities },
-        { count: totalApplications },
         { data: hoursData },
-        { count: activeUsers7d },
-        { count: activeUsers30d },
+        { data: activeUsers30dData },
         { data: landingEvents },
         { data: signupEvents },
         { data: guestSessionsTodayData },
@@ -71,16 +66,10 @@ export default function AdminOverviewTab() {
         supabase.from('hospital_accounts').select('*', { count: 'exact', head: true }).eq('account_status', 'pending'),
         supabase.from('hospital_accounts').select('*', { count: 'exact', head: true }).eq('account_status', 'rejected'),
         supabase.from('opportunities').select('*', { count: 'exact', head: true }),
-        supabase.from('applications').select('*', { count: 'exact', head: true }),
         supabase.from('experience_entries').select('hours'),
         supabase
           .from('tracking_events')
-          .select('*', { count: 'exact', head: true })
-          .not('user_id', 'is', null)
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
-        supabase
-          .from('tracking_events')
-          .select('*', { count: 'exact', head: true })
+          .select('user_id')
           .not('user_id', 'is', null)
           .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
         supabase
@@ -101,6 +90,7 @@ export default function AdminOverviewTab() {
       ]);
 
       const totalHoursLogged = (hoursData || []).reduce((sum, e) => sum + (e.hours ?? 0), 0);
+      const activeUsers30d = new Set((activeUsers30dData ?? []).map((e: { user_id: string }) => e.user_id)).size;
 
       setStats({
         totalStudents: totalStudents ?? 0,
@@ -108,10 +98,8 @@ export default function AdminOverviewTab() {
         pendingHospitals: pendingHospitals ?? 0,
         rejectedHospitals: rejectedHospitals ?? 0,
         totalOpportunities: totalOpportunities ?? 0,
-        totalApplications: totalApplications ?? 0,
         totalHoursLogged,
-        activeUsers7d: activeUsers7d ?? 0,
-        activeUsers30d: activeUsers30d ?? 0,
+        activeUsers30d,
       });
 
       const landingSessionIds = new Set<string>();
@@ -185,13 +173,6 @@ export default function AdminOverviewTab() {
           icon: Briefcase,
           color: 'text-purple-400',
           bg: 'bg-purple-400/10',
-        },
-        {
-          label: 'Applications',
-          value: stats.totalApplications,
-          icon: FileText,
-          color: 'text-orange-400',
-          bg: 'bg-orange-400/10',
         },
         {
           label: 'Clinical Hours Logged',

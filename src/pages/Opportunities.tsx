@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useOpportunities } from "@/hooks/useOpportunities";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { trackOpportunityViewed, trackOpportunitySearch, trackOpportunitySaved } from "@/lib/tracking";
 import { GuestGate } from "@/components/GuestGate";
 import { VerificationGate } from "@/components/VerificationGate";
 import { useEmailVerified } from "@/hooks/useEmailVerified";
@@ -64,6 +65,12 @@ const Opportunities = () => {
     searchTerm: debouncedSearch,
     pageSize: 20,
   });
+
+  useEffect(() => {
+    if (debouncedSearch.trim().length >= 2 && !loading) {
+      trackOpportunitySearch(debouncedSearch, totalCount ?? 0, user?.id);
+    }
+  }, [debouncedSearch, totalCount, loading]);
 
   // Ref for detail panel to reset scroll position when switching opportunities
   const detailRef = useRef<HTMLDivElement>(null);
@@ -172,11 +179,17 @@ const Opportunities = () => {
     }
 
     setSavedOpportunityIds((prev) => new Set(prev).add(opportunityId));
+    trackOpportunitySaved(opportunityId, user.id);
     toast({ title: "Added to tracker!", description: "View it in your Dashboard to track your progress." });
   };
 
   const handleSelect = (id: string) => {
-    setSelectedId((prev) => (prev === id ? null : id));
+    setSelectedId((prev) => {
+      if (prev !== id) {
+        trackOpportunityViewed(id, user?.id);
+      }
+      return prev === id ? null : id;
+    });
   };
 
   const getTypeColor = (type: string) => {
