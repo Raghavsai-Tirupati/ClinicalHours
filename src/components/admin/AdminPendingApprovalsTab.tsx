@@ -57,6 +57,7 @@ export default function AdminPendingApprovalsTab({ onPendingCountChange }: Admin
   const [pending, setPending] = useState<PendingHospital[]>([]);
   const [reviewed, setReviewed] = useState<ReviewedHospital[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<PendingHospital | null>(null);
   const [rejectNote, setRejectNote] = useState('');
@@ -74,8 +75,9 @@ export default function AdminPendingApprovalsTab({ onPendingCountChange }: Admin
   }, []);
 
   async function fetchData() {
+    setFetchError(null);
     try {
-      const [{ data: pendingData }, { data: reviewedData }] = await Promise.all([
+      const [{ data: pendingData, error: e1 }, { data: reviewedData, error: e2 }] = await Promise.all([
         supabase
           .from('hospital_accounts')
           .select(
@@ -92,6 +94,7 @@ export default function AdminPendingApprovalsTab({ onPendingCountChange }: Admin
           .limit(50),
       ]);
 
+      if (e1 || e2) throw e1 ?? e2;
       const newPending = (pendingData || []).map((r: any) => {
         const h = Array.isArray(r.hospitals) ? r.hospitals[0] : r.hospitals;
         return {
@@ -121,6 +124,7 @@ export default function AdminPendingApprovalsTab({ onPendingCountChange }: Admin
       onPendingCountChange?.(newPending.length);
     } catch (err) {
       console.error('Error fetching pending approvals:', err);
+      setFetchError(err instanceof Error ? err.message : 'Failed to load pending approvals');
     } finally {
       setLoading(false);
     }
@@ -199,6 +203,12 @@ export default function AdminPendingApprovalsTab({ onPendingCountChange }: Admin
 
   return (
     <div className="space-y-6">
+      {fetchError && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+          <XCircle className="h-4 w-4 shrink-0" />
+          Failed to load pending approvals: {fetchError}. The queue may show stale data.
+        </div>
+      )}
       {/* Pending Queue */}
       <Card>
         <CardHeader>

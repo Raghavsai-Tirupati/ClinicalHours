@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { StudentApplication, ApplicationStatus, HospitalPosition, QuestionType } from '@/types/positions';
+import { normalizeDisplayName } from '@/lib/validation';
 
 function readCache<T>(key: string): T | null {
   try { return JSON.parse(sessionStorage.getItem(key) ?? 'null') as T | null; } catch { return null; }
@@ -8,15 +9,6 @@ function readCache<T>(key: string): T | null {
 function writeCache<T>(key: string, value: T): void {
   try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
-
-const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
-
-const normalizeDisplayName = (value: string | null | undefined): string | null => {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  if (PLACEHOLDER_NAME_REGEX.test(trimmed)) return null;
-  return trimmed;
-};
 
 // Map hospital_applications status strings to StudentApplication status
 const LEGACY_STATUS_MAP: Record<string, ApplicationStatus> = {
@@ -120,8 +112,9 @@ export function useAllApplications(hospitalPageId: string | undefined) {
                 .order('order_index'),
             ]);
 
-            console.log('[useAllApplications] legacy apps:', legacyAppsRes.data?.length, 'error:', legacyAppsRes.error);
-            console.log('[useAllApplications] legacy questions:', legacyQsRes.data?.length, 'error:', legacyQsRes.error);
+            if (legacyAppsRes.error) throw legacyAppsRes.error;
+            if (legacyQsRes.error) throw legacyQsRes.error;
+            console.log('[useAllApplications] legacy apps:', legacyAppsRes.data?.length, 'legacy questions:', legacyQsRes.data?.length);
 
             legacyQuestions = (legacyQsRes.data || []).map((q: any) => ({
               id: q.id,
@@ -208,9 +201,7 @@ export function useAllApplications(hospitalPageId: string | undefined) {
           `)
           .in('application_id', appIds);
 
-        if (answersError) {
-          console.error('Failed to fetch application answers:', answersError);
-        }
+        if (answersError) throw answersError;
 
         const answersByAppId = new Map<string, StudentApplication['answers']>();
         const questionIdsMissingText = new Set<string>();

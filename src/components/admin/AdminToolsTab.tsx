@@ -5,6 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
@@ -58,9 +68,37 @@ export default function AdminToolsTab() {
   const [fixStatesLimit, setFixStatesLimit] = useState(50);
   const [findLinksLimit, setFindLinksLimit] = useState(25);
 
+  // Confirmation dialog state
+  const [showMassEmailConfirm, setShowMassEmailConfirm] = useState(false);
+  const [showClearExistingConfirm, setShowClearExistingConfirm] = useState(false);
+  const [showRemoveDuplicatesConfirm, setShowRemoveDuplicatesConfirm] = useState(false);
+  const [showFixCoordinatesConfirm, setShowFixCoordinatesConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
   async function getAuthToken(): Promise<string | null> {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token || null;
+  }
+
+  /** RFC 4180–compliant CSV line parser — handles quoted fields with embedded commas. */
+  function parseCsvLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current.trim());
+    return result;
   }
 
   async function fetchSubscriberCount() {
@@ -83,7 +121,6 @@ export default function AdminToolsTab() {
   async function handleSendMassEmail() {
     if (!emailSubject.trim()) { toast.error('Please enter an email subject'); return; }
     if (!emailBody.trim()) { toast.error('Please enter an email body'); return; }
-
     setSendingEmail(true);
     setOperationResult(null);
     try {
@@ -116,6 +153,7 @@ export default function AdminToolsTab() {
 
   async function handleCsvImport() {
     if (!csvFile) { toast.error('Please select a CSV file'); return; }
+    if (csvFile.size > 5 * 1024 * 1024) { toast.error('CSV file must be under 5 MB'); return; }
 
     setImporting(true);
     setImportProgress(0);
@@ -123,11 +161,11 @@ export default function AdminToolsTab() {
     try {
       const text = await csvFile.text();
       const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase());
       const opportunities = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',');
+        const values = parseCsvLine(lines[i]);
         if (values.length < headers.length) continue;
         const opp: Record<string, unknown> = {};
         headers.forEach((header, idx) => {
@@ -231,6 +269,7 @@ export default function AdminToolsTab() {
   }
 
   async function handleRemoveDuplicates() {
+    setShowRemoveDuplicatesConfirm(false);
     setRemovingDuplicates(true);
     setOperationResult(null);
     try {
@@ -254,6 +293,7 @@ export default function AdminToolsTab() {
   }
 
   async function handleFixCoordinates() {
+    setShowFixCoordinatesConfirm(false);
     setFixingCoordinates(true);
     setOperationResult(null);
     try {
@@ -373,13 +413,29 @@ export default function AdminToolsTab() {
                   <p className="text-xs text-muted-foreground">{emailBody.length} characters</p>
                 </div>
                 <Button
-                  onClick={handleSendMassEmail}
+                  onClick={() => setShowMassEmailConfirm(true)}
                   disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim()}
                   className="w-full"
                 >
                   {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                   {sendingEmail ? 'Sending...' : 'Send to All Subscribers'}
                 </Button>
+                <AlertDialog open={showMassEmailConfirm} onOpenChange={setShowMassEmailConfirm}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Send mass email to all subscribers?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will send <strong>"{emailSubject}"</strong> to{' '}
+                        {subscriberCount !== null ? <strong>{subscriberCount.toLocaleString()} subscribers</strong> : 'all subscribers'}.
+                        This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleSendMassEmail}>Send Email</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <p className="text-sm text-muted-foreground">
                   ⚠️ This will send an email to all users who have opted in.
                   Make sure your content is ready before sending.
@@ -440,10 +496,41 @@ export default function AdminToolsTab() {
                   </p>
                 </div>
               )}
-              <Button onClick={handleCsvImport} disabled={!csvFile || importing} className="w-full">
+              <Button
+                onClick={() => clearExisting ? setShowClearExistingConfirm(true) : handleCsvImport()}
+                disabled={!csvFile || importing}
+                className="w-full"
+              >
                 {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
                 {importing ? 'Importing...' : 'Import CSV'}
               </Button>
+              <AlertDialog open={showClearExistingConfirm} onOpenChange={(o) => { setShowClearExistingConfirm(o); if (!o) setDeleteConfirmText(''); }}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-destructive">Delete ALL existing opportunities?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete every opportunity in the database before importing the CSV.
+                      Type <strong>DELETE</strong> below to confirm.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <Input
+                    placeholder="Type DELETE to confirm"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    className="mt-2"
+                  />
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setDeleteConfirmText('')}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleCsvImport}
+                      disabled={deleteConfirmText !== 'DELETE'}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      Delete All &amp; Import
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         </TabsContent>
@@ -534,10 +621,25 @@ export default function AdminToolsTab() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleFixCoordinates} disabled={fixingCoordinates}>
+              <Button onClick={() => setShowFixCoordinatesConfirm(true)} disabled={fixingCoordinates}>
                 {fixingCoordinates ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
                 {fixingCoordinates ? 'Fixing...' : 'Fix Coordinates'}
               </Button>
+              <AlertDialog open={showFixCoordinatesConfirm} onOpenChange={setShowFixCoordinatesConfirm}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Fix missing coordinates?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will geocode addresses and update latitude/longitude for all opportunities missing coordinates.
+                      The operation writes to the database and cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleFixCoordinates}>Fix Coordinates</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         </TabsContent>
@@ -558,10 +660,27 @@ export default function AdminToolsTab() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="destructive" onClick={handleRemoveDuplicates} disabled={removingDuplicates}>
+              <Button variant="destructive" onClick={() => setShowRemoveDuplicatesConfirm(true)} disabled={removingDuplicates}>
                 {removingDuplicates ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
                 {removingDuplicates ? 'Processing...' : 'Remove Duplicates'}
               </Button>
+              <AlertDialog open={showRemoveDuplicatesConfirm} onOpenChange={setShowRemoveDuplicatesConfirm}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove duplicate opportunities?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete duplicate opportunity records (by matching name + location), keeping only the oldest entry.
+                      This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleRemoveDuplicates} className="bg-destructive hover:bg-destructive/90">
+                      Remove Duplicates
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         </TabsContent>

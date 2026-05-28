@@ -26,8 +26,13 @@ export function StudentOnlyRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Unauthenticated: redirect to sign-in
+  if (!user) {
+    return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+  }
+
   // Hospital members: redirect from student pages, allow hospital-admin paths
-  if (user && member && !isHospitalAllowedPath(location.pathname)) {
+  if (member && !isHospitalAllowedPath(location.pathname)) {
     return <Navigate to="/hospital-dashboard" replace state={{ from: location }} />;
   }
 

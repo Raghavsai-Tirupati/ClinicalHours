@@ -44,15 +44,9 @@ import { useEmailTemplates } from '@/components/clinic-dashboard/email-communica
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
-const WEEKDAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+import { normalizeDisplayName, formatLastFirst, emailToColor } from '@/lib/validation';
 
-function normalizeDisplayName(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  if (PLACEHOLDER_NAME_REGEX.test(trimmed)) return null;
-  return trimmed;
-}
+const WEEKDAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function getApplicantName(app: StudentApplication): string {
   return (
@@ -62,24 +56,6 @@ function getApplicantName(app: StudentApplication): string {
     app.applicant_email?.split('@')[0] ||
     `Student ${app.student_id.slice(0, 8)}`
   );
-}
-
-function formatLastFirst(fullName: string): string {
-  const parts = fullName.trim().split(' ');
-  if (parts.length < 2) return fullName;
-  const last = parts[parts.length - 1];
-  const first = parts.slice(0, -1).join(' ');
-  return `${last}, ${first}`;
-}
-
-const AVATAR_COLORS = [
-  'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
-  'bg-rose-500', 'bg-cyan-500', 'bg-fuchsia-500', 'bg-orange-500',
-] as const;
-
-function emailToColor(email: string): string {
-  const hash = [...email].reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 function formatAvailability(raw: ApplicationAvailability | null | undefined): string | null {

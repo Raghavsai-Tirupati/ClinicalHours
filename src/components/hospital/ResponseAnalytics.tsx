@@ -49,15 +49,18 @@ function applicantLabel(app: StudentApplication): string {
 function buildSummaries(applications: StudentApplication[]): QuestionSummary[] {
   const questionMap = new Map<string, QuestionSummary>();
 
-  const ensure = (ans: { question_id: string; question?: { question_text?: string; question_type?: string; display_order?: number } }) => {
+  const ensure = (ans: { question_id: string; question?: { question_text?: string; question_type?: string; display_order?: number } }): QuestionSummary | null => {
     const qid = ans.question_id;
     if (!questionMap.has(qid)) {
       const q = ans.question;
+      // Skip answers whose question metadata is missing — they would create a
+      // misleading "Question" placeholder entry that contaminates analytics.
+      if (!q?.question_text) return null;
       questionMap.set(qid, {
         question_id: qid,
-        question_text: q?.question_text || 'Question',
-        question_type: q?.question_type || 'short_answer',
-        display_order: q?.display_order ?? 999,
+        question_text: q.question_text,
+        question_type: q.question_type || 'short_answer',
+        display_order: q.display_order ?? 999,
         total_responses: 0,
         counts: {},
         countApplicants: {},
@@ -66,7 +69,7 @@ function buildSummaries(applications: StudentApplication[]): QuestionSummary[] {
         file_responses: [],
       });
     }
-    return questionMap.get(qid)!;
+    return questionMap.get(qid) ?? null;
   };
 
   const addCountApplicant = (s: QuestionSummary, label: string, app: StudentApplication) => {
@@ -81,6 +84,7 @@ function buildSummaries(applications: StudentApplication[]): QuestionSummary[] {
     for (const ans of app.answers) {
       if (!ans.question) continue;
       const s = ensure(ans);
+      if (!s) continue;
       const qt = s.question_type;
 
       if (qt === 'file_upload') {
@@ -93,7 +97,7 @@ function buildSummaries(applications: StudentApplication[]): QuestionSummary[] {
             label: ans.answer_text || 'File',
           });
         }
-      } else if (qt === 'yes_no' || qt === 'multiple_choice' || qt === 'mcq' || qt === 'checkbox') {
+      } else if (qt === 'yes_no' || qt === 'multiple_choice') {
         const choices = ans.answer_options?.length
           ? ans.answer_options
           : ans.answer_text

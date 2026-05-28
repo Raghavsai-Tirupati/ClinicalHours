@@ -140,7 +140,7 @@ function AppContent() {
               <Route path="/profile" element={<Settings />} />
               <Route path="/dashboard" element={<StudentOnlyRoute><Dashboard /></StudentOnlyRoute>} />
               <Route path="/my-applications" element={<StudentOnlyRoute><MyApplications /></StudentOnlyRoute>} />
-              <Route path="/map" element={<StudentOnlyRoute><MapView /></StudentOnlyRoute>} />
+              <Route path="/map" element={<MapView />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/check-email" element={<CheckEmail />} />

@@ -34,6 +34,7 @@ import ApplicationFilterBar from './ApplicationFilterBar';
 import ApplicantReviewPanel from './ApplicantReviewPanel';
 import RichEmailDialog from './RichEmailDialog';
 import InterviewInviteDialog from './InterviewInviteDialog';
+import { normalizeDisplayName } from '@/lib/validation';
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   new: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
@@ -44,14 +45,10 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
   waitlisted: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
 };
 
-const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
 function getApplicantName(app: StudentApplication): string {
-  const candidates = [app.applicant_name, app.student_profile?.full_name];
-  for (const c of candidates) {
-    const t = c?.trim();
-    if (t && !PLACEHOLDER_NAME_REGEX.test(t)) return t;
-  }
   return (
+    normalizeDisplayName(app.applicant_name) ||
+    normalizeDisplayName(app.student_profile?.full_name) ||
     app.student_profile?.email?.split('@')[0] ||
     app.applicant_email?.split('@')[0] ||
     `Student ${app.student_id?.slice(0, 8) || ''}`
@@ -103,7 +100,23 @@ export default function ApplicationsHub() {
     const update = buildStudentApplicationStatusUpdate(newStatus);
     updateApplicationLocally(appId, update);
     setSelectedApp((prev) => (prev?.id === appId ? { ...prev, ...update } : prev));
-    const { error } = await supabase.from('student_applications').update(update).eq('id', appId);
+
+    const app = applications.find((a) => a.id === appId);
+    const isLegacy = (app as any)?._isLegacy === true;
+    const table = isLegacy ? 'hospital_applications' : 'student_applications';
+
+    // Legacy apps use different status strings — map back from StudentApplication enum
+    const legacyStatusMap: Record<ApplicationStatus, string> = {
+      new: 'submitted',
+      under_review: 'in_review',
+      accepted: 'accepted',
+      rejected: 'rejected',
+      waitlisted: 'submitted',
+      interview: 'in_review',
+    };
+    const payload = isLegacy ? { status: legacyStatusMap[newStatus] ?? 'submitted' } : update;
+
+    const { error } = await supabase.from(table as any).update(payload).eq('id', appId);
     if (error) toast.error('Failed to update status');
   };
 

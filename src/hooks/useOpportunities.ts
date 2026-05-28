@@ -14,9 +14,11 @@ interface UseOpportunitiesOptions {
 interface UseOpportunitiesResult {
   opportunities: Opportunity[];
   loading: boolean;
+  error: string | null;
   hasMore: boolean;
   loadMore: () => void;
   totalCount: number;
+  refetch: () => void;
 }
 
 // Distance calculation moved to src/lib/geolocation.ts
@@ -29,6 +31,7 @@ export function useOpportunities({
 }: UseOpportunitiesOptions): UseOpportunitiesResult {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -43,6 +46,7 @@ export function useOpportunities({
   // Fetch opportunities with server-side pagination
   const fetchOpportunitiesPage = useCallback(async (pageNum: number) => {
     setLoading(true);
+    setError(null);
     try {
       const offset = pageNum * pageSize;
       
@@ -74,13 +78,9 @@ export function useOpportunities({
       const total = count || processedData.length;
       setTotalCount(total);
       setHasMore(processedData.length === pageSize && (offset + pageSize < total));
-    } catch (error) {
-      logger.error("Error fetching opportunities", error);
-      toast({
-        title: "Error",
-        description: "Failed to load opportunities. Please try again.",
-        variant: "destructive",
-      });
+    } catch (err) {
+      logger.error("Error fetching opportunities", err);
+      setError("Failed to load opportunities. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -97,11 +97,18 @@ export function useOpportunities({
     }
   }, [loading, hasMore]);
 
+  const refetch = useCallback(() => {
+    setPage(0);
+    setHasMore(true);
+  }, []);
+
   return {
     opportunities,
     loading,
+    error,
     hasMore,
     loadMore,
     totalCount,
+    refetch,
   };
 }

@@ -35,6 +35,9 @@ interface ApplicationWithOpp {
   student_email: string;
   status: string;
   created_at: string;
+  // interview_requested_at / interview_confirmed_at added by migration
+  // 20260311030000_interview_scheduling.sql — not yet applied to DB.
+  // Re-enable these once that migration runs.
   interview_requested_at: string | null;
   interview_confirmed_at: string | null;
   opportunity_name: string;
@@ -126,24 +129,60 @@ export default function MyApplications() {
 
   async function fetchApplications() {
     if (!user) return;
+    const legacyStatusMap: Record<string, string> = {
+      submitted: 'new',
+      in_review: 'under_review',
+      accepted: 'accepted',
+      rejected: 'rejected',
+    };
     try {
-      const { data, error: err } = await supabase
-        .from("applications")
-        .select(`
-          id, opportunity_id, student_name, student_email, status, created_at,
-          interview_requested_at, interview_confirmed_at,
-          opportunities (name, slug)
-        `)
-        .eq("student_id", user.id)
-        .order("created_at", { ascending: false });
+      const [{ data, error: err }, hospitalAppsResult] = await Promise.all([
+        supabase
+          .from("applications")
+          .select(`
+            id, opportunity_id, student_name, student_email, status, created_at,
+            opportunities (name, slug)
+          `)
+          .eq("student_id", user.id)
+          .order("created_at", { ascending: false }),
+        user.email
+          ? supabase
+              .from("hospital_applications")
+              .select(`id, applicant_name, applicant_email, status, submitted_at, interview_confirmed_at,
+                account:hospital_accounts(hospital:hospitals(name))`)
+              .or(`student_id.eq.${user.id},applicant_email.eq.${user.email}`)
+              .order("submitted_at", { ascending: false })
+          : Promise.resolve({ data: [] as unknown[] }),
+      ]);
 
       if (err) throw err;
-      const opps = (data || []).map((a: Record<string, unknown>) => ({
+
+      const fromApplications = (data || []).map((a: Record<string, unknown>) => ({
         ...a,
+        interview_requested_at: null,
+        interview_confirmed_at: null,
         opportunity_name: (a.opportunities as Record<string, unknown>)?.["name"] ?? "Unknown",
         opportunity_slug: (a.opportunities as Record<string, unknown>)?.["slug"] ?? null,
       })) as ApplicationWithOpp[];
-      setApplications(opps);
+
+      const fromHospitalApps = ((hospitalAppsResult.data as any[]) ?? []).map((row) => {
+        const account = Array.isArray(row.account) ? row.account[0] : row.account;
+        const hospital = Array.isArray(account?.hospital) ? account.hospital[0] : account?.hospital;
+        return {
+          id: row.id,
+          opportunity_id: '',
+          student_name: row.applicant_name ?? '',
+          student_email: row.applicant_email ?? '',
+          status: legacyStatusMap[row.status] ?? row.status,
+          created_at: row.submitted_at,
+          interview_requested_at: null,
+          interview_confirmed_at: row.interview_confirmed_at ?? null,
+          opportunity_name: hospital?.name ?? 'Unknown Hospital',
+          opportunity_slug: null,
+        } as ApplicationWithOpp;
+      });
+
+      setApplications([...fromApplications, ...fromHospitalApps]);
     } catch (e) {
       console.error(e);
       setApplications([]);

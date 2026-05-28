@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -40,6 +40,15 @@ export default function PositionForm() {
   );
 
   const [saving, setSaving] = useState(false);
+  const interactedRef = useRef(false);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (interactedRef.current && !saving) e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saving]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [requirements, setRequirements] = useState('');
@@ -199,18 +208,21 @@ export default function PositionForm() {
           };
 
           if (q.id) {
-            await supabase
+            const { error: updateErr } = await supabase
               .from('position_questions')
               .update(questionData)
               .eq('id', q.id);
+            if (updateErr) throw updateErr;
           } else {
-            await supabase
+            const { error: insertErr } = await supabase
               .from('position_questions')
               .insert(questionData);
+            if (insertErr) throw insertErr;
           }
         }
       }
 
+      interactedRef.current = false;
       toast.success(
         isEdit
           ? 'Position updated'
@@ -270,7 +282,7 @@ export default function PositionForm() {
   }
 
   return (
-    <div className="max-w-6xl w-full space-y-6">
+    <div className="max-w-6xl w-full space-y-6" onFocus={() => { interactedRef.current = true; }}>
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -564,12 +576,15 @@ export default function PositionForm() {
                 setDeleting(true);
                 try {
                   // Delete questions first, then position
-                  await supabase.from('application_answers').delete().in(
+                  const { error: ansErr } = await supabase.from('application_answers').delete().in(
                     'question_id',
                     existingQuestions.map((q) => q.id)
                   );
-                  await supabase.from('student_applications').delete().eq('position_id', positionId);
-                  await supabase.from('position_questions').delete().eq('position_id', positionId);
+                  if (ansErr) throw ansErr;
+                  const { error: saErr } = await supabase.from('student_applications').delete().eq('position_id', positionId);
+                  if (saErr) throw saErr;
+                  const { error: pqErr } = await supabase.from('position_questions').delete().eq('position_id', positionId);
+                  if (pqErr) throw pqErr;
                   const { error } = await supabase.from('hospital_positions').delete().eq('id', positionId);
                   if (error) throw error;
                   toast.success('Position deleted');

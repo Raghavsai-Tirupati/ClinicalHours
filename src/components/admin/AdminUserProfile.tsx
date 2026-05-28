@@ -38,25 +38,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-// ─── Utility functions (exported for testing) ────────────────────────────────
-
-export function formatLastFirst(fullName: string): string {
-  const parts = fullName.trim().split(' ');
-  if (parts.length < 2) return fullName;
-  const last = parts[parts.length - 1];
-  const first = parts.slice(0, -1).join(' ');
-  return `${last}, ${first}`;
-}
-
-const AVATAR_COLORS = [
-  'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
-  'bg-rose-500', 'bg-cyan-500', 'bg-fuchsia-500', 'bg-orange-500',
-] as const;
-
-export function emailToColor(email: string): string {
-  const hash = [...email].reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
+export { formatLastFirst, emailToColor } from '@/lib/validation';
 
 interface UserProfile {
   id: string;
@@ -261,21 +243,60 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
         }
       }
 
-      // Fetch applications for this user
-      const { data: appRows } = await supabase
-        .from('student_applications')
-        .select(`
-          id, status, submitted_at, reviewed_at,
-          interview_invited_at, interview_confirmed_at, availability_json,
-          position:hospital_positions(
-            title,
-            opportunity:opportunities(name)
-          )
-        `)
-        .eq('student_id', user.id)
-        .order('submitted_at', { ascending: false });
+      // Fetch applications for this user — both new system and legacy
+      const legacyStatusMap: Record<string, ApplicationStatus> = {
+        submitted: 'new',
+        in_review: 'under_review',
+        accepted: 'accepted',
+        rejected: 'rejected',
+      };
 
-      const fetchedApps: ApplicationRow[] = (appRows ?? []) as unknown as ApplicationRow[];
+      const [{ data: appRows }, legacyResult] = await Promise.all([
+        supabase
+          .from('student_applications')
+          .select(`
+            id, status, submitted_at, reviewed_at,
+            interview_invited_at, interview_confirmed_at, availability_json,
+            position:hospital_positions(
+              title,
+              opportunity:opportunities(name)
+            )
+          `)
+          .eq('student_id', user.id)
+          .order('submitted_at', { ascending: false }),
+        user.email
+          ? supabase
+              .from('hospital_applications')
+              .select(`id, status, submitted_at, interview_confirmed_at,
+                account:hospital_accounts(hospital:hospitals(name))`)
+              .or(`student_id.eq.${user.id},applicant_email.eq.${user.email}`)
+              .order('submitted_at', { ascending: false })
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const legacyRows = (legacyResult.data ?? []) as any[];
+      const legacyAppRows: ApplicationRow[] = legacyRows.map((row) => {
+        const account = Array.isArray(row.account) ? row.account[0] : row.account;
+        const hospital = Array.isArray(account?.hospital) ? account.hospital[0] : account?.hospital;
+        return {
+          id: row.id,
+          status: (legacyStatusMap[row.status] ?? 'new') as ApplicationStatus,
+          submitted_at: row.submitted_at,
+          reviewed_at: null,
+          interview_invited_at: null,
+          interview_confirmed_at: row.interview_confirmed_at ?? null,
+          availability_json: null,
+          position: {
+            title: 'Legacy Application',
+            opportunity: hospital?.name ? { name: hospital.name } : null,
+          },
+        };
+      });
+
+      const fetchedApps: ApplicationRow[] = [
+        ...((appRows ?? []) as unknown as ApplicationRow[]),
+        ...legacyAppRows,
+      ];
       setApplications(fetchedApps);
 
       // Use application IDs to batch-fetch dependent data
@@ -306,12 +327,18 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
         setDocuments((documentsResult.data ?? []) as DocumentRow[]);
       }
 
-      // Contact history: email_send_logs where this user's email is in recipient_emails
-      const { data: emailLogRows } = await supabase
-        .from('email_send_logs')
-        .select('id, subject, template_name, sent_by, created_at')
-        .contains('recipient_emails', [user.email])
-        .order('created_at', { ascending: false });
+      // Contact history: only query if we have a real email.
+      // AdminActivityTab passes email:"" when email is unavailable from profiles —
+      // querying with an empty string returns incorrect results.
+      let emailLogRows: unknown[] = [];
+      if (user.email) {
+        const { data: logs } = await supabase
+          .from('email_send_logs')
+          .select('id, subject, template_name, sent_by, created_at')
+          .contains('recipient_emails', [user.email])
+          .order('created_at', { ascending: false });
+        emailLogRows = logs ?? [];
+      }
 
       setEmailLogs((emailLogRows ?? []) as EmailLogRow[]);
     } catch (error) {

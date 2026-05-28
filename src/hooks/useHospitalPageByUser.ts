@@ -219,11 +219,15 @@ export function useHospitalPageByUser() {
             console.error('Failed to call ensure-hospital-page:', e);
           }
 
-          const pageIdToUse = realPageId || `virtual-${hospitalId}`;
-          setPageId(realPageId);
+          if (!realPageId) {
+            setError('Your clinic dashboard could not be provisioned. Please contact support or ask an admin to set up your hospital page.');
+            setLoading(false);
+            return;
+          }
 
+          setPageId(realPageId);
           setHospitalPage({
-            id: pageIdToUse,
+            id: realPageId,
             hospital_id: opportunityId || hospitalId,
             admin_email: user.email!,
             interview_booking_url: null,
@@ -254,7 +258,10 @@ export function useHospitalPageByUser() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  // pageParam must be in the dep array — the clinic switcher changes it and
+  // fetchPage captures it via closure.  Without this, switching clinics as a
+  // super-admin silently reloads the same clinic.
+  }, [user, pageParam]);
 
   useEffect(() => {
     if (!authLoading) {

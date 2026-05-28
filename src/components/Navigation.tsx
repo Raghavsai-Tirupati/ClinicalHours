@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Home, MapPin, Mail, LogIn, ChevronDown, User, Settings as SettingsIcon, FileText } from "lucide-react";
+import { Menu, X, Home, MapPin, Mail, LogIn, ChevronDown, User, Settings as SettingsIcon, FileText, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import {
@@ -44,6 +45,7 @@ const Navigation = () => {
   const location = useLocation();
   const { user, isGuest } = useAuth();
   const { member: hospitalMember } = useHospitalMember();
+  const { isAdmin } = useAdminCheck();
   const { isPremium } = usePremiumStatus();
 
 
@@ -226,6 +228,16 @@ const Navigation = () => {
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                )}
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
+                    title="Admin Panel"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Admin
+                  </Link>
                 )}
                 {user && !isGuest ? (
                   <Link

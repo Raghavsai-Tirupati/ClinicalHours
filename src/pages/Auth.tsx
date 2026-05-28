@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { logAuthEvent } from "@/lib/auditLogger";
@@ -13,12 +12,14 @@ import { trackLogin, trackSignup, trackEvent } from "@/lib/tracking";
 import { setRememberMePreference, getRememberMePreference, useAuth } from "@/hooks/useAuth";
 import { migrateGuestDataToUser } from "@/lib/guestMigration";
 import { z } from "zod";
-import { ArrowLeft, Mail, Loader2, Eye, UserCircle, Building2, Check, X, Search, MapPin } from "lucide-react";
+import { ArrowLeft, Mail, Loader2, Eye } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "@/hooks/useDebounce";
 import logo from "@/assets/logo.png";
 import authBackground from "@/assets/auth-background.png";
+import SignInForm from "@/components/auth/SignInForm";
+import SignUpForm from "@/components/auth/SignUpForm";
+import type { HospitalOption } from "@/components/auth/types";
 
 // Google icon SVG component
 const GoogleIcon = () => (
@@ -40,13 +41,6 @@ const GoogleIcon = () => (
       fill="#EA4335"
     />
   </svg>
-);
-
-const PasswordReq = ({ met, label }: { met: boolean; label: string }) => (
-  <div className={`flex items-center gap-1.5 ${met ? "text-green-500" : "text-muted-foreground"}`}>
-    {met ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-    <span>{label}</span>
-  </div>
 );
 
 const loginSchema = z.object({
@@ -98,8 +92,8 @@ const Auth = () => {
 
   // Opportunity search state
   const [hospitalSearchQuery, setHospitalSearchQuery] = useState("");
-  const [hospitalSearchResults, setHospitalSearchResults] = useState<Array<{ id: string; name: string; location: string; type: string; website?: string }>>([]);
-  const [selectedOpportunity, setSelectedOpportunity] = useState<{ id: string; name: string; location: string; type: string; website?: string } | null>(null);
+  const [hospitalSearchResults, setHospitalSearchResults] = useState<HospitalOption[]>([]);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<HospitalOption | null>(null);
   const [hospitalSearchLoading, setHospitalSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [emailPreFilled, setEmailPreFilled] = useState(false);
@@ -109,7 +103,6 @@ const Auth = () => {
     // Warm likely post-auth routes to reduce redirect flicker.
     const preload = () => {
       void import("./Dashboard");
-      void import("./HospitalDashboard");
       void import("./PendingApproval");
       void import("./CheckEmail");
     };
@@ -137,14 +130,39 @@ const Auth = () => {
       redirectStartRef.current = performance.now();
     }
 
-    // Single query with nested account status to reduce redirect latency.
-    const { data: memberships } = await supabase
-      .from("hospital_members")
-      .select("hospital_accounts!inner(account_status)")
-      .eq("user_id", userId)
-      .eq("role", "owner");
+    // Fetch hospital membership, admin role, and current user in parallel.
+    const [{ data: memberships }, { data: { user: currentUser } }, { data: adminRole }] = await Promise.all([
+      supabase
+        .from("hospital_members")
+        .select("hospital_accounts!inner(account_status)")
+        .eq("user_id", userId)
+        .eq("role", "owner"),
+      supabase.auth.getUser(),
+      supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle(),
+    ]);
+
+    // Super-admin always goes to /dashboard (admin panel), regardless of any
+    // hospital_pages admin_email match that might otherwise redirect them.
+    if (adminRole) {
+      navigate("/dashboard");
+      return;
+    }
 
     if (!memberships?.length) {
+      // Check if this user is a hospital page admin by email (new system).
+      const userEmail = currentUser?.email;
+      if (userEmail) {
+        const { data: page } = await supabase
+          .from("hospital_pages")
+          .select("id")
+          .eq("admin_email", userEmail)
+          .limit(1)
+          .maybeSingle();
+        if (page) {
+          navigate("/hospital-dashboard");
+          return;
+        }
+      }
       const stored = sessionStorage.getItem('postAuthRedirect');
       if (stored) sessionStorage.removeItem('postAuthRedirect');
       navigate(redirectTo || stored || "/dashboard");
@@ -265,12 +283,12 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     if (googleLoading) return;
     setGoogleLoading(true);
-    
+
     try {
       // Save "remember me" preference BEFORE OAuth redirect
       // This ensures the useAuth hook picks it up when user returns
       setRememberMePreference(rememberMe);
-      
+
       if (redirectTo) sessionStorage.setItem('postAuthRedirect', redirectTo);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -278,7 +296,7 @@ const Auth = () => {
           redirectTo: `${window.location.origin}/auth`,
         },
       });
-      
+
       if (error) throw error;
     } catch (error) {
       console.error("Google sign-in error:", error);
@@ -311,18 +329,18 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Prevent double submission
     if (isSubmittingRef.current || loading) {
       return;
     }
-    
+
     isSubmittingRef.current = true;
     setLoading(true);
 
     try {
       const validatedData = signupSchema.parse({ email, password, fullName, phone });
-      
+
       const { data, error } = await supabase.auth.signUp({
         email: validatedData.email,
         password: validatedData.password,
@@ -488,20 +506,20 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Prevent double submission
     if (isSubmittingRef.current || loading) {
       return;
     }
-    
+
     isSubmittingRef.current = true;
     setLoading(true);
 
     try {
       const validatedData = loginSchema.parse({ email, password });
-      
+
       setRememberMePreference(rememberMe);
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: validatedData.email,
         password: validatedData.password,
@@ -562,22 +580,22 @@ const Auth = () => {
       toast.error("Please enter your email address");
       return;
     }
-    
+
     // Prevent double submission
     if (isSubmittingRef.current || loading) {
       return;
     }
-    
+
     isSubmittingRef.current = true;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-password-reset", {
         body: { email, origin: window.location.origin },
       });
-      
+
       if (error) throw error;
       if (data.error) throw new Error(data.error);
-      
+
       setResetEmailSent(true);
       toast.success("If an account exists, a password reset email will be sent.");
     } catch (error: unknown) {
@@ -592,10 +610,29 @@ const Auth = () => {
     }
   };
 
+  const handleHospitalSelect = (opp: HospitalOption) => {
+    setSelectedOpportunity(opp);
+    setHospitalName(opp.name);
+    setHospitalWebsite(opp.website || "");
+    setHospitalAddress(opp.location || "");
+    setShowSearchResults(false);
+    setHospitalSearchQuery("");
+  };
+
+  const handleHospitalClear = () => {
+    setSelectedOpportunity(null);
+    setHospitalName("");
+    setHospitalWebsite("");
+    setHospitalAddress("");
+    setHospitalSearchQuery("");
+    setHospitalSearchResults([]);
+    setEmailPreFilled(false);
+  };
+
   // Show forgot password screen
   if (showForgotPassword) {
     return (
-      <div 
+      <div
         className="min-h-screen flex items-center justify-center p-4 relative"
         style={{
           backgroundImage: `url(${authBackground})`,
@@ -606,7 +643,7 @@ const Auth = () => {
       >
         {/* Dark overlay */}
         <div className="absolute inset-0 bg-black/60" />
-        
+
         <div className="relative z-10 w-full max-w-md text-center space-y-6 bg-card/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-border/50">
           <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
             <Mail className="w-10 h-10 text-primary" />
@@ -681,7 +718,7 @@ const Auth = () => {
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
         backgroundImage: `url(${authBackground})`,
@@ -699,8 +736,8 @@ const Auth = () => {
       <div className="absolute inset-0 bg-black/50" />
 
       {/* Back to Home Link */}
-      <Link 
-        to="/" 
+      <Link
+        to="/"
         className="absolute top-6 left-6 z-20 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -738,7 +775,7 @@ const Auth = () => {
             )}
             Continue with Google
           </Button>
-          
+
           <button
             type="button"
             onClick={handleGuestMode}
@@ -762,301 +799,56 @@ const Auth = () => {
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="signin">
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signin-email">Email</Label>
-                <Input
-                  id="signin-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={loading || googleLoading}
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <button
-                    type="button"
-                    onClick={() => setShowForgotPassword(true)}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-                <div className="relative">
-                  <Input
-                    id="signin-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading || googleLoading}
-                    className="h-11 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember-me"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked === true)}
-                  disabled={loading || googleLoading}
-                />
-                <Label
-                  htmlFor="remember-me"
-                  className="text-sm font-normal text-muted-foreground cursor-pointer"
-                >
-                  Keep me signed in
-                </Label>
-              </div>
-              <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading}>
-                {loading ? "Signing in..." : "Sign In"}
-              </Button>
-            </form>
+            <SignInForm
+              email={email}
+              onEmailChange={setEmail}
+              password={password}
+              onPasswordChange={setPassword}
+              showPassword={showPassword}
+              onToggleShowPassword={() => setShowPassword((prev) => !prev)}
+              rememberMe={rememberMe}
+              onRememberMeChange={setRememberMe}
+              loading={loading}
+              googleLoading={googleLoading}
+              onSubmit={handleSignIn}
+              onForgotPassword={() => setShowForgotPassword(true)}
+            />
           </TabsContent>
-          
+
           <TabsContent value="signup">
-            <form onSubmit={handleSignUp} className="space-y-4">
-              {/* Hospital toggle */}
-              <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border border-border/50">
-                <Checkbox
-                  id="hospital-toggle"
-                  checked={isHospitalSignup}
-                  onCheckedChange={(checked) => setIsHospitalSignup(checked === true)}
-                  disabled={loading || googleLoading}
-                />
-                <Label
-                  htmlFor="hospital-toggle"
-                  className="text-sm font-medium cursor-pointer flex items-center gap-2"
-                >
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  I'm registering as a hospital / clinical site
-                </Label>
-              </div>
-
-              {/* Hospital search — select from opportunities */}
-              {isHospitalSignup && (
-                <div className="space-y-3 p-3 bg-muted/20 rounded-lg border border-border/30">
-                  <div className="space-y-2">
-                    <Label htmlFor="hospital-search">Hospital / Facility Name</Label>
-                    {selectedOpportunity ? (
-                      <div className="flex items-center gap-2 p-2.5 bg-background rounded-md border border-border">
-                        <div className="flex-1 min-w-0">
-                          <p className="break-words text-sm font-medium">{selectedOpportunity.name}</p>
-                          <p className="flex items-start gap-1 break-words text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            {selectedOpportunity.location}
-                          </p>
-                        </div>
-                        <Badge variant="secondary" className="text-xs shrink-0">{selectedOpportunity.type}</Badge>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedOpportunity(null);
-                            setHospitalName("");
-                            setHospitalWebsite("");
-                            setHospitalAddress("");
-                            setHospitalSearchQuery("");
-                            setHospitalSearchResults([]);
-                            setEmailPreFilled(false);
-                          }}
-                          className="text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="hospital-search"
-                          type="text"
-                          placeholder="Search for your hospital or clinic..."
-                          value={hospitalSearchQuery}
-                          onChange={(e) => {
-                            setHospitalSearchQuery(e.target.value);
-                            setShowSearchResults(true);
-                          }}
-                          onFocus={() => {
-                            if (hospitalSearchResults.length > 0) setShowSearchResults(true);
-                          }}
-                          disabled={loading || googleLoading}
-                          className="h-10 pl-9"
-                          autoComplete="off"
-                        />
-                        {hospitalSearchLoading && (
-                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                        )}
-                        {/* Search results dropdown */}
-                        {showSearchResults && hospitalSearchResults.length > 0 && (
-                          <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                            {hospitalSearchResults.map((opp) => (
-                              <button
-                                key={opp.id}
-                                type="button"
-                                className="w-full text-left px-3 py-2 hover:bg-muted transition-colors border-b border-border/30 last:border-0"
-                                onClick={() => {
-                                  setSelectedOpportunity(opp);
-                                  setHospitalName(opp.name);
-                                  setHospitalWebsite(opp.website || "");
-                                  setHospitalAddress(opp.location || "");
-                                  setShowSearchResults(false);
-                                  setHospitalSearchQuery("");
-                                }}
-                              >
-                                <p className="break-words text-sm font-medium">{opp.name}</p>
-                                <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                                  <span className="flex min-w-0 flex-1 items-start gap-1 break-words text-xs text-muted-foreground">
-                                    <MapPin className="h-3 w-3 shrink-0" />
-                                    {opp.location}
-                                  </span>
-                                  <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">{opp.type}</Badge>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        {showSearchResults && debouncedHospitalSearch.trim() && !hospitalSearchLoading && hospitalSearchResults.length === 0 && (
-                          <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg p-3">
-                            <p className="text-sm text-muted-foreground text-center">No results found</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="signup-name">
-                  {isHospitalSignup ? "Contact Person Name" : "Full Name"}
-                </Label>
-                <Input
-                  id="signup-name"
-                  type="text"
-                  placeholder={isHospitalSignup ? "Dr. Jane Smith" : "John Doe"}
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  disabled={loading || googleLoading}
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
-                <Input
-                  id="signup-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (emailPreFilled) setEmailPreFilled(false);
-                  }}
-                  required
-                  disabled={loading || googleLoading}
-                  className="h-11"
-                />
-                {emailPreFilled && (
-                  <p className="text-xs text-green-600">Email pre-filled from your hospital page</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-phone">
-                  Phone Number <span className="text-muted-foreground text-xs">(optional)</span>
-                </Label>
-                <Input
-                  id="signup-phone"
-                  type="tel"
-                  placeholder="(555) 123-4567"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  disabled={loading || googleLoading}
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="signup-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading || googleLoading}
-                    className="h-11 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </button>
-                </div>
-                {password.length > 0 && (
-                  <div className="space-y-1 text-xs">
-                    <PasswordReq met={password.length >= 8} label="At least 8 characters" />
-                    <PasswordReq met={/[a-zA-Z]/.test(password)} label="Contains a letter" />
-                    <PasswordReq met={/[0-9]/.test(password)} label="Contains a number" />
-                  </div>
-                )}
-              </div>
-              <div className="flex items-start space-x-3 pt-1">
-                <Checkbox
-                  id="email-opt-in"
-                  checked={emailOptIn}
-                  onCheckedChange={(checked) => setEmailOptIn(checked === true)}
-                  disabled={loading || googleLoading}
-                  className="mt-0.5"
-                />
-                <Label
-                  htmlFor="email-opt-in"
-                  className="text-sm font-normal text-muted-foreground cursor-pointer leading-tight"
-                >
-                  Send me updates about new clinical opportunities
-                </Label>
-              </div>
-              <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading || (isHospitalSignup && !selectedOpportunity)}>
-                {loading ? "Creating account..." : isHospitalSignup ? "Register Hospital" : "Sign Up"}
-              </Button>
-
-              {isHospitalSignup && (
-                <p className="text-xs text-muted-foreground text-center">
-                  Hospital accounts require admin approval before access is granted.
-                </p>
-              )}
-              
-              <p className="text-xs text-muted-foreground text-center mt-3">
-                By signing up, you agree to our{" "}
-                <Link to="/terms" className="text-primary hover:underline">
-                  Terms
-                </Link>{" "}
-                and{" "}
-                <Link to="/privacy" className="text-primary hover:underline">
-                  Privacy Policy
-                </Link>
-                .
-              </p>
-            </form>
+            <SignUpForm
+              email={email}
+              onEmailChange={setEmail}
+              password={password}
+              onPasswordChange={setPassword}
+              fullName={fullName}
+              onFullNameChange={setFullName}
+              phone={phone}
+              onPhoneChange={setPhone}
+              showPassword={showPassword}
+              onToggleShowPassword={() => setShowPassword((prev) => !prev)}
+              emailOptIn={emailOptIn}
+              onEmailOptInChange={setEmailOptIn}
+              emailPreFilled={emailPreFilled}
+              onEmailPreFilledChange={setEmailPreFilled}
+              isHospitalSignup={isHospitalSignup}
+              onIsHospitalSignupChange={setIsHospitalSignup}
+              selectedOpportunity={selectedOpportunity}
+              hospitalSearchQuery={hospitalSearchQuery}
+              onHospitalSearchQueryChange={setHospitalSearchQuery}
+              hospitalSearchResults={hospitalSearchResults}
+              hospitalSearchLoading={hospitalSearchLoading}
+              showSearchResults={showSearchResults}
+              onShowSearchResults={setShowSearchResults}
+              debouncedHospitalSearch={debouncedHospitalSearch}
+              onHospitalSelect={handleHospitalSelect}
+              onHospitalClear={handleHospitalClear}
+              loading={loading}
+              googleLoading={googleLoading}
+              onSubmit={handleSignUp}
+            />
           </TabsContent>
         </Tabs>
       </div>

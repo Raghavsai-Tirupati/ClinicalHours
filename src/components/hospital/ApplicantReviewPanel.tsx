@@ -391,6 +391,7 @@ export default function ApplicantReviewPanel({
                     <SelectContent>
                       <SelectItem value="new">{APPLICATION_STATUS_LABELS.new}</SelectItem>
                       <SelectItem value="under_review">{APPLICATION_STATUS_LABELS.under_review}</SelectItem>
+                      <SelectItem value="interview">{APPLICATION_STATUS_LABELS.interview}</SelectItem>
                     </SelectContent>
                   </Select>
                 </CollapsibleContent>

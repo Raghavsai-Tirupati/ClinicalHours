@@ -58,7 +58,7 @@ const Opportunities = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { opportunities, loading, hasMore, loadMore, totalCount } = useOpportunities({
+  const { opportunities, loading, error: fetchError, hasMore, loadMore, totalCount, refetch } = useOpportunities({
     userLocation,
     filterType,
     searchTerm: debouncedSearch,
@@ -337,7 +337,22 @@ const Opportunities = () => {
       </div>
 
       {/* ── Main Content Area ── */}
-      {loading && opportunities.length === 0 ? (
+      {fetchError && opportunities.length === 0 ? (
+        <div className="flex-1 container mx-auto px-4">
+          <div className="max-w-6xl mx-auto pt-8">
+            <Card>
+              <CardContent className="py-12 text-center">
+                <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                <p className="text-lg font-medium mb-2">Failed to load opportunities</p>
+                <p className="text-muted-foreground mb-4">{fetchError}</p>
+                <Button variant="outline" size="sm" onClick={refetch}>
+                  Try again
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : loading && opportunities.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
