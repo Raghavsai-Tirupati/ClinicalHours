@@ -9,28 +9,19 @@ import {
   Shield,
   Users,
   Building2,
-  Clock,
   BarChart3,
   Wrench,
-  Radio,
-  ImageIcon,
-  Ghost,
-  Crown,
   Laptop,
-  TrendingDown,
+  Zap,
 } from 'lucide-react';
 import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
-import AdminUserList from '@/components/admin/AdminUserList';
-import AdminHospitalsTab from '@/components/admin/AdminHospitalsTab';
-import AdminPendingApprovalsTab from '@/components/admin/AdminPendingApprovalsTab';
-import AdminToolsTab from '@/components/admin/AdminToolsTab';
-import { AdminActivityTab } from '@/components/admin/AdminActivityTab';
-import AdminLogosTab from '@/components/admin/AdminLogosTab';
-import GuestSessionsTab from '@/components/admin/GuestSessionsTab';
-import AdminPremiumTab from '@/components/admin/AdminPremiumTab';
-import AdminHospitalConsoleTab from '@/components/admin/AdminHospitalConsoleTab';
 import AdminFunnelTab from '@/components/admin/AdminFunnelTab';
+import AdminUsersTab from '@/components/admin/AdminUsersTab';
+import AdminHospitalsTab from '@/components/admin/AdminHospitalsTab';
+import AdminAutomationTab from '@/components/admin/AdminAutomationTab';
+import AdminHospitalConsoleTab from '@/components/admin/AdminHospitalConsoleTab';
+import AdminToolsTab from '@/components/admin/AdminToolsTab';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -47,7 +38,6 @@ export default function AdminDashboard() {
 
       <main className="min-h-screen bg-background pt-20 pb-12">
         <div className="container mx-auto max-w-7xl px-3 sm:px-4">
-          {/* Header */}
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold sm:gap-3 sm:text-3xl">
@@ -63,123 +53,75 @@ export default function AdminDashboard() {
             </Badge>
           </div>
 
-          {/* Tabs — consolidated admin tools */}
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="flex h-auto w-full max-w-full min-w-0 flex-nowrap items-stretch justify-start gap-1 overflow-x-auto overflow-y-hidden rounded-md bg-muted p-1 [-webkit-overflow-scrolling:touch]">
-              <TabsTrigger value="overview" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
+          <Tabs defaultValue="dashboard" className="space-y-6">
+            <TabsList className="flex h-auto w-full flex-wrap items-stretch justify-start gap-1 rounded-md bg-muted p-1">
+              <TabsTrigger value="dashboard" className="flex shrink-0 items-center gap-2 px-3">
                 <BarChart3 className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Overview</span>
+                <span>Dashboard</span>
               </TabsTrigger>
-              <TabsTrigger value="funnel" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
-                <TrendingDown className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Funnel</span>
-              </TabsTrigger>
-              <TabsTrigger value="students" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
+              <TabsTrigger value="users" className="flex shrink-0 items-center gap-2 px-3">
                 <Users className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Students</span>
+                <span>Users</span>
               </TabsTrigger>
-              <TabsTrigger value="hospitals" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
+              <TabsTrigger value="hospitals" className="flex shrink-0 items-center gap-2 px-3">
                 <Building2 className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Hospitals</span>
-              </TabsTrigger>
-              <TabsTrigger value="clinic-consoles" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
-                <Laptop className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Clinic admin</span>
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
-                <Clock className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Pending</span>
+                <span>Hospitals</span>
                 {pendingCount > 0 && (
                   <Badge className="ml-0.5 h-5 min-w-[1.25rem] shrink-0 bg-yellow-500 px-1.5 py-0 text-xs text-white">
                     {pendingCount}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="tools" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
+              <TabsTrigger value="automation" className="flex shrink-0 items-center gap-2 px-3">
+                <Zap className="h-4 w-4 shrink-0" />
+                <span>Automation</span>
+              </TabsTrigger>
+              <TabsTrigger value="supply" className="flex shrink-0 items-center gap-2 px-3">
+                <Laptop className="h-4 w-4 shrink-0" />
+                <span>Supply</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex shrink-0 items-center gap-2 px-3">
                 <Wrench className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Tools</span>
-              </TabsTrigger>
-              <TabsTrigger value="logos" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
-                <ImageIcon className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Logos</span>
-              </TabsTrigger>
-              <TabsTrigger value="guest-sessions" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
-                <Ghost className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Guests</span>
-              </TabsTrigger>
-              <TabsTrigger value="premium" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
-                <Crown className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Premium</span>
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="flex shrink-0 items-center gap-2 px-2.5 sm:px-3">
-                <Radio className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Activity</span>
+                <span>Settings</span>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview">
-              <TabErrorBoundary tabName="Overview">
-                <AdminOverviewTab />
+            <TabsContent value="dashboard">
+              <TabErrorBoundary tabName="Dashboard">
+                <div className="space-y-8">
+                  <AdminOverviewTab />
+                  <AdminFunnelTab />
+                </div>
               </TabErrorBoundary>
             </TabsContent>
 
-            <TabsContent value="funnel">
-              <TabErrorBoundary tabName="Funnel">
-                <AdminFunnelTab />
-              </TabErrorBoundary>
-            </TabsContent>
-
-            <TabsContent value="students">
-              <TabErrorBoundary tabName="Students">
-                <AdminUserList />
+            <TabsContent value="users">
+              <TabErrorBoundary tabName="Users">
+                <AdminUsersTab />
               </TabErrorBoundary>
             </TabsContent>
 
             <TabsContent value="hospitals">
               <TabErrorBoundary tabName="Hospitals">
-                <AdminHospitalsTab />
+                <AdminHospitalsTab onPendingCountChange={setPendingCount} />
               </TabErrorBoundary>
             </TabsContent>
 
-            <TabsContent value="clinic-consoles">
-              <TabErrorBoundary tabName="Clinic admin">
+            <TabsContent value="automation">
+              <TabErrorBoundary tabName="Automation">
+                <AdminAutomationTab />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            <TabsContent value="supply">
+              <TabErrorBoundary tabName="Supply">
                 <AdminHospitalConsoleTab />
               </TabErrorBoundary>
             </TabsContent>
 
-            <TabsContent value="pending">
-              <TabErrorBoundary tabName="Pending Approvals">
-                <AdminPendingApprovalsTab onPendingCountChange={setPendingCount} />
-              </TabErrorBoundary>
-            </TabsContent>
-
-            <TabsContent value="tools">
-              <TabErrorBoundary tabName="Tools">
+            <TabsContent value="settings">
+              <TabErrorBoundary tabName="Settings">
                 <AdminToolsTab />
-              </TabErrorBoundary>
-            </TabsContent>
-
-            <TabsContent value="logos">
-              <TabErrorBoundary tabName="Logos">
-                <AdminLogosTab />
-              </TabErrorBoundary>
-            </TabsContent>
-
-            <TabsContent value="guest-sessions">
-              <TabErrorBoundary tabName="Guest Sessions">
-                <GuestSessionsTab />
-              </TabErrorBoundary>
-            </TabsContent>
-
-            <TabsContent value="premium">
-              <TabErrorBoundary tabName="Premium">
-                <AdminPremiumTab />
-              </TabErrorBoundary>
-            </TabsContent>
-
-            <TabsContent value="activity">
-              <TabErrorBoundary tabName="Activity">
-                <AdminActivityTab />
               </TabErrorBoundary>
             </TabsContent>
           </Tabs>

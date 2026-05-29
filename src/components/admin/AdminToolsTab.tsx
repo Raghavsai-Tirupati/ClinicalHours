@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,8 +33,21 @@ import {
   Mail,
   Send,
   Wrench,
+  Image,
+  Play,
+  Square,
+  CheckCircle2,
+  XCircle,
+  Crown,
+  Users,
+  Ghost,
+  Ticket,
+  UserPlus,
+  CreditCard,
 } from 'lucide-react';
 import AdminDuplicateHospitals from './AdminDuplicateHospitals';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatDistanceToNow } from 'date-fns';
 
 interface OperationResult {
   success: boolean;
@@ -340,7 +354,7 @@ export default function AdminToolsTab() {
       )}
 
       <Tabs defaultValue="email" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="flex h-auto flex-wrap gap-1">
           <TabsTrigger value="email" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             Email
@@ -356,6 +370,14 @@ export default function AdminToolsTab() {
           <TabsTrigger value="maintenance" className="flex items-center gap-2">
             <Wrench className="h-4 w-4" />
             Maintenance
+          </TabsTrigger>
+          <TabsTrigger value="logos" className="flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            Logos
+          </TabsTrigger>
+          <TabsTrigger value="premium" className="flex items-center gap-2">
+            <Crown className="h-4 w-4" />
+            Premium
           </TabsTrigger>
         </TabsList>
 
@@ -684,7 +706,348 @@ export default function AdminToolsTab() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Logos Tab */}
+        <TabsContent value="logos">
+          <LogosSection />
+        </TabsContent>
+
+        {/* Premium Tab */}
+        <TabsContent value="premium">
+          <PremiumSection />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ── Logos Section (inlined from AdminLogosTab) ───────────────
+
+interface BatchResult {
+  processed: number;
+  success: number;
+  failed: number;
+}
+
+interface LogoStats {
+  total: number;
+  withLogos: number;
+  withoutLogos: number;
+  withWebsite: number;
+}
+
+function LogosSection() {
+  const [stats, setStats] = useState<LogoStats>({ total: 0, withLogos: 0, withoutLogos: 0, withWebsite: 0 });
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [singleRunning, setSingleRunning] = useState(false);
+  const [batchLog, setBatchLog] = useState<BatchResult[]>([]);
+  const [totalProcessed, setTotalProcessed] = useState(0);
+  const [totalSuccess, setTotalSuccess] = useState(0);
+  const [totalFailed, setTotalFailed] = useState(0);
+  const stopRef = useRef(false);
+
+  const fetchStats = useCallback(async () => {
+    const { count: total } = await supabase.from('opportunities').select('*', { count: 'exact', head: true });
+    const { count: withLogos } = await supabase.from('opportunities').select('*', { count: 'exact', head: true }).not('logo_url', 'is', null).neq('logo_url', '');
+    const { count: withoutLogos } = await supabase.from('opportunities').select('*', { count: 'exact', head: true }).or('logo_url.is.null,logo_url.eq.');
+    const { count: withWebsite } = await supabase.from('opportunities').select('*', { count: 'exact', head: true }).is('logo_url', null).not('website', 'is', null);
+    setStats({ total: total ?? 0, withLogos: withLogos ?? 0, withoutLogos: withoutLogos ?? 0, withWebsite: withWebsite ?? 0 });
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  const invokeBatch = async (): Promise<BatchResult | null> => {
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'sysbtcikrbrrgafffody';
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const url = `https://${projectId}.supabase.co/functions/v1/batch-fetch-logos`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: anonKey,
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || anonKey}`,
+        },
+      });
+      if (!res.ok) return null;
+      return (await res.json()) as BatchResult;
+    } catch { return null; }
+  };
+
+  const runSingleBatch = async () => {
+    setSingleRunning(true);
+    const result = await invokeBatch();
+    if (result) {
+      setBatchLog((prev) => [result, ...prev]);
+      setTotalProcessed((p) => p + result.processed);
+      setTotalSuccess((p) => p + result.success);
+      setTotalFailed((p) => p + result.failed);
+    }
+    await fetchStats();
+    setSingleRunning(false);
+  };
+
+  const runLoop = async () => {
+    stopRef.current = false;
+    setRunning(true);
+    setBatchLog([]);
+    setTotalProcessed(0);
+    setTotalSuccess(0);
+    setTotalFailed(0);
+    while (!stopRef.current) {
+      const result = await invokeBatch();
+      if (!result) break;
+      setBatchLog((prev) => [result, ...prev]);
+      setTotalProcessed((p) => p + result.processed);
+      setTotalSuccess((p) => p + result.success);
+      setTotalFailed((p) => p + result.failed);
+      await fetchStats();
+      if (result.processed === 0) break;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    setRunning(false);
+  };
+
+  const pct = stats.total > 0 ? Math.round((stats.withLogos / stats.total) * 100) : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Listings', value: stats.total, color: '' },
+          { label: 'With Logos', value: stats.withLogos, color: 'text-green-500' },
+          { label: 'Without Logos', value: stats.withoutLogos, color: 'text-amber-500' },
+          { label: 'Fetchable', value: stats.withWebsite, color: 'text-blue-500' },
+        ].map((s) => (
+          <Card key={s.label}>
+            <CardHeader className="pb-2"><CardDescription>{s.label}</CardDescription></CardHeader>
+            <CardContent><p className={`text-2xl font-bold ${s.color}`}>{loading ? '…' : s.value.toLocaleString()}</p></CardContent>
+          </Card>
+        ))}
+      </div>
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Image className="h-5 w-5" />Logo Coverage</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <Progress value={pct} className="h-3" />
+          <p className="text-sm text-muted-foreground">{pct}% of listings have logos</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Batch Logo Fetch</CardTitle>
+          <CardDescription>Fetches logos for listings that have a website but no logo. Processes 30 per batch.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={runSingleBatch} disabled={singleRunning || running} variant="outline">
+              {singleRunning ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Running…</> : <><Image className="h-4 w-4 mr-2" />Fetch Single Batch</>}
+            </Button>
+            {!running ? (
+              <Button onClick={runLoop} disabled={singleRunning}><Play className="h-4 w-4 mr-2" />Run Continuous Loop</Button>
+            ) : (
+              <Button onClick={() => { stopRef.current = true; }} variant="destructive"><Square className="h-4 w-4 mr-2" />Stop</Button>
+            )}
+          </div>
+          {(totalProcessed > 0 || running) && (
+            <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex items-center gap-2"><Badge variant="secondary">Processed</Badge><span className="font-mono text-lg">{totalProcessed}</span></div>
+              <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" /><span className="font-mono text-lg">{totalSuccess}</span></div>
+              <div className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-500" /><span className="font-mono text-lg">{totalFailed}</span></div>
+              <div className="flex items-center gap-2"><Badge variant="outline">Remaining</Badge><span className="font-mono text-lg">{stats.withWebsite.toLocaleString()}</span></div>
+            </div>
+          )}
+          {batchLog.length > 0 && (
+            <div className="max-h-48 overflow-y-auto rounded-md border p-3 bg-muted/30 space-y-1">
+              {batchLog.map((b, i) => (
+                <p key={i} className="text-xs font-mono text-muted-foreground">
+                  Batch #{batchLog.length - i}: {b.processed} processed, {b.success} success, {b.failed} failed
+                </p>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── Premium Section (inlined from AdminPremiumTab) ───────────
+
+type PremiumProfileLite = {
+  id: string;
+  full_name: string | null;
+  is_premium: boolean;
+  stripe_subscription_id: string | null;
+  premium_expires_at: string | null;
+  premium_source: 'paid' | 'promo_code' | 'directly_added' | null;
+};
+
+type PremiumTrackingEvent = {
+  id: string;
+  user_id: string | null;
+  session_id: string;
+  page_url: string;
+  created_at: string;
+};
+
+type SubscriptionLite = {
+  user_id: string;
+  status: string;
+};
+
+function PremiumSection() {
+  const [premiumProfiles, setPremiumProfiles] = useState<PremiumProfileLite[]>([]);
+  const [recentVisitors, setRecentVisitors] = useState<{ userId: string; name: string; lastVisit: string }[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionLite[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [{ data: profiles }, { data: events }, { data: subs }] = await Promise.all([
+        supabase.from('profiles').select('id, full_name, is_premium, stripe_subscription_id, premium_expires_at, premium_source').eq('is_premium', true).order('premium_expires_at', { ascending: false }),
+        supabase.from('tracking_events').select('id, user_id, session_id, page_url, created_at').eq('page_url', '/premium').not('user_id', 'is', null).order('created_at', { ascending: false }).limit(100),
+        supabase.from('subscriptions').select('user_id, status').eq('status', 'active'),
+      ]);
+
+      setPremiumProfiles((profiles ?? []) as PremiumProfileLite[]);
+      setSubscriptions((subs ?? []) as SubscriptionLite[]);
+
+      if (events && events.length > 0) {
+        const userIds = [...new Set((events as PremiumTrackingEvent[]).filter((e) => e.user_id).map((e) => e.user_id!))];
+        const { data: profilesForVisitors } = await supabase.from('profiles').select('id, full_name').in('id', userIds);
+        const nameMap = new Map((profilesForVisitors ?? []).map((p: { id: string; full_name: string | null }) => [p.id, p.full_name]));
+        const seen = new Set<string>();
+        const visitors: { userId: string; name: string; lastVisit: string }[] = [];
+        for (const e of events as PremiumTrackingEvent[]) {
+          if (!e.user_id || seen.has(e.user_id)) continue;
+          seen.add(e.user_id);
+          visitors.push({ userId: e.user_id, name: nameMap.get(e.user_id) ?? `User ${e.user_id.slice(0, 6)}`, lastVisit: e.created_at });
+        }
+        setRecentVisitors(visitors.slice(0, 20));
+      }
+    } catch (err) {
+      console.error('Error fetching premium data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const sourceLabel = (source: PremiumProfileLite['premium_source']) => {
+    switch (source) {
+      case 'paid': return 'Paid';
+      case 'promo_code': return 'Promo';
+      case 'directly_added': return 'Admin';
+      default: return '—';
+    }
+  };
+
+  const sourceColor = (source: PremiumProfileLite['premium_source']) => {
+    switch (source) {
+      case 'paid': return 'border-green-500/30 text-green-400';
+      case 'promo_code': return 'border-blue-500/30 text-blue-400';
+      case 'directly_added': return 'border-purple-500/30 text-purple-400';
+      default: return '';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Crown className="h-5 w-5 text-amber-400" />
+          <h3 className="text-base font-semibold">Premium Users</h3>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchAll} disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="bg-card border-border">
+          <CardContent className="pt-4 pb-3">
+            <p className="text-2xl font-bold tabular-nums">{premiumProfiles.length}</p>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Crown className="h-3 w-3 text-amber-400" />Premium users</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="pt-4 pb-3">
+            <p className="text-2xl font-bold tabular-nums">{subscriptions.length}</p>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><CreditCard className="h-3 w-3 text-green-400" />Active subscriptions</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="pt-4 pb-3">
+            <p className="text-2xl font-bold tabular-nums">{recentVisitors.length}</p>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Users className="h-3 w-3 text-blue-400" />Recent page visitors</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Crown className="h-4 w-4 text-amber-400" />
+            Premium Members
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : premiumProfiles.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No premium users.</p>
+          ) : (
+            <ScrollArea className="h-[320px]">
+              <div className="divide-y divide-border/40">
+                {premiumProfiles.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/30 transition-colors">
+                    <span className="text-sm font-medium truncate">{p.full_name ?? `User ${p.id.slice(0, 6)}`}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline" className={`text-[10px] ${sourceColor(p.premium_source)}`}>{sourceLabel(p.premium_source)}</Badge>
+                      {p.premium_expires_at && (
+                        <span className="text-[11px] text-muted-foreground">
+                          Expires {formatDistanceToNow(new Date(p.premium_expires_at), { addSuffix: true })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4 text-blue-400" />
+            Recent Premium Page Visitors
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {loading ? (
+            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : recentVisitors.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No recent visitors.</p>
+          ) : (
+            <div className="divide-y divide-border/40">
+              {recentVisitors.map((v) => (
+                <div key={v.userId} className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/30 transition-colors">
+                  <span className="text-sm truncate">{v.name}</span>
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    {formatDistanceToNow(new Date(v.lastVisit), { addSuffix: true })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

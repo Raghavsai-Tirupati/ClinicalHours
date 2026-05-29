@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,9 +40,15 @@ import {
   Play,
   Archive,
   Bell,
+  Clock,
+  CheckCircle,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { useDebounce } from '@/hooks/useDebounce';
+import { Textarea } from '@/components/ui/textarea';
 
 // ── Hospital Accounts Section ──────────────────────────────
 
@@ -103,12 +109,31 @@ interface HospitalPage {
 
 const PAGE_SIZE = 20;
 
-export default function AdminHospitalsTab() {
+interface AdminHospitalsTabProps {
+  onPendingCountChange?: (count: number) => void;
+}
+
+export default function AdminHospitalsTab({ onPendingCountChange }: AdminHospitalsTabProps) {
+  const [pendingCount, setPendingCount] = useState(0);
+
+  function handlePendingCount(count: number) {
+    setPendingCount(count);
+    onPendingCountChange?.(count);
+  }
+
   return (
     <Tabs defaultValue="pages" className="space-y-4">
       <TabsList>
         <TabsTrigger value="pages">Hospital Pages</TabsTrigger>
         <TabsTrigger value="accounts">Hospital Accounts</TabsTrigger>
+        <TabsTrigger value="pending" className="flex items-center gap-1.5">
+          Pending Approvals
+          {pendingCount > 0 && (
+            <Badge className="h-5 min-w-[1.25rem] bg-yellow-500 px-1.5 py-0 text-xs text-white">
+              {pendingCount}
+            </Badge>
+          )}
+        </TabsTrigger>
         <TabsTrigger value="notifications">Notifications</TabsTrigger>
       </TabsList>
       <TabsContent value="pages">
@@ -116,6 +141,9 @@ export default function AdminHospitalsTab() {
       </TabsContent>
       <TabsContent value="accounts">
         <HospitalAccountsSection />
+      </TabsContent>
+      <TabsContent value="pending">
+        <PendingApprovalsSection onPendingCountChange={handlePendingCount} />
       </TabsContent>
       <TabsContent value="notifications">
         <HospitalNotificationsSection />
@@ -960,5 +988,320 @@ function HospitalAccountsSection() {
         </SheetContent>
       </Sheet>
     </Card>
+  );
+}
+
+// ── Pending Approvals Section (inlined from AdminPendingApprovalsTab) ──
+
+interface PendingHospital {
+  id: string;
+  hospital_name: string;
+  contact_email: string;
+  contact_phone: string | null;
+  website: string | null;
+  address: string | null;
+  description: string | null;
+  created_at: string;
+}
+
+interface ReviewedHospital {
+  id: string;
+  hospital_name: string;
+  contact_email: string;
+  account_status: string;
+  admin_note: string | null;
+  reviewed_at: string;
+}
+
+interface PendingApprovalsSectionProps {
+  onPendingCountChange?: (count: number) => void;
+}
+
+function PendingApprovalsSection({ onPendingCountChange }: PendingApprovalsSectionProps) {
+  const [pending, setPending] = useState<PendingHospital[]>([]);
+  const [reviewed, setReviewed] = useState<ReviewedHospital[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<PendingHospital | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    fetchData();
+    pollingRef.current = setInterval(fetchData, 60_000);
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  async function fetchData() {
+    setFetchError(null);
+    try {
+      const [{ data: pendingData, error: e1 }, { data: reviewedData, error: e2 }] = await Promise.all([
+        supabase
+          .from('hospital_accounts')
+          .select('id, contact_email, contact_phone, description, created_at, hospitals(name, website, address)')
+          .eq('account_status', 'pending')
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('hospital_accounts')
+          .select('id, contact_email, account_status, admin_note, reviewed_at, hospitals(name)')
+          .in('account_status', ['approved', 'rejected'])
+          .not('reviewed_at', 'is', null)
+          .order('reviewed_at', { ascending: false })
+          .limit(50),
+      ]);
+      if (e1 || e2) throw e1 ?? e2;
+      const newPending = (pendingData || []).map((r: any) => {
+        const h = Array.isArray(r.hospitals) ? r.hospitals[0] : r.hospitals;
+        return {
+          id: r.id,
+          hospital_name: h?.name ?? 'Unknown',
+          contact_email: r.contact_email ?? '',
+          contact_phone: r.contact_phone,
+          website: h?.website ?? null,
+          address: h?.address ?? null,
+          description: r.description,
+          created_at: r.created_at,
+        };
+      }) as PendingHospital[];
+      setPending(newPending);
+      setReviewed(
+        (reviewedData || []).map((r: any) => {
+          const h = Array.isArray(r.hospitals) ? r.hospitals[0] : r.hospitals;
+          return {
+            id: r.id,
+            hospital_name: h?.name ?? 'Unknown',
+            contact_email: r.contact_email ?? '',
+            account_status: r.account_status,
+            admin_note: r.admin_note,
+            reviewed_at: r.reviewed_at,
+          };
+        }) as ReviewedHospital[]
+      );
+      onPendingCountChange?.(newPending.length);
+    } catch (err) {
+      console.error('Error fetching pending approvals:', err);
+      setFetchError(err instanceof Error ? err.message : 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function getAuthToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  }
+
+  async function callHospitalReview(hospitalId: string, action: 'approve' | 'reject', note?: string) {
+    const token = await getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/hospital-review`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ hospitalId, action, note }),
+      }
+    );
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || `${action} failed`);
+    return result;
+  }
+
+  async function handleApprove(hospital: PendingHospital) {
+    setProcessingId(hospital.id);
+    try {
+      await callHospitalReview(hospital.id, 'approve');
+      setPending((prev) => {
+        const next = prev.filter((h) => h.id !== hospital.id);
+        onPendingCountChange?.(next.length);
+        return next;
+      });
+      toast.success(`${hospital.hospital_name} approved`);
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Approval failed');
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function handleReject() {
+    if (!rejectTarget) return;
+    const target = rejectTarget;
+    const note = rejectNote.trim() || undefined;
+    setProcessingId(target.id);
+    try {
+      await callHospitalReview(target.id, 'reject', note);
+      setPending((prev) => {
+        const next = prev.filter((h) => h.id !== target.id);
+        onPendingCountChange?.(next.length);
+        return next;
+      });
+      setRejectTarget(null);
+      setRejectNote('');
+      toast.success(`${target.hospital_name} rejected`);
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Rejection failed');
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {fetchError && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+          <XCircle className="h-4 w-4 shrink-0" />
+          {fetchError}
+        </div>
+      )}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-yellow-500" />
+                Pending Hospital Approvals
+                {pending.length > 0 && <Badge className="bg-yellow-500 text-white ml-1">{pending.length}</Badge>}
+              </CardTitle>
+              <CardDescription>Review and approve or reject new hospital account registrations</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : pending.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+              <p className="font-medium text-foreground">All caught up!</p>
+              <p className="text-sm text-muted-foreground mt-1">No pending hospital approvals</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pending.map((hospital) => (
+                <div key={hospital.id} className="bg-muted/20 border border-border rounded-xl p-5 flex flex-col sm:flex-row sm:items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <p className="break-words font-semibold text-foreground">{hospital.hospital_name}</p>
+                    </div>
+                    <div className="space-y-1 mt-2">
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Mail className="h-3 w-3 flex-shrink-0" />{hospital.contact_email}
+                      </p>
+                      {hospital.website && (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Globe className="h-3 w-3 flex-shrink-0" />
+                          <a href={hospital.website} target="_blank" rel="noopener noreferrer" className="min-w-0 break-all text-primary hover:underline">{hospital.website}</a>
+                        </p>
+                      )}
+                      {hospital.address && <p className="text-sm text-muted-foreground">{hospital.address}</p>}
+                      {hospital.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{hospital.description}</p>}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      Submitted {formatDistanceToNow(new Date(hospital.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0 sm:flex-col">
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none"
+                      onClick={() => handleApprove(hospital)}
+                      disabled={processingId === hospital.id}
+                    >
+                      {processingId === hospital.id ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => { setRejectTarget(hospital); setRejectNote(''); }}
+                      disabled={processingId === hospital.id}
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="cursor-pointer select-none" onClick={() => setShowHistory((v) => !v)}>
+          <CardTitle className="flex items-center justify-between text-base">
+            <span className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              Review History ({reviewed.length})
+            </span>
+            {showHistory ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </CardTitle>
+        </CardHeader>
+        {showHistory && (
+          <CardContent>
+            {reviewed.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No reviews yet</p>
+            ) : (
+              <div className="space-y-0">
+                {reviewed.map((h) => (
+                  <div key={h.id} className="flex items-start justify-between gap-3 py-3 border-b border-border last:border-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="break-words font-medium text-sm">{h.hospital_name}</p>
+                        <Badge variant={h.account_status === 'approved' ? 'default' : 'destructive'} className="text-xs flex-shrink-0">{h.account_status}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{h.contact_email}</p>
+                      {h.admin_note && <p className="text-xs text-muted-foreground mt-1 italic">Note: {h.admin_note}</p>}
+                    </div>
+                    <p className="text-xs text-muted-foreground flex-shrink-0">{format(new Date(h.reviewed_at), 'MMM d, yyyy')}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      <AlertDialog open={!!rejectTarget} onOpenChange={(open) => { if (!open) { setRejectTarget(null); setRejectNote(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Hospital Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Reject <strong>{rejectTarget?.hospital_name}</strong>? They will receive a notification email.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Textarea
+              placeholder="Optional: note explaining rejection (included in email)..."
+              value={rejectNote}
+              onChange={(e) => setRejectNote(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setRejectTarget(null); setRejectNote(''); }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReject}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={processingId !== null}
+            >
+              {processingId ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Reject Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
