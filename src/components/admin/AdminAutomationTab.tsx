@@ -304,7 +304,7 @@ export default function AdminAutomationTab() {
         (guestSessionData ?? []).map((g: { session_id: string }) => g.session_id)
       );
       const guestSessionMap = new Map(
-        (guestSessionData ?? []).map((g: GuestSession) => [g.session_id, g])
+        (guestSessionData ?? []).map((g: { session_id: string; created_at: string; user_agent: string | null; converted_to_user_id: string | null }) => [g.session_id, g])
       );
       const viewCountBySession = new Map<string, number>();
       for (const e of (guestEventData ?? []) as { session_id: string }[]) {
