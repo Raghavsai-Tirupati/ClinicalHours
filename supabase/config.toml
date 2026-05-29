@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.bcs-email-autoresponder]
 verify_jwt = false
+
+[functions.admin-chat]
+verify_jwt = false
