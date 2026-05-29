@@ -22,6 +22,7 @@ import AdminHospitalsTab from '@/components/admin/AdminHospitalsTab';
 import AdminAutomationTab from '@/components/admin/AdminAutomationTab';
 import AdminHospitalConsoleTab from '@/components/admin/AdminHospitalConsoleTab';
 import AdminToolsTab from '@/components/admin/AdminToolsTab';
+import AdminChatbot from '@/components/admin/AdminChatbot';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -129,6 +130,8 @@ export default function AdminDashboard() {
       </main>
 
       <Footer />
+
+      <AdminChatbot />
     </>
   );
 }
