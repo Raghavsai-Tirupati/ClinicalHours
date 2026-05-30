@@ -9,13 +9,21 @@ import {
   Shield,
   Users,
   Building2,
-  BarChart3,
   Wrench,
   Laptop,
   Zap,
+  LayoutDashboard,
+  TrendingUp,
+  GitBranch,
+  HeartPulse,
+  MessageSquare,
+  DollarSign,
+  ShieldCheck,
+  Bot,
 } from 'lucide-react';
 import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
-import AdminOverviewTab from '@/components/admin/AdminOverviewTab';
+
+// Existing tabs (preserved)
 import AdminFunnelTab from '@/components/admin/AdminFunnelTab';
 import AdminUsersTab from '@/components/admin/AdminUsersTab';
 import AdminHospitalsTab from '@/components/admin/AdminHospitalsTab';
@@ -23,15 +31,24 @@ import AdminAutomationTab from '@/components/admin/AdminAutomationTab';
 import AdminHospitalConsoleTab from '@/components/admin/AdminHospitalConsoleTab';
 import AdminToolsTab from '@/components/admin/AdminToolsTab';
 import AdminChatbot from '@/components/admin/AdminChatbot';
+import AdminPremiumTab from '@/components/admin/AdminPremiumTab';
+
+// New tabs
+import ControlTowerTab from '@/components/admin/ControlTowerTab';
+import ClinicPipelineTab from '@/components/admin/ClinicPipelineTab';
+import MessagingTab from '@/components/admin/MessagingTab';
+import DataTrustTab from '@/components/admin/DataTrustTab';
+import AgentInboxTab from '@/components/admin/AgentInboxTab';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
+  const [openApprovalsCount, setOpenApprovalsCount] = useState(0);
 
   return (
     <>
       <Helmet>
-        <title>Admin Dashboard | ClinicalHours</title>
+        <title>Admin OS | ClinicalHours</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
@@ -39,90 +56,164 @@ export default function AdminDashboard() {
 
       <main className="min-h-screen bg-background pt-20 pb-12">
         <div className="container mx-auto max-w-7xl px-3 sm:px-4">
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold sm:gap-3 sm:text-3xl">
                 <Shield className="h-7 w-7 shrink-0 text-primary sm:h-8 sm:w-8" />
-                <span className="break-words">Admin Dashboard</span>
+                <span>Admin OS</span>
               </h1>
-              <p className="text-muted-foreground mt-1 text-pretty break-words">
-                Platform management and oversight
+              <p className="text-muted-foreground mt-1 text-sm">
+                ClinicalHours business operating system
               </p>
             </div>
-            <Badge variant="outline" className="w-fit max-w-full whitespace-normal break-all text-left text-sm leading-snug sm:max-w-sm">
-              {user?.email}
-            </Badge>
+            <div className="flex items-center gap-2 flex-wrap">
+              {openApprovalsCount > 0 && (
+                <Badge variant="destructive" className="text-xs">
+                  {openApprovalsCount} approval{openApprovalsCount !== 1 ? 's' : ''} pending
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-sm">
+                {user?.email}
+              </Badge>
+            </div>
           </div>
 
-          <Tabs defaultValue="dashboard" className="space-y-6">
+          <Tabs defaultValue="control-tower" className="space-y-6">
             <TabsList className="flex h-auto w-full flex-wrap items-stretch justify-start gap-1 rounded-md bg-muted p-1">
-              <TabsTrigger value="dashboard" className="flex shrink-0 items-center gap-2 px-3">
-                <BarChart3 className="h-4 w-4 shrink-0" />
-                <span>Dashboard</span>
+              <TabsTrigger value="control-tower" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
+                <span>Control Tower</span>
+                {openApprovalsCount > 0 && (
+                  <Badge className="ml-0.5 h-4 min-w-[1rem] shrink-0 bg-red-500 px-1 py-0 text-xs text-white">
+                    {openApprovalsCount}
+                  </Badge>
+                )}
               </TabsTrigger>
-              <TabsTrigger value="users" className="flex shrink-0 items-center gap-2 px-3">
-                <Users className="h-4 w-4 shrink-0" />
-                <span>Users</span>
+
+              <TabsTrigger value="growth" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                <span>Growth</span>
               </TabsTrigger>
-              <TabsTrigger value="hospitals" className="flex shrink-0 items-center gap-2 px-3">
-                <Building2 className="h-4 w-4 shrink-0" />
-                <span>Hospitals</span>
+
+              <TabsTrigger value="clinic-pipeline" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <GitBranch className="h-3.5 w-3.5 shrink-0" />
+                <span>Clinic Pipeline</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="clinic-ops" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <Building2 className="h-3.5 w-3.5 shrink-0" />
+                <span>Clinic Ops</span>
                 {pendingCount > 0 && (
-                  <Badge className="ml-0.5 h-5 min-w-[1.25rem] shrink-0 bg-yellow-500 px-1.5 py-0 text-xs text-white">
+                  <Badge className="ml-0.5 h-4 min-w-[1rem] shrink-0 bg-yellow-500 px-1 py-0 text-xs text-white">
                     {pendingCount}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="automation" className="flex shrink-0 items-center gap-2 px-3">
-                <Zap className="h-4 w-4 shrink-0" />
-                <span>Automation</span>
-              </TabsTrigger>
-              <TabsTrigger value="supply" className="flex shrink-0 items-center gap-2 px-3">
-                <Laptop className="h-4 w-4 shrink-0" />
+
+              <TabsTrigger value="supply" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <Laptop className="h-3.5 w-3.5 shrink-0" />
                 <span>Supply</span>
               </TabsTrigger>
-              <TabsTrigger value="settings" className="flex shrink-0 items-center gap-2 px-3">
-                <Wrench className="h-4 w-4 shrink-0" />
+
+              <TabsTrigger value="messaging" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                <span>Messaging</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="revenue" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                <span>Revenue</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="data-trust" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                <span>Data Trust</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="agent-inbox" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <Bot className="h-3.5 w-3.5 shrink-0" />
+                <span>Agent Inbox</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="settings" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <Wrench className="h-3.5 w-3.5 shrink-0" />
                 <span>Settings</span>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="dashboard">
-              <TabErrorBoundary tabName="Dashboard">
+            {/* Control Tower */}
+            <TabsContent value="control-tower">
+              <TabErrorBoundary tabName="Control Tower">
+                <ControlTowerTab onOpenApprovalsChange={setOpenApprovalsCount} />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            {/* Growth — existing funnel + users */}
+            <TabsContent value="growth">
+              <TabErrorBoundary tabName="Growth">
                 <div className="space-y-8">
-                  <AdminOverviewTab />
+                  <AdminUsersTab />
                   <AdminFunnelTab />
                 </div>
               </TabErrorBoundary>
             </TabsContent>
 
-            <TabsContent value="users">
-              <TabErrorBoundary tabName="Users">
-                <AdminUsersTab />
+            {/* Clinic Pipeline — new lead pipeline */}
+            <TabsContent value="clinic-pipeline">
+              <TabErrorBoundary tabName="Clinic Pipeline">
+                <ClinicPipelineTab />
               </TabErrorBoundary>
             </TabsContent>
 
-            <TabsContent value="hospitals">
-              <TabErrorBoundary tabName="Hospitals">
+            {/* Clinic Ops — hospital approvals + management */}
+            <TabsContent value="clinic-ops">
+              <TabErrorBoundary tabName="Clinic Ops">
                 <AdminHospitalsTab onPendingCountChange={setPendingCount} />
               </TabErrorBoundary>
             </TabsContent>
 
-            <TabsContent value="automation">
-              <TabErrorBoundary tabName="Automation">
-                <AdminAutomationTab />
-              </TabErrorBoundary>
-            </TabsContent>
-
+            {/* Supply */}
             <TabsContent value="supply">
               <TabErrorBoundary tabName="Supply">
                 <AdminHospitalConsoleTab />
               </TabErrorBoundary>
             </TabsContent>
 
+            {/* Messaging */}
+            <TabsContent value="messaging">
+              <TabErrorBoundary tabName="Messaging">
+                <MessagingTab />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            {/* Revenue */}
+            <TabsContent value="revenue">
+              <TabErrorBoundary tabName="Revenue">
+                <RevenueTab />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            {/* Data Trust */}
+            <TabsContent value="data-trust">
+              <TabErrorBoundary tabName="Data Trust">
+                <DataTrustTab />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            {/* Agent Inbox */}
+            <TabsContent value="agent-inbox">
+              <TabErrorBoundary tabName="Agent Inbox">
+                <AgentInboxTab />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            {/* Settings — existing tools preserved */}
             <TabsContent value="settings">
               <TabErrorBoundary tabName="Settings">
-                <AdminToolsTab />
+                <div className="space-y-8">
+                  <AdminAutomationTab />
+                  <AdminToolsTab />
+                </div>
               </TabErrorBoundary>
             </TabsContent>
           </Tabs>
@@ -133,5 +224,14 @@ export default function AdminDashboard() {
 
       <AdminChatbot />
     </>
+  );
+}
+
+// Inline Revenue tab (thin wrapper over existing AdminPremiumTab)
+function RevenueTab() {
+  return (
+    <div className="space-y-6">
+      <AdminPremiumTab />
+    </div>
   );
 }
