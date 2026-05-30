@@ -120,6 +120,158 @@ export type Database = {
           },
         ]
       }
+      agent_recommendations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          agent_name: string
+          body: string | null
+          created_at: string
+          dismissed_at: string | null
+          dismissed_by: string | null
+          expires_at: string | null
+          id: string
+          priority: number
+          recommendation_type: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          agent_name: string
+          body?: string | null
+          created_at?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          expires_at?: string | null
+          id?: string
+          priority?: number
+          recommendation_type: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          agent_name?: string
+          body?: string | null
+          created_at?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          expires_at?: string | null
+          id?: string
+          priority?: number
+          recommendation_type?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      agent_runs: {
+        Row: {
+          agent_name: string
+          created_at: string
+          duration_ms: number | null
+          id: string
+          log_summary: string | null
+          run_status: string
+          task_id: string
+          tokens_used: number | null
+        }
+        Insert: {
+          agent_name: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          log_summary?: string | null
+          run_status: string
+          task_id: string
+          tokens_used?: number | null
+        }
+        Update: {
+          agent_name?: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          log_summary?: string | null
+          run_status?: string
+          task_id?: string
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "agent_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_tasks: {
+        Row: {
+          agent_name: string
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          id: string
+          input_data: Json | null
+          output_data: Json | null
+          priority: number
+          related_entity_id: string | null
+          related_entity_type: string | null
+          started_at: string | null
+          status: string
+          task_type: string
+          updated_at: string
+        }
+        Insert: {
+          agent_name: string
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          output_data?: Json | null
+          priority?: number
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          started_at?: string | null
+          status?: string
+          task_type: string
+          updated_at?: string
+        }
+        Update: {
+          agent_name?: string
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          output_data?: Json | null
+          priority?: number
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          started_at?: string | null
+          status?: string
+          task_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       application_answers: {
         Row: {
           answer_file_url: string | null
@@ -340,6 +492,66 @@ export type Database = {
           },
         ]
       }
+      approval_tasks: {
+        Row: {
+          approval_type: string
+          approved_at: string | null
+          approver_id: string | null
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          payload: Json | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          requester_id: string | null
+          requester_source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          approval_type: string
+          approved_at?: string | null
+          approver_id?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          payload?: Json | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          requester_id?: string | null
+          requester_source: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          approval_type?: string
+          approved_at?: string | null
+          approver_id?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          payload?: Json | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          requester_id?: string | null
+          requester_source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bcs_autoresponder_log: {
         Row: {
           category: string
@@ -364,6 +576,122 @@ export type Database = {
           responded_at?: string
           sender_email?: string
           subject?: string | null
+        }
+        Relationships: []
+      }
+      campaign_messages: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          audience_definition: Json | null
+          author_source: string
+          body_html: string
+          campaign_id: string | null
+          created_at: string
+          id: string
+          queued_at: string | null
+          reasoning: string | null
+          recipient_email: string
+          recipient_id: string | null
+          recipient_type: string
+          send_error: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          template_ref: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          audience_definition?: Json | null
+          author_source: string
+          body_html: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          queued_at?: string | null
+          reasoning?: string | null
+          recipient_email: string
+          recipient_id?: string | null
+          recipient_type: string
+          send_error?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template_ref?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          audience_definition?: Json | null
+          author_source?: string
+          body_html?: string
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          queued_at?: string | null
+          reasoning?: string | null
+          recipient_email?: string
+          recipient_id?: string | null
+          recipient_type?: string
+          send_error?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template_ref?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          audience_definition: Json | null
+          campaign_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          audience_definition?: Json | null
+          campaign_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          audience_definition?: Json | null
+          campaign_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -414,6 +742,85 @@ export type Database = {
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "clinic_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_leads: {
+        Row: {
+          city: string | null
+          created_at: string
+          created_by: string | null
+          fit_score: number | null
+          id: string
+          linked_hospital_id: string | null
+          linked_opportunity_id: string | null
+          name: string
+          notes: string | null
+          pipeline_stage: string
+          source: string | null
+          specialty: string | null
+          state: string | null
+          updated_at: string
+          urgency_score: number | null
+          website: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          fit_score?: number | null
+          id?: string
+          linked_hospital_id?: string | null
+          linked_opportunity_id?: string | null
+          name: string
+          notes?: string | null
+          pipeline_stage?: string
+          source?: string | null
+          specialty?: string | null
+          state?: string | null
+          updated_at?: string
+          urgency_score?: number | null
+          website?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          created_by?: string | null
+          fit_score?: number | null
+          id?: string
+          linked_hospital_id?: string | null
+          linked_opportunity_id?: string | null
+          name?: string
+          notes?: string | null
+          pipeline_stage?: string
+          source?: string | null
+          specialty?: string | null
+          state?: string | null
+          updated_at?: string
+          urgency_score?: number | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_leads_linked_hospital_id_fkey"
+            columns: ["linked_hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_leads_linked_opportunity_id_fkey"
+            columns: ["linked_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_leads_linked_opportunity_id_fkey"
+            columns: ["linked_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities_with_ratings"
             referencedColumns: ["id"]
           },
         ]
@@ -592,6 +999,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      data_quality_incidents: {
+        Row: {
+          created_at: string
+          description: string | null
+          detected_by: string | null
+          id: string
+          related_row_id: string | null
+          related_table: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          detected_by?: string | null
+          id?: string
+          related_row_id?: string | null
+          related_table?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          detected_by?: string | null
+          id?: string
+          related_row_id?: string | null
+          related_table?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       discussion_votes: {
         Row: {
@@ -1402,6 +1857,206 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          enriched_at: string | null
+          enriched_by: string | null
+          id: string
+          is_primary: boolean
+          lead_id: string
+          linkedin_url: string | null
+          name: string
+          phone: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          enriched_at?: string | null
+          enriched_by?: string | null
+          id?: string
+          is_primary?: boolean
+          lead_id: string
+          linkedin_url?: string | null
+          name: string
+          phone?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          enriched_at?: string | null
+          enriched_by?: string | null
+          id?: string
+          is_primary?: boolean
+          lead_id?: string
+          linkedin_url?: string | null
+          name?: string
+          phone?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_contacts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_pipeline_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          from_stage: string | null
+          id: string
+          lead_id: string
+          note: string | null
+          to_stage: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          lead_id: string
+          note?: string | null
+          to_stage: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          lead_id?: string
+          note?: string | null
+          to_stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_pipeline_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_sequences: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_sequences_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      metric_definitions: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          freshness_target_minutes: number | null
+          id: string
+          is_active: boolean
+          name: string
+          source_query: string | null
+          source_table: string | null
+          unit: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          freshness_target_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          source_query?: string | null
+          source_table?: string | null
+          unit?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          freshness_target_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          source_query?: string | null
+          source_table?: string | null
+          unit?: string | null
+        }
+        Relationships: []
+      }
+      metric_snapshots: {
+        Row: {
+          computed_by: string
+          id: string
+          metric_id: string
+          snapshot_at: string
+          value: number
+        }
+        Insert: {
+          computed_by?: string
+          id?: string
+          metric_id: string
+          snapshot_at?: string
+          value: number
+        }
+        Update: {
+          computed_by?: string
+          id?: string
+          metric_id?: string
+          snapshot_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metric_snapshots_metric_id_fkey"
+            columns: ["metric_id"]
+            isOneToOne: false
+            referencedRelation: "metric_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       oauth_states: {
         Row: {
           created_at: string
@@ -1715,6 +2370,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      playbooks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          playbook_type: string
+          steps: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          playbook_type: string
+          steps?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          playbook_type?: string
+          steps?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       position_questions: {
         Row: {
@@ -2115,6 +2806,47 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "clinic_scheduling_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequence_steps: {
+        Row: {
+          body_template: string
+          created_at: string
+          delay_days: number
+          id: string
+          sequence_id: string
+          step_order: number
+          subject_template: string
+          updated_at: string
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          delay_days?: number
+          id?: string
+          sequence_id: string
+          step_order: number
+          subject_template: string
+          updated_at?: string
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          delay_days?: number
+          id?: string
+          sequence_id?: string
+          step_order?: number
+          subject_template?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequence_steps_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "message_sequences"
             referencedColumns: ["id"]
           },
         ]
