@@ -231,14 +231,44 @@ export function getCorsHeaders(origin: string | null): Record<string, string> {
 
 /**
  * Check if user has admin role
+ *
+ * Supports two calling conventions:
+ *  1. checkAdminRole(userId) -> validates the given user id against user_roles.
+ *  2. checkAdminRole(authHeader, supabaseClient) -> extracts the bearer token,
+ *     resolves the user, then validates the admin role. Returns userId too.
  */
-export async function checkAdminRole(userId: string): Promise<{ isAdmin: boolean; error?: string }> {
+export async function checkAdminRole(
+  userIdOrAuthHeader: string | null,
+  supabaseClient?: unknown,
+): Promise<{ isAdmin: boolean; userId?: string; error?: string }> {
   try {
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
+
+    let userId: string | undefined;
+
+    if (supabaseClient !== undefined) {
+      // (authHeader, supabaseClient) convention
+      const authHeader = userIdOrAuthHeader;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return { isAdmin: false, error: "Missing or invalid authorization header" };
+      }
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+      if (userError || !user) {
+        return { isAdmin: false, error: "Invalid token" };
+      }
+      userId = user.id;
+    } else {
+      // (userId) convention
+      userId = userIdOrAuthHeader ?? undefined;
+      if (!userId) {
+        return { isAdmin: false, error: "Missing user id" };
+      }
+    }
 
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
@@ -248,10 +278,10 @@ export async function checkAdminRole(userId: string): Promise<{ isAdmin: boolean
       .single();
 
     if (roleError || !roleData) {
-      return { isAdmin: false, error: "Admin access required" };
+      return { isAdmin: false, userId, error: "Admin access required" };
     }
 
-    return { isAdmin: true };
+    return { isAdmin: true, userId };
   } catch (error) {
     console.error("Error checking admin role:", error);
     return { isAdmin: false, error: "Failed to verify admin role" };
