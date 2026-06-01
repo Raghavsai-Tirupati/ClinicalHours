@@ -2714,8 +2714,10 @@ export type Database = {
           heard_back: boolean | null
           id: string
           is_active_experience: boolean | null
+          last_contact_date: string | null
           notes: string | null
           opportunity_id: string
+          reminder_date: string | null
           scheduled_interview: boolean | null
           status: string
           updated_at: string | null
@@ -2729,8 +2731,10 @@ export type Database = {
           heard_back?: boolean | null
           id?: string
           is_active_experience?: boolean | null
+          last_contact_date?: string | null
           notes?: string | null
           opportunity_id: string
+          reminder_date?: string | null
           scheduled_interview?: boolean | null
           status?: string
           updated_at?: string | null
@@ -2744,8 +2748,10 @@ export type Database = {
           heard_back?: boolean | null
           id?: string
           is_active_experience?: boolean | null
+          last_contact_date?: string | null
           notes?: string | null
           opportunity_id?: string
+          reminder_date?: string | null
           scheduled_interview?: boolean | null
           status?: string
           updated_at?: string | null
