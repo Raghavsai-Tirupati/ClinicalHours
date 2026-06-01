@@ -2159,6 +2159,7 @@ export type Database = {
         Row: {
           acceptance_likelihood: Database["public"]["Enums"]["acceptance_likelihood"]
           address: string | null
+          application_method: string | null
           country_code: string | null
           created_at: string
           created_by: string | null
@@ -2168,22 +2169,27 @@ export type Database = {
           hospital_id: string | null
           hours_required: string
           id: string
+          last_verified_at: string | null
           latitude: number | null
+          link_status: string
           location: string
           logo_url: string | null
           longitude: number | null
           name: string
           phone: string | null
           requirements: string[] | null
+          seasonality: string | null
           slug: string | null
           source: string | null
           type: Database["public"]["Enums"]["opportunity_type"]
           updated_at: string
+          verification_source: string | null
           website: string | null
         }
         Insert: {
           acceptance_likelihood: Database["public"]["Enums"]["acceptance_likelihood"]
           address?: string | null
+          application_method?: string | null
           country_code?: string | null
           created_at?: string
           created_by?: string | null
@@ -2193,22 +2199,27 @@ export type Database = {
           hospital_id?: string | null
           hours_required: string
           id?: string
+          last_verified_at?: string | null
           latitude?: number | null
+          link_status?: string
           location: string
           logo_url?: string | null
           longitude?: number | null
           name: string
           phone?: string | null
           requirements?: string[] | null
+          seasonality?: string | null
           slug?: string | null
           source?: string | null
           type: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
+          verification_source?: string | null
           website?: string | null
         }
         Update: {
           acceptance_likelihood?: Database["public"]["Enums"]["acceptance_likelihood"]
           address?: string | null
+          application_method?: string | null
           country_code?: string | null
           created_at?: string
           created_by?: string | null
@@ -2218,17 +2229,21 @@ export type Database = {
           hospital_id?: string | null
           hours_required?: string
           id?: string
+          last_verified_at?: string | null
           latitude?: number | null
+          link_status?: string
           location?: string
           logo_url?: string | null
           longitude?: number | null
           name?: string
           phone?: string | null
           requirements?: string[] | null
+          seasonality?: string | null
           slug?: string | null
           source?: string | null
           type?: Database["public"]["Enums"]["opportunity_type"]
           updated_at?: string
+          verification_source?: string | null
           website?: string | null
         }
         Relationships: [
