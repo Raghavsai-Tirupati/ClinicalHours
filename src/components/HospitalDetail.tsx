@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Opportunity } from "@/types";
 import { FindApplicationButton } from "@/components/FindApplicationButton";
 import HospitalLogo from "@/components/HospitalLogo";
+import { TrustChips } from "@/components/TrustChips";
 import { supabase } from "@/integrations/supabase/client";
 import { isPositionDeadlinePassed } from '@/lib/positionAvailability';
 import { POSITION_TYPE_LABELS } from "@/types/positions";
@@ -288,6 +289,7 @@ export function HospitalDetail({
             <p className="text-sm text-muted-foreground leading-relaxed">
               {opportunity.description}
             </p>
+            <TrustChips opportunity={opportunity} className="mt-3" />
           </div>
         )}
 

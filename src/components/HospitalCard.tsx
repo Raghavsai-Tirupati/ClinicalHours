@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Opportunity } from "@/types";
 import HospitalLogo from "@/components/HospitalLogo";
+import { TrustChips } from "@/components/TrustChips";
 
 interface HospitalCardProps {
   opportunity: Opportunity;
@@ -123,6 +124,9 @@ export function HospitalCard({
                 {opportunity.description}
               </p>
             )}
+
+            {/* Trust chips */}
+            <TrustChips opportunity={opportunity} />
 
             {/* Actions row */}
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
