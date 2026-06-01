@@ -34,11 +34,16 @@ import { type OpportunityStatus, type Opportunity, type Reflection, type Dashboa
 import { StatCard } from "@/components/dashboard/StatCard";
 import { OpportunityCard } from "@/components/dashboard/OpportunityCard";
 import { ReflectionBlock } from "@/components/dashboard/ReflectionBlock";
+import { ActivationChecklist } from "@/components/dashboard/ActivationChecklist";
+import { ThisWeekRail } from "@/components/dashboard/ThisWeekRail";
 
 interface SavedOpportunityRow {
   id: string;
   opportunity_id: string;
   status: string | null;
+  notes: string | null;
+  reminder_date: string | null;
+  last_contact_date: string | null;
   opportunities: {
     id: string;
     name: string;
@@ -90,6 +95,10 @@ const Dashboard = () => {
   const [dashboardTutorialComplete, setDashboardTutorialComplete] = useState(true);
   const [dashboardApplications, setDashboardApplications] = useState<DashboardApplication[]>([]);
   const [dashboardRefreshTick, setDashboardRefreshTick] = useState(0);
+  const [checklistDismissed, setChecklistDismissed] = useState(
+    () => localStorage.getItem("clinicalhours_checklist_dismissed") === "true"
+  );
+  const [hasCity, setHasCity] = useState(false);
 
   const recentDashboardApplications = useMemo(() => {
     const sorted = [...dashboardApplications].sort(
@@ -155,7 +164,7 @@ const Dashboard = () => {
         const [profileRes, savedRes, entriesRes, clinicAppsRes] = await Promise.all([
           supabase
             .from("profiles")
-            .select("dashboard_tutorial_complete")
+            .select("dashboard_tutorial_complete, city, university")
             .eq("id", user!.id)
             .single(),
           supabase
@@ -164,6 +173,9 @@ const Dashboard = () => {
               id,
               opportunity_id,
               status,
+              notes,
+              reminder_date,
+              last_contact_date,
               created_at,
               opportunities (
                 id,
@@ -197,6 +209,9 @@ const Dashboard = () => {
         ]);
 
         setDashboardTutorialComplete(Boolean(profileRes.data?.dashboard_tutorial_complete));
+        setHasCity(
+          !!(profileRes.data?.city?.trim() || profileRes.data?.university?.trim())
+        );
 
         if (savedRes.error) throw savedRes.error;
         if (entriesRes.error) throw entriesRes.error;
@@ -206,12 +221,18 @@ const Dashboard = () => {
           id: string;
           opportunity_id: string;
           status: string | null;
+          notes: string | null;
+          reminder_date: string | null;
+          last_contact_date: string | null;
           created_at: string;
           opportunities: { id: string; name: string; type: string; location: string; website: string; logo_url: string; } | { id: string; name: string; type: string; location: string; website: string; logo_url: string; }[];
         }>).map(row => ({
           id: row.id,
           opportunity_id: row.opportunity_id,
           status: row.status,
+          notes: row.notes ?? null,
+          reminder_date: row.reminder_date ?? null,
+          last_contact_date: row.last_contact_date ?? null,
           opportunities: Array.isArray(row.opportunities) ? row.opportunities[0] ?? null : row.opportunities,
         })) as SavedOpportunityRow[];
         const entries = (entriesRes.data || []) as ExperienceEntryRow[];
@@ -262,6 +283,9 @@ const Dashboard = () => {
             hoursLogged: Math.round((hoursMap[oppId] || 0) * 10) / 10,
             reflectionCount: reflCountMap[oppId] || 0,
             logo_url: opp?.logo_url ?? null,
+            notes: row.notes ?? null,
+            reminder_date: row.reminder_date ?? null,
+            last_contact_date: row.last_contact_date ?? null,
           };
         });
 
@@ -367,12 +391,18 @@ const Dashboard = () => {
   const guestTutorialVisible = isGuest && shouldShowGuestTutorial(getGuestSessionId());
   const accountTutorialVisible = Boolean(user && !isGuest && !dashboardTutorialComplete);
   const activeCount = opportunities.filter(
-    (o) => o.status !== "Completed"
+    (o) => o.status !== "Accepted" && o.status !== "Rejected" && o.status !== "Archived"
   ).length;
   const reflectionCount = opportunities.reduce(
     (s, o) => s + o.reflectionCount,
     0
   );
+
+  const nearestDeadline = useMemo(() => {
+    const withDeadline = opportunities.filter((o) => o.deadline);
+    if (withDeadline.length === 0) return null;
+    return withDeadline.sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())[0];
+  }, [opportunities]);
 
   const nextDeadline = useMemo(() => {
     const upcoming = opportunities
@@ -381,6 +411,11 @@ const Dashboard = () => {
     if (upcoming.length === 0) return "No upcoming deadlines";
     return deadlineLabel(upcoming[0].deadline)!;
   }, [opportunities]);
+
+  const handleChecklistDismiss = () => {
+    localStorage.setItem("clinicalhours_checklist_dismissed", "true");
+    setChecklistDismissed(true);
+  };
 
   const handleStatusChange = async (id: string, status: OpportunityStatus) => {
     if (!requireAuth('update opportunity status')) return;
@@ -396,6 +431,20 @@ const Dashboard = () => {
       // Revert on failure
       toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
       // Re-fetch would be cleaner but a revert by re-querying is simpler
+    }
+  };
+
+  const handleNotesChange = async (id: string, notes: string) => {
+    if (!requireAuth('save notes')) return;
+    setOpportunities((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, notes } : o))
+    );
+    const { error } = await supabase
+      .from("saved_opportunities")
+      .update({ notes })
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to save notes.", variant: "destructive" });
     }
   };
 
@@ -554,6 +603,19 @@ const Dashboard = () => {
                 </div>
               )}
 
+              {/* Activation Checklist */}
+              {!isGuest && user && !checklistDismissed && (
+                <div className="mb-8">
+                  <ActivationChecklist
+                    savedCount={opportunities.length}
+                    totalHours={totalHours}
+                    reflectionCount={reflectionCount + localReflections.length}
+                    hasCity={hasCity}
+                    onDismiss={handleChecklistDismiss}
+                  />
+                </div>
+              )}
+
               {/* Progress Summary */}
               <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard icon={Clock} label="Total Hours Logged" value={Math.round(totalHours * 10) / 10} />
@@ -561,6 +623,12 @@ const Dashboard = () => {
                 <StatCard icon={FileText} label="Experiences Recorded" value={reflectionCount} />
                 <StatCard icon={CalendarClock} label="Next Deadline" value={nextDeadline} />
               </div>
+
+              <ThisWeekRail
+                nearestDeadline={nearestDeadline ? { name: nearestDeadline.name, deadline: nearestDeadline.deadline! } : null}
+                profileIncomplete={!hasCity}
+                savedCount={opportunities.filter((o) => o.status === "Saved").length}
+              />
 
               {/* Applications preview (full list: /my-applications) */}
               <section className="mb-10">
@@ -623,22 +691,44 @@ const Dashboard = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filtered.map((opp) => (
-                      <OpportunityCard
-                        key={opp.id}
-                        opp={opp}
-                        onStatusChange={handleStatusChange}
-                        onRemove={handleRemove}
-                        onLogHours={(o) => { if (requireAuth('log hours')) openDialog(o, "hours"); }}
-                        onAddReflection={(o) => { if (requireAuth('add reflections')) openDialog(o, "reflections"); }}
-                        onCardClick={(o) => {
-                          const isAppFlow = o.status === "Interviewing" || o.status === "Applied" || o.status === "Saved";
-                          openDialog(o, isAppFlow ? "checklist" : "overview");
-                        }}
-                      />
-                    ))}
-                  </div>
+                  (() => {
+                    const active = filtered.filter((o) => o.status !== "Archived");
+                    const archived = filtered.filter((o) => o.status === "Archived");
+                    const cardProps = (opp: Opportunity) => ({
+                      key: opp.id,
+                      opp,
+                      onStatusChange: handleStatusChange,
+                      onRemove: handleRemove,
+                      onNotesChange: handleNotesChange,
+                      onLogHours: (o: Opportunity) => { if (requireAuth('log hours')) openDialog(o, "hours"); },
+                      onAddReflection: (o: Opportunity) => { if (requireAuth('add reflections')) openDialog(o, "reflections"); },
+                      onCardClick: (o: Opportunity) => {
+                        const isAppFlow = o.status === "Applied" || o.status === "Waiting" || o.status === "Interview" || o.status === "Saved" || o.status === "Researching";
+                        openDialog(o, isAppFlow ? "checklist" : "overview");
+                      },
+                    });
+                    return (
+                      <>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {active.map((opp) => (
+                            <OpportunityCard {...cardProps(opp)} />
+                          ))}
+                        </div>
+                        {archived.length > 0 && (
+                          <details className="mt-6">
+                            <summary className="cursor-pointer text-sm text-muted-foreground select-none mb-3">
+                              Archived ({archived.length})
+                            </summary>
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                              {archived.map((opp) => (
+                                <OpportunityCard {...cardProps(opp)} />
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </>
+                    );
+                  })()
                 )}
               </section>
 
