@@ -16,6 +16,7 @@ import {
   List,
   Map,
   MapPin,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +46,9 @@ const Opportunities = () => {
   const [savedLoading, setSavedLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [directApplyIds, setDirectApplyIds] = useState<Set<string>>(new Set());
+  const [locationBannerDismissed, setLocationBannerDismissed] = useState<boolean>(
+    () => sessionStorage.getItem("clinicalhours_location_prompt_dismissed") === "1"
+  );
   const [guestGateOpen, setGuestGateOpen] = useState(false);
   const [verificationGateOpen, setVerificationGateOpen] = useState(false);
   const { user, loading: authLoading, isReady, isGuest } = useAuth();
@@ -141,6 +145,11 @@ const Opportunities = () => {
     }
   }, [user, authLoading, isGuest, navigate]);
 
+  const handleDismissLocationBanner = () => {
+    sessionStorage.setItem("clinicalhours_location_prompt_dismissed", "1");
+    setLocationBannerDismissed(true);
+  };
+
   const handleSortByDistance = () => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -148,8 +157,13 @@ const Opportunities = () => {
         setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
         setLocationDenied(false);
       },
-      () => {
+      (error) => {
         setLocationDenied(true);
+        toast({
+          title: "Location access denied",
+          description: "Enable location in your browser settings, or use the search bar to filter by city name.",
+          variant: "destructive",
+        });
       }
     );
   };
@@ -159,10 +173,22 @@ const Opportunities = () => {
     if (needsVerification) { setVerificationGateOpen(true); return; }
     if (!user) return;
 
+    // Optimistic update — immediately reflect saved state in the UI
+    setSavedOpportunityIds((prev) => new Set(prev).add(opportunityId));
     setSavingIds((prev) => new Set(prev).add(opportunityId));
-    const { error } = await supabase
+
+    let { error } = await supabase
       .from("saved_opportunities")
       .insert({ user_id: user.id, opportunity_id: opportunityId });
+
+    // Silent one-time retry on transient 500s (e.g. PostgREST cold-start)
+    if (error && error.code !== "23505") {
+      await new Promise((r) => setTimeout(r, 600));
+      ({ error } = await supabase
+        .from("saved_opportunities")
+        .insert({ user_id: user.id, opportunity_id: opportunityId }));
+    }
+
     setSavingIds((prev) => {
       const next = new Set(prev);
       next.delete(opportunityId);
@@ -171,14 +197,20 @@ const Opportunities = () => {
 
     if (error) {
       if (error.code === "23505") {
+        // Already saved — optimistic state is correct, just notify
         toast({ title: "Already in tracker", description: "This opportunity is already in your tracker." });
       } else {
+        // Revert optimistic update on genuine failure
+        setSavedOpportunityIds((prev) => {
+          const next = new Set(prev);
+          next.delete(opportunityId);
+          return next;
+        });
         toast({ title: "Error", description: "Failed to add to tracker. Please try again.", variant: "destructive" });
       }
       return;
     }
 
-    setSavedOpportunityIds((prev) => new Set(prev).add(opportunityId));
     trackOpportunitySaved(opportunityId, user.id);
     toast({ title: "Added to tracker!", description: "View it in your Dashboard to track your progress." });
   };
@@ -301,10 +333,11 @@ const Opportunities = () => {
                 size="sm"
                 onClick={handleSortByDistance}
                 className="shrink-0 self-start h-10 gap-1.5"
-                aria-label="Sort by distance"
+                aria-label={userLocation ? "Sorted by distance" : "Sort by distance from your location"}
+                title={userLocation ? "Results sorted nearest first" : "Click to sort by distance from your location"}
               >
                 <MapPin className="h-3.5 w-3.5" />
-                {userLocation ? "Sorted by distance" : "Sort by distance"}
+                {userLocation ? "Sorted by distance" : "Near me"}
               </Button>
               {/* List / Map toggle */}
               <div className="flex rounded-lg border border-border overflow-hidden shrink-0 self-start">
@@ -330,16 +363,56 @@ const Opportunities = () => {
               </div>
             </div>
 
+            {/* ── Location prompt banner ── */}
+            {!userLocation && !locationBannerDismissed && (
+              <div className="flex items-center justify-between gap-3 mb-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center gap-2 min-w-0">
+                  <MapPin className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  {locationDenied ? (
+                    <span className="text-xs text-amber-300">
+                      Location access denied —{" "}
+                      <Link to="/settings" className="underline underline-offset-2 hover:text-amber-200">
+                        set your city in Settings
+                      </Link>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-amber-300">
+                      Get distance-sorted results —{" "}
+                      <button
+                        type="button"
+                        onClick={handleSortByDistance}
+                        className="underline underline-offset-2 hover:text-amber-200"
+                      >
+                        allow location access
+                      </button>{" "}
+                      or{" "}
+                      <Link to="/settings" className="underline underline-offset-2 hover:text-amber-200">
+                        set your city in settings →
+                      </Link>
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDismissLocationBanner}
+                  className="shrink-0 text-amber-400/60 hover:text-amber-300 transition-colors"
+                  aria-label="Dismiss location prompt"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between gap-4">
               {!loading && hasResults && (
                 <p className="text-xs text-muted-foreground">
                   Showing {opportunities.length} of {totalCount} opportunities
-                  {userLocation && " · sorted by distance"}
+                  {userLocation ? " · sorted by distance" : " · sorted A–Z"}
                 </p>
               )}
               {locationDenied && (
                 <p className="text-xs text-muted-foreground">
-                  Location access denied — showing all opportunities.
+                  Location access denied — showing all opportunities sorted A–Z.
                 </p>
               )}
               <div className="hidden">
