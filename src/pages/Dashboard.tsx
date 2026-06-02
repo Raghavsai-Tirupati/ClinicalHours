@@ -39,6 +39,7 @@ import { ThisWeekRail } from "@/components/dashboard/ThisWeekRail";
 import { HoursGoalWidget } from "@/components/dashboard/HoursGoalWidget";
 import { RecommendedStrip } from "@/components/dashboard/RecommendedStrip";
 import { ApplyYearCountdown } from "@/components/dashboard/ApplyYearCountdown";
+import { PaceInsight } from "@/components/dashboard/PaceInsight";
 
 interface SavedOpportunityRow {
   id: string;
@@ -645,6 +646,10 @@ const Dashboard = () => {
                 <StatCard icon={CalendarClock} label="Next Deadline" value={nextDeadline} />
                 <HoursGoalWidget totalHours={Math.round(totalHours * 10) / 10} />
                 <ApplyYearCountdown applyYear={applyYear} />
+                <PaceInsight
+                  totalHours={Math.round(totalHours * 10) / 10}
+                  startedAt={user?.created_at ?? null}
+                />
               </div>
 
               <ThisWeekRail
