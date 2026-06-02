@@ -12,6 +12,7 @@ import PageViewTracker from "./components/PageViewTracker";
 import { StudentOnlyRoute } from "./components/StudentOnlyRoute";
 import { HospitalOnlyRoute } from "./components/HospitalOnlyRoute";
 import { AdminOnlyRoute } from "./components/AdminOnlyRoute";
+import { OnboardingModal } from "@/components/OnboardingModal";
 import { useAppKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { AuthProvider } from "./hooks/useAuth";
 
@@ -122,6 +123,7 @@ function AppContent() {
       <Toaster />
       <Sonner />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <OnboardingModal />
         <KeyboardShortcuts />
         <ScrollToTop />
         <PageViewTracker />
