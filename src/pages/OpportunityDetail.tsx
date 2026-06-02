@@ -57,6 +57,12 @@ interface Opportunity {
   review_count?: number;
 }
 
+function ensureHttps(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `https://${url}`;
+}
+
 const OpportunityDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -231,11 +237,23 @@ const OpportunityDetail = () => {
     }
     if (!user || !opportunity?.id) return;
 
+    // Optimistic update
+    setSaved(true);
     setSaving(true);
-    const { error } = await supabase.from("saved_opportunities").insert({
+
+    let { error } = await supabase.from("saved_opportunities").insert({
       user_id: user.id,
       opportunity_id: opportunity.id,
     });
+
+    // Silent one-time retry on transient 500s
+    if (error && error.code !== "23505") {
+      await new Promise((r) => setTimeout(r, 600));
+      ({ error } = await supabase.from("saved_opportunities").insert({
+        user_id: user.id,
+        opportunity_id: opportunity.id,
+      }));
+    }
 
     setSaving(false);
 
@@ -246,6 +264,8 @@ const OpportunityDetail = () => {
           description: "This opportunity is already in your tracker.",
         });
       } else {
+        // Revert optimistic update
+        setSaved(false);
         toast({
           title: "Error",
           description: "Failed to add to tracker. Please try again.",
@@ -255,7 +275,6 @@ const OpportunityDetail = () => {
       return;
     }
 
-    setSaved(true);
     toast({
       title: "Added to tracker!",
       description: "View it in your Dashboard to track your progress.",
@@ -360,7 +379,7 @@ const OpportunityDetail = () => {
         })}</script>
       </Helmet>
       <Navigation />
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 pt-24 pb-24 md:pb-12 max-w-4xl">
         <Button
           variant="outline"
           onClick={() => navigate("/opportunities")}
@@ -450,7 +469,7 @@ const OpportunityDetail = () => {
               )}
               {opportunity.website && (
                 <Button variant="outline" size="sm" asChild>
-                  <a href={opportunity.website} target="_blank" rel="noopener noreferrer">
+                  <a href={ensureHttps(opportunity.website)} target="_blank" rel="noopener noreferrer">
                     Visit Website
                   </a>
                 </Button>

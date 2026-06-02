@@ -15,9 +15,10 @@ interface ThisWeekRailProps {
   nearestDeadline: { name: string; deadline: string } | null;
   profileIncomplete: boolean;
   savedCount: number;
+  isGuest?: boolean;
 }
 
-export function ThisWeekRail({ nearestDeadline, profileIncomplete, savedCount }: ThisWeekRailProps) {
+export function ThisWeekRail({ nearestDeadline, profileIncomplete, savedCount, isGuest }: ThisWeekRailProps) {
   const items: RailItem[] = [];
 
   if (nearestDeadline) {
@@ -36,9 +37,9 @@ export function ThisWeekRail({ nearestDeadline, profileIncomplete, savedCount }:
   if (profileIncomplete) {
     items.push({
       icon: <UserCircle className="h-4 w-4" />,
-      label: "Complete your profile",
-      sub: "Improves opportunity matching",
-      href: "/profile",
+      label: isGuest ? "Create your account" : "Complete your profile",
+      sub: isGuest ? "Save your progress and track hours" : "Improves opportunity matching",
+      href: isGuest ? "/auth" : "/profile",
       accent: "border-sky-500/30 bg-sky-500/5 text-sky-300",
     });
   }

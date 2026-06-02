@@ -44,6 +44,12 @@ interface HospitalDetailProps {
   getTypeColor: (type: string) => string;
 }
 
+function ensureHttps(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `https://${url}`;
+}
+
 export function HospitalDetail({
   opportunity,
   isPremium,
@@ -203,7 +209,7 @@ export function HospitalDetail({
                 <div className="flex min-w-0 items-center gap-2 text-sm">
                   <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                   <a
-                    href={opportunity.website}
+                    href={ensureHttps(opportunity.website)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="min-w-0 break-all text-primary hover:underline"

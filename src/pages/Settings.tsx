@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalAccount } from "@/hooks/useHospitalAccount";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
@@ -69,6 +69,7 @@ import { getGraduationYears } from "@/lib/data/graduationYears";
 
 const Settings = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading: authLoading, isReady, signOut, isGuest } = useAuth();
   const { isHospital, hospitalAccount, isLoading: hospitalLoading } = useHospitalAccount();
   const { member: hospitalMember, loading: memberLoading } = useHospitalMember();
@@ -182,7 +183,7 @@ const Settings = () => {
     if (!isReady) return;
 
     if (!user || isGuest) {
-      navigate("/auth");
+      navigate(`/auth?redirect=${encodeURIComponent(location.pathname)}`);
     } else {
       loadProfile();
       const savedDraft = loadSavedData();

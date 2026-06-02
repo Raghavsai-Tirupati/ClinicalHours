@@ -481,7 +481,7 @@ const Dashboard = () => {
 
       <Navigation />
 
-      <main className="flex-1 container mx-auto px-4 pt-24 pb-16 relative z-10">
+      <main className="flex-1 container mx-auto px-4 pt-24 pb-24 md:pb-16 relative z-10">
         {/* ─── Hero Banner ────────────────────────────────── */}
         <HeroBanner firstName={firstName} isGuest={isGuest} compact={!!user && !isGuest} />
 
@@ -628,6 +628,7 @@ const Dashboard = () => {
                 nearestDeadline={nearestDeadline ? { name: nearestDeadline.name, deadline: nearestDeadline.deadline! } : null}
                 profileIncomplete={!hasCity}
                 savedCount={opportunities.filter((o) => o.status === "Saved").length}
+                isGuest={isGuest}
               />
 
               {/* Applications preview (full list: /my-applications) */}
