@@ -433,7 +433,10 @@ const Navigation = () => {
       )}
 
       {showBottomTabs && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 border-t border-border/80 backdrop-blur-sm">
+        <nav
+          className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 border-t border-border/80 backdrop-blur-sm"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
           <div className="flex items-center justify-around px-2 py-1.5">
             {bottomTabs.map((tab) => {
               const Icon = tab.icon;

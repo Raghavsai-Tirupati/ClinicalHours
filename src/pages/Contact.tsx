@@ -139,7 +139,7 @@ const Contact = () => {
       </Helmet>
       <Navigation />
 
-      <div className="container mx-auto px-4 pt-28 pb-12">
+      <div className="container mx-auto px-4 pt-28 pb-24 md:pb-12">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">

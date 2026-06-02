@@ -3,8 +3,8 @@ import { Linkedin, Instagram } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-background border-t border-border safe-area-inset-bottom">
-      <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20">
+    <footer className="bg-background border-t border-border">
+      <div className="container mx-auto px-4 sm:px-6 pt-12 pb-24 sm:py-16 md:py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 md:gap-12">
           {/* Brand - Full width on mobile */}
           <div className="col-span-2 md:col-span-1 space-y-4 sm:space-y-6">

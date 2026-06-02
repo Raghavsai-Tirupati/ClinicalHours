@@ -404,7 +404,7 @@ const AMCASGeneratorContent = () => {
 const AMCASGenerator = () => (
   <div className="min-h-screen flex flex-col bg-background">
     <Navigation />
-    <main className="flex-1 container mx-auto px-4 pt-24 pb-16">
+    <main className="flex-1 container mx-auto px-4 pt-24 pb-24 md:pb-16">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground font-heading">AMCAS Activity Writer</h1>
         <p className="text-muted-foreground mt-1">AI-powered writing assistant for your Work & Activities descriptions.</p>

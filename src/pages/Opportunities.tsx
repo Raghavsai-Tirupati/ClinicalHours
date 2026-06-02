@@ -481,7 +481,7 @@ const Opportunities = () => {
         </div>
       ) : (
         /* ── Split Layout ──────────────────────────────────────────── */
-        <div className="flex-1 container mx-auto px-4 pb-8">
+        <div className="flex-1 container mx-auto px-4 pb-24 md:pb-8">
           <div className="flex max-w-6xl mx-auto gap-5 lg:gap-6">
             {/* ── Left: Hospital list ─────────────────────────────── */}
             <div

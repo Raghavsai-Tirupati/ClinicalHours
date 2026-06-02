@@ -14,7 +14,7 @@ function isHospitalAllowedPath(pathname: string): boolean {
  * except when on hospital-allowed paths (e.g. /opportunities/:slug/admin).
  */
 export function StudentOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isGuest, loading: authLoading } = useAuth();
   const { member, loading: memberLoading } = useHospitalMember();
   const location = useLocation();
 
@@ -26,8 +26,8 @@ export function StudentOnlyRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Unauthenticated: redirect to sign-in
-  if (!user) {
+  // Unauthenticated and not a guest: redirect to sign-in
+  if (!user && !isGuest) {
     return <Navigate to={`/auth?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
 

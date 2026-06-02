@@ -32,7 +32,7 @@ function ConfidenceIcon({ confidence }: { confidence: LinkResult["confidence"] }
   return <HelpCircle className="h-3 w-3 text-muted-foreground/60 shrink-0" />;
 }
 
-type Status = "idle" | "loading" | "done" | "error" | "empty";
+type Status = "idle" | "loading" | "done" | "error" | "empty" | "auth-required" | "premium-required";
 
 export function FindApplicationButton({
   opportunityId,
@@ -97,7 +97,13 @@ export function FindApplicationButton({
           ...(websiteHint ? { websiteHint } : {}),
         },
       });
-      if (error) throw error;
+      if (error) {
+        // Supabase wraps edge function HTTP errors in error.context
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (status === 401) { setStatus("auth-required"); return; }
+        if (status === 403) { setStatus("premium-required"); return; }
+        throw error;
+      }
       const result = data as { links: LinkResult[] };
       cache.set(opportunityId, { links: result.links, timestamp: Date.now() });
       setLinks(result.links);
@@ -109,6 +115,53 @@ export function FindApplicationButton({
       setStatus("error");
     }
   };
+
+  // ── Auth / premium gate states (both variants) ───────────────────────────────
+  if (status === "auth-required") {
+    if (compact) {
+      return (
+        <Link
+          to="/auth"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-[11px] font-medium rounded-xl bg-blue-500/10 text-blue-400/70 border border-blue-500/20 hover:bg-blue-500/15 transition-all"
+        >
+          <Lock className="w-3 h-3" />
+          Sign in to search
+        </Link>
+      );
+    }
+    return (
+      <Button variant="outline" size="sm" asChild className="gap-1.5">
+        <Link to="/auth">
+          <Lock className="h-3.5 w-3.5" />
+          Sign in to use this feature
+        </Link>
+      </Button>
+    );
+  }
+
+  if (status === "premium-required") {
+    if (compact) {
+      return (
+        <Link
+          to="/premium/purchase"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-[11px] font-medium rounded-xl bg-amber-500/10 text-amber-400/60 border border-amber-500/15 hover:bg-amber-500/15 transition-all"
+        >
+          <Lock className="w-3 h-3" />
+          Premium required
+        </Link>
+      );
+    }
+    return (
+      <Button variant="outline" size="sm" asChild className="gap-1.5 opacity-70">
+        <Link to="/premium/purchase">
+          <Lock className="h-3.5 w-3.5" />
+          Premium required
+        </Link>
+      </Button>
+    );
+  }
 
   // ── States: compact (map popup) variant ──────────────────────────────────────
   if (compact) {

@@ -366,7 +366,7 @@ export default function MyApplications() {
       </Helmet>
       <Navigation />
 
-      <main className="min-h-screen bg-background pt-24 pb-12">
+      <main className="min-h-screen bg-background pt-24 pb-24 md:pb-12">
         <div className="container mx-auto px-4 max-w-3xl">
           <h1 className="text-2xl font-bold text-foreground mb-2">My Applications</h1>
           <p className="text-muted-foreground text-sm mb-6">

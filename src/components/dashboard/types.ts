@@ -1,6 +1,6 @@
 import type { ApplicationStatus, PositionType } from "@/types/positions";
 
-export type OpportunityStatus = "Saved" | "Applied" | "Interviewing" | "Completed";
+export type OpportunityStatus = "Saved" | "Researching" | "Applied" | "Waiting" | "Interview" | "Accepted" | "Rejected" | "Archived";
 
 export interface Opportunity {
   id: string;           // saved_opportunities.id — used for DB remove/update
@@ -14,6 +14,9 @@ export interface Opportunity {
   hoursLogged: number;
   reflectionCount: number;
   logo_url: string | null;
+  notes?: string | null;
+  reminder_date?: string | null;
+  last_contact_date?: string | null;
 }
 
 export interface Reflection {
@@ -51,9 +54,13 @@ export function deadlineLabel(deadline: string | null): string | null {
 
 export const statusColors: Record<OpportunityStatus, string> = {
   Saved: "bg-zinc-700/60 text-zinc-300",
-  Applied: "bg-blue-900/50 text-blue-300",
-  Interviewing: "bg-amber-900/50 text-amber-300",
-  Completed: "bg-emerald-900/50 text-emerald-300",
+  Researching: "bg-blue-900/50 text-blue-300",
+  Applied: "bg-violet-900/50 text-violet-300",
+  Waiting: "bg-amber-900/50 text-amber-300",
+  Interview: "bg-yellow-900/50 text-yellow-300",
+  Accepted: "bg-emerald-900/50 text-emerald-300",
+  Rejected: "bg-red-900/50 text-red-300",
+  Archived: "bg-zinc-900/40 text-zinc-500",
 };
 
 export const typeColors: Record<string, string> = {
