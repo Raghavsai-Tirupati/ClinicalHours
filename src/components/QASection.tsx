@@ -170,10 +170,12 @@ export function QASection({ opportunityId, opportunityName }: QASectionProps) {
     setLoading(false);
   };
 
-  // Refetch when displayCount changes
+  // Refetch when displayCount changes (load more).
+  // Intentionally excludes `loading` from deps — including it would create an
+  // infinite loop because fetchQuestions toggles loading true→false on every call.
   useEffect(() => {
     let isMounted = true;
-    
+
     if (!loading) {
       const fetch = async () => {
         await fetchQuestions();
@@ -181,12 +183,12 @@ export function QASection({ opportunityId, opportunityName }: QASectionProps) {
       };
       fetch();
     }
-    
+
     return () => {
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayCount, loading, opportunityId]);
+  }, [displayCount, opportunityId]);
 
   const fetchAnswers = async (questionId: string) => {
     const limit = answerDisplayCount[questionId] || INITIAL_ANSWERS;

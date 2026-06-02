@@ -38,6 +38,7 @@ import { ActivationChecklist } from "@/components/dashboard/ActivationChecklist"
 import { ThisWeekRail } from "@/components/dashboard/ThisWeekRail";
 import { HoursGoalWidget } from "@/components/dashboard/HoursGoalWidget";
 import { RecommendedStrip } from "@/components/dashboard/RecommendedStrip";
+import { ApplyYearCountdown } from "@/components/dashboard/ApplyYearCountdown";
 
 interface SavedOpportunityRow {
   id: string;
@@ -100,6 +101,11 @@ const Dashboard = () => {
   const [checklistDismissed, setChecklistDismissed] = useState(
     () => localStorage.getItem("clinicalhours_checklist_dismissed") === "true"
   );
+  const applyYear = useMemo<number | null>(() => {
+    const raw = localStorage.getItem("ch_apply_year");
+    const parsed = raw ? parseInt(raw, 10) : NaN;
+    return Number.isFinite(parsed) && parsed >= 2024 ? parsed : null;
+  }, []);
   const [hasCity, setHasCity] = useState(false);
 
   const recentDashboardApplications = useMemo(() => {
@@ -638,6 +644,7 @@ const Dashboard = () => {
                 <StatCard icon={FileText} label="Experiences Recorded" value={reflectionCount} />
                 <StatCard icon={CalendarClock} label="Next Deadline" value={nextDeadline} />
                 <HoursGoalWidget totalHours={Math.round(totalHours * 10) / 10} />
+                <ApplyYearCountdown applyYear={applyYear} />
               </div>
 
               <ThisWeekRail
