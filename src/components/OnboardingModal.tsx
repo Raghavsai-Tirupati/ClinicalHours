@@ -1,8 +1,8 @@
 // src/components/OnboardingModal.tsx
 import { useState } from "react";
-import { GraduationCap, Target, ChevronRight, X } from "lucide-react";
+import { GraduationCap, Target, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const DONE_KEY = "ch_onboarding_done";
 const YEAR_KEY = "ch_apply_year";
@@ -34,19 +34,13 @@ export function OnboardingModal() {
         className="max-w-sm p-0 overflow-hidden gap-0"
         onInteractOutside={(e) => e.preventDefault()}
       >
+        <DialogTitle className="sr-only">Set up your profile</DialogTitle>
         {/* Header */}
         <div className="bg-primary/10 border-b border-border px-6 py-5">
           <div className="flex items-center justify-between mb-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Step {step} of 2
             </p>
-            <button
-              onClick={dismiss}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Skip setup"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
           <div className="flex gap-1.5 mt-2">
             <div className={`h-1 rounded-full flex-1 transition-colors ${step >= 1 ? "bg-primary" : "bg-border"}`} />
