@@ -32,6 +32,7 @@ import AdminHospitalConsoleTab from '@/components/admin/AdminHospitalConsoleTab'
 import AdminToolsTab from '@/components/admin/AdminToolsTab';
 import AdminChatbot from '@/components/admin/AdminChatbot';
 import AdminPremiumTab from '@/components/admin/AdminPremiumTab';
+import AdminStudentsTab from '@/components/admin/AdminStudentsTab';
 
 // New tabs
 import ControlTowerTab from '@/components/admin/ControlTowerTab';
@@ -90,6 +91,11 @@ export default function AdminDashboard() {
                 )}
               </TabsTrigger>
 
+              <TabsTrigger value="students" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
+                <Users className="h-3.5 w-3.5 shrink-0" />
+                <span>Students</span>
+              </TabsTrigger>
+
               <TabsTrigger value="growth" className="flex shrink-0 items-center gap-1.5 px-3 text-xs sm:text-sm">
                 <TrendingUp className="h-3.5 w-3.5 shrink-0" />
                 <span>Growth</span>
@@ -145,6 +151,13 @@ export default function AdminDashboard() {
             <TabsContent value="control-tower">
               <TabErrorBoundary tabName="Control Tower">
                 <ControlTowerTab onOpenApprovalsChange={setOpenApprovalsCount} />
+              </TabErrorBoundary>
+            </TabsContent>
+
+            {/* Students */}
+            <TabsContent value="students">
+              <TabErrorBoundary tabName="Students">
+                <AdminStudentsTab />
               </TabErrorBoundary>
             </TabsContent>
 
