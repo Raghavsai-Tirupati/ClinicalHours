@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
+import { useEffect, useRef } from "react";
 import { ArrowRight, Lock, Network, ShieldCheck } from "lucide-react";
 import { FadeUp } from "@/components/enterprise/animations/FadeUp";
 import {
@@ -91,13 +92,33 @@ function DrawCheck({ className }: { className?: string }) {
   );
 }
 
+/** Linear interpolation between two values based on a clamped progress. */
+function lerp(input: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+  const t = Math.max(0, Math.min(1, (input - inMin) / (inMax - inMin)));
+  return outMin + t * (outMax - outMin);
+}
+
 const Enterprise = () => {
-  const { scrollY } = useScroll();
-  // Nav crossfades from "transparent over the dark hero" to "white over the
-  // light content below" once the user scrolls past ~400px.
-  const navLightBgOpacity = useTransform(scrollY, [0, 400, 600], [0, 0.4, 1]);
-  const navOverHeroOpacity = useTransform(scrollY, [0, 400, 600], [1, 0.4, 0]);
-  const navOverLightOpacity = useTransform(scrollY, [0, 400, 600], [0, 0.4, 1]);
+  // Replicate useScroll/useTransform with a plain scroll listener to avoid
+  // the motion/react null-dispatcher crash on first mount.
+  const navLightBgRef = useRef<HTMLDivElement>(null);
+  const navOverHeroRef = useRef<HTMLDivElement>(null);
+  const navOverLightRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const y = window.scrollY;
+      const lightBg = lerp(y, 0, 600, 0, 1) * (y > 400 ? 1 : lerp(y, 0, 400, 0, 0.4) / 0.4 * 0.4);
+      const overHero = lerp(y, 0, 600, 1, 0);
+      const overLight = lerp(y, 0, 600, 0, 1);
+      if (navLightBgRef.current) navLightBgRef.current.style.opacity = String(lerp(y, 0, 600, 0, 1));
+      if (navOverHeroRef.current) navOverHeroRef.current.style.opacity = String(overHero);
+      if (navOverLightRef.current) navOverLightRef.current.style.opacity = String(overLight);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
 
   const handleScrollToProblem = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -125,78 +146,52 @@ const Enterprise = () => {
 
       {/* Sticky nav: transparent over the dark hero, white once scrolled into the light content */}
       <header className="fixed top-0 inset-x-0 z-50">
-        <motion.div
+        <div
+          ref={navLightBgRef}
           aria-hidden
           className="absolute inset-0 bg-white/90 backdrop-blur-md"
-          style={{ opacity: navLightBgOpacity }}
+          style={{ opacity: 0 }}
         />
-        <motion.div
+        <div
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-px bg-zinc-200"
-          style={{ opacity: navLightBgOpacity }}
         />
         <div className="relative max-w-7xl mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
           {/* Left: brand wordmark — two stacked copies, one for hero one for light bg */}
           <Link to="/enterprise" className="relative font-mono text-sm tracking-wide">
-            <motion.span
-              style={{ opacity: navOverHeroOpacity }}
+            <span
+              ref={navOverHeroRef}
               className="block"
+              style={{ opacity: 1 }}
             >
               <span className="text-white/70">Clinical</span>
               <span className="text-white">Hours</span>
-            </motion.span>
-            <motion.span
-              style={{ opacity: navOverLightOpacity }}
+            </span>
+            <span
+              ref={navOverLightRef}
               className="absolute inset-0"
+              style={{ opacity: 0 }}
             >
               <span className="text-zinc-500">Clinical</span>
               <span className="text-zinc-900">Hours</span>
-            </motion.span>
+            </span>
           </Link>
           <nav className="flex items-center gap-6">
             <Link
               to="/"
               className="relative hidden sm:inline-block text-[11px] uppercase tracking-[0.2em]"
             >
-              <motion.span
-                style={{ opacity: navOverHeroOpacity }}
-                className="block text-white/60 hover:text-white transition-colors"
-              >
+              <span className="block text-white/60 hover:text-white transition-colors">
                 For students
-              </motion.span>
-              <motion.span
-                style={{ opacity: navOverLightOpacity }}
-                className="absolute inset-0 text-zinc-500 hover:text-zinc-900 transition-colors"
-              >
-                For students
-              </motion.span>
+              </span>
             </Link>
-            {/* CTA button — light variant over hero, dark variant over light bg */}
+            {/* CTA button */}
             <DemoRequestDialog>
             <button
               type="button"
-              className="relative inline-flex items-center text-[11px] uppercase tracking-[0.2em] px-4 py-2 transition-colors duration-150"
+              className="relative inline-flex items-center text-[11px] uppercase tracking-[0.2em] px-4 py-2 transition-colors duration-150 bg-white text-black hover:bg-white/90"
             >
-              <motion.span
-                style={{ opacity: navOverHeroOpacity }}
-                className="absolute inset-0 bg-white"
-              />
-              <motion.span
-                style={{ opacity: navOverLightOpacity }}
-                className="absolute inset-0 bg-zinc-900"
-              />
-              <motion.span
-                style={{ opacity: navOverHeroOpacity }}
-                className="relative text-black"
-              >
-                Request demo
-              </motion.span>
-              <motion.span
-                style={{ opacity: navOverLightOpacity }}
-                className="absolute inset-0 flex items-center justify-center text-white"
-              >
-                Request demo
-              </motion.span>
+              Request demo
             </button>
             </DemoRequestDialog>
           </nav>

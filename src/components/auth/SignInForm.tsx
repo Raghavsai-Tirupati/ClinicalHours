@@ -17,6 +17,7 @@ interface SignInFormProps {
   googleLoading: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onForgotPassword: () => void;
+  authError?: string;
 }
 
 const SignInForm = ({
@@ -32,6 +33,7 @@ const SignInForm = ({
   googleLoading,
   onSubmit,
   onForgotPassword,
+  authError,
 }: SignInFormProps) => {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -97,6 +99,11 @@ const SignInForm = ({
       <Button type="submit" className="w-full h-11 text-base" disabled={loading || googleLoading}>
         {loading ? "Signing in..." : "Sign In"}
       </Button>
+      {authError && (
+        <p className="mt-2 text-sm text-destructive font-medium" role="alert">
+          {authError}
+        </p>
+      )}
     </form>
   );
 };

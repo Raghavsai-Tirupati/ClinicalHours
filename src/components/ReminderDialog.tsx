@@ -165,10 +165,22 @@ export function ReminderDialog({
     return [`${hour}:00`, `${hour}:30`];
   }).flat();
 
+  const handleOpenChange = (next: boolean) => {
+    if (next && (!user || isGuest)) {
+      toast({
+        title: "Sign up to set reminders",
+        description: "Create a free account to get email reminders for opportunities.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setOpen(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => handleOpenChange(true)}>
           <Bell className="h-4 w-4 mr-2" />
           Remind Me
         </Button>

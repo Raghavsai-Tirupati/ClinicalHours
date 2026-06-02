@@ -79,6 +79,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(false);
   const [authRedirecting, setAuthRedirecting] = useState(false);
+  const [authError, setAuthError] = useState("");
   const isSubmittingRef = useRef(false);
   const authInitRef = useRef(false);
 
@@ -512,6 +513,7 @@ const Auth = () => {
       return;
     }
 
+    setAuthError("");
     isSubmittingRef.current = true;
     setLoading(true);
 
@@ -553,19 +555,19 @@ const Auth = () => {
       }
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
+        setAuthError(error.errors[0].message);
       } else {
         console.error("Sign in error:", error);
         const errorMsg = error instanceof Error ? error.message.toLowerCase() : "";
 
         if (errorMsg.includes('invalid login credentials') || errorMsg.includes('invalid_credentials')) {
-          toast.error("Incorrect email or password. Try again or reset your password.");
+          setAuthError("Incorrect email or password. Try again or reset your password.");
         } else if (errorMsg.includes('rate') || errorMsg.includes('too many')) {
-          toast.error("Too many login attempts. Please wait a moment and try again.");
+          setAuthError("Too many login attempts. Please wait a moment and try again.");
         } else if (errorMsg.includes('email not confirmed')) {
-          toast.error("Please verify your email before signing in. Check your inbox for the verification link.");
+          setAuthError("Please verify your email before signing in. Check your inbox for the verification link.");
         } else {
-          toast.error("Something went wrong signing in. Please try again.");
+          setAuthError("Something went wrong signing in. Please try again.");
         }
       }
     } finally {
@@ -814,6 +816,7 @@ const Auth = () => {
               googleLoading={googleLoading}
               onSubmit={handleSignIn}
               onForgotPassword={() => setShowForgotPassword(true)}
+              authError={authError}
             />
           </TabsContent>
 

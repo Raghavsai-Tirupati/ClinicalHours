@@ -4,7 +4,6 @@ import { Helmet } from "react-helmet-async";
 import { MapPin, Building2, Heart } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import AnimatedCounter from "@/components/AnimatedCounter";
 import { useInView } from "@/hooks/useInView";
 import { useAuth } from "@/hooks/useAuth";
 import HeroVideoCarousel from "@/components/HeroVideoCarousel";
@@ -51,9 +50,9 @@ const Home = () => {
   const { ref: ctaRef, isInView: ctaInView } = useInView({ threshold: 0.2 });
 
   const stats = [
-      { value: opportunityCount, suffix: "+", label: "Opportunities", icon: Building2 },
-      { value: 3700, suffix: "+", label: "Cities", icon: MapPin },
-    { value: 100, suffix: "%", label: "Free", icon: Heart },
+    { display: `${opportunityCount > 0 ? opportunityCount.toLocaleString() : "9,500"}+`, label: "Opportunities", icon: Building2 },
+    { display: "3,700+", label: "Cities", icon: MapPin },
+    { display: "100%", label: "Free", icon: Heart },
   ];
 
   const handleHeroVideoChange = (index: number) => {
@@ -174,15 +173,7 @@ const Home = () => {
                 >
                   <div className="relative inline-block mb-2 sm:mb-3">
                     <div className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl text-white relative z-10 transition-transform duration-300 font-light">
-                      {statsInView ? (
-                        <AnimatedCounter 
-                          end={stat.value} 
-                          suffix={stat.suffix}
-                          duration={2000}
-                        />
-                      ) : (
-                        `0${stat.suffix}`
-                      )}
+                      {stat.display}
                     </div>
                     <div className="absolute inset-0 blur-xl opacity-0 group-hover:opacity-30 bg-white transition-opacity duration-300"></div>
                   </div>
