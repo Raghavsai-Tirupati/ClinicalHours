@@ -37,6 +37,7 @@ import { ReflectionBlock } from "@/components/dashboard/ReflectionBlock";
 import { ActivationChecklist } from "@/components/dashboard/ActivationChecklist";
 import { ThisWeekRail } from "@/components/dashboard/ThisWeekRail";
 import { HoursGoalWidget } from "@/components/dashboard/HoursGoalWidget";
+import { RecommendedStrip } from "@/components/dashboard/RecommendedStrip";
 
 interface SavedOpportunityRow {
   id: string;
@@ -111,6 +112,11 @@ const Dashboard = () => {
   const bcsDashboardApplications = useMemo(
     () => dashboardApplications.filter((app) => isBcsHospitalName(app.hospital_name)),
     [dashboardApplications]
+  );
+
+  const savedOppIds = useMemo(
+    () => new Set(opportunities.map((o) => o.opportunityId)),
+    [opportunities]
   );
 
   // Dialog state
@@ -418,6 +424,14 @@ const Dashboard = () => {
     setChecklistDismissed(true);
   };
 
+  const handleRecommendedSave = async (opportunityId: string) => {
+    if (!user || isGuest) return;
+    await supabase
+      .from("saved_opportunities")
+      .insert({ user_id: user.id, opportunity_id: opportunityId });
+    setDashboardRefreshTick((t) => t + 1);
+  };
+
   const handleStatusChange = async (id: string, status: OpportunityStatus) => {
     if (!requireAuth('update opportunity status')) return;
     // Optimistic update
@@ -631,6 +645,11 @@ const Dashboard = () => {
                 profileIncomplete={!hasCity}
                 savedCount={opportunities.filter((o) => o.status === "Saved").length}
                 isGuest={isGuest}
+              />
+
+              <RecommendedStrip
+                savedOpportunityIds={savedOppIds}
+                onSave={handleRecommendedSave}
               />
 
               {/* Applications preview (full list: /my-applications) */}
