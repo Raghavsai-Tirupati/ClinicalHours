@@ -36,6 +36,7 @@ import { OpportunityCard } from "@/components/dashboard/OpportunityCard";
 import { ReflectionBlock } from "@/components/dashboard/ReflectionBlock";
 import { ActivationChecklist } from "@/components/dashboard/ActivationChecklist";
 import { ThisWeekRail } from "@/components/dashboard/ThisWeekRail";
+import { HoursGoalWidget } from "@/components/dashboard/HoursGoalWidget";
 
 interface SavedOpportunityRow {
   id: string;
@@ -622,6 +623,7 @@ const Dashboard = () => {
                 <StatCard icon={Briefcase} label="Active Opportunities" value={activeCount} />
                 <StatCard icon={FileText} label="Experiences Recorded" value={reflectionCount} />
                 <StatCard icon={CalendarClock} label="Next Deadline" value={nextDeadline} />
+                <HoursGoalWidget totalHours={Math.round(totalHours * 10) / 10} />
               </div>
 
               <ThisWeekRail
