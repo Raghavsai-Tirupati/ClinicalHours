@@ -32,7 +32,15 @@ export function PaceInsight({ totalHours, startedAt }: PaceInsightProps) {
   if (!applyYear || applyYear === 0) return null;
 
   const weeksLeft = weeksUntilJune(applyYear);
-  if (weeksLeft <= 0) return null;
+  if (weeksLeft <= 0) {
+    return (
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-5 py-4 space-y-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pace to Goal</p>
+        <p className="text-sm font-semibold text-emerald-400">🎓 You're in application season!</p>
+        <p className="text-xs text-muted-foreground">AMCAS opens in May–June. Make sure your hours are documented.</p>
+      </div>
+    );
+  }
 
   const hoursNeeded = Math.max(0, goal - totalHours);
   const requiredPace = hoursNeeded / weeksLeft;
