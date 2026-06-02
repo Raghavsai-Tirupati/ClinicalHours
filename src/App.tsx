@@ -14,8 +14,6 @@ import { HospitalOnlyRoute } from "./components/HospitalOnlyRoute";
 import { AdminOnlyRoute } from "./components/AdminOnlyRoute";
 import { useAppKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { AuthProvider } from "./hooks/useAuth";
-import { OnboardingModal } from "@/components/OnboardingModal";
-
 // Retry wrapper for lazy imports — handles chunk-loading failures after deploys
 function lazyRetry<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
