@@ -23,10 +23,10 @@ export interface Opportunity {
   review_count?: number;
   distance?: number;
   last_verified_at?: string | null;
-  verification_source?: 'clinic-confirmed' | 'student-confirmed' | 'web-confirmed' | 'unverified' | null;
-  application_method?: 'portal' | 'email' | 'phone' | 'form' | null;
-  seasonality?: 'year-round' | 'summer-only' | 'window-closed' | null;
-  link_status?: 'working' | 'retry-needed' | null;
+  verification_source?: string | null;
+  application_method?: 'internal' | 'external' | 'email' | 'phone' | 'in_person' | 'unknown' | null;
+  seasonality?: string | null;
+  link_status?: 'unknown' | 'active' | 'broken' | 'redirected';
 }
 
 export interface SavedOpportunity {
@@ -166,10 +166,10 @@ export interface OpportunityRow {
   avg_rating?: number | null;
   review_count?: number | null;
   last_verified_at?: string | null;
-  verification_source?: 'clinic-confirmed' | 'student-confirmed' | 'web-confirmed' | 'unverified' | null;
-  application_method?: 'portal' | 'email' | 'phone' | 'form' | null;
-  seasonality?: 'year-round' | 'summer-only' | 'window-closed' | null;
-  link_status?: 'working' | 'retry-needed' | null;
+  verification_source?: string | null;
+  application_method?: 'internal' | 'external' | 'email' | 'phone' | 'in_person' | 'unknown' | null;
+  seasonality?: string | null;
+  link_status?: 'unknown' | 'active' | 'broken' | 'redirected';
 }
 
 // Saved opportunity with nested opportunity data (from database join)

@@ -10,18 +10,13 @@ type TrustChipsProps = {
   className?: string;
 };
 
-const sourceLabel: Record<string, string> = {
-  "clinic-confirmed":  "Clinic verified",
-  "student-confirmed": "Student verified",
-  "web-confirmed":     "Web verified",
-  "unverified":        "Unverified",
-};
-
 const methodLabel: Record<string, string> = {
-  portal: "Apply via portal",
-  email:  "Apply via email",
-  phone:  "Apply by phone",
-  form:   "Apply via form",
+  internal:  "Apply on-site",
+  external:  "Apply via portal",
+  email:     "Apply via email",
+  phone:     "Apply by phone",
+  in_person: "Apply in person",
+  unknown:   "Application method unknown",
 };
 
 const seasonLabel: Record<string, { text: string; cls: string }> = {
@@ -33,11 +28,11 @@ const seasonLabel: Record<string, { text: string; cls: string }> = {
 export function TrustChips({ opportunity, className }: TrustChipsProps) {
   const chips: React.ReactNode[] = [];
 
-  if (opportunity.verification_source && opportunity.verification_source !== "unverified") {
+  if (opportunity.verification_source) {
     chips.push(
       <span key="source" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
         <ShieldCheck className="h-3 w-3" />
-        {sourceLabel[opportunity.verification_source]}
+        {opportunity.verification_source}
       </span>
     );
   }
@@ -53,7 +48,7 @@ export function TrustChips({ opportunity, className }: TrustChipsProps) {
     );
   }
 
-  if (opportunity.application_method) {
+  if (opportunity.application_method && opportunity.application_method !== 'unknown') {
     chips.push(
       <span key="method" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-zinc-800 text-zinc-400 border-zinc-700">
         <Mail className="h-3 w-3" />
@@ -64,19 +59,36 @@ export function TrustChips({ opportunity, className }: TrustChipsProps) {
 
   if (opportunity.seasonality) {
     const s = seasonLabel[opportunity.seasonality];
-    chips.push(
-      <span key="season" className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border", s.cls)}>
-        <CalendarClock className="h-3 w-3" />
-        {s.text}
-      </span>
-    );
+    if (s) {
+      chips.push(
+        <span key="season" className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border", s.cls)}>
+          <CalendarClock className="h-3 w-3" />
+          {s.text}
+        </span>
+      );
+    } else {
+      chips.push(
+        <span key="season" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-zinc-800 text-zinc-400 border-zinc-700">
+          <CalendarClock className="h-3 w-3" />
+          {opportunity.seasonality}
+        </span>
+      );
+    }
   }
 
-  if (opportunity.link_status === "retry-needed") {
+  if (opportunity.link_status === "broken") {
     chips.push(
       <span key="link" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-red-500/10 text-red-400 border-red-500/30">
         <LinkIcon className="h-3 w-3" />
-        Link needs retry
+        Link broken
+      </span>
+    );
+  }
+  if (opportunity.link_status === "redirected") {
+    chips.push(
+      <span key="link" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
+        <LinkIcon className="h-3 w-3" />
+        Link redirected
       </span>
     );
   }
