@@ -34,7 +34,7 @@ function setCache(count: number) {
  * and a sensible fallback while loading.
  */
 export function useOpportunityCount(): number {
-  const [count, setCount] = useState<number>(() => getCached() ?? 0);
+  const [count, setCount] = useState<number>(() => getCached() ?? 9500);
 
   useEffect(() => {
     const cached = getCached();
@@ -51,6 +51,7 @@ export function useOpportunityCount(): number {
           setCount(total);
           setCache(total);
         }
+        // If fetch fails or returns 0, keep the fallback value already set in state
       });
   }, []);
 

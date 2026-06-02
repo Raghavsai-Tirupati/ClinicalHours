@@ -22,6 +22,7 @@ import { Bell, CalendarPlus } from "lucide-react";
 import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { downloadIcsFile, createOpportunityReminder } from "@/lib/calendar";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ReminderDialogProps {
   opportunityId: string;
@@ -45,6 +46,7 @@ export function ReminderDialog({
   const [time, setTime] = useState("09:00");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { user, isGuest } = useAuth();
 
   // Get user's timezone
   const getUserTimezone = () => {
@@ -75,6 +77,15 @@ export function ReminderDialog({
   const timezoneAbbr = getTimezoneAbbr();
 
   const handleSetReminder = async () => {
+    if (!user || isGuest) {
+      toast({
+        title: "Sign up to set reminders",
+        description: "Create a free account to get email reminders for opportunities.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!date) {
       toast({
         title: "Please select a date",
