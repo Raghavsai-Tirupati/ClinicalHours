@@ -120,7 +120,7 @@ const Auth = () => {
   const handleGuestMode = () => {
     trackEvent("page_view", { action: "guest_mode_entered" });
     enterGuestMode();
-    navigate("/dashboard");
+    navigate(redirectTo || "/opportunities");
   };
 
   // Check hospital account status and redirect accordingly.

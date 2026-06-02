@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * SCENES CONFIGURATION
@@ -64,6 +65,8 @@ const scenes: Scene[] = [
 const AUTO_ROTATE_INTERVAL = 7000; // 7 seconds per scene
 
 const FeatureShowcase = () => {
+  const { user, isGuest } = useAuth();
+  const isLoggedIn = !!(user && !isGuest);
   const [activeIndex, setActiveIndex] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -166,11 +169,11 @@ const FeatureShowcase = () => {
               {/* CTA Button */}
               <div className="pt-4">
                 <Link
-                  to={activeScene.ctaHref}
+                  to={activeScene.id === "profile" && !isLoggedIn ? "/auth" : activeScene.ctaHref}
                   className={`group inline-flex items-center gap-3 text-sm uppercase tracking-widest px-8 py-4 bg-white text-black hover:bg-white/90 ${transitionClass}`}
                   style={{ fontWeight: 500 }}
                 >
-                  <span>{activeScene.ctaText}</span>
+                  <span>{activeScene.id === "profile" && !isLoggedIn ? "Get Started Free" : activeScene.ctaText}</span>
                   <svg 
                     className={`w-4 h-4 ${prefersReducedMotion ? "" : "group-hover:translate-x-1 transition-transform"}`}
                     fill="none" 
