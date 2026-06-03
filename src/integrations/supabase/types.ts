@@ -1226,35 +1226,44 @@ export type Database = {
       }
       experience_entries: {
         Row: {
+          activity_type: string | null
           amcas_description: string | null
           created_at: string
+          custom_organization_name: string | null
           entry_date: string
           hours: number | null
           id: string
           moment: string | null
-          opportunity_id: string
+          opportunity_id: string | null
+          supervisor_name: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          activity_type?: string | null
           amcas_description?: string | null
           created_at?: string
+          custom_organization_name?: string | null
           entry_date?: string
           hours?: number | null
           id?: string
           moment?: string | null
-          opportunity_id: string
+          opportunity_id?: string | null
+          supervisor_name?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          activity_type?: string | null
           amcas_description?: string | null
           created_at?: string
+          custom_organization_name?: string | null
           entry_date?: string
           hours?: number | null
           id?: string
           moment?: string | null
-          opportunity_id?: string
+          opportunity_id?: string | null
+          supervisor_name?: string | null
           updated_at?: string
           user_id?: string
         }
