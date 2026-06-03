@@ -115,8 +115,11 @@ export function OpportunityCard({
                 </a>
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem className="flex items-center gap-2">
-              <Pencil className="h-4 w-4" /> Edit
+            <DropdownMenuItem
+              className="flex items-center gap-2"
+              onClick={(e) => { e.stopPropagation(); onCardClick(opp); }}
+            >
+              <Pencil className="h-4 w-4" /> Edit / View Details
             </DropdownMenuItem>
             <DropdownMenuItem
               className="flex items-center gap-2 text-destructive focus:text-destructive"
@@ -200,7 +203,7 @@ export function OpportunityCard({
         <Button
           variant="outline"
           size="sm"
-          className="h-8 text-xs"
+          className="h-9 text-xs"
           onClick={(e) => { e.stopPropagation(); onLogHours(opp); }}
         >
           Log Hours
@@ -208,7 +211,7 @@ export function OpportunityCard({
         <Button
           variant="outline"
           size="sm"
-          className="h-8 text-xs"
+          className="h-9 text-xs"
           onClick={(e) => { e.stopPropagation(); onAddReflection(opp); }}
         >
           Add Reflection
@@ -220,7 +223,7 @@ export function OpportunityCard({
               onStatusChange(opp.id, val as OpportunityStatus)
             }
           >
-            <SelectTrigger className="h-8 w-[140px] text-xs">
+            <SelectTrigger className="h-9 w-[140px] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

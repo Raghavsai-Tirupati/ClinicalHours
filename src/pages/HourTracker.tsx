@@ -35,6 +35,7 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
+  Download,
 } from "lucide-react";
 import { ACTIVITY_TYPE_LABELS, type ActivityType } from "@/lib/premium";
 import { localInsert, localSelect, localUpdate, TABLES } from "@/lib/localStore";
@@ -172,12 +173,20 @@ function LogForm({ onSubmit, onClose, canReflect, trackedOpportunities = [], sel
         <Label>Notes (optional)</Label>
         <Textarea className="mt-1.5" placeholder="Brief notes about this session..." rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
-      {canReflect && (
+      {canReflect ? (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
           <Switch checked={addReflection} onCheckedChange={setAddReflection} />
           <div>
             <p className="text-sm font-medium text-foreground">Add a reflection?</p>
             <p className="text-xs text-muted-foreground">Capture what you learned while it's fresh (2-3 min)</p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 opacity-70">
+          <Switch checked={false} disabled />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">Add a reflection <span className="text-amber-400 text-xs font-normal">(Premium)</span></p>
+            <p className="text-xs text-muted-foreground">Used to generate your AMCAS "Most Meaningful" descriptions. <a href="/premium" className="text-amber-400 hover:underline">Unlock →</a></p>
           </div>
         </div>
       )}
@@ -255,6 +264,9 @@ const HourTrackerContent = () => {
           entry_date,
           hours,
           moment,
+          custom_organization_name,
+          activity_type,
+          supervisor_name,
           opportunities:opportunity_id (name)
         `)
         .eq("user_id", user.id)
@@ -271,7 +283,10 @@ const HourTrackerContent = () => {
       }
 
       const supabaseLogs: EnrichedLog[] = (data || []).map((row) => {
-        const oppName = (row.opportunities as { name?: string } | null)?.name || "Tracked Opportunity";
+        const rowAny = row as Record<string, unknown>;
+        const oppName = (row.opportunities as { name?: string } | null)?.name
+          || (rowAny.custom_organization_name as string | null)
+          || "Unknown Organization";
         const reflectionText = row.moment || "";
         const reflection: Reflection | null = reflectionText
           ? {
@@ -294,10 +309,10 @@ const HourTrackerContent = () => {
           user_id: user.id,
           organization_id: row.opportunity_id,
           custom_organization_name: oppName,
-          activity_type: "shadowing",
+          activity_type: ((rowAny.activity_type as string) || "clinical_volunteering") as ActivityType,
           session_date: row.entry_date,
           hours: Number(row.hours) || 0,
-          supervisor_name: null,
+          supervisor_name: (rowAny.supervisor_name as string | null) || null,
           supervisor_title: null,
           department: null,
           specialty_area: null,
@@ -363,20 +378,14 @@ const HourTrackerContent = () => {
 
   const handleLogSubmit = async (logData: Partial<ActivityLog>, addReflection: boolean) => {
     if (user) {
-      if (!selectedOpportunityId) {
-        toast({
-          title: "Select a tracked opportunity",
-          description: "Choose where this journal entry should be tracked.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const { data, error } = await supabase
         .from("experience_entries")
         .insert({
           user_id: user.id,
-          opportunity_id: selectedOpportunityId,
+          opportunity_id: selectedOpportunityId || null,
+          custom_organization_name: !selectedOpportunityId ? (logData.custom_organization_name || null) : null,
+          activity_type: logData.activity_type || "clinical_volunteering",
+          supervisor_name: logData.supervisor_name || null,
           entry_date: logData.session_date || new Date().toISOString().split("T")[0],
           hours: logData.hours || 0,
           moment: logData.notes || null,
@@ -470,6 +479,73 @@ const HourTrackerContent = () => {
     void run();
   };
 
+  const handleExportAMCAS = () => {
+    if (logs.length === 0) return;
+
+    const lines: string[] = [
+      "AMCAS WORK & ACTIVITIES EXPORT",
+      `Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
+      `Total Hours: ${Math.round(totalHours * 10) / 10}`,
+      `Total Sessions: ${logs.length}`,
+      "",
+      "─────────────────────────────────────────────────────",
+    ];
+
+    const byOrg = new Map<string, EnrichedLog[]>();
+    logs.forEach((l) => {
+      const key = l.custom_organization_name || "Unknown Organization";
+      if (!byOrg.has(key)) byOrg.set(key, []);
+      byOrg.get(key)!.push(l);
+    });
+
+    let activityNum = 1;
+    byOrg.forEach((entries, orgName) => {
+      const orgHours = entries.reduce((s, e) => s + e.hours, 0);
+      const dates = entries.map((e) => e.session_date).sort();
+      const dateRange = dates.length > 1
+        ? `${new Date(dates[0] + "T00:00:00").toLocaleDateString("en-US", { month: "short", year: "numeric" })} – ${new Date(dates[dates.length - 1] + "T00:00:00").toLocaleDateString("en-US", { month: "short", year: "numeric" })}`
+        : new Date(dates[0] + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+      lines.push("");
+      lines.push(`ACTIVITY ${activityNum}: ${orgName.toUpperCase()}`);
+      lines.push(`Hours: ${Math.round(orgHours * 10) / 10}`);
+      lines.push(`Date Range: ${dateRange}`);
+      lines.push(`Sessions: ${entries.length}`);
+
+      const supervisors = [...new Set(entries.map((e) => e.supervisor_name).filter(Boolean))];
+      if (supervisors.length > 0) {
+        lines.push(`Supervisor(s): ${supervisors.join(", ")}`);
+      }
+
+      const reflections = entries.filter((e) => e.reflection?.what_happened || e.notes);
+      if (reflections.length > 0) {
+        lines.push("");
+        lines.push("Session Notes & Reflections:");
+        reflections.slice(0, 5).forEach((e) => {
+          const date = new Date(e.session_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+          lines.push(`  • ${date} (${e.hours}h)`);
+          const text = e.reflection?.what_happened || e.notes || "";
+          if (text) lines.push(`    ${text.slice(0, 200)}`);
+        });
+      }
+
+      lines.push("─────────────────────────────────────────────────────");
+      activityNum++;
+    });
+
+    lines.push("");
+    lines.push("NOTE: Review AMCAS Work & Activities for exact format requirements.");
+    lines.push("clinicalhours.org — Free clinical hours tracker for pre-med students");
+
+    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `amcas-activities-${new Date().toISOString().split("T")[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const summaries = useMemo<ActivitySummary[]>(() => {
     const map = new Map<ActivityType, { hours: number; sessions: number; orgs: Set<string> }>();
     logs.forEach((l) => {
@@ -548,6 +624,11 @@ const HourTrackerContent = () => {
               ))}
             </SelectContent>
           </Select>
+          {logs.length > 0 && (
+            <Button size="sm" variant="outline" className="h-9 gap-1.5" onClick={handleExportAMCAS}>
+              <Download className="h-4 w-4" /> Export for AMCAS
+            </Button>
+          )}
           <Button size="sm" className="h-9 gap-1.5" onClick={() => setShowLogDialog(true)}>
             <Plus className="h-4 w-4" /> Log Hours
           </Button>
@@ -555,15 +636,32 @@ const HourTrackerContent = () => {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border py-16 text-center">
-          <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground mb-4">
-            {logs.length === 0 ? "No hours logged yet. Start tracking!" : "No logs match your filters."}
-          </p>
-          {logs.length === 0 && (
-            <Button onClick={() => setShowLogDialog(true)} className="gap-1.5">
-              <Plus className="h-4 w-4" /> Log Your First Hours
-            </Button>
+        <div className="rounded-lg border border-dashed border-border py-12 text-center px-6">
+          {logs.length === 0 ? (
+            <>
+              <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-base font-medium text-foreground mb-1">Start your clinical hours log</p>
+              <p className="text-sm text-muted-foreground mb-2 max-w-md mx-auto">
+                Most competitive medical school applicants document <strong className="text-foreground">100–200+ clinical hours</strong>. Log your first session now — it takes 30 seconds.
+              </p>
+              <div className="mb-6 max-w-xs mx-auto">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span>0 hours logged</span>
+                  <span>150h goal</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-border">
+                  <div className="h-full w-0 rounded-full bg-primary" />
+                </div>
+              </div>
+              <Button onClick={() => setShowLogDialog(true)} className="gap-1.5">
+                <Plus className="h-4 w-4" /> Log Your First Hours
+              </Button>
+            </>
+          ) : (
+            <>
+              <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No logs match your filters.</p>
+            </>
           )}
         </div>
       ) : (

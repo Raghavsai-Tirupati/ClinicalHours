@@ -27,6 +27,8 @@ import {
   Loader2,
   Building2,
   Sparkles,
+  X,
+  Download,
 } from "lucide-react";
 import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from "@/types/positions";
 import type { ApplicationStatus, PositionType } from "@/types/positions";
@@ -101,6 +103,9 @@ const Dashboard = () => {
   const [dashboardRefreshTick, setDashboardRefreshTick] = useState(0);
   const [checklistDismissed, setChecklistDismissed] = useState(
     () => localStorage.getItem("clinicalhours_checklist_dismissed") === "true"
+  );
+  const [bcsBannerDismissed, setBcsBannerDismissed] = useState(
+    () => localStorage.getItem("clinicalhours_bcs_banner_dismissed") === "true"
   );
   const applyYear = useMemo<number | null>(() => {
     const raw = localStorage.getItem("ch_apply_year");
@@ -431,6 +436,13 @@ const Dashboard = () => {
     setChecklistDismissed(true);
   };
 
+  const handleBcsBannerDismiss = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    localStorage.setItem("clinicalhours_bcs_banner_dismissed", "true");
+    setBcsBannerDismissed(true);
+  };
+
   const handleRecommendedSave = async (opportunityId: string) => {
     if (!user || isGuest) return;
     await supabase
@@ -505,7 +517,13 @@ const Dashboard = () => {
 
       <main className="flex-1 container mx-auto px-4 pt-24 pb-24 md:pb-16 relative z-10">
         {/* ─── Hero Banner ────────────────────────────────── */}
-        <HeroBanner firstName={firstName} isGuest={isGuest} compact={!!user && !isGuest} />
+        <HeroBanner
+          firstName={firstName}
+          isGuest={isGuest}
+          compact={!!user && !isGuest}
+          totalHours={Math.round(totalHours * 10) / 10}
+          savedCount={opportunities.length}
+        />
 
         {/* ─── Guest Banner ────────────────────────────────── */}
         {isGuest && (
@@ -545,26 +563,35 @@ const Dashboard = () => {
         )}
 
         {/* ─── Featured Opportunity ────────────────────────── */}
-        <div className="mt-6">
-          <Link
-            to="/opportunities/bcs-free-health-clinic"
-            className="group flex items-center justify-between gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] backdrop-blur-sm px-5 py-4 hover:bg-emerald-500/[0.1] transition-colors"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
-                <Building2 className="h-5 w-5 text-emerald-400" aria-hidden />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-foreground">BCS Free Health Clinic</p>
-                  <Badge className="text-[10px] py-0 h-4 bg-emerald-500/15 text-emerald-400 border-emerald-500/30">Featured</Badge>
+        {!bcsBannerDismissed && (
+          <div className="mt-6 relative">
+            <Link
+              to="/opportunities/bcs-free-health-clinic"
+              className="group flex items-center justify-between gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] backdrop-blur-sm px-5 py-4 pr-10 hover:bg-emerald-500/[0.1] transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+                  <Building2 className="h-5 w-5 text-emerald-400" aria-hidden />
                 </div>
-                <p className="text-xs text-muted-foreground">College Station, TX · Free community health clinic · Now accepting volunteers</p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-foreground">BCS Free Health Clinic</p>
+                    <Badge className="text-[10px] py-0 h-4 bg-emerald-500/15 text-emerald-400 border-emerald-500/30">Apply on ClinicalHours</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">College Station, TX · Community clinic · Direct apply — no external website needed</p>
+                </div>
               </div>
-            </div>
-            <ArrowRight className="h-4 w-4 text-emerald-400 shrink-0 group-hover:translate-x-0.5 transition-transform" aria-hidden />
-          </Link>
-        </div>
+              <ArrowRight className="h-4 w-4 text-emerald-400 shrink-0 group-hover:translate-x-0.5 transition-transform" aria-hidden />
+            </Link>
+            <button
+              onClick={handleBcsBannerDismiss}
+              className="absolute top-3 right-3 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+              aria-label="Dismiss featured opportunity"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* ─── Dashboard content ─────────────────────────── */}
         <div className="mt-8">
@@ -615,13 +642,32 @@ const Dashboard = () => {
             <>
               {/* Onboarding card — shown when no opportunities are tracked yet */}
               {!isGuest && user && opportunities.length === 0 && (
-                <div className="mb-8 rounded-xl border border-primary/20 bg-primary/5 px-6 py-8 text-center">
-                  <p className="text-base font-medium text-foreground mb-3">
-                    Save your first opportunity to start tracking your progress.
-                  </p>
-                  <Button asChild size="sm">
-                    <Link to="/opportunities">Browse Opportunities</Link>
-                  </Button>
+                <div className="mb-8 rounded-xl border border-primary/20 bg-primary/5 px-6 py-8">
+                  <div className="max-w-lg mx-auto text-center">
+                    <p className="text-base font-semibold text-foreground mb-2">
+                      Your clinical hours tracker starts here
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-5">
+                      Find a clinical volunteer position near you, save it to your tracker, and start logging hours. Every session builds toward your AMCAS Work &amp; Activities section.
+                    </p>
+                    <div className="grid grid-cols-3 gap-4 mb-6 text-center">
+                      <div className="rounded-lg border border-border bg-card/50 px-3 py-3">
+                        <p className="text-lg font-bold text-foreground">100+</p>
+                        <p className="text-xs text-muted-foreground">hours expected for competitive applicants</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-card/50 px-3 py-3">
+                        <p className="text-lg font-bold text-foreground">9,500+</p>
+                        <p className="text-xs text-muted-foreground">opportunities in our database</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-card/50 px-3 py-3">
+                        <p className="text-lg font-bold text-foreground">Free</p>
+                        <p className="text-xs text-muted-foreground">to track, log, and export</p>
+                      </div>
+                    </div>
+                    <Button asChild>
+                      <Link to="/opportunities">Browse Opportunities Near You</Link>
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -642,8 +688,8 @@ const Dashboard = () => {
               <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard icon={Clock} label="Total Hours Logged" value={Math.round(totalHours * 10) / 10} />
                 <StatCard icon={Briefcase} label="Active Opportunities" value={activeCount} />
-                <StatCard icon={FileText} label="Experiences Recorded" value={reflectionCount} />
-                <StatCard icon={CalendarClock} label="Next Deadline" value={nextDeadline} />
+                <StatCard icon={FileText} label="Reflections Logged" value={reflectionCount} />
+                <StatCard icon={Building2} label="Opportunities Saved" value={opportunities.length} />
                 <HoursGoalWidget totalHours={Math.round(totalHours * 10) / 10} />
                 <ApplyYearCountdown applyYear={applyYear} />
                 <PaceInsight
@@ -710,7 +756,18 @@ const Dashboard = () => {
 
               {/* Tracked Opportunities */}
               <section className="mb-10">
-                <h2 className="mb-4 text-lg font-medium text-foreground">Tracked Opportunities</h2>
+                <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+                  <h2 className="text-lg font-medium text-foreground">Tracked Opportunities</h2>
+                  {opportunities.length > 0 && (
+                    <Link
+                      to="/hours"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 hover:bg-white/5 transition-colors"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Export for AMCAS
+                    </Link>
+                  )}
+                </div>
                 {filtered.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border py-16 text-center">
                     <p className="text-muted-foreground">

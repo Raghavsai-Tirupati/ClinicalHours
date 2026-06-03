@@ -129,11 +129,11 @@ export function HospitalCard({
             <TrustChips opportunity={opportunity} />
 
             {/* Actions row */}
-            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 pt-0.5" onClick={(e) => e.stopPropagation()}>
               {isSavedLoading ? (
-                <Skeleton className="h-8 w-28" />
+                <Skeleton className="h-9 w-32" />
               ) : isSaved ? (
-                <Button variant="secondary" size="sm" disabled className="h-8">
+                <Button variant="secondary" size="sm" disabled className="h-9 min-w-[110px]">
                   <Check className="h-3.5 w-3.5 mr-1.5" />
                   In Tracker
                 </Button>
@@ -142,7 +142,7 @@ export function HospitalCard({
                   size="sm"
                   onClick={() => onAddToTracker(opportunity.id)}
                   disabled={isSaving}
-                  className="h-8"
+                  className="h-9 min-w-[120px]"
                 >
                   {isSaving ? (
                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -153,12 +153,12 @@ export function HospitalCard({
                 </Button>
               )}
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="h-8 text-muted-foreground hover:text-foreground gap-1"
+                className="h-9 text-muted-foreground hover:text-foreground gap-1"
                 onClick={() => onSelect(opportunity.id)}
               >
-                More Info
+                Details
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </div>

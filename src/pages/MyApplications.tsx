@@ -526,114 +526,19 @@ export default function MyApplications() {
                     )}
                   </div>
                   {app.interview_requested_at && !app.interview_confirmed_at && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openSchedule(app)}
-                    >
-                      <Calendar className="h-4 w-4 mr-1" />
-                      Submit times
-                    </Button>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs text-amber-400 flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        Interview time submission coming soon — the clinic will email you directly.
+                      </p>
+                    </div>
                   )}
                 </div>
               ))}
             </div>
           ) : null}
 
-          {/* Schedule modal / panel */}
-          {selectedApp && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-              <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-                <h2 className="text-lg font-semibold text-foreground mb-1">
-                  Submit available times
-                </h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {selectedApp.opportunity_name}
-                </p>
-
-                <form onSubmit={addSlot} className="space-y-4 mb-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs">Date</Label>
-                      <Input
-                        type="date"
-                        value={newSlotDate}
-                        onChange={(e) => setNewSlotDate(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Start</Label>
-                      <Input
-                        type="time"
-                        value={newSlotStart}
-                        onChange={(e) => setNewSlotStart(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">End</Label>
-                      <Input
-                        type="time"
-                        value={newSlotEnd}
-                        onChange={(e) => setNewSlotEnd(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                  {error && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {error}
-                    </p>
-                  )}
-                  {success && (
-                    <p className="text-sm text-green-500">Time slot added.</p>
-                  )}
-                  <Button type="submit" disabled={submitting}>
-                    {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Clock className="h-4 w-4 mr-2" />}
-                    Add time slot
-                  </Button>
-                </form>
-
-                {slots.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase mb-2">
-                      Your preferred times ({slots.length})
-                    </p>
-                    <ul className="space-y-2">
-                      {slots.map((s, i) => (
-                        <li
-                          key={s.id}
-                          className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg text-sm"
-                        >
-                          <span>
-                            {format(new Date(s.slot_start), "EEE, MMM d, h:mm a")} —{" "}
-                            {format(new Date(s.slot_end), "h:mm a")}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-muted-foreground hover:text-destructive h-8"
-                            onClick={() => removeSlot(s.id)}
-                          >
-                            Remove
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="mt-6 flex justify-end">
-                  <Button variant="outline" onClick={() => setSelectedApp(null)}>
-                    Done
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Interview scheduling modal placeholder — not yet implemented */}
         </div>
       </main>
       <Footer />

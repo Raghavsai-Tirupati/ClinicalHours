@@ -25,22 +25,22 @@ export function ActivationChecklist({
 }: ActivationChecklistProps) {
   const steps: Step[] = [
     {
-      label: "Add your city or school",
+      label: "Add your city or school — unlocks nearby opportunities",
       href: "/settings",
       done: hasCity,
     },
     {
-      label: "Save your first opportunity",
+      label: "Save your first opportunity — start your AMCAS activity list",
       href: "/opportunities",
       done: savedCount >= 1,
     },
     {
-      label: "Log your first clinical hour",
+      label: "Log your first clinical hour — every hour counts toward med school",
       href: "/hours",
       done: totalHours >= 1,
     },
     {
-      label: "Write your first reflection",
+      label: "Write a reflection — builds your AMCAS essay material over time",
       href: "/hours",
       done: reflectionCount >= 1,
     },
@@ -120,7 +120,7 @@ export function ActivationChecklist({
       {allDone && (
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            You've completed all the setup steps. Welcome aboard!
+            You're set up. Keep logging hours — every entry builds your AMCAS application.
           </p>
           <Button size="sm" variant="secondary" onClick={onDismiss}>
             Dismiss

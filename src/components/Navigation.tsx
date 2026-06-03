@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Home, MapPin, Mail, LogIn, ChevronDown, User, Settings as SettingsIcon, FileText, ShieldCheck } from "lucide-react";
+import { Menu, X, Home, MapPin, Mail, LogIn, ChevronDown, User, Settings as SettingsIcon, FileText, ShieldCheck, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
@@ -136,7 +136,8 @@ const Navigation = () => {
 
   const bottomTabs = [
     { name: "Track", path: "/dashboard", icon: Home },
-    { name: "Opportunities", path: "/opportunities", icon: MapPin },
+    { name: "Explore", path: "/opportunities", icon: MapPin },
+    { name: "Journal", path: "/hours", icon: BookOpen },
     { name: "Applications", path: "/my-applications", icon: FileText },
   ];
 
@@ -437,7 +438,7 @@ const Navigation = () => {
           className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 border-t border-border/80 backdrop-blur-sm"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <div className="flex items-center justify-around px-2 py-1.5">
+          <div className="flex items-center justify-around px-1 py-1">
             {bottomTabs.map((tab) => {
               const Icon = tab.icon;
               const active = isActive(tab.path);
@@ -445,10 +446,10 @@ const Navigation = () => {
                 <Link
                   key={tab.path}
                   to={tab.path}
-                  className="flex flex-col items-center justify-center flex-1 px-2"
+                  className="flex flex-col items-center justify-center flex-1 py-1 min-h-[48px]"
                 >
                   <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-full text-xs transition-colors ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs transition-colors ${
                       active
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground"
@@ -457,7 +458,7 @@ const Navigation = () => {
                     <Icon className="h-4 w-4" />
                   </div>
                   <span
-                    className={`mt-0.5 text-[10px] font-medium ${
+                    className={`mt-0.5 text-[9px] font-medium leading-none ${
                       active ? "text-primary" : "text-muted-foreground"
                     }`}
                   >

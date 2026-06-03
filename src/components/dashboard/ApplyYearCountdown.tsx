@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { CalendarDays } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface ApplyYearCountdownProps {
@@ -42,7 +43,27 @@ function urgencyColor(months: number): string {
 export function ApplyYearCountdown({ applyYear }: ApplyYearCountdownProps) {
   const countdown = useMemo(() => (applyYear ? computeCountdown(applyYear) : null), [applyYear]);
 
-  if (!applyYear || !countdown) return null;
+  if (!applyYear || !countdown) {
+    return (
+      <Card className="col-span-2 lg:col-span-4 border-border bg-card">
+        <CardContent className="flex items-center gap-3 py-3 px-4">
+          <CalendarDays className="h-5 w-5 shrink-0 text-muted-foreground" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">Set your target application year</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              See your AMCAS countdown and whether you're on pace to hit your hours goal.
+            </p>
+          </div>
+          <Link
+            to="/settings"
+            className="shrink-0 text-xs font-medium text-primary hover:underline"
+          >
+            Set year →
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const colorClass = urgencyColor(countdown.months);
 

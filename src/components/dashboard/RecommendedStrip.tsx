@@ -33,7 +33,7 @@ export function RecommendedStrip({ savedOpportunityIds, onSave }: RecommendedStr
     <div className="mb-6">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Recommended For You
+          Top-Rated Opportunities
         </p>
         <Link
           to="/opportunities"

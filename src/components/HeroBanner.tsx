@@ -7,12 +7,18 @@ interface HeroBannerProps {
   compact?: boolean;
   firstName?: string;
   isGuest?: boolean;
+  totalHours?: number;
+  savedCount?: number;
 }
 
-const HeroBanner = ({ firstName, isGuest, compact = false }: HeroBannerProps) => {
+const HeroBanner = ({ firstName, isGuest, compact = false, totalHours = 0, savedCount = 0 }: HeroBannerProps) => {
   const subtitle = isGuest
-    ? 'Explore opportunities and see how the platform works.'
-    : 'Track your clinical journey and find new opportunities.';
+    ? 'Browse 9,500+ clinical volunteer opportunities. Build your AMCAS activity list for free.'
+    : totalHours > 0
+      ? `You've logged ${totalHours} clinical hours. Every session builds your AMCAS application.`
+      : savedCount > 0
+        ? `You have ${savedCount} opportunity saved. Log your first hours to start building your AMCAS application.`
+        : 'Most competitive med school applicants have 100–200+ clinical hours. Start logging yours.';
 
   return (
     <section className={`relative w-full overflow-hidden rounded-2xl${!compact ? " min-h-[280px] sm:min-h-[320px] lg:min-h-[340px]" : ""}`}>
