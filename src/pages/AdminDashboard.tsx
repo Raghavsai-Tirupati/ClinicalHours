@@ -33,6 +33,7 @@ import AdminToolsTab from '@/components/admin/AdminToolsTab';
 import AdminChatbot from '@/components/admin/AdminChatbot';
 import AdminPremiumTab from '@/components/admin/AdminPremiumTab';
 import AdminStudentsTab from '@/components/admin/AdminStudentsTab';
+import AdminAnalyticsCenter from '@/components/admin/AdminAnalyticsCenter';
 
 // New tabs
 import ControlTowerTab from '@/components/admin/ControlTowerTab';
@@ -157,7 +158,10 @@ export default function AdminDashboard() {
             {/* Students */}
             <TabsContent value="students">
               <TabErrorBoundary tabName="Students">
-                <AdminStudentsTab />
+                <div className="space-y-8">
+                  <AdminAnalyticsCenter />
+                  <AdminStudentsTab />
+                </div>
               </TabErrorBoundary>
             </TabsContent>
 
