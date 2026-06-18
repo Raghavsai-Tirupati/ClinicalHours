@@ -80,8 +80,8 @@ export default function ControlTowerTab({ onOpenApprovalsChange }: Props) {
         agentTaskRes,
       ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('hospital_accounts').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('opportunities').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('hospital_accounts').select('*', { count: 'exact', head: true }).eq('account_status', 'pending'),
+        supabase.from('opportunities').select('*', { count: 'exact', head: true }).neq('link_status', 'broken'),
         supabase.from('clinic_leads').select('*', { count: 'exact', head: true }).neq('pipeline_stage', 'live').neq('pipeline_stage', 'lost'),
         supabase.from('approval_tasks').select('id, title, approval_type, requester_source, created_at').eq('status', 'pending').order('created_at', { ascending: false }).limit(10),
         supabase.from('agent_recommendations').select('id, agent_name, title, body, priority, recommendation_type, created_at').eq('status', 'pending').order('priority', { ascending: true }).limit(8),

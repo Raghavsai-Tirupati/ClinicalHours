@@ -2988,6 +2988,50 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_events: {
+        Row: {
+          actor_type: string
+          clinic_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          user_id: string | null
+        }
+        Insert: {
+          actor_type?: string
+          clinic_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Update: {
+          actor_type?: string
+          clinic_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_events_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "hospital_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracking_events: {
         Row: {
           created_at: string
@@ -3554,6 +3598,48 @@ export type Database = {
           },
         ]
       }
+      admin_student_summary: {
+        Row: {
+          id: string | null
+          full_name: string | null
+          university: string | null
+          major: string | null
+          graduation_year: number | null
+          phone: string | null
+          joined_at: string | null
+          onboarding_complete: boolean | null
+          last_login_at: string | null
+          last_active_at: string | null
+          login_count: number | null
+          application_count: number | null
+          pending_applications: number | null
+          accepted_applications: number | null
+          upcoming_interviews: number | null
+          last_application_at: string | null
+          clinic_names: string | null
+          clinic_count: number | null
+          volunteer_hours: number | null
+          avg_evaluation_score: number | null
+          evaluation_count: number | null
+          attention_level: string | null
+          needs_attention: boolean | null
+        }
+        Relationships: []
+      }
+      admin_unified_activity: {
+        Row: {
+          id: string | null
+          user_id: string | null
+          created_at: string | null
+          event_type: string | null
+          actor_type: string | null
+          description: string | null
+          metadata: Json | null
+          clinic_id: string | null
+          source: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_admin_by_email: { Args: { admin_email: string }; Returns: boolean }
@@ -3570,6 +3656,27 @@ export type Database = {
       deploy_hospital_opportunity: {
         Args: { p_hospital_id: string }
         Returns: string
+      }
+      get_admin_dashboard_kpis: {
+        Args: {
+          p_since?: string
+          p_until?: string
+          p_clinic_id?: string | null
+        }
+        Returns: Json
+      }
+      get_admin_time_series: {
+        Args: {
+          p_metric: string
+          p_since: string
+          p_until: string
+          p_granularity?: string
+          p_clinic_id?: string | null
+        }
+        Returns: {
+          bucket: string
+          value: number
+        }[]
       }
       get_opportunities_by_distance: {
         Args: {

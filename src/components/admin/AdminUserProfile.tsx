@@ -187,6 +187,12 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
   const [applications, setApplications] = useState<ApplicationRow[]>([]);
   const [emailLogs, setEmailLogs] = useState<EmailLogRow[]>([]);
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
+  const [clinicMemberships, setClinicMemberships] = useState<
+    { clinic_name: string; status: string; hours_logged: number; join_date: string }[]
+  >([]);
+  const [adminNotes, setAdminNotes] = useState<
+    { note: string; created_at: string; clinic_name: string | null }[]
+  >([]);
 
   useEffect(() => {
     if (open && user) {
@@ -197,6 +203,8 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
       setApplications([]);
       setEmailLogs([]);
       setTrackingEvents([]);
+      setClinicMemberships([]);
+      setAdminNotes([]);
     }
   }, [open, user]);
 
@@ -234,7 +242,7 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
         rejected: 'rejected',
       };
 
-      const [{ data: appRows }, legacyResult, { data: evts }] = await Promise.all([
+      const [{ data: appRows }, legacyResult, { data: evts }, { data: memberships }, { data: notes }] = await Promise.all([
         supabase
           .from('student_applications')
           .select(`
@@ -261,6 +269,16 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(300),
+        supabase
+          .from('clinic_members')
+          .select('status, hours_logged, join_date, clinic:hospital_pages(opportunity:opportunities(name))')
+          .eq('user_id', user.id),
+        supabase
+          .from('person_notes')
+          .select('note, created_at, clinic:hospital_pages(opportunity:opportunities(name))')
+          .eq('student_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(20),
       ]);
 
       const legacyRows = (legacyResult.data ?? []) as any[];
@@ -288,6 +306,35 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
       ]);
 
       setTrackingEvents((evts ?? []) as TrackingEvent[]);
+
+      setClinicMemberships(
+        (memberships ?? []).map((row: Record<string, unknown>) => {
+          const clinic = Array.isArray(row.clinic) ? row.clinic[0] : row.clinic;
+          const opp = clinic && (Array.isArray((clinic as { opportunity?: unknown }).opportunity)
+            ? (clinic as { opportunity: { name?: string }[] }).opportunity[0]
+            : (clinic as { opportunity?: { name?: string } }).opportunity);
+          return {
+            clinic_name: opp?.name ?? 'Clinic',
+            status: String(row.status ?? 'active'),
+            hours_logged: Number(row.hours_logged ?? 0),
+            join_date: String(row.join_date ?? ''),
+          };
+        })
+      );
+
+      setAdminNotes(
+        (notes ?? []).map((row: Record<string, unknown>) => {
+          const clinic = Array.isArray(row.clinic) ? row.clinic[0] : row.clinic;
+          const opp = clinic && (Array.isArray((clinic as { opportunity?: unknown }).opportunity)
+            ? (clinic as { opportunity: { name?: string }[] }).opportunity[0]
+            : (clinic as { opportunity?: { name?: string } }).opportunity);
+          return {
+            note: String(row.note ?? ''),
+            created_at: String(row.created_at ?? ''),
+            clinic_name: opp?.name ?? null,
+          };
+        })
+      );
 
       let emailLogRows: unknown[] = [];
       if (user.email) {
@@ -568,6 +615,45 @@ export default function AdminUserProfile({ user, open, onOpenChange }: AdminUser
                   </div>
                 )}
               </div>
+
+              {/* ── Clinic / Volunteer ── */}
+              {clinicMemberships.length > 0 && (
+                <div>
+                  <SectionHeader icon={Award} title={`Clinic Membership (${clinicMemberships.length})`} />
+                  <div className="space-y-2">
+                    {clinicMemberships.map((m, i) => (
+                      <div key={i} className="flex items-center justify-between gap-4 text-sm border-b border-border/30 py-2 last:border-0">
+                        <div>
+                          <p className="font-medium">{m.clinic_name}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{m.status.replace('_', ' ')}</p>
+                        </div>
+                        <div className="text-right text-xs text-muted-foreground">
+                          <p>{m.hours_logged} hrs logged</p>
+                          {m.join_date && <p>Since {formatDateShort(m.join_date)}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Admin Notes Timeline ── */}
+              {adminNotes.length > 0 && (
+                <div>
+                  <SectionHeader icon={FileText} title={`Admin Notes (${adminNotes.length})`} />
+                  <div className="space-y-2">
+                    {adminNotes.map((n, i) => (
+                      <div key={i} className="rounded-md border border-border/50 p-2.5 text-sm">
+                        {n.clinic_name && (
+                          <p className="text-[10px] text-muted-foreground mb-1">{n.clinic_name}</p>
+                        )}
+                        <p>{n.note}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">{formatDateShort(n.created_at)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* ── Live Activity ── */}
               <div>
