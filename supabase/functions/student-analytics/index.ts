@@ -61,7 +61,15 @@ Deno.serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
-    let query = supabase.from(table).select(select).range(offset, offset + limit - 1);
+    // count_only=true returns just the total without fetching rows
+    const countOnly = params.get("count_only") === "true";
+
+    let query = countOnly
+      ? supabase.from(table).select("*", { count: "exact", head: true })
+      : supabase
+          .from(table)
+          .select(select, { count: "exact" })
+          .range(offset, offset + limit - 1);
 
     // Optional ordering: order=column.desc or order=column.asc
     const order = params.get("order");
@@ -71,7 +79,7 @@ Deno.serve(async (req) => {
     }
 
     // Optional simple equality filters: any other ?col=eq.value pair
-    const reserved = new Set(["table", "select", "limit", "offset", "order", "token"]);
+    const reserved = new Set(["table", "select", "limit", "offset", "order", "token", "count_only"]);
     for (const [key, value] of params.entries()) {
       if (reserved.has(key)) continue;
       const m = value.match(/^eq\.(.*)$/);
@@ -81,7 +89,12 @@ Deno.serve(async (req) => {
     const { data, error, count } = await query;
     if (error) return json({ error: error.message }, 400);
 
-    return json({ table, count: data?.length ?? 0, total: count ?? null, data });
+    return json({
+      table,
+      returned: data?.length ?? 0,
+      total: count ?? null,
+      data: countOnly ? undefined : data,
+    });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }
