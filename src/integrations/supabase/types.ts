@@ -3757,6 +3757,12 @@ export type Database = {
         Args: { p_hospital_id: string; p_opportunity_id: string }
         Returns: undefined
       }
+      list_public_tables: {
+        Args: never
+        Returns: {
+          table_name: string
+        }[]
+      }
       log_platform_event: {
         Args: {
           p_actor_type: string
