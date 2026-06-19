@@ -1,15 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-// Tables this endpoint is allowed to read. Read-only by design.
-const ALLOWED_TABLES = new Set([
-  "profiles",
-  "student_applications",
-  "experience_entries",
-  "saved_opportunities",
-  "tracking_events",
-  "reviews",
-  "subscriptions",
+// Pure-credential / security tables: no analytical value, real risk if exposed.
+// Everything else in the public schema is readable.
+const DENY_TABLES = new Set([
+  "password_reset_tokens",
+  "email_verification_tokens",
+  "oauth_states",
+  "edge_function_rate_limits",
 ]);
 
 const MAX_LIMIT = 1000;
@@ -43,23 +41,31 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const params = url.searchParams;
 
-    const table = params.get("table") ?? "profiles";
-    if (!ALLOWED_TABLES.has(table)) {
-      return json(
-        { error: `Unknown table '${table}'`, allowed: [...ALLOWED_TABLES] },
-        400,
-      );
-    }
-
-    const select = params.get("select") ?? "*";
-    const limit = Math.min(Number(params.get("limit") ?? 100) || 100, MAX_LIMIT);
-    const offset = Number(params.get("offset") ?? 0) || 0;
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
+
+    // Discover every table in the database (minus the denylist).
+    const { data: tableRows, error: listErr } = await supabase.rpc("list_public_tables");
+    if (listErr) return json({ error: listErr.message }, 500);
+    const available = (tableRows ?? [])
+      .map((r: { table_name: string }) => r.table_name)
+      .filter((t: string) => !DENY_TABLES.has(t));
+
+    // table=_list (or no table) returns the catalog of readable tables.
+    const table = params.get("table");
+    if (!table || table === "_list") {
+      return json({ tables: available });
+    }
+    if (!available.includes(table)) {
+      return json({ error: `Unknown or restricted table '${table}'`, tables: available }, 400);
+    }
+
+    const select = params.get("select") ?? "*";
+    const limit = Math.min(Number(params.get("limit") ?? 100) || 100, MAX_LIMIT);
+    const offset = Number(params.get("offset") ?? 0) || 0;
 
     // count_only=true returns just the total without fetching rows
     const countOnly = params.get("count_only") === "true";
