@@ -55,12 +55,40 @@ Deno.serve(async (req) => {
       .filter((t: string) => !DENY_TABLES.has(t));
 
     // table=_list (or no table) returns the catalog of readable tables.
-    const table = params.get("table");
-    if (!table || table === "_list") {
+    const rawTable = params.get("table");
+    console.log("student-analytics request:", JSON.stringify(Object.fromEntries(params.entries())));
+
+    if (!rawTable || rawTable === "_list") {
       return json({ tables: available });
     }
-    if (!available.includes(table)) {
-      return json({ error: `Unknown or restricted table '${table}'`, tables: available }, 400);
+
+    // Resolve the requested table tolerantly: exact match, then case-insensitive,
+    // then a few common natural-language aliases the agent tends to guess.
+    const ALIASES: Record<string, string> = {
+      students: "profiles",
+      student: "profiles",
+      users: "profiles",
+      user: "profiles",
+      applications: "student_applications",
+      experiences: "experience_entries",
+      saved: "saved_opportunities",
+      events: "tracking_events",
+      subscription: "subscriptions",
+    };
+    const lowered = rawTable.toLowerCase();
+    const table =
+      available.find((t) => t === rawTable) ??
+      available.find((t) => t.toLowerCase() === lowered) ??
+      (ALIASES[lowered] && available.includes(ALIASES[lowered]) ? ALIASES[lowered] : undefined);
+
+    if (!table) {
+      return json(
+        {
+          error: `Unknown or restricted table '${rawTable}'. Use table=_list to see all readable tables.`,
+          tables: available,
+        },
+        400,
+      );
     }
 
     const select = params.get("select") ?? "*";
