@@ -105,19 +105,36 @@ Deno.serve(async (req) => {
           .select(select, { count: "exact" })
           .range(offset, offset + limit - 1);
 
-    // Optional ordering: order=column.desc or order=column.asc
+    // Optional ordering: accepts "column.desc", "column desc", or just "column".
     const order = params.get("order");
     if (order) {
-      const [col, dir] = order.split(".");
-      if (col) query = query.order(col, { ascending: dir !== "desc" });
+      const [col, dir] = order.trim().split(/[.\s]+/);
+      if (col) query = query.order(col, { ascending: (dir ?? "asc").toLowerCase() !== "desc" });
     }
 
-    // Optional simple equality filters: any other ?col=eq.value pair
+    // Optional filters: ?column=op.value where op is one of the PostgREST operators.
+    // Examples: created_at=gte.2026-06-18  status=eq.active  role=in.(admin,user)
     const reserved = new Set(["table", "select", "limit", "offset", "order", "token", "count_only"]);
+    const OPS = ["gte", "lte", "gt", "lt", "neq", "eq", "ilike", "like", "in", "is"];
     for (const [key, value] of params.entries()) {
       if (reserved.has(key)) continue;
-      const m = value.match(/^eq\.(.*)$/);
-      if (m) query = query.eq(key, m[1]);
+      const m = value.match(/^([a-z]+)\.(.*)$/i);
+      if (!m) continue;
+      const op = m[1].toLowerCase();
+      let val: string = m[2];
+      if (!OPS.includes(op)) continue;
+      if (op === "in") {
+        const items = val.replace(/^\(|\)$/g, "").split(",").map((s) => s.trim()).filter(Boolean);
+        query = query.in(key, items);
+      } else if (op === "is") {
+        const lowered = val.toLowerCase();
+        const parsed = lowered === "null" ? null : lowered === "true" ? true : lowered === "false" ? false : val;
+        query = query.is(key, parsed as null | boolean);
+      } else {
+        // gte | lte | gt | lt | neq | eq | like | ilike
+        // deno-lint-ignore no-explicit-any
+        query = (query as any)[op](key, val);
+      }
     }
 
     const { data, error, count } = await query;
