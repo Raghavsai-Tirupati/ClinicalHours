@@ -2988,6 +2988,36 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_cohorts: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          filter_json: Json;
+          is_template: boolean;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          filter_json?: Json;
+          is_template?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          filter_json?: Json;
+          is_template?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       platform_events: {
         Row: {
           actor_type: string
@@ -3657,6 +3687,33 @@ export type Database = {
         Args: { p_hospital_id: string }
         Returns: string
       }
+      get_promotion_funnel: {
+        Args: { p_since?: string; p_until?: string };
+        Returns: Json;
+      };
+      get_student_analytics_bundle: {
+        Args: { p_user_id: string };
+        Returns: Json;
+      };
+      run_cohort_filter: {
+        Args: { p_filter?: Json; p_limit?: number; p_offset?: number };
+        Returns: {
+          id: string;
+          full_name: string | null;
+          university: string | null;
+          major: string | null;
+          graduation_year: number | null;
+          joined_at: string;
+          last_active_at: string | null;
+          application_count: number;
+          pending_applications: number;
+          attention_level: string;
+          needs_attention: boolean;
+          saved_count: number;
+          state: string | null;
+          is_premium: boolean;
+        }[];
+      };
       get_admin_dashboard_kpis: {
         Args: {
           p_since?: string

@@ -50,6 +50,13 @@ const CheckEmail = lazyRetry(() => import("./pages/CheckEmail"));
 const VerifyEmail = lazyRetry(() => import("./pages/VerifyEmail"));
 const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"));
 const AdminDashboard = lazyRetry(() => import("./pages/AdminDashboard"));
+const StudentAnalyticsLayout = lazyRetry(() => import("./layouts/StudentAnalyticsLayout"));
+const AnalyticsOverviewPage = lazyRetry(() => import("./pages/analytics/OverviewPage"));
+const AnalyticsStudentsPage = lazyRetry(() => import("./pages/analytics/StudentsPage"));
+const AnalyticsStudentDetailPage = lazyRetry(() => import("./pages/analytics/StudentDetailPage"));
+const AnalyticsEventsPage = lazyRetry(() => import("./pages/analytics/EventsPage"));
+const AnalyticsCohortsPage = lazyRetry(() => import("./pages/analytics/CohortsPage"));
+const AnalyticsReportsPage = lazyRetry(() => import("./pages/analytics/ReportsPage"));
 const HospitalAdmin = lazyRetry(() => import("./pages/HospitalAdmin"));
 const MyApplications = lazyRetry(() => import("./pages/MyApplications"));
 const HospitalApplyPage = lazyRetry(() => import("./pages/HospitalApplyPage"));
@@ -154,6 +161,21 @@ function AppContent() {
                   </AdminOnlyRoute>
                 }
               />
+              <Route
+                path="/analytics"
+                element={
+                  <AdminOnlyRoute>
+                    <StudentAnalyticsLayout />
+                  </AdminOnlyRoute>
+                }
+              >
+                <Route index element={<AnalyticsOverviewPage />} />
+                <Route path="students" element={<AnalyticsStudentsPage />} />
+                <Route path="students/:id" element={<AnalyticsStudentDetailPage />} />
+                <Route path="events" element={<AnalyticsEventsPage />} />
+                <Route path="cohorts" element={<AnalyticsCohortsPage />} />
+                <Route path="reports" element={<AnalyticsReportsPage />} />
+              </Route>
               <Route path="/opportunities/:slug/apply" element={<StudentOnlyRoute><HospitalApplyPage /></StudentOnlyRoute>} />
               <Route
                 path="/opportunities/:slug/admin"

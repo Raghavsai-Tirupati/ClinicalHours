@@ -1,5 +1,7 @@
 # Lovable: Admin Analytics — Supabase migrations + deploy
 
+> **Backend-only prompt:** For a focused copy-paste prompt (migrations, verification SQL, no UI work), use **[LOVABLE_ANALYTICS_BACKEND_PROMPT.md](./LOVABLE_ANALYTICS_BACKEND_PROMPT.md)**.
+
 Paste the **prompt below** into Lovable’s chat after this repo is synced. The frontend for the admin analytics dashboard is already in the codebase; **Lovable must apply the database migrations** so KPIs, charts, student table, and activity feed work.
 
 ---
@@ -9,11 +11,11 @@ Paste the **prompt below** into Lovable’s chat after this repo is synced. The 
 ```
 You are working on the ClinicalHours repo (Vite + React + Supabase via Lovable Cloud).
 
-The Admin → Students tab was rebuilt as a student analytics control center. The React UI is already merged in this repo. Your job is to apply the Supabase backend changes and verify everything works. Do NOT rewrite the frontend unless a migration fix requires a small adjustment.
+The student analytics workspace lives at **`/analytics`** (platform-admin only). Admin OS → Students tab now links there. Apply all three migrations below.
 
 ---
 
-## 1. Apply these two migrations (in order)
+## 1. Apply these three migrations (in order)
 
 Source of truth: `supabase/migrations/`
 
@@ -21,6 +23,7 @@ Run in timestamp order:
 
 1. `20260618100000_admin_analytics.sql`
 2. `20260618110000_fix_admin_os_rls.sql`
+3. `20260619100000_student_analytics_hub.sql`
 
 Preferred method: Supabase CLI from repo root:
 - `npx supabase link` (if needed, project ref is in `supabase/config.toml` → `project_id`)
@@ -84,7 +87,44 @@ Without this fix, Control Tower / Data Trust / Agent Inbox tabs may return empty
 
 ---
 
-## 4. Frontend already wired (do not rebuild)
+## 4. What migration 3 creates (`20260619100000_student_analytics_hub.sql`)
+
+### Table: `analytics_cohorts`
+Saved cohort filter scripts (templates + custom):
+- `name`, `description`, `filter_json` (declarative JSON filters), `is_template`, `created_by`
+- Seeded templates: inactive signups, saved-not-applied, incomplete onboarding, etc.
+
+### RPCs
+- `run_cohort_filter(p_filter, p_limit, p_offset)` — run a cohort script server-side
+- `get_student_analytics_bundle(p_user_id)` — full student 360 JSON for `/analytics/students/:id`
+- `get_promotion_funnel(p_since, p_until)` — acquisition funnel for Reports tab
+
+### Admin read RLS
+- SELECT on `activity_logs` and `experience_entries` for platform admins
+
+### Realtime
+- Adds `profiles` and `student_applications` to realtime publication
+
+---
+
+## 5. Frontend routes (already wired)
+
+| Route | Purpose |
+|-------|---------|
+| `/analytics` | Overview — KPIs, funnel, live feed, charts |
+| `/analytics/students` | Student explorer + CSV export |
+| `/analytics/students/:id` | Student 360 — all data tabs + JSON export |
+| `/analytics/events` | Live event stream |
+| `/analytics/cohorts` | Cohort script builder + saved scripts |
+| `/analytics/reports` | Promotion reports (funnel, geo, universities) |
+
+Key files: `src/layouts/StudentAnalyticsLayout.tsx`, `src/pages/analytics/*`, `src/lib/analytics/*`, `src/hooks/useAnalyticsRealtime.ts`
+
+Admin OS → Students tab links to `/analytics`. No AI/LLM used in analytics.
+
+---
+
+## 6. Frontend already wired (legacy admin analytics)
 
 These files call the new backend:
 
@@ -98,11 +138,11 @@ These files call the new backend:
 | `src/components/admin/ControlTowerTab.tsx` | Fixed queries: `account_status` not `status`, `link_status` not `is_active` |
 | `src/integrations/supabase/types.ts` | Already includes `platform_events`, views, RPC types |
 
-Admin page route: `/admin` → tab **Students**
+Admin page: `/admin` → Students tab links to `/analytics`
 
 ---
 
-## 5. Post-migration verification
+## 7. Post-migration verification
 
 Run as an admin user (`user_roles.role = 'admin'`):
 
@@ -126,19 +166,17 @@ SELECT count(*) FROM public.admin_unified_activity;
 
 ### UI smoke test
 1. Log in as platform admin
-2. Go to `/admin` → **Students** tab
-3. Confirm:
-   - KPI cards show numbers (not all "—" or errors)
-   - Trend charts render (new users, logins, applications, etc.)
-   - Student directory table loads with search/filters
-   - "Needs attention" panel shows flagged students if any exist
-   - Recent activity feed loads
-   - Click a student → profile drawer opens with applications, clinic membership, notes
-4. Go to **Control Tower** tab — KPIs and approval/agent panels should load (RLS fix)
+2. Go to **`/analytics`** (Overview)
+3. Confirm KPI cards, funnel, charts, live activity feed
+4. **Students** — directory loads, click student → 360 page with tabs
+5. **Events** — filterable live stream
+6. **Cohorts** — run a template script, export CSV
+7. **Reports** — funnel + university/state breakdowns
+8. Admin OS → Students tab shows link card to `/analytics`
 
 ---
 
-## 6. Regenerate types (optional but recommended)
+## 8. Regenerate types (optional but recommended)
 
 After migrations apply:
 ```bash
@@ -148,7 +186,7 @@ Types were manually updated in repo; regen ensures parity with live schema.
 
 ---
 
-## 7. Constraints — do NOT break
+## 9. Constraints — do NOT break
 
 - Existing `tracking_events` + `track` edge function — keep working
 - Hospital admin RLS (`hospital_pages.admin_email = auth.email()`) — untouched
@@ -157,7 +195,7 @@ Types were manually updated in repo; regen ensures parity with live schema.
 
 ---
 
-## 8. Report back
+## 10. Report back
 
 Tell me:
 1. CLI vs manual SQL
@@ -175,8 +213,9 @@ Tell me:
 |------|------|
 | `supabase/migrations/20260618100000_admin_analytics.sql` | Analytics backend |
 | `supabase/migrations/20260618110000_fix_admin_os_rls.sql` | Admin OS RLS fix |
-| `src/components/admin/analytics/*` | Dashboard UI components |
-| `src/lib/admin/analytics.ts` | API layer |
+| `supabase/migrations/20260619100000_student_analytics_hub.sql` | Cohorts, bundle RPC, funnel RPC |
+| `src/pages/analytics/*` | Analytics hub pages |
+| `src/layouts/StudentAnalyticsLayout.tsx` | Analytics shell |
 | `docs/LOVABLE_ADMIN_ANALYTICS_PROMPT.md` | This prompt |
 
 ## If migrations fail
