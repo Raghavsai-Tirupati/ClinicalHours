@@ -272,6 +272,39 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_cohorts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          filter_json: Json
+          id: string
+          is_template: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filter_json?: Json
+          id?: string
+          is_template?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filter_json?: Json
+          id?: string
+          is_template?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       application_answers: {
         Row: {
           answer_file_url: string | null
@@ -3717,6 +3750,14 @@ export type Database = {
           website: string
         }[]
       }
+      get_promotion_funnel: {
+        Args: { p_since?: string; p_until?: string }
+        Returns: Json
+      }
+      get_student_analytics_bundle: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_user_hospital_account_ids: {
         Args: { _user_id: string }
         Returns: string[]
@@ -3792,6 +3833,30 @@ export type Database = {
           p_max_hour?: number
         }
         Returns: Json
+      }
+      run_cohort_filter: {
+        Args: { p_filter?: Json; p_limit?: number; p_offset?: number }
+        Returns: {
+          application_count: number
+          attention_level: string
+          avg_evaluation_score: number
+          city: string
+          clinic_count: number
+          clinical_hours: number
+          created_at: string
+          full_name: string
+          graduation_year: number
+          id: string
+          is_premium: boolean
+          last_active_at: string
+          last_login_at: string
+          major: string
+          needs_attention: boolean
+          pending_application_count: number
+          saved_count: number
+          state: string
+          university: string
+        }[]
       }
       seed_default_clinic_roles: {
         Args: { p_clinic_id: string }
