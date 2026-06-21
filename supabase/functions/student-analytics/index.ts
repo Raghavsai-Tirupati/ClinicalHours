@@ -12,6 +12,22 @@ const DENY_TABLES = new Set([
 
 const MAX_LIMIT = 1000;
 
+// Analytics views that aren't returned by list_public_tables (which is tables-only)
+// but are safe, admin-equivalent read surfaces. admin_student_summary is where
+// last_login_at / last_active_at / attention_level live.
+const EXTRA_VIEWS = ["admin_student_summary"];
+
+// Whitelisted admin analytics RPCs exposed via ?analytics=<key>.
+// The edge function runs with the service role, so assert_admin() inside these
+// functions passes (auth.uid() is null in that context).
+const ANALYTICS_RPCS: Record<string, string> = {
+  kpis: "get_admin_dashboard_kpis",
+  timeseries: "get_admin_time_series",
+  funnel: "get_promotion_funnel",
+  student: "get_student_analytics_bundle",
+  cohort: "run_cohort_filter",
+};
+
 const FIELD_ALIASES: Record<string, Record<string, string>> = {
   profiles: {
     name: "full_name",
