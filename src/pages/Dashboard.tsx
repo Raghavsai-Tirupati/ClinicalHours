@@ -105,12 +105,8 @@ const Dashboard = () => {
   const [checklistDismissed, setChecklistDismissed] = useState(
     () => localStorage.getItem("clinicalhours_checklist_dismissed") === "true"
   );
-  const [bcsBannerDismissed, setBcsBannerDismissed] = useState(
-    () => localStorage.getItem("clinicalhours_bcs_banner_dismissed") === "true"
-  );
-  const [feedbackBannerDismissed, setFeedbackBannerDismissed] = useState(
-    () => localStorage.getItem("clinicalhours_feedback_banner_dismissed") === "true"
-  );
+  const [bcsBannerDismissed, setBcsBannerDismissed] = useState(false);
+  const [feedbackBannerDismissed, setFeedbackBannerDismissed] = useState(false);
   const applyYear = useMemo<number | null>(() => {
     const raw = localStorage.getItem("ch_apply_year");
     const parsed = raw ? parseInt(raw, 10) : NaN;
@@ -443,14 +439,12 @@ const Dashboard = () => {
   const handleBcsBannerDismiss = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    localStorage.setItem("clinicalhours_bcs_banner_dismissed", "true");
     setBcsBannerDismissed(true);
   };
 
   const handleFeedbackBannerDismiss = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    localStorage.setItem("clinicalhours_feedback_banner_dismissed", "true");
     setFeedbackBannerDismissed(true);
   };
 
