@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
+import { useSearchParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,11 +14,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { sanitizeErrorMessage } from "@/lib/errorUtils";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { useAuth } from "@/hooks/useAuth";
 import { MAX_LENGTHS, validateEmail } from "@/lib/inputValidation";
 // CSRF protection is handled by Supabase's built-in JWT token validation
 
 const Contact = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const isStudentFeedback = searchParams.get("intent") === "student-feedback";
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -25,19 +30,31 @@ const Contact = () => {
     subject: "",
     message: "",
   });
+  const [messagePlaceholder, setMessagePlaceholder] = useState("Tell us more...");
   const [emailError, setEmailError] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
 
   // Auto-save contact form data
   const { loadSavedData, clearSavedData } = useAutoSave(formData, "contact-form-draft", true);
 
-  // Load saved draft on mount
+  // Load saved draft on mount; apply student-feedback pre-fill when linked from dashboard
   useEffect(() => {
     const savedDraft = loadSavedData();
-    if (savedDraft) {
+    const base = savedDraft ?? { name: "", email: "", subject: "", message: "" };
+
+    if (isStudentFeedback) {
+      const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || "";
+      setFormData({
+        name: base.name || fullName,
+        email: base.email || user?.email || "",
+        subject: "Student platform feedback",
+        message: base.message,
+      });
+      setMessagePlaceholder("What should we fix, add, or make easier?");
+    } else if (savedDraft) {
       setFormData(savedDraft);
     }
-  }, []);
+  }, [isStudentFeedback, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,7 +345,7 @@ const Contact = () => {
                     name="message"
                     value={formData.message}
                     onChange={handleChange}
-                    placeholder="Tell us more..."
+                    placeholder={messagePlaceholder}
                     rows={6}
                     required
                     maxLength={5000}

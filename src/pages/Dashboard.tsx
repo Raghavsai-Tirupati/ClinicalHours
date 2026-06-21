@@ -29,6 +29,7 @@ import {
   Sparkles,
   X,
   Download,
+  MessageCircle,
 } from "lucide-react";
 import { APPLICATION_STATUS_LABELS, POSITION_TYPE_LABELS } from "@/types/positions";
 import type { ApplicationStatus, PositionType } from "@/types/positions";
@@ -106,6 +107,9 @@ const Dashboard = () => {
   );
   const [bcsBannerDismissed, setBcsBannerDismissed] = useState(
     () => localStorage.getItem("clinicalhours_bcs_banner_dismissed") === "true"
+  );
+  const [feedbackBannerDismissed, setFeedbackBannerDismissed] = useState(
+    () => localStorage.getItem("clinicalhours_feedback_banner_dismissed") === "true"
   );
   const applyYear = useMemo<number | null>(() => {
     const raw = localStorage.getItem("ch_apply_year");
@@ -443,6 +447,13 @@ const Dashboard = () => {
     setBcsBannerDismissed(true);
   };
 
+  const handleFeedbackBannerDismiss = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    localStorage.setItem("clinicalhours_feedback_banner_dismissed", "true");
+    setFeedbackBannerDismissed(true);
+  };
+
   const handleRecommendedSave = async (opportunityId: string) => {
     if (!user || isGuest) return;
     await supabase
@@ -587,6 +598,34 @@ const Dashboard = () => {
               onClick={handleBcsBannerDismiss}
               className="absolute top-3 right-3 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
               aria-label="Dismiss featured opportunity"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* ─── Student feedback ────────────────────────────── */}
+        {!feedbackBannerDismissed && (
+          <div className="mt-6 relative">
+            <Link
+              to="/contact?intent=student-feedback"
+              className="group flex items-center justify-between gap-4 rounded-xl border border-primary/30 bg-primary/[0.06] backdrop-blur-sm px-5 py-4 pr-10 hover:bg-primary/[0.1] transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg border border-primary/30 bg-primary/10">
+                  <MessageCircle className="h-5 w-5 text-primary" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">We&apos;re trying to make the student platform better</p>
+                  <p className="text-xs text-muted-foreground">What should we fix, add, or make easier? Send us feedback.</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-primary shrink-0 group-hover:translate-x-0.5 transition-transform" aria-hidden />
+            </Link>
+            <button
+              onClick={handleFeedbackBannerDismiss}
+              className="absolute top-3 right-3 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+              aria-label="Dismiss feedback request"
             >
               <X className="h-3.5 w-3.5" />
             </button>
