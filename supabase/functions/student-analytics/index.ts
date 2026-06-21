@@ -222,6 +222,10 @@ Deno.serve(async (req) => {
       saved: "saved_opportunities",
       events: "tracking_events",
       subscription: "subscriptions",
+      summary: "admin_student_summary",
+      student_summary: "admin_student_summary",
+      last_login: "admin_student_summary",
+      engagement: "admin_student_summary",
     };
     const lowered = rawTable.toLowerCase();
     const table =
