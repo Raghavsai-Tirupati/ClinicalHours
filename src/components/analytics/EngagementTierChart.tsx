@@ -26,7 +26,7 @@ export default function EngagementTierChart({ tiers, loading }: EngagementTierCh
           <p className="text-[11px] text-muted-foreground">Based on last activity and login frequency</p>
         </div>
         <ExportButton
-          rows={tiers}
+          rows={tiers as unknown as Record<string, unknown>[]}
           filename="engagement-tiers.csv"
           columns={[
             { key: 'label', label: 'Tier' },

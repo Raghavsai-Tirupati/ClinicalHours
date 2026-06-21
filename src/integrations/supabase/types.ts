@@ -3071,80 +3071,6 @@ export type Database = {
         }
         Relationships: []
       }
-      analytics_cohorts: {
-        Row: {
-          id: string;
-          name: string;
-          description: string | null;
-          filter_json: Json;
-          is_template: boolean;
-          created_by: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          description?: string | null;
-          filter_json?: Json;
-          is_template?: boolean;
-          created_by?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          description?: string | null;
-          filter_json?: Json;
-          is_template?: boolean;
-          created_by?: string | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      platform_events: {
-        Row: {
-          actor_type: string
-          clinic_id: string | null
-          created_at: string
-          entity_id: string | null
-          entity_type: string | null
-          event_type: string
-          id: string
-          metadata: Json
-          user_id: string | null
-        }
-        Insert: {
-          actor_type?: string
-          clinic_id?: string | null
-          created_at?: string
-          entity_id?: string | null
-          entity_type?: string | null
-          event_type: string
-          id?: string
-          metadata?: Json
-          user_id?: string | null
-        }
-        Update: {
-          actor_type?: string
-          clinic_id?: string | null
-          created_at?: string
-          entity_id?: string | null
-          entity_type?: string | null
-          event_type?: string
-          id?: string
-          metadata?: Json
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "platform_events_clinic_id_fkey"
-            columns: ["clinic_id"]
-            isOneToOne: false
-            referencedRelation: "hospital_pages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tracking_events: {
         Row: {
           created_at: string
@@ -3567,6 +3493,7 @@ export type Database = {
     Views: {
       admin_student_summary: {
         Row: {
+          accepted_applications: number | null
           active_application_count: number | null
           application_count: number | null
           attention_level: string | null
@@ -3576,17 +3503,25 @@ export type Database = {
           clinic_names: string | null
           clinical_hours: number | null
           created_at: string | null
+          evaluation_count: number | null
           full_name: string | null
           graduation_year: number | null
           id: string | null
           is_premium: boolean | null
+          joined_at: string | null
           last_active_at: string | null
+          last_application_at: string | null
           last_login_at: string | null
+          login_count: number | null
           major: string | null
           needs_attention: boolean | null
+          onboarding_complete: boolean | null
           pending_application_count: number | null
+          pending_applications: number | null
+          phone: string | null
           state: string | null
           university: string | null
+          upcoming_interviews: number | null
           volunteer_hours: number | null
         }
         Relationships: []
@@ -3594,6 +3529,10 @@ export type Database = {
       admin_unified_activity: {
         Row: {
           actor_email: string | null
+          actor_type: string | null
+          clinic_id: string | null
+          created_at: string | null
+          description: string | null
           entity_id: string | null
           entity_type: string | null
           event_type: string | null
@@ -3757,48 +3696,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      admin_student_summary: {
-        Row: {
-          id: string | null
-          full_name: string | null
-          university: string | null
-          major: string | null
-          graduation_year: number | null
-          phone: string | null
-          joined_at: string | null
-          onboarding_complete: boolean | null
-          last_login_at: string | null
-          last_active_at: string | null
-          login_count: number | null
-          application_count: number | null
-          pending_applications: number | null
-          accepted_applications: number | null
-          upcoming_interviews: number | null
-          last_application_at: string | null
-          clinic_names: string | null
-          clinic_count: number | null
-          volunteer_hours: number | null
-          avg_evaluation_score: number | null
-          evaluation_count: number | null
-          attention_level: string | null
-          needs_attention: boolean | null
-        }
-        Relationships: []
-      }
-      admin_unified_activity: {
-        Row: {
-          id: string | null
-          user_id: string | null
-          created_at: string | null
-          event_type: string | null
-          actor_type: string | null
-          description: string | null
-          metadata: Json | null
-          clinic_id: string | null
-          source: string | null
-        }
-        Relationships: []
       }
     }
     Functions: {
