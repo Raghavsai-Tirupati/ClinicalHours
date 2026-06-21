@@ -272,6 +272,39 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_cohorts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          filter_json: Json
+          id: string
+          is_template: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filter_json?: Json
+          id?: string
+          is_template?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filter_json?: Json
+          id?: string
+          is_template?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       application_answers: {
         Row: {
           answer_file_url: string | null
@@ -2260,6 +2293,13 @@ export type Database = {
             foreignKeyName: "opportunities_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "admin_student_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2394,6 +2434,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_events: {
+        Row: {
+          actor_type: string
+          clinic_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          user_id: string | null
+        }
+        Insert: {
+          actor_type?: string
+          clinic_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Update: {
+          actor_type?: string
+          clinic_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Relationships: []
       }
       playbooks: {
         Row: {
@@ -2711,6 +2787,13 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_student_summary"
             referencedColumns: ["id"]
           },
           {
@@ -3482,6 +3565,46 @@ export type Database = {
       }
     }
     Views: {
+      admin_student_summary: {
+        Row: {
+          active_application_count: number | null
+          application_count: number | null
+          attention_level: string | null
+          avg_evaluation_score: number | null
+          city: string | null
+          clinic_count: number | null
+          clinic_names: string | null
+          clinical_hours: number | null
+          created_at: string | null
+          full_name: string | null
+          graduation_year: number | null
+          id: string | null
+          is_premium: boolean | null
+          last_active_at: string | null
+          last_login_at: string | null
+          major: string | null
+          needs_attention: boolean | null
+          pending_application_count: number | null
+          state: string | null
+          university: string | null
+          volunteer_hours: number | null
+        }
+        Relationships: []
+      }
+      admin_unified_activity: {
+        Row: {
+          actor_email: string | null
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string | null
+          id: string | null
+          metadata: Json | null
+          occurred_at: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       answers_with_votes: {
         Row: {
           author_clinical_hours: number | null
@@ -3544,6 +3667,13 @@ export type Database = {
           website: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "opportunities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_student_summary"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "opportunities_created_by_fkey"
             columns: ["created_by"]
@@ -3673,6 +3803,7 @@ export type Database = {
     }
     Functions: {
       add_admin_by_email: { Args: { admin_email: string }; Returns: boolean }
+      assert_admin: { Args: never; Returns: undefined }
       calculate_distance_miles: {
         Args: { lat1: number; lat2: number; lon1: number; lon2: number }
         Returns: number
@@ -3687,48 +3818,17 @@ export type Database = {
         Args: { p_hospital_id: string }
         Returns: string
       }
-      get_promotion_funnel: {
-        Args: { p_since?: string; p_until?: string };
-        Returns: Json;
-      };
-      get_student_analytics_bundle: {
-        Args: { p_user_id: string };
-        Returns: Json;
-      };
-      run_cohort_filter: {
-        Args: { p_filter?: Json; p_limit?: number; p_offset?: number };
-        Returns: {
-          id: string;
-          full_name: string | null;
-          university: string | null;
-          major: string | null;
-          graduation_year: number | null;
-          joined_at: string;
-          last_active_at: string | null;
-          application_count: number;
-          pending_applications: number;
-          attention_level: string;
-          needs_attention: boolean;
-          saved_count: number;
-          state: string | null;
-          is_premium: boolean;
-        }[];
-      };
       get_admin_dashboard_kpis: {
-        Args: {
-          p_since?: string
-          p_until?: string
-          p_clinic_id?: string | null
-        }
+        Args: { p_clinic_id?: string; p_since?: string; p_until?: string }
         Returns: Json
       }
       get_admin_time_series: {
         Args: {
-          p_metric: string
-          p_since: string
-          p_until: string
+          p_clinic_id?: string
           p_granularity?: string
-          p_clinic_id?: string | null
+          p_metric: string
+          p_since?: string
+          p_until?: string
         }
         Returns: {
           bucket: string
@@ -3765,6 +3865,14 @@ export type Database = {
           type: string
           website: string
         }[]
+      }
+      get_promotion_funnel: {
+        Args: { p_since?: string; p_until?: string }
+        Returns: Json
+      }
+      get_student_analytics_bundle: {
+        Args: { p_user_id: string }
+        Returns: Json
       }
       get_user_hospital_account_ids: {
         Args: { _user_id: string }
@@ -3806,6 +3914,24 @@ export type Database = {
         Args: { p_hospital_id: string; p_opportunity_id: string }
         Returns: undefined
       }
+      list_public_tables: {
+        Args: never
+        Returns: {
+          table_name: string
+        }[]
+      }
+      log_platform_event: {
+        Args: {
+          p_actor_type: string
+          p_clinic_id?: string
+          p_entity_id?: string
+          p_entity_type?: string
+          p_event_type: string
+          p_metadata?: Json
+          p_user_id: string
+        }
+        Returns: string
+      }
       reserve_edge_rate_limit: {
         Args: {
           p_delta?: number
@@ -3823,6 +3949,30 @@ export type Database = {
           p_max_hour?: number
         }
         Returns: Json
+      }
+      run_cohort_filter: {
+        Args: { p_filter?: Json; p_limit?: number; p_offset?: number }
+        Returns: {
+          application_count: number
+          attention_level: string
+          avg_evaluation_score: number
+          city: string
+          clinic_count: number
+          clinical_hours: number
+          created_at: string
+          full_name: string
+          graduation_year: number
+          id: string
+          is_premium: boolean
+          last_active_at: string
+          last_login_at: string
+          major: string
+          needs_attention: boolean
+          pending_application_count: number
+          saved_count: number
+          state: string
+          university: string
+        }[]
       }
       seed_default_clinic_roles: {
         Args: { p_clinic_id: string }
