@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Home, MapPin, Mail, LogIn, ChevronDown, User, Settings as SettingsIcon, FileText, ShieldCheck, BookOpen } from "lucide-react";
+import { Menu, X, Home, MapPin, Mail, LogIn, ChevronDown, User, Settings as SettingsIcon, FileText, ShieldCheck, BookOpen, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHospitalMember } from "@/hooks/useHospitalMember";
@@ -231,14 +231,24 @@ const Navigation = () => {
                   </DropdownMenu>
                 )}
                 {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
-                    title="Admin Panel"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Admin
-                  </Link>
+                  <>
+                    <Link
+                      to="/analytics"
+                      className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
+                      title="Student Analytics"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      Analytics
+                    </Link>
+                    <Link
+                      to="/admin"
+                      className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
+                      title="Admin Panel"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Admin
+                    </Link>
+                  </>
                 )}
                 {user && !isGuest ? (
                   <Link
@@ -340,6 +350,27 @@ const Navigation = () => {
                       ))}
                     </>
                   )}
+                </div>
+              )}
+              {isAdmin && (
+                <div className={`pt-2 border-t ${hasTransparentNav ? "border-white/10" : "border-border"}`}>
+                  <p className={`text-[10px] font-semibold uppercase tracking-widest mb-1 ${textColor} opacity-50`}>Platform Admin</p>
+                  <Link
+                    to="/analytics"
+                    onClick={() => setIsOpen(false)}
+                    className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    Student Analytics
+                  </Link>
+                  <Link
+                    to="/admin"
+                    onClick={() => setIsOpen(false)}
+                    className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-widest py-2 transition-opacity hover:opacity-70 opacity-80 font-heading ${textColor}`}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Admin OS
+                  </Link>
                 </div>
               )}
               {user && !isGuest ? (

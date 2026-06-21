@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +22,7 @@ import {
   DollarSign,
   ShieldCheck,
   Bot,
+  BarChart3,
 } from 'lucide-react';
 import { TabErrorBoundary } from '@/components/admin/TabErrorBoundary';
 
@@ -73,6 +76,12 @@ export default function AdminDashboard() {
                   {openApprovalsCount} approval{openApprovalsCount !== 1 ? 's' : ''} pending
                 </Badge>
               )}
+              <Button variant="default" size="sm" asChild>
+                <Link to="/analytics">
+                  <BarChart3 className="h-4 w-4 mr-1.5" />
+                  Student Analytics
+                </Link>
+              </Button>
               <Badge variant="outline" className="text-sm">
                 {user?.email}
               </Badge>
