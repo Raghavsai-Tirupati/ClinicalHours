@@ -3493,6 +3493,7 @@ export type Database = {
     Views: {
       admin_student_summary: {
         Row: {
+          accepted_applications: number | null
           active_application_count: number | null
           application_count: number | null
           attention_level: string | null
@@ -3502,17 +3503,25 @@ export type Database = {
           clinic_names: string | null
           clinical_hours: number | null
           created_at: string | null
+          evaluation_count: number | null
           full_name: string | null
           graduation_year: number | null
           id: string | null
           is_premium: boolean | null
+          joined_at: string | null
           last_active_at: string | null
+          last_application_at: string | null
           last_login_at: string | null
+          login_count: number | null
           major: string | null
           needs_attention: boolean | null
+          onboarding_complete: boolean | null
           pending_application_count: number | null
+          pending_applications: number | null
+          phone: string | null
           state: string | null
           university: string | null
+          upcoming_interviews: number | null
           volunteer_hours: number | null
         }
         Relationships: []
@@ -3520,6 +3529,10 @@ export type Database = {
       admin_unified_activity: {
         Row: {
           actor_email: string | null
+          actor_type: string | null
+          clinic_id: string | null
+          created_at: string | null
+          description: string | null
           entity_id: string | null
           entity_type: string | null
           event_type: string | null
