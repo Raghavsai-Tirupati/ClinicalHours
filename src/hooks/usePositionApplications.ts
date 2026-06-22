@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getResumeUrlFromApplication } from '@/lib/applicationFilters';
 import type { StudentApplication, ApplicationStatus, HospitalPosition } from '@/types/positions';
 
 const PLACEHOLDER_NAME_REGEX = /^student\s+[a-f0-9]{8}$/i;
@@ -36,7 +37,7 @@ const scoreResumeReadiness = (app: StudentApplication): number => {
   const profile = app.student_profile;
   const normalizedGpa = typeof profile?.gpa === 'number' ? Math.max(0, Math.min(4, profile.gpa)) : 0;
   const normalizedHours = typeof profile?.clinical_hours === 'number' ? Math.max(0, Math.min(300, profile.clinical_hours)) : 0;
-  const hasResume = !!profile?.resume_url;
+  const hasResume = !!getResumeUrlFromApplication(app);
   const hasExperienceSummary = !!profile?.research_experience?.trim();
   const answerTextBlob = (app.answers || [])
     .map((answer) => answer.answer_text || '')

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { CalendarCheck, Eye, Info, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { toastBulkSendResult } from '@/lib/toastHelpers';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -108,16 +109,18 @@ export default function InterviewInviteDialog({
 
       const sent = data?.sent ?? 0;
       const failed = data?.failed ?? 0;
-      if (sent > 0) toast.success(`Interview invites sent to ${sent} applicant${sent === 1 ? '' : 's'}`);
-      else if (failed === 0 && (data?.alreadyInvited ?? 0) > 0) toast.info('Selected applicants have already been invited');
-      else if (failed === 0) toast.info('No invites were sent');
-      if (failed > 0) {
-        const errDetails = data?.errors?.length ? `: ${data.errors[0]}` : '';
-        toast.error(`${failed} invite${failed === 1 ? '' : 's'} failed${errDetails}`);
-      }
+      toastBulkSendResult({
+        kind: 'invite',
+        sent,
+        failed,
+        alreadySent: data?.alreadyInvited ?? 0,
+        errors: data?.errors,
+      });
 
-      onOpenChange(false);
-      setMessage('');
+      if (sent > 0 || failed === 0) {
+        onOpenChange(false);
+        setMessage('');
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to send interview invites');
     } finally {

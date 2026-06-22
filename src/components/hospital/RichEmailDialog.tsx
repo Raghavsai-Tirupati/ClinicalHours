@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { toastBulkSendResult } from '@/lib/toastHelpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -154,9 +155,13 @@ export default function RichEmailDialog({
       if (!data?.success) throw new Error(data?.error || 'Failed to send');
       const sent = data?.sent ?? 0;
       const failed = data?.failed ?? 0;
-      if (sent > 0) toast.success(`Email sent to ${sent} recipient${sent === 1 ? '' : 's'}`);
-      if (failed > 0) toast.error(`${failed} email${failed === 1 ? '' : 's'} failed`);
-      onOpenChange(false);
+      toastBulkSendResult({
+        kind: 'email',
+        sent,
+        failed,
+        errors: data?.errors,
+      });
+      if (sent > 0 || failed === 0) onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to send emails');
     } finally {

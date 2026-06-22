@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { usePositionApplications } from '@/hooks/usePositionApplications';
 import { useHospitalPageContext } from '@/contexts/HospitalPageContext';
 import { buildStudentApplicationStatusUpdate } from '@/lib/applicationStatus';
+import { getResumeUrlFromApplication } from '@/lib/applicationFilters';
 import { APPLICATION_STATUS_LABELS } from '@/types/positions';
 import type { ApplicationStatus, StudentApplication } from '@/types/positions';
 import EmailDialog from './EmailDialog';
@@ -287,9 +288,9 @@ export default function PositionApplicationsTable({ positionId }: Props) {
                               {app.student_profile.clinical_hours} clinical hrs
                             </Badge>
                           )}
-                          {app.student_profile?.resume_url && (
+                          {getResumeUrlFromApplication(app) && (
                             <Badge variant="outline" className="text-[10px] py-0">
-                              Resume
+                              Resume uploaded
                             </Badge>
                           )}
                         </div>

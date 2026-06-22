@@ -60,6 +60,17 @@ export function getApplicantSortName(app: StudentApplication): string {
   );
 }
 
+/** Profile resume URL, or resume/CV file uploaded in application answers. */
+export function getResumeUrlFromApplication(app: StudentApplication): string | null {
+  if (app.student_profile?.resume_url) return app.student_profile.resume_url;
+  if (!app.answers?.length) return null;
+  const match = app.answers.find((answer) => {
+    const label = answer.question?.question_text?.toLowerCase() || '';
+    return label.includes('resume') || label.includes('cv');
+  });
+  return match?.answer_file_url || null;
+}
+
 function compareNumericOp(actual: number, op: NumericOp, value: number): boolean {
   switch (op) {
     case 'gt':
