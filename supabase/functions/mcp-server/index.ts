@@ -61,17 +61,17 @@ function jsonContent(value: unknown) {
 
 const mcp = new McpServer({ name: "clinicalhours-db", version: "1.0.0" });
 
-mcp.tool({
-  name: "list_tables",
+mcp.tool("list_tables", {
   description: "List the database tables that can be read.",
+  annotations: { readOnlyHint: true },
   inputSchema: { type: "object", properties: {} },
   handler: async () => jsonContent({ tables: [...ALLOWED_TABLES].sort() }),
 });
 
-mcp.tool({
-  name: "describe_table",
+mcp.tool("describe_table", {
   description:
     "Describe a table's columns by sampling a row. Returns column names and inferred types.",
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: "object",
     properties: {
@@ -94,10 +94,10 @@ mcp.tool({
   },
 });
 
-mcp.tool({
-  name: "query_table",
+mcp.tool("query_table", {
   description:
     "Read rows from a table (READ-ONLY). Supports column selection, filters, ordering, limit and offset.",
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: "object",
     properties: {
@@ -179,9 +179,9 @@ mcp.tool({
   },
 });
 
-mcp.tool({
-  name: "count_table",
+mcp.tool("count_table", {
   description: "Count rows in a table (READ-ONLY), optionally with filters.",
+  annotations: { readOnlyHint: true },
   inputSchema: {
     type: "object",
     properties: {
