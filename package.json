@@ -16,7 +16,8 @@
     "fix:coordinates": "tsx scripts/fix-map-coordinates.ts",
     "fix:coordinates:direct": "tsx scripts/fix-coordinates-direct.ts",
     "discover:fields": "tsx scripts/discoverFields.ts",
-    "import:hospitals": "tsx scripts/importHospitals.ts"
+    "import:hospitals": "tsx scripts/importHospitals.ts",
+    "mcp:analytics": "tsx mcp/clinicalhours-analytics/index.ts"
   },
   "dependencies": {
     "@capacitor/cli": "^8.2.0",
@@ -90,6 +91,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

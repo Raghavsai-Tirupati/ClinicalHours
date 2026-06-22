@@ -114,6 +114,9 @@ verify_jwt = false
 [functions.admin-chat]
 verify_jwt = false
 
+[functions.student-analytics]
+verify_jwt = false
+
 [functions.mcp-server]
 verify_jwt = false
 
