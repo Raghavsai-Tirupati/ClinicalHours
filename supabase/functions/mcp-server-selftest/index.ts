@@ -11,7 +11,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const MCP_TOKEN = Deno.env.get("MCP_SERVER_TOKEN") ?? "";
+const MCP_TOKEN = "zZ9qf3-selftest-7sLkP2wQ1xT8vN4mB6cR0dE5yH-throwaway";
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
