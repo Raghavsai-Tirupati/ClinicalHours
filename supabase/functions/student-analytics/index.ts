@@ -95,21 +95,6 @@ Deno.serve(async (req) => {
     req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
     new URL(req.url).searchParams.get("token");
 
-  // TEMP DIAGNOSTIC (no secret values exposed): compare SHA-256 hashes + lengths.
-  if (new URL(req.url).searchParams.get("diag") === "tokens") {
-    const sha = async (s: string) => {
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-      return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
-    };
-    return json({
-      expected_len: expected.length,
-      expected_sha256: await sha(expected),
-      provided_len: provided ? provided.length : null,
-      provided_sha256: provided ? await sha(provided) : null,
-      match: provided === expected,
-    });
-  }
-
   if (provided !== expected) {
     return json({ error: "Unauthorized" }, 401);
   }
