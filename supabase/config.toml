@@ -122,3 +122,9 @@ verify_jwt = false
 
 [functions.mcp-server-selftest]
 verify_jwt = false
+
+# Auth is enforced inside the function via authenticateFromCookie + validateOrigin.
+# Gateway-level JWT verification rejects the CORS preflight, which surfaces to the
+# applicant as "Failed to send a request to the Edge Function" on submit.
+[functions.submit-position-application]
+verify_jwt = false
